@@ -282,7 +282,7 @@ class WorkoutTrackingFragment : Fragment() {
         // Инициализируем GPS статус
         try {
             android.util.Log.d("GPSStatus", "Initializing GPS status indicator")
-            android.util.Log.d("GPSStatus", "GPS layout initialized: ${binding.layoutGpsStatus != null}")
+            // GPS layout is always initialized at this point
             
             // Инициализируем LocationManager для постоянного мониторинга GPS
             locationManager = requireContext().getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
@@ -308,7 +308,7 @@ class WorkoutTrackingFragment : Fragment() {
         mapView = binding.mapView
         mapView?.setTileSource(TileSourceFactory.MAPNIK)
         mapView?.setMultiTouchControls(true)
-        mapView?.setBuiltInZoomControls(false) // Отключаем встроенные кнопки зума
+        // setBuiltInZoomControls is deprecated - zoom controls are disabled by default in modern OSMDroid
         mapView?.setClickable(true)
         mapView?.isHorizontalMapRepetitionEnabled = false
         mapView?.isVerticalMapRepetitionEnabled = false
@@ -337,8 +337,8 @@ class WorkoutTrackingFragment : Fragment() {
         
         // Инициализация полилинии для трека
         trackPolyline = Polyline().apply {
-            color = TRACK_LINE_COLOR
-            width = TRACK_LINE_WIDTH
+            outlinePaint.color = TRACK_LINE_COLOR
+            outlinePaint.strokeWidth = TRACK_LINE_WIDTH
         }
         mapView?.overlays?.add(trackPolyline)
     }
@@ -501,9 +501,9 @@ class WorkoutTrackingFragment : Fragment() {
                 velocityX: Float,
                 velocityY: Float
             ): Boolean {
-                if (e1 != null && e2 != null) {
-                    val diffY = e2.y - e1.y
-                    val diffX = e2.x - e1.x
+                e1?.let {
+                    val diffY = e2.y - it.y
+                    val diffX = e2.x - it.x
                     
                     // Движение пальца вверх по области информации для развертывания
                     if (Math.abs(diffY) > Math.abs(diffX) && diffY < 0 && Math.abs(diffY) > 100) {
@@ -519,6 +519,7 @@ class WorkoutTrackingFragment : Fragment() {
                             return true
                         }
                     }
+                    return true
                 }
                 return false
             }
@@ -852,15 +853,16 @@ class WorkoutTrackingFragment : Fragment() {
     private fun updateTrackOnMap(trackPoints: List<GeoPoint>) {
         if (trackPoints.isNotEmpty()) {
             // Обновляем трек только если есть новые точки
+            @Suppress("DEPRECATION")
             val currentPoints = trackPolyline?.points ?: emptyList()
             if (trackPoints.size != currentPoints.size) {
-                trackPolyline?.setPoints(ArrayList(trackPoints))
+                trackPolyline?.setPoints(trackPoints.toMutableList())
                 mapView?.invalidate()
                 android.util.Log.d(TAG, "Track updated: ${trackPoints.size} points")
             }
         } else {
             // Очищаем трек если нет точек
-            trackPolyline?.setPoints(ArrayList())
+            trackPolyline?.setPoints(mutableListOf())
             mapView?.invalidate()
         }
     }

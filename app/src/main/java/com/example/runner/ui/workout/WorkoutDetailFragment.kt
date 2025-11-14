@@ -77,8 +77,8 @@ class WorkoutDetailFragment : Fragment() {
         
         // Инициализация полилинии для трека
         trackPolyline = Polyline().apply {
-            color = Color.RED
-            width = 10f // Увеличиваем толщину для лучшей видимости
+            outlinePaint.color = Color.RED
+            outlinePaint.strokeWidth = 10f // Увеличиваем толщину для лучшей видимости
         }
         mapView?.overlays?.add(trackPolyline)
         
@@ -314,7 +314,7 @@ class WorkoutDetailFragment : Fragment() {
                         GeoPoint(trackPoint.latitude, trackPoint.longitude)
                     }
                     
-                    trackPolyline?.setPoints(ArrayList(geoPoints))
+                    trackPolyline?.setPoints(geoPoints.toMutableList())
                     
                     // Центрируем карту на маршруте с отступами
                     if (geoPoints.isNotEmpty()) {
