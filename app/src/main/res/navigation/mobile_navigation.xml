@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mobile_navigation"
+    app:startDestination="@+id/nav_tracking">
+
+    <fragment
+        android:id="@+id/nav_workouts"
+        android:name="com.example.runner.ui.workout.WorkoutListFragment"
+        android:label="@string/menu_workouts"
+        tools:layout="@layout/fragment_workout_list" />
+
+    <fragment
+        android:id="@+id/nav_add_workout"
+        android:name="com.example.runner.ui.workout.AddWorkoutFragment"
+        android:label="@string/menu_add_workout"
+        tools:layout="@layout/fragment_add_workout" />
+
+    <fragment
+        android:id="@+id/nav_tracking"
+        android:name="com.example.runner.ui.tracking.WorkoutTrackingFragment"
+        android:label="Тренировка"
+        tools:layout="@layout/fragment_workout_tracking" />
+
+    <fragment
+        android:id="@+id/nav_workout_detail"
+        android:name="com.example.runner.ui.workout.WorkoutDetailFragment"
+        android:label="Детали тренировки"
+        tools:layout="@layout/fragment_workout_detail">
+        <argument
+            android:name="workoutId"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_statistics"
+        android:name="com.example.runner.ui.statistics.StatisticsFragment"
+        android:label="@string/menu_statistics"
+        tools:layout="@layout/fragment_statistics" />
+
+    <fragment
+        android:id="@+id/nav_settings"
+        android:name="com.example.runner.ui.settings.SettingsFragment"
+        android:label="@string/menu_settings"
+        tools:layout="@layout/fragment_settings" />
+</navigation>

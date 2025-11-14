@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="32dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="@color/map_navigation_shadow"
+        android:pathData="M13,3L5,21h16L13,3z"
+        android:alpha="0.8" />
+    <path
+        android:fillColor="@color/map_navigation_icon"
+        android:pathData="M12,2L4,20h16L12,2z" />
+    <path
+        android:fillColor="@color/map_navigation_highlight"
+        android:pathData="M12,2L8,14h4L12,2z"
+        android:alpha="0.6" />
+</vector>

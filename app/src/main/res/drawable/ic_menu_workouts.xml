@@ -1,0 +1,112 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorOnSurface">
+    
+    <!-- Список тренировок -->
+    <group>
+        <!-- Первая тренировка -->
+        <path
+            android:fillColor="@android:color/black"
+            android:pathData="M3,4h18v2H3z" />
+        
+        <!-- Фигура бегуна для первой тренировки -->
+        <group
+            android:translateX="2"
+            android:translateY="5">
+            <circle
+                android:fillColor="@android:color/black"
+                android:centerX="1"
+                android:centerY="0"
+                android:radius="0.5dp" />
+            <path
+                android:fillColor="@android:color/black"
+                android:pathData="M1,0.5 L1,2" 
+                android:strokeWidth="0.5"
+                android:strokeColor="@android:color/black"
+                android:strokeLineCap="round" />
+            <path
+                android:fillColor="@android:color/black"
+                android:pathData="M1,1 L0.5,1.5" 
+                android:strokeWidth="0.5"
+                android:strokeColor="@android:color/black"
+                android:strokeLineCap="round" />
+            <path
+                android:fillColor="@android:color/black"
+                android:pathData="M1,1 L1.5,1.5" 
+                android:strokeWidth="0.5"
+                android:strokeColor="@android:color/black"
+                android:strokeLineCap="round" />
+        </group>
+        
+        <!-- Вторая тренировка -->
+        <path
+            android:fillColor="@android:color/black"
+            android:pathData="M3,8h18v2H3z" />
+        
+        <!-- Фигура бегуна для второй тренировки -->
+        <group
+            android:translateX="2"
+            android:translateY="9">
+            <circle
+                android:fillColor="@android:color/black"
+                android:centerX="1"
+                android:centerY="0"
+                android:radius="0.5dp" />
+            <path
+                android:fillColor="@android:color/black"
+                android:pathData="M1,0.5 L1,2" 
+                android:strokeWidth="0.5"
+                android:strokeColor="@android:color/black"
+                android:strokeLineCap="round" />
+            <path
+                android:fillColor="@android:color/black"
+                android:pathData="M1,1 L0.5,1.5" 
+                android:strokeWidth="0.5"
+                android:strokeColor="@android:color/black"
+                android:strokeLineCap="round" />
+            <path
+                android:fillColor="@android:color/black"
+                android:pathData="M1,1 L1.5,1.5" 
+                android:strokeWidth="0.5"
+                android:strokeColor="@android:color/black"
+                android:strokeLineCap="round" />
+        </group>
+        
+        <!-- Третья тренировка -->
+        <path
+            android:fillColor="@android:color/black"
+            android:pathData="M3,12h18v2H3z" />
+        
+        <!-- Фигура бегуна для третьей тренировки -->
+        <group
+            android:translateX="2"
+            android:translateY="13">
+            <circle
+                android:fillColor="@android:color/black"
+                android:centerX="1"
+                android:centerY="0"
+                android:radius="0.5dp" />
+            <path
+                android:fillColor="@android:color/black"
+                android:pathData="M1,0.5 L1,2" 
+                android:strokeWidth="0.5"
+                android:strokeColor="@android:color/black"
+                android:strokeLineCap="round" />
+            <path
+                android:fillColor="@android:color/black"
+                android:pathData="M1,1 L0.5,1.5" 
+                android:strokeWidth="0.5"
+                android:strokeColor="@android:color/black"
+                android:strokeLineCap="round" />
+            <path
+                android:fillColor="@android:color/black"
+                android:pathData="M1,1 L1.5,1.5" 
+                android:strokeWidth="0.5"
+                android:strokeColor="@android:color/black"
+                android:strokeLineCap="round" />
+        </group>
+    </group>
+</vector>
