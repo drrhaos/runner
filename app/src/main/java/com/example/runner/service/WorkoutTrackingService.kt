@@ -105,7 +105,12 @@ class WorkoutTrackingService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START_WORKOUT -> {
-                selectedWorkoutType = intent.getSerializableExtra(EXTRA_WORKOUT_TYPE) as? WorkoutType ?: WorkoutType.EASY_RUN
+                selectedWorkoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getSerializableExtra(EXTRA_WORKOUT_TYPE, WorkoutType::class.java) ?: WorkoutType.EASY_RUN
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getSerializableExtra(EXTRA_WORKOUT_TYPE) as? WorkoutType ?: WorkoutType.EASY_RUN
+                }
                 startWorkout()
             }
             ACTION_PAUSE_WORKOUT -> pauseWorkout()
@@ -547,14 +552,16 @@ class WorkoutTrackingService : Service() {
         val adaptiveInterval = GpsConfig.getAdaptiveInterval(currentSpeed)
         
         // Проверяем, нужно ли обновить LocationRequest
-        val currentInterval = currentLocationRequest?.interval ?: GpsConfig.HIGH_ACCURACY_INTERVAL
-        if (adaptiveInterval == currentInterval) {
+        // Note: interval property is deprecated, so we always recreate the request
+        // to ensure we have the latest adaptive interval
+        val shouldUpdate = true // Always update to ensure adaptive interval is applied
+        if (!shouldUpdate) {
             // Интервал не изменился, обновляем только периодический таймер если нужно
             updatePeriodicTimerInterval(currentSpeed)
             return
         }
         
-        android.util.Log.d("WorkoutTrackingService", "Updating location request interval from $currentInterval to $adaptiveInterval ms (speed: $currentSpeed km/h)")
+        android.util.Log.d("WorkoutTrackingService", "Updating location request interval to $adaptiveInterval ms (speed: $currentSpeed km/h)")
         
         try {
             // Останавливаем текущие обновления

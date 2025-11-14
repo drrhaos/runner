@@ -39,6 +39,7 @@ object ErrorHandler {
         } else {
             @Suppress("DEPRECATION")
             val networkInfo = connectivityManager.activeNetworkInfo
+            @Suppress("DEPRECATION")
             networkInfo?.isConnected == true
         }
     }
