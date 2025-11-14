@@ -1,0 +1,53 @@
+<resources>
+    <string name="app_name">Runner</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Runner App</string>
+    <string name="nav_header_subtitle">Твой персональный тренер</string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="action_settings">Settings</string>
+
+    <!-- Меню навигации -->
+    <string name="menu_workouts">Мои тренировки</string>
+    <string name="menu_add_workout">Добавить тренировку</string>
+    <string name="menu_statistics">Статистика</string>
+    <string name="menu_settings">Настройки</string>
+
+    <!-- Типы тренировок -->
+    <string name="workout_type_easy_run">Легкий бег</string>
+    <string name="workout_type_tempo_run">Темповый бег</string>
+    <string name="workout_type_interval_training">Интервальная тренировка</string>
+    <string name="workout_type_long_run">Длинный бег</string>
+    <string name="workout_type_recovery_run">Восстановительный бег</string>
+    <string name="workout_type_race">Соревнование</string>
+
+    <!-- Сообщения -->
+    <string name="workout_saved">Тренировка сохранена</string>
+    <string name="workout_deleted">Тренировка удалена</string>
+    <string name="confirm_delete">Вы уверены, что хотите удалить эту тренировку?</string>
+    <string name="error_save_workout">Ошибка при сохранении тренировки</string>
+    <string name="error_delete_workout">Ошибка при удалении тренировки</string>
+    <string name="fill_required_fields">Заполните обязательные поля</string>
+
+    <!-- Общие -->
+    <string name="save">Сохранить</string>
+    <string name="cancel">Отмена</string>
+    <string name="edit">Редактировать</string>
+    <string name="delete">Удалить</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+
+    <!-- Управление тренировкой -->
+    <string name="stop_hold_hint_initial">Удерживайте 3 сек. для остановки</string>
+    <string name="stop_hold_hint">Удерживайте %1$d сек. для остановки</string>
+    <string name="gps_signal_searching">Поиск</string>
+    <string name="gps_signal_weak">Слабый</string>
+    <string name="gps_signal_medium">Средний</string>
+    <string name="gps_signal_strong">Сильный</string>
+    <string name="gps_signal_lost">Потерян</string>
+    <string name="gps_signal_denied">Нет доступа</string>
+    <string name="gps_accuracy_searching">Ищем спутники…</string>
+    <string name="gps_accuracy_value">Точность: %1$d м</string>
+    <string name="gps_accuracy_lost">Сигнал потерян</string>
+    <string name="gps_accuracy_denied">Нет доступа к GPS</string>
+</resources>

@@ -1,0 +1,1195 @@
+package com.example.runner.ui.tracking
+
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.graphics.Color
+import android.os.Build
+import android.os.PowerManager
+import android.os.SystemClock
+import android.provider.Settings
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
+import android.app.AlertDialog
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import com.example.runner.data.WorkoutDatabase
+import com.example.runner.data.WorkoutType
+import com.example.runner.util.GpsFilter
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
+import com.example.runner.R
+import com.example.runner.databinding.FragmentWorkoutTrackingBinding
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Polyline
+import org.osmdroid.events.MapListener
+import org.osmdroid.events.ScrollEvent
+import org.osmdroid.events.ZoomEvent
+import android.location.LocationManager
+import android.location.LocationListener
+import android.location.Location
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import android.view.MotionEvent
+import android.view.GestureDetector
+import android.view.GestureDetector.SimpleOnGestureListener
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
+import kotlin.math.ceil
+
+class WorkoutTrackingFragment : Fragment() {
+
+    companion object {
+        private const val TAG = "WorkoutTrackingFragment"
+        
+        // Timing constants
+        private const val AUTO_CENTER_DELAY = 5000L // 5 секунд неактивности для возврата к текущему местоположению
+        private const val UI_UPDATE_THROTTLE = 500L
+        private const val GPS_STATUS_UPDATE_INTERVAL = 2000L
+        private const val MAP_UPDATE_THROTTLE = 1000L
+        private const val STOP_HOLD_DURATION_MS = 3000L
+        private const val STOP_HOLD_SECONDS = 3
+        
+        // Map configuration
+        private const val DEFAULT_ZOOM_LEVEL = 16.0
+        private const val TRACK_LINE_WIDTH = 8f
+        private const val TRACK_LINE_COLOR = Color.RED
+        
+        // GPS accuracy thresholds
+        private const val EXCELLENT_ACCURACY = 5f
+        private const val GOOD_ACCURACY = 10f
+        private const val FAIR_ACCURACY = 20f
+    }
+
+    private var _binding: FragmentWorkoutTrackingBinding? = null
+    private val binding get() = _binding!!
+
+    private val viewModel: WorkoutTrackingViewModel by viewModels {
+        val database = WorkoutDatabase.getDatabase(requireContext())
+        WorkoutTrackingViewModelFactory(database.workoutDao(), requireContext())
+    }
+
+    // Map components
+    private var mapView: MapView? = null
+    private var locationOverlay: MyLocationNewOverlay? = null
+    private var trackPolyline: Polyline? = null
+    private var selectedWorkoutType: WorkoutType = WorkoutType.EASY_RUN
+    
+    // User interaction tracking
+    private var isUserInteractingWithMap = false
+    private var isMapCenteredOnUser = true
+    private var lastUserInteractionTime = 0L
+    private var lastMapUpdateTime = 0L
+    private var lastUIUpdateTime = 0L
+    
+    // GPS status tracking
+    private var lastGpsAccuracy = 0f
+    private var lastGpsUpdateTime = 0L
+    private var lastGpsStatusUpdate = 0L
+    
+    // Handler для периодического обновления GPS статуса
+    private val gpsStatusHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val gpsStatusRunnable = object : Runnable {
+        override fun run() {
+            updateGpsStatusIcon()
+            gpsStatusHandler.postDelayed(this, GPS_STATUS_UPDATE_INTERVAL)
+        }
+    }
+    
+    // LocationManager для постоянного мониторинга GPS
+    private lateinit var locationManager: LocationManager
+    private val gpsStatusListener = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            // Обновляем GPS данные для статуса
+            lastGpsAccuracy = location.accuracy
+            lastGpsUpdateTime = System.currentTimeMillis()
+            
+            
+            android.util.Log.d(TAG, "GPS location updated via LocationManager: accuracy=${location.accuracy}m")
+        }
+        
+        override fun onProviderEnabled(provider: String) {
+            android.util.Log.d("GPSStatus", "GPS provider enabled: $provider")
+        }
+        
+        override fun onProviderDisabled(provider: String) {
+            android.util.Log.d("GPSStatus", "GPS provider disabled: $provider")
+            lastGpsUpdateTime = 0L // Сбрасываем время последнего обновления
+        }
+    }
+    
+    // Управление панелью
+    private var isPanelExpanded = false
+    private lateinit var gestureDetector: GestureDetector
+    private var lastTapTime = 0L
+    private var stopHoldJob: Job? = null
+    private var stopHoldStartTime = 0L
+    private fun updateGpsSignalIndicator(status: GpsStatus, accuracy: Float) {
+        when (status) {
+            GpsStatus.SEARCHING -> {
+                binding.layoutGpsStatus.visibility = View.VISIBLE
+                setGpsBarsLevel(1)
+                binding.textViewGpsAccuracy.visibility = View.VISIBLE
+                binding.textViewGpsAccuracy.text = getString(R.string.gps_accuracy_searching)
+            }
+            GpsStatus.WEAK -> {
+                binding.layoutGpsStatus.visibility = View.VISIBLE
+                setGpsBarsLevel(2)
+                binding.textViewGpsAccuracy.visibility = View.VISIBLE
+                binding.textViewGpsAccuracy.text = getString(R.string.gps_accuracy_value, accuracy.toInt())
+            }
+            GpsStatus.MEDIUM -> {
+                binding.layoutGpsStatus.visibility = View.VISIBLE
+                setGpsBarsLevel(3)
+                binding.textViewGpsAccuracy.visibility = View.VISIBLE
+                binding.textViewGpsAccuracy.text = getString(R.string.gps_accuracy_value, accuracy.toInt())
+            }
+            GpsStatus.STRONG, GpsStatus.FOUND -> {
+                binding.layoutGpsStatus.visibility = View.VISIBLE
+                setGpsBarsLevel(4)
+                binding.textViewGpsAccuracy.visibility = View.INVISIBLE
+            }
+            GpsStatus.LOST -> {
+                binding.layoutGpsStatus.visibility = View.VISIBLE
+                setGpsBarsLevel(1)
+                binding.textViewGpsAccuracy.visibility = View.VISIBLE
+                binding.textViewGpsAccuracy.text = getString(R.string.gps_accuracy_lost)
+            }
+            GpsStatus.DENIED -> {
+                binding.layoutGpsStatus.visibility = View.VISIBLE
+                setGpsBarsLevel(0)
+                binding.textViewGpsAccuracy.visibility = View.VISIBLE
+                binding.textViewGpsAccuracy.text = getString(R.string.gps_accuracy_denied)
+            }
+            else -> {
+                binding.layoutGpsStatus.visibility = View.GONE
+                binding.textViewGpsAccuracy.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun setGpsBarsLevel(level: Int) {
+        val bars = listOf(
+            binding.viewGpsBar1,
+            binding.viewGpsBar2,
+            binding.viewGpsBar3,
+            binding.viewGpsBar4
+        )
+        val inactiveColor = ContextCompat.getColor(requireContext(), R.color.gps_signal_inactive)
+        val activeColor = when (level) {
+            4 -> ContextCompat.getColor(requireContext(), R.color.gps_signal_level_4)
+            3 -> ContextCompat.getColor(requireContext(), R.color.gps_signal_level_3)
+            2 -> ContextCompat.getColor(requireContext(), R.color.gps_signal_level_2)
+            1 -> ContextCompat.getColor(requireContext(), R.color.gps_signal_level_1)
+            else -> inactiveColor
+        }
+        bars.forEachIndexed { index, view ->
+            val background = view.background?.let { DrawableCompat.wrap(it).mutate() }
+            val color = if (index < level) activeColor else inactiveColor
+            background?.let {
+                DrawableCompat.setTint(it, color)
+                view.background = it
+            }
+            view.alpha = if (index < level) 1f else 0.3f
+        }
+    }
+
+    private fun setMapCenteredState(centered: Boolean) {
+        if (isMapCenteredOnUser != centered) {
+            isMapCenteredOnUser = centered
+            updateCenterButtonVisibility()
+        }
+    }
+
+    private fun updateCenterButtonVisibility() {
+        val visibility = if (isMapCenteredOnUser) View.GONE else View.VISIBLE
+        _binding?.buttonMyLocationContainer?.visibility = visibility
+        _binding?.buttonMyLocation?.visibility = visibility
+    }
+
+    private val locationPermissionRequest = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        when {
+            permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {
+                initializeMap()
+                viewModel.initializeLocationClient(requireContext())
+                requestNotificationPermission()
+                requestBackgroundLocationPermission()
+                requestActivityRecognitionPermission()
+            }
+            permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
+                initializeMap()
+                viewModel.initializeLocationClient(requireContext())
+                requestNotificationPermission()
+                requestBackgroundLocationPermission()
+                requestActivityRecognitionPermission()
+            }
+            permissions.getOrDefault(Manifest.permission.ACTIVITY_RECOGNITION, false) -> {
+                // Разрешение на распознавание физической активности предоставлено
+                Toast.makeText(context, "Разрешение на физическую активность предоставлено", Toast.LENGTH_SHORT).show()
+            }
+            else -> {
+                Toast.makeText(context, "Разрешение на местоположение необходимо для трекинга", Toast.LENGTH_LONG).show()
+                findNavController().navigateUp()
+            }
+        }
+    }
+
+    private val notificationPermissionRequest = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            Toast.makeText(requireContext(), "Разрешение на уведомления необходимо для фонового трекинга", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun stripUnit(value: String): String {
+        val trimmed = value.trim()
+        val spaceIndex = trimmed.indexOf(' ')
+        return if (spaceIndex > 0) trimmed.substring(0, spaceIndex) else trimmed
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        _binding = FragmentWorkoutTrackingBinding.inflate(inflater, container, false)
+        return binding.root
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        setupMap()
+        setupClickListeners()
+        setupSwipeGesture()
+        observeViewModel()
+        requestLocationPermission()
+        updateCenterButtonVisibility()
+        
+        // Инициализируем GPS статус
+        try {
+            android.util.Log.d("GPSStatus", "Initializing GPS status indicator")
+            android.util.Log.d("GPSStatus", "GPS layout initialized: ${binding.layoutGpsStatus != null}")
+            
+            // Инициализируем LocationManager для постоянного мониторинга GPS
+            locationManager = requireContext().getSystemService(android.content.Context.LOCATION_SERVICE) as LocationManager
+            setupGpsStatusMonitoring()
+            
+            updateGpsStatusIcon()
+            
+            // Запускаем периодическое обновление GPS статуса
+            gpsStatusHandler.post(gpsStatusRunnable)
+            
+            android.util.Log.d("GPSStatus", "GPS status initialized successfully")
+        } catch (e: Exception) {
+            android.util.Log.e("GPSStatus", "Failed to initialize GPS status: ${e.message}")
+        }
+        
+        // Сервис инициализируется только при старте тренировки для экономии батареи
+    }
+
+    private fun setupMap() {
+        // Конфигурация OSMDroid
+        Configuration.getInstance().load(requireContext(), requireContext().getSharedPreferences("osmdroid", 0))
+        
+        mapView = binding.mapView
+        mapView?.setTileSource(TileSourceFactory.MAPNIK)
+        mapView?.setMultiTouchControls(true)
+        mapView?.setBuiltInZoomControls(false) // Отключаем встроенные кнопки зума
+        mapView?.setClickable(true)
+        mapView?.isHorizontalMapRepetitionEnabled = false
+        mapView?.isVerticalMapRepetitionEnabled = false
+        
+        // Дополнительные настройки для отключения встроенных элементов управления
+        mapView?.setFlingEnabled(true)
+        mapView?.setScrollableAreaLimitLatitude(MapView.getTileSystem().maxLatitude, MapView.getTileSystem().minLatitude, 0)
+        
+        // Отключаем дополнительные элементы управления OSMDroid
+        mapView?.setUseDataConnection(true)
+        mapView?.setKeepScreenOn(true)
+        mapView?.controller?.setZoom(DEFAULT_ZOOM_LEVEL)
+        
+        // Добавляем слушатели взаимодействия с картой
+        setupMapInteractionListeners()
+        
+        // Настройка карты для отображения местоположения с кастомной иконкой
+        locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(requireContext()), mapView)
+        locationOverlay?.enableMyLocation()
+        locationOverlay?.enableFollowLocation() // Включаем следование за местоположением
+        locationOverlay?.setDrawAccuracyEnabled(false) // Отключаем отображение точности
+        
+        setupLocationIcon()
+        
+        mapView?.overlays?.add(locationOverlay)
+        
+        // Инициализация полилинии для трека
+        trackPolyline = Polyline().apply {
+            color = TRACK_LINE_COLOR
+            width = TRACK_LINE_WIDTH
+        }
+        mapView?.overlays?.add(trackPolyline)
+    }
+
+    private fun setupLocationIcon() {
+        try {
+            val customIcon = ContextCompat.getDrawable(requireContext(), R.drawable.ic_location_no_arrow)
+            customIcon?.let { icon ->
+                val bitmap = createBitmapFromDrawable(icon)
+                locationOverlay?.setPersonIcon(bitmap)
+                locationOverlay?.setDirectionIcon(bitmap)
+                android.util.Log.d(TAG, "Custom location icon set successfully")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Failed to set custom location icon: ${e.message}")
+        }
+    }
+
+    private fun createBitmapFromDrawable(drawable: android.graphics.drawable.Drawable): android.graphics.Bitmap {
+        val bitmap = android.graphics.Bitmap.createBitmap(
+            drawable.intrinsicWidth,
+            drawable.intrinsicHeight,
+            android.graphics.Bitmap.Config.ARGB_8888
+        )
+        val canvas = android.graphics.Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
+    }
+
+    private fun setupMapInteractionListeners() {
+        // Слушаем изменения масштаба через GestureDetector
+        val scaleDetector = android.view.ScaleGestureDetector(requireContext(), object : android.view.ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: android.view.ScaleGestureDetector): Boolean {
+                isUserInteractingWithMap = true
+                lastUserInteractionTime = System.currentTimeMillis()
+                setMapCenteredState(false)
+                scheduleAutoCenter()
+                return super.onScale(detector)
+            }
+        })
+        
+        // Добавляем обработку жестов масштабирования к OnTouchListener
+        mapView?.setOnTouchListener { _, event ->
+            scaleDetector.onTouchEvent(event)
+            when (event.action) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                    isUserInteractingWithMap = true
+                    lastUserInteractionTime = System.currentTimeMillis()
+                    setMapCenteredState(false)
+                    // Отменяем предыдущую задачу, т.к. пользователь активно взаимодействует с картой
+                    mapView?.handler?.removeCallbacks(autoCenterRunnable)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    // Планируем автоматическое центрирование через задержку после завершения взаимодействия
+                    scheduleAutoCenter()
+                }
+            }
+            false // Не блокируем обработку касаний картой
+        }
+        
+        // Добавляем MapListener для отслеживания всех изменений карты (zoom, pan, scroll)
+        mapView?.addMapListener(object : MapListener {
+            override fun onScroll(event: ScrollEvent?): Boolean {
+                isUserInteractingWithMap = true
+                lastUserInteractionTime = System.currentTimeMillis()
+                setMapCenteredState(false)
+                scheduleAutoCenter()
+                return false // Позволяем обработку события дальше
+            }
+            
+            override fun onZoom(event: ZoomEvent?): Boolean {
+                isUserInteractingWithMap = true
+                lastUserInteractionTime = System.currentTimeMillis()
+                setMapCenteredState(false)
+                scheduleAutoCenter()
+                return false // Позволяем обработку события дальше
+            }
+        })
+    }
+
+    private fun scheduleAutoCenter() {
+        // Отменяем предыдущую задачу автопоиска
+        mapView?.handler?.removeCallbacks(autoCenterRunnable)
+        // Планируем новую задачу через задержку
+        mapView?.handler?.postDelayed(autoCenterRunnable, AUTO_CENTER_DELAY)
+    }
+
+    private val autoCenterRunnable = Runnable {
+        isUserInteractingWithMap = false
+        // Автоматически центрируем карту на текущем местоположении
+        autoCenterOnLocation()
+    }
+
+    private fun autoCenterOnLocation() {
+        val session = viewModel.workoutSession.value
+        session.currentLocation?.let { location ->
+            val geoPoint = GpsFilter.createValidGeoPoint(location)
+            if (geoPoint != null) {
+                // Используем плавную анимацию для автопоиска
+                mapView?.controller?.animateTo(geoPoint, 16.0, 1000L)
+                setMapCenteredState(true)
+            } else {
+                android.util.Log.w("WorkoutTracking", "Invalid GPS coordinates for auto center")
+            }
+            
+            // Обновляем ориентацию карты по направлению движения
+            val bearing = location.bearing
+            if (bearing >= 0) {
+                try {
+                    val mapOrientation = -bearing
+                    mapView?.mapOrientation = mapOrientation
+                    android.util.Log.d("AutoCenter", "Auto-centered map and updated orientation: bearing=$bearing, mapOrientation=$mapOrientation")
+                } catch (e: Exception) {
+                    android.util.Log.e("AutoCenter", "Error updating map orientation: ${e.message}", e)
+                }
+            }
+            
+            lastMapUpdateTime = System.currentTimeMillis()
+        }
+    }
+    
+    private fun setupGpsStatusMonitoring() {
+        try {
+            // Проверяем разрешения
+            if (androidx.core.content.ContextCompat.checkSelfPermission(requireContext(), 
+                android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                
+                // Запрашиваем обновления местоположения для мониторинга GPS статуса
+                locationManager.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER,
+                    com.example.runner.util.GpsConfig.MEDIUM_ACCURACY_INTERVAL, // 5 секунд
+                    com.example.runner.util.GpsConfig.MIN_DISTANCE, // 5 метров
+                    gpsStatusListener
+                )
+                
+                android.util.Log.d("GPSStatus", "GPS status monitoring started")
+            } else {
+                android.util.Log.w("GPSStatus", "Location permission not granted for GPS status monitoring")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("GPSStatus", "Failed to setup GPS status monitoring: ${e.message}")
+        }
+    }
+    
+    private fun updateGpsStatusIcon() {
+        val gpsStatus = com.example.runner.util.ErrorHandler.determineGpsStatus(
+            requireContext(),
+            lastGpsAccuracy,
+            lastGpsUpdateTime
+        )
+        updateGpsSignalIndicator(gpsStatus, lastGpsAccuracy)
+    }
+
+    private fun setupSwipeGesture() {
+        gestureDetector = GestureDetector(requireContext(), object : SimpleOnGestureListener() {
+            override fun onFling(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                velocityX: Float,
+                velocityY: Float
+            ): Boolean {
+                if (e1 != null && e2 != null) {
+                    val diffY = e2.y - e1.y
+                    val diffX = e2.x - e1.x
+                    
+                    // Движение пальца вверх по области информации для развертывания
+                    if (Math.abs(diffY) > Math.abs(diffX) && diffY < 0 && Math.abs(diffY) > 100) {
+                        if (!isPanelExpanded) {
+                            expandPanel()
+                            return true
+                        }
+                    }
+                    // Движение пальца вниз для свертывания
+                    else if (Math.abs(diffY) > Math.abs(diffX) && diffY > 0 && Math.abs(diffY) > 100) {
+                        if (isPanelExpanded) {
+                            collapsePanel()
+                            return true
+                        }
+                    }
+                }
+                return false
+            }
+
+            override fun onSingleTapUp(e: MotionEvent): Boolean {
+                return handleDoubleTap()
+            }
+        })
+
+        // Устанавливаем gesture detector в кастомный LinearLayout
+        (binding.layoutWorkoutPanel as TouchInterceptingLinearLayout).setGestureDetector(gestureDetector)
+
+    }
+
+    private fun handleDoubleTap(): Boolean {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastTapTime < 300) { // 300ms для двойного тапа
+            // Двойной тап - переключаем состояние панели
+            if (isPanelExpanded) {
+                collapsePanel()
+            } else {
+                expandPanel()
+            }
+            return true
+        }
+        lastTapTime = currentTime
+        return false
+    }
+
+    private fun expandPanel() {
+        isPanelExpanded = true
+        binding.layoutExpandedInfo.visibility = android.view.View.VISIBLE
+        binding.textViewWorkoutTime.visibility = View.GONE
+        binding.textViewWorkoutDistance.visibility = View.GONE
+        binding.textViewWorkoutTimeLabel.visibility = View.GONE
+        binding.textViewWorkoutDistanceLabel.visibility = View.GONE
+        
+        // Анимация появления расширенной информации
+        binding.layoutExpandedInfo.alpha = 0f
+        binding.layoutExpandedInfo.animate()
+            .alpha(1f)
+            .setDuration(300)
+            .start()
+    }
+
+    private fun collapsePanel() {
+        isPanelExpanded = false
+        
+        // Анимация исчезновения расширенной информации
+        binding.layoutExpandedInfo.animate()
+            .alpha(0f)
+            .setDuration(300)
+            .withEndAction {
+                binding.layoutExpandedInfo.visibility = android.view.View.GONE
+                binding.textViewWorkoutTime.visibility = View.VISIBLE
+                binding.textViewWorkoutDistance.visibility = View.VISIBLE
+                binding.textViewWorkoutTimeLabel.visibility = View.VISIBLE
+                binding.textViewWorkoutDistanceLabel.visibility = View.VISIBLE
+            }
+            .start()
+    }
+
+    private fun initializeMap() {
+        mapView?.let { map ->
+            // Центрируем карту на текущем местоположении
+            locationOverlay?.myLocation?.let { geoPoint ->
+                // Проверяем валидность координат GeoPoint
+                if (geoPoint.latitude in -90.0..90.0 && geoPoint.longitude in -180.0..180.0) {
+                    map.controller?.setCenter(geoPoint)
+                } else {
+                    android.util.Log.w("WorkoutTracking", "Invalid GPS coordinates for map center")
+                }
+            }
+        }
+    }
+
+    private fun setupClickListeners() {
+        binding.buttonStart.setOnClickListener {
+            showWorkoutTypeDialog()
+        }
+
+        binding.buttonPause.setOnClickListener {
+            val currentState = viewModel.workoutState.value
+            android.util.Log.d("WorkoutTracking", "Pause button clicked, current state: $currentState")
+            
+            when (currentState) {
+                WorkoutState.RUNNING -> {
+                    android.util.Log.d("WorkoutTracking", "Pausing workout")
+                    viewModel.pauseWorkout()
+                }
+                WorkoutState.PAUSED -> {
+                    android.util.Log.d("WorkoutTracking", "Resuming workout")
+                    viewModel.resumeWorkout()
+                }
+                else -> {
+                    android.util.Log.w("WorkoutTracking", "Pause button clicked in unexpected state: $currentState")
+                }
+            }
+        }
+
+        binding.buttonStop.setOnTouchListener { view, event ->
+            if (!view.isEnabled) {
+                return@setOnTouchListener false
+            }
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    startStopHold()
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    if (stopHoldJob != null) {
+                        val inside = event.x >= 0 && event.y >= 0 && event.x <= view.width && event.y <= view.height
+                        if (!inside) {
+                            cancelStopHold()
+                        }
+                    }
+                    true
+                }
+                MotionEvent.ACTION_UP -> {
+                    val elapsed = SystemClock.elapsedRealtime() - stopHoldStartTime
+                    if (elapsed >= STOP_HOLD_DURATION_MS) {
+                        stopHoldJob?.cancel()
+                        stopHoldJob = null
+                        completeStopHold()
+                    } else {
+                        cancelStopHold()
+                    }
+                    view.performClick()
+                    true
+                }
+                MotionEvent.ACTION_CANCEL -> {
+                    cancelStopHold()
+                    true
+                }
+                else -> false
+            }
+        }
+
+        // Кнопка "Моё местоположение"
+        binding.buttonMyLocation.setOnClickListener {
+            centerMapOnCurrentLocation()
+        }
+    }
+
+    private fun startStopHold() {
+        stopHoldJob?.cancel()
+        stopHoldStartTime = SystemClock.elapsedRealtime()
+        binding.layoutStopHold.visibility = View.VISIBLE
+        binding.progressBarStopHold.progress = 0
+        binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
+
+        stopHoldJob = viewLifecycleOwner.lifecycleScope.launch {
+            while (true) {
+                val elapsed = SystemClock.elapsedRealtime() - stopHoldStartTime
+                val progress = (elapsed.toFloat() / STOP_HOLD_DURATION_MS).coerceIn(0f, 1f)
+                binding.progressBarStopHold.progress =
+                    (progress * binding.progressBarStopHold.max).toInt()
+
+                if (elapsed >= STOP_HOLD_DURATION_MS) {
+                    stopHoldJob = null
+                    completeStopHold()
+                    return@launch
+                }
+
+                val remainingMillis = (STOP_HOLD_DURATION_MS - elapsed).coerceAtLeast(0L)
+                val remainingSeconds = ceil(remainingMillis / 1000.0).toInt().coerceAtLeast(1)
+                binding.textViewStopHoldHint.text =
+                    getString(R.string.stop_hold_hint, remainingSeconds)
+                delay(50)
+            }
+        }
+    }
+
+    private fun cancelStopHold() {
+        stopHoldJob?.cancel()
+        stopHoldJob = null
+        stopHoldStartTime = 0L
+        binding.layoutStopHold.visibility = View.GONE
+        binding.progressBarStopHold.progress = 0
+        binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
+        binding.buttonStop.isPressed = false
+    }
+
+    private fun completeStopHold() {
+        stopHoldStartTime = 0L
+        binding.layoutStopHold.visibility = View.GONE
+        binding.progressBarStopHold.progress = 0
+        binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
+        binding.buttonStop.isPressed = false
+        viewModel.stopWorkout()
+        navigateToWorkoutDetails()
+    }
+
+    private fun observeViewModel() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                viewModel.workoutSession.collect { session ->
+                    if (isAdded && !isDetached) {
+                        updateUI(session)
+                    }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                android.util.Log.d("WorkoutTracking", "Session loading cancelled")
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                viewModel.workoutState.collect { state ->
+                    if (isAdded && !isDetached) {
+                        updateButtonStates(state)
+                    }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                android.util.Log.d("WorkoutTracking", "State loading cancelled")
+            }
+        }
+    }
+
+    private fun updateUI(session: WorkoutSession) {
+        val currentTime = System.currentTimeMillis()
+        
+        // Throttling UI обновлений для предотвращения дергания
+        if (currentTime - lastUIUpdateTime < UI_UPDATE_THROTTLE) {
+            return
+        }
+        lastUIUpdateTime = currentTime
+        
+        android.util.Log.d("WorkoutTracking", "updateUI called: isTracking=${session.isTracking}, isPaused=${session.isPaused}, currentTime=${session.currentTime}")
+        
+        // Показываем/скрываем индикатор точности GPS
+        updateGpsSignalIndicator(session.gpsStatus, lastGpsAccuracy)
+        
+        // Обновляем основную информацию
+        val formattedTime = viewModel.formatTime(session.currentTime)
+        val formattedDistance = String.format("%.2f", session.distance)
+        binding.textViewWorkoutTime.text = formattedTime
+        binding.textViewWorkoutDistance.text = formattedDistance
+        binding.textViewWorkoutTimeExpanded.text = formattedTime
+        binding.textViewWorkoutDistanceExpanded.text = formattedDistance
+        binding.textViewWorkoutPace.text = stripUnit(viewModel.formatPace(session.avgPace))
+        binding.textViewWorkoutHeartRate.text = if (session.heartRate > 0) session.heartRate.toString() else "--"
+        binding.textViewAvgSpeed.text = stripUnit(viewModel.formatSpeed(session.avgSpeed))
+        binding.textViewCurrentPace.text = stripUnit(viewModel.formatPace(session.currentPace))
+        binding.textViewCaloriesBurned.text = session.calories.toString()
+
+        // Обновляем GPS данные
+        session.currentLocation?.let { location ->
+            lastGpsAccuracy = location.accuracy
+            lastGpsUpdateTime = System.currentTimeMillis()
+            
+            
+            android.util.Log.d("GPSStatus", "GPS location updated: accuracy=${location.accuracy}m")
+        }
+
+        // Обновляем GPS статус (независимо от UI throttling)
+        val gpsStatusTime = System.currentTimeMillis()
+        if (gpsStatusTime - lastGpsStatusUpdate >= GPS_STATUS_UPDATE_INTERVAL) {
+            updateGpsStatusIcon()
+            lastGpsStatusUpdate = gpsStatusTime
+        }
+
+        // Обновляем трек на карте
+        updateTrackOnMap(session.trackPoints)
+        
+        // Обновляем ориентацию карты по направлению движения
+        updateMapOrientation(session)
+
+        // Автоматически центрируем карту только если пользователь не взаимодействует и прошло достаточно времени
+        session.currentLocation?.let { location ->
+            if (session.gpsStatus == GpsStatus.FOUND) {
+                if (!isUserInteractingWithMap) {
+                    val currentTime = System.currentTimeMillis()
+                    // Центрируем только если прошло больше 2 секунд с последнего обновления
+                    if (currentTime - lastMapUpdateTime > 2000) {
+                        val geoPoint = GpsFilter.createValidGeoPoint(location)
+                        if (geoPoint != null) {
+                            // Используем плавную анимацию с меньшей скоростью
+                            mapView?.controller?.animateTo(geoPoint, 16.0, 1000L)
+                            setMapCenteredState(true)
+                            lastMapUpdateTime = currentTime
+                        } else {
+                            android.util.Log.w("WorkoutTracking", "Invalid GPS coordinates for map update")
+                        }
+                    }
+                } else {
+                    // Если пользователь взаимодействует, планируем автопоиск после завершения взаимодействия
+                    scheduleAutoCenter()
+                }
+            }
+        }
+    }
+
+    private fun updateButtonStates(state: WorkoutState) {
+        android.util.Log.d("WorkoutTracking", "updateButtonStates called with state: $state")
+        
+        when (state) {
+            WorkoutState.NOT_STARTED -> {
+                android.util.Log.d("WorkoutTracking", "Setting buttons to NOT_STARTED state")
+                // 1. активна кнопка старта (не запущена)
+                binding.buttonStart.visibility = View.VISIBLE
+                binding.buttonPause.visibility = View.GONE
+                binding.buttonStop.visibility = View.GONE
+            }
+            WorkoutState.RUNNING -> {
+                android.util.Log.d("WorkoutTracking", "Setting buttons to RUNNING state")
+                // 2. активна кнопка паузы и остановки (запущена)
+                binding.buttonStart.visibility = View.GONE
+                binding.buttonPause.visibility = View.VISIBLE
+                binding.buttonStop.visibility = View.VISIBLE
+                binding.buttonPause.setImageResource(R.drawable.ic_pause)
+            }
+            WorkoutState.PAUSED -> {
+                android.util.Log.d("WorkoutTracking", "Setting buttons to PAUSED state")
+                // 3. активна кнопка возобновить и стоп (пауза)
+                binding.buttonStart.visibility = View.GONE
+                binding.buttonPause.visibility = View.VISIBLE
+                binding.buttonStop.visibility = View.VISIBLE
+                binding.buttonPause.setImageResource(R.drawable.ic_play_arrow)
+            }
+            WorkoutState.STOPPED -> {
+                android.util.Log.d("WorkoutTracking", "Setting buttons to STOPPED state")
+                // Возвращаемся к начальному состоянию
+                binding.buttonStart.visibility = View.VISIBLE
+                binding.buttonPause.visibility = View.GONE
+                binding.buttonStop.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun updateTrackOnMap(trackPoints: List<GeoPoint>) {
+        if (trackPoints.isNotEmpty()) {
+            // Обновляем трек только если есть новые точки
+            val currentPoints = trackPolyline?.points ?: emptyList()
+            if (trackPoints.size != currentPoints.size) {
+                trackPolyline?.setPoints(ArrayList(trackPoints))
+                mapView?.invalidate()
+                android.util.Log.d(TAG, "Track updated: ${trackPoints.size} points")
+            }
+        } else {
+            // Очищаем трек если нет точек
+            trackPolyline?.setPoints(ArrayList())
+            mapView?.invalidate()
+        }
+    }
+
+    private fun calculateBearing(from: GeoPoint, to: GeoPoint): Float {
+        val lat1 = Math.toRadians(from.latitude)
+        val lat2 = Math.toRadians(to.latitude)
+        val deltaLon = Math.toRadians(to.longitude - from.longitude)
+        
+        val y = Math.sin(deltaLon) * Math.cos(lat2)
+        val x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon)
+        
+        var bearing = Math.toDegrees(Math.atan2(y, x))
+        bearing = (bearing + 360) % 360
+        
+        return bearing.toFloat()
+    }
+
+    private fun updateMapOrientation(session: WorkoutSession) {
+        session.currentLocation?.let { currentLocation ->
+            val bearing = currentLocation.bearing
+            if (bearing >= 0) {
+                try {
+                    // Поворачиваем карту так, чтобы направление движения было вверх
+                    // bearing - это угол от севера по часовой стрелке
+                    // Для OSMDroid нужно инвертировать угол, чтобы направление было вверх
+                    val mapOrientation = -bearing
+                    mapView?.mapOrientation = mapOrientation
+                    android.util.Log.d("MapOrientation", "Updated map orientation: bearing=$bearing, mapOrientation=$mapOrientation")
+                } catch (e: Exception) {
+                    android.util.Log.e("MapOrientation", "Error updating map orientation: ${e.message}", e)
+                }
+            }
+        }
+    }
+
+    private fun centerMapOnCurrentLocation() {
+        // Принудительно центрируем карту на текущем местоположении
+        isUserInteractingWithMap = false
+        lastUserInteractionTime = System.currentTimeMillis()
+        lastMapUpdateTime = System.currentTimeMillis() // Сбрасываем таймер обновления
+
+        val session = viewModel.workoutSession.value
+        session.currentLocation?.let { location ->
+            val geoPoint = GpsFilter.createValidGeoPoint(location)
+            if (geoPoint != null) {
+                // Используем плавную анимацию
+                mapView?.controller?.animateTo(geoPoint, 16.0, 1000L)
+                setMapCenteredState(true)
+            } else {
+                android.util.Log.w("WorkoutTracking", "Invalid GPS coordinates for map center")
+                return
+            }
+            
+            // Обновляем ориентацию карты по направлению движения
+            val bearing = location.bearing
+            if (bearing >= 0) {
+                try {
+                    val mapOrientation = -bearing
+                    mapView?.mapOrientation = mapOrientation
+                    android.util.Log.d("MapCenter", "Centered map and updated orientation: bearing=$bearing, mapOrientation=$mapOrientation")
+                } catch (e: Exception) {
+                    android.util.Log.e("MapCenter", "Error updating map orientation: ${e.message}", e)
+                }
+            }
+        } ?: run {
+            // Если текущее местоположение недоступно, попробуем получить последнее известное
+            locationOverlay?.let { overlay ->
+                overlay.lastFix?.let { location ->
+                    val geoPoint = GpsFilter.createValidGeoPoint(location)
+                    if (geoPoint != null) {
+                        mapView?.controller?.animateTo(geoPoint, 16.0, 1000L)
+                        setMapCenteredState(true)
+                    } else {
+                        android.util.Log.w("WorkoutTracking", "Invalid GPS coordinates for last fix")
+                    }
+                }
+            }
+        }
+    }
+
+    private fun requestLocationPermission() {
+        when {
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                initializeMap()
+                viewModel.initializeLocationClient(requireContext())
+                requestNotificationPermission()
+            }
+            else -> {
+                locationPermissionRequest.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                )
+            }
+        }
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    // Разрешение уже предоставлено
+                }
+                else -> {
+                    notificationPermissionRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        }
+    }
+
+    private fun requestBackgroundLocationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    // Разрешение на фоновое местоположение уже предоставлено
+                }
+                else -> {
+                    // Запрашиваем разрешение на фоновое местоположение
+                    locationPermissionRequest.launch(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
+                }
+            }
+        }
+    }
+
+    private fun requestBatteryOptimizationExemption() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val powerManager = requireContext().getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
+            if (!powerManager.isIgnoringBatteryOptimizations(requireContext().packageName)) {
+                try {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = android.net.Uri.parse("package:${requireContext().packageName}")
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    // Если не удается открыть настройки, показываем уведомление
+                    Toast.makeText(
+                        requireContext(),
+                        "Для стабильной работы приложения отключите оптимизацию батареи в настройках",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
+    }
+
+    private fun requestActivityRecognitionPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    requireContext(),
+                    Manifest.permission.ACTIVITY_RECOGNITION
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    // Разрешение на распознавание активности уже предоставлено
+                }
+                else -> {
+                    // Запрашиваем разрешение на распознавание физической активности
+                    locationPermissionRequest.launch(arrayOf(Manifest.permission.ACTIVITY_RECOGNITION))
+                }
+            }
+        }
+    }
+
+    private fun showWorkoutTypeDialog() {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_workout_type, null)
+        
+        val dialog = AlertDialog.Builder(requireContext())
+            .setView(dialogView)
+            .create()
+
+        dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.button_cancel).setOnClickListener {
+            dialog.dismiss()
+        }
+
+        dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.button_start).setOnClickListener {
+            // Определяем выбранный тип тренировки
+            val radioGroup = dialogView.findViewById<android.widget.RadioGroup>(R.id.radioGroup_workout_type)
+            val selectedId = radioGroup.checkedRadioButtonId
+            
+            selectedWorkoutType = when (selectedId) {
+                R.id.radio_easy_run -> WorkoutType.EASY_RUN
+                R.id.radio_tempo_run -> WorkoutType.TEMPO_RUN
+                R.id.radio_interval_training -> WorkoutType.INTERVAL_TRAINING
+                R.id.radio_long_run -> WorkoutType.LONG_RUN
+                R.id.radio_recovery_run -> WorkoutType.RECOVERY_RUN
+                R.id.radio_race -> WorkoutType.RACE
+                else -> WorkoutType.EASY_RUN
+            }
+
+            dialog.dismiss()
+            // Запрашиваем отключение оптимизации батареи для стабильной работы
+            requestBatteryOptimizationExemption()
+            // Инициализируем сервис только при старте тренировки для экономии батареи
+            viewModel.initializeService()
+            // Используем retry механизм для надежного запуска
+            viewLifecycleOwner.lifecycleScope.launch {
+                kotlinx.coroutines.delay(500) // Небольшая задержка для инициализации
+                viewModel.startWorkoutWithRetry(selectedWorkoutType)
+            }
+            binding.textViewGpsAccuracy.visibility = View.GONE
+        }
+
+        dialog.show()
+    }
+
+    private fun saveWorkoutAndNavigateBack() {
+        val session = viewModel.workoutSession.value
+        
+        if (session.distance > 0 && session.currentTime > 0) {
+            // Сохраняем тренировку в базу данных
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val workoutId = viewModel.saveWorkoutToDatabase(selectedWorkoutType)
+                    if (workoutId != null) {
+                        Toast.makeText(context, "Тренировка сохранена: ${String.format("%.2f км за %s", session.distance, viewModel.formatTime(session.currentTime))}", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(context, "Ошибка при сохранении тренировки", Toast.LENGTH_SHORT).show()
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Ошибка при сохранении тренировки: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+                
+                // Сбрасываем данные тренировки после сохранения
+                viewModel.resetWorkout()
+                // Возвращаемся к списку тренировок
+                findNavController().navigateUp()
+            }
+        } else {
+            // Если тренировка слишком короткая, не сохраняем
+            Toast.makeText(context, "Тренировка слишком короткая для сохранения", Toast.LENGTH_SHORT).show()
+            // Сбрасываем данные тренировки даже если не сохраняем
+            viewModel.resetWorkout()
+            findNavController().navigateUp()
+        }
+    }
+
+    private fun navigateToWorkoutDetails() {
+        val session = viewModel.workoutSession.value
+        
+        if (session.distance > 0 && session.currentTime > 0) {
+            binding.textViewGpsAccuracy.visibility = View.GONE
+            binding.buttonStop.isEnabled = false
+            
+            // Сохраняем тренировку в базу данных
+            viewLifecycleOwner.lifecycleScope.launch {
+                try {
+                    val workoutId = viewModel.saveWorkoutToDatabase(selectedWorkoutType)
+                    if (workoutId != null) {
+                        Toast.makeText(context, "Тренировка сохранена: ${String.format("%.2f км за %s", session.distance, viewModel.formatTime(session.currentTime))}", Toast.LENGTH_LONG).show()
+                        
+                        // Переходим к экрану деталей тренировки
+                        val bundle = Bundle().apply {
+                            putLong("workoutId", workoutId)
+                        }
+                        findNavController().navigate(com.example.runner.R.id.nav_workout_detail, bundle)
+                    } else {
+                        com.example.runner.util.ErrorHandler.handleSaveError(requireContext(), Exception("Failed to save workout"))
+                    }
+                } catch (e: Exception) {
+                    com.example.runner.util.ErrorHandler.handleSaveError(requireContext(), e)
+                } finally {
+                    // Скрываем индикатор загрузки
+                    binding.textViewGpsAccuracy.visibility = View.GONE
+                    binding.buttonStop.isEnabled = true
+                    
+                    // Сбрасываем данные тренировки после сохранения
+                    viewModel.resetWorkout()
+                }
+            }
+        } else {
+            Toast.makeText(context, "Нет данных для сохранения", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mapView?.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        mapView?.onPause()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        
+        // Отменяем все запланированные задачи автопоиска
+        mapView?.handler?.removeCallbacks(autoCenterRunnable)
+        
+        // Останавливаем периодическое обновление GPS статуса
+        gpsStatusHandler.removeCallbacks(gpsStatusRunnable)
+        
+        // Останавливаем мониторинг GPS статуса
+        try {
+            locationManager.removeUpdates(gpsStatusListener)
+            android.util.Log.d("GPSStatus", "GPS status monitoring stopped")
+        } catch (e: Exception) {
+            android.util.Log.e("GPSStatus", "Failed to stop GPS status monitoring: ${e.message}")
+        }
+        
+        // Очищаем все обработчики и таймеры
+        // locationTimer уже объявлен как var в классе
+        
+        // Отключаемся от сервиса если подключены
+        try {
+            viewModel.cleanup()
+        } catch (e: Exception) {
+            // ViewModel может быть не инициализирован
+        }
+        
+        // Очищаем карту
+        mapView?.onDetach()
+        mapView = null
+        locationOverlay = null
+        trackPolyline = null
+
+        cancelStopHold()
+        
+        _binding = null
+    }
+}

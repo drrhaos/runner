@@ -1,0 +1,83 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    
+    <!-- Круглый фон -->
+    <circle
+        android:fillColor="#FF5722"
+        android:centerX="24"
+        android:centerY="24"
+        android:radius="24dp" />
+    
+    <!-- Внутренний круг -->
+    <circle
+        android:fillColor="#FFFFFF"
+        android:centerX="24"
+        android:centerY="24"
+        android:radius="20dp" />
+    
+    <!-- Фигура бегуна -->
+    <group
+        android:scaleX="0.7"
+        android:scaleY="0.7"
+        android:pivotX="24"
+        android:pivotY="24">
+        
+        <!-- Голова -->
+        <circle
+            android:fillColor="#FF5722"
+            android:centerX="24"
+            android:centerY="12"
+            android:radius="3dp" />
+        
+        <!-- Тело -->
+        <path
+            android:fillColor="#FF5722"
+            android:pathData="M24,15 L24,28" 
+            android:strokeWidth="2"
+            android:strokeColor="#FF5722"
+            android:strokeLineCap="round" />
+        
+        <!-- Левая рука (поднята) -->
+        <path
+            android:fillColor="#FF5722"
+            android:pathData="M24,18 L20,10" 
+            android:strokeWidth="2"
+            android:strokeColor="#FF5722"
+            android:strokeLineCap="round" />
+        
+        <!-- Правая рука (опущена) -->
+        <path
+            android:fillColor="#FF5722"
+            android:pathData="M24,18 L28,24" 
+            android:strokeWidth="2"
+            android:strokeColor="#FF5722"
+            android:strokeLineCap="round" />
+        
+        <!-- Левая нога (вытянута) -->
+        <path
+            android:fillColor="#FF5722"
+            android:pathData="M24,28 L18,38" 
+            android:strokeWidth="2"
+            android:strokeColor="#FF5722"
+            android:strokeLineCap="round" />
+        
+        <!-- Правая нога (поджата) -->
+        <path
+            android:fillColor="#FF5722"
+            android:pathData="M24,28 L30,34" 
+            android:strokeWidth="2"
+            android:strokeColor="#FF5722"
+            android:strokeLineCap="round" />
+    </group>
+    
+    <!-- Линия движения -->
+    <path
+        android:fillColor="#4CAF50"
+        android:pathData="M8,38 Q24,35 40,38" 
+        android:strokeWidth="3"
+        android:strokeColor="#4CAF50"
+        android:strokeLineCap="round" />
+</vector>

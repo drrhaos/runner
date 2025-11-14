@@ -1,0 +1,179 @@
+package com.example.runner.util
+
+import android.location.Location
+import android.util.Log
+import org.osmdroid.util.GeoPoint
+
+/**
+ * Утилита для фильтрации GPS выбросов и неправильных координат
+ */
+object GpsFilter {
+    
+    // Максимальное расстояние между точками (в метрах) для фильтрации выбросов
+    private const val MAX_DISTANCE_BETWEEN_POINTS = 500.0 // 500 метров
+    
+    // Максимальная точность GPS (в метрах) - точки с худшей точностью игнорируются
+    private const val MAX_ACCEPTABLE_ACCURACY = 100.0 // 100 метров
+    
+    // Минимальная точность GPS (в метрах) - точки с лучшей точностью всегда принимаются
+    private const val MIN_ACCEPTABLE_ACCURACY = 20.0 // 20 метров
+    
+    // Максимальная скорость движения (м/с) - 50 км/ч для велосипеда
+    private const val MAX_REASONABLE_SPEED = 14.0 // 14 м/с = 50 км/ч
+    
+    /**
+     * Проверяет, является ли GPS координата валидной
+     */
+    fun isValidGpsLocation(location: Location): Boolean {
+        Log.d("GpsFilter", "Validating GPS location: lat=${location.latitude}, lon=${location.longitude}, accuracy=${location.accuracy}m, speed=${location.speed}m/s")
+        
+        // Проверяем базовые параметры
+        if (!location.hasAccuracy() || !location.hasSpeed()) {
+            Log.w("GpsFilter", "Location missing accuracy or speed data")
+            return false
+        }
+        
+        // Проверяем точность GPS
+        if (location.accuracy > MAX_ACCEPTABLE_ACCURACY) {
+            Log.w("GpsFilter", "GPS accuracy too poor: ${location.accuracy}m > ${MAX_ACCEPTABLE_ACCURACY}m")
+            return false
+        }
+        
+        // Проверяем скорость (если слишком высокая, возможно это выброс)
+        if (location.speed > MAX_REASONABLE_SPEED) {
+            Log.w("GpsFilter", "Speed too high: ${location.speed}m/s > ${MAX_REASONABLE_SPEED}m/s")
+            return false
+        }
+        
+        // Проверяем координаты на валидность
+        if (!isValidCoordinate(location.latitude, location.longitude)) {
+            Log.w("GpsFilter", "Invalid coordinates: lat=${location.latitude}, lon=${location.longitude}")
+            return false
+        }
+        
+        Log.d("GpsFilter", "GPS location validation passed")
+        return true
+    }
+    
+    /**
+     * Проверяет, является ли координата валидной
+     */
+    private fun isValidCoordinate(latitude: Double, longitude: Double): Boolean {
+        return latitude in -90.0..90.0 && 
+               longitude in -180.0..180.0 &&
+               !latitude.isNaN() && 
+               !longitude.isNaN() &&
+               latitude.isFinite() && 
+               longitude.isFinite()
+    }
+    
+    /**
+     * Фильтрует GPS выбросы, сравнивая с предыдущей точкой
+     */
+    fun filterGpsOutlier(
+        newLocation: Location, 
+        previousLocation: Location?
+    ): Location? {
+        // Если это первая точка, проверяем только базовую валидность
+        if (previousLocation == null) {
+            return if (isValidGpsLocation(newLocation)) {
+                Log.d("GpsFilter", "First valid GPS point accepted")
+                newLocation
+            } else {
+                Log.w("GpsFilter", "First GPS point rejected")
+                null
+            }
+        }
+        
+        // Проверяем базовую валидность новой точки
+        if (!isValidGpsLocation(newLocation)) {
+            Log.w("GpsFilter", "GPS point failed basic validation")
+            return null
+        }
+        
+        // Вычисляем расстояние между точками
+        val distance = newLocation.distanceTo(previousLocation)
+        
+        // Если расстояние слишком большое, считаем это выбросом
+        if (distance > MAX_DISTANCE_BETWEEN_POINTS) {
+            Log.w("GpsFilter", "GPS outlier detected: distance=${distance}m")
+            return null
+        }
+        
+        // Проверяем, не является ли это "прыжком" назад по времени
+        if (newLocation.time < previousLocation.time) {
+            Log.w("GpsFilter", "GPS point with earlier timestamp rejected")
+            return null
+        }
+        
+        // Если новая точка имеет очень хорошую точность, принимаем её
+        if (newLocation.accuracy <= MIN_ACCEPTABLE_ACCURACY) {
+            Log.d("GpsFilter", "High accuracy GPS point accepted: ${newLocation.accuracy}m")
+            return newLocation
+        }
+        
+        // Для точек со средней точностью проверяем дополнительно
+        val timeDiff = newLocation.time - previousLocation.time
+        val expectedMaxDistance = calculateExpectedMaxDistance(previousLocation, timeDiff)
+        
+        if (distance > expectedMaxDistance) {
+            Log.w("GpsFilter", "GPS point exceeds expected distance: ${distance}m > ${expectedMaxDistance}m")
+            return null
+        }
+        
+        Log.d("GpsFilter", "GPS point accepted: distance=${distance}m, accuracy=${newLocation.accuracy}m")
+        return newLocation
+    }
+    
+    /**
+     * Вычисляет максимально ожидаемое расстояние на основе скорости и времени
+     */
+    private fun calculateExpectedMaxDistance(previousLocation: Location, timeDiffMs: Long): Double {
+        val timeDiffSeconds = timeDiffMs / 1000.0
+        val speed = previousLocation.speed
+        
+        // Максимальная скорость для бега + 50% запас
+        val maxSpeed = minOf(speed * 1.5, MAX_REASONABLE_SPEED)
+        
+        return maxSpeed * timeDiffSeconds
+    }
+    
+    /**
+     * Создает валидный GeoPoint или возвращает null
+     */
+    fun createValidGeoPoint(location: Location): GeoPoint? {
+        // ВРЕМЕННО: Всегда создаем GeoPoint для тестирования
+        return GeoPoint(location.latitude, location.longitude)
+        
+        // return if (isValidGpsLocation(location)) {
+        //     GeoPoint(location.latitude, location.longitude)
+        // } else {
+        //     Log.w("GpsFilter", "Cannot create GeoPoint: invalid location")
+        //     null
+        // }
+    }
+    
+    /**
+     * Создает валидный GeoPoint с фильтрацией выбросов
+     */
+    fun createValidGeoPointWithFiltering(
+        location: Location, 
+        previousLocation: Location?
+    ): GeoPoint? {
+        val filteredLocation = filterGpsOutlier(location, previousLocation)
+        return filteredLocation?.let { 
+            GeoPoint(it.latitude, it.longitude) 
+        }
+    }
+    
+    /**
+     * Логирует информацию о GPS точке для отладки
+     */
+    fun logGpsInfo(location: Location, isAccepted: Boolean) {
+        Log.d("GpsFilter", 
+            "GPS Point: lat=${location.latitude}, lon=${location.longitude}, " +
+            "accuracy=${location.accuracy}m, speed=${location.speed}m/s, " +
+            "accepted=$isAccepted"
+        )
+    }
+}

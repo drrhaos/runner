@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".ui.tracking.WorkoutTrackingFragment">
+
+        <!-- Карта OpenStreetMap -->
+        <org.osmdroid.views.MapView
+            android:id="@+id/mapView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clickable="true" />
+
+        <!-- Индикатор GPS сигнала в левом верхнем углу -->
+        <LinearLayout
+            android:id="@+id/layout_gps_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentStart="true"
+            android:layout_margin="16dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+            <LinearLayout
+                android:id="@+id/layout_gps_signal_bars"
+                android:layout_width="wrap_content"
+                android:layout_height="16dp"
+                android:layout_marginStart="8dp"
+                android:gravity="bottom"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/view_gps_bar_1"
+                    android:layout_width="4dp"
+                    android:layout_height="6dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="@drawable/gps_signal_bar_background" />
+
+                <View
+                    android:id="@+id/view_gps_bar_2"
+                    android:layout_width="4dp"
+                    android:layout_height="10dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="@drawable/gps_signal_bar_background" />
+
+                <View
+                    android:id="@+id/view_gps_bar_3"
+                    android:layout_width="4dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="2dp"
+                    android:background="@drawable/gps_signal_bar_background" />
+
+                <View
+                    android:id="@+id/view_gps_bar_4"
+                    android:layout_width="4dp"
+                    android:layout_height="16dp"
+                    android:background="@drawable/gps_signal_bar_background" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Элементы управления картой в правом верхнем углу -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"
+            android:layout_margin="16dp"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <!-- Кнопка поиска текущего местоположения -->
+            <FrameLayout
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:visibility="gone"
+                android:id="@+id/button_my_location_container">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center"
+                    android:background="@drawable/map_center_circle" />
+
+                <ImageButton
+                    android:id="@+id/button_my_location"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:layout_gravity="center"
+                    android:background="@android:color/transparent"
+                    android:src="@drawable/ic_navigation_yellow"
+                    android:scaleType="centerInside"
+                    android:padding="8dp"
+                    android:rotation="45"
+                    android:contentDescription="Мое местоположение" />
+            </FrameLayout>
+        </LinearLayout>
+
+    <!-- Объединенная панель с параметрами тренировки и кнопками -->
+    <com.example.runner.ui.tracking.TouchInterceptingLinearLayout
+        android:id="@+id/layout_workout_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:orientation="vertical"
+        android:background="@drawable/tracking_panel_background"
+        android:padding="12dp"
+        android:layout_margin="8dp"
+        android:elevation="8dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <LinearLayout
+            android:id="@+id/layout_panel_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <View
+                android:layout_width="48dp"
+                android:layout_height="4dp"
+                android:layout_marginBottom="8dp"
+                android:background="@drawable/panel_handle_background"
+                android:alpha="0.6" />
+
+        </LinearLayout>
+
+        <!-- Расширенная информация (скрыта по умолчанию) -->
+        <LinearLayout
+            android:id="@+id/layout_expanded_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="@dimen/expanded_info_min_height"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:layout_marginTop="12dp"
+            android:padding="16dp"
+            android:gravity="center_horizontal">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:layout_marginBottom="24dp">
+
+                <TextView
+                    android:id="@+id/textView_workout_time_expanded"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00:00:00"
+                    android:textSize="40sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Время (ч:мин:с)"
+                    android:textSize="16sp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:alpha="0.72"
+                    android:layout_marginTop="4dp" />
+
+                <TextView
+                    android:id="@+id/textView_workout_distance_expanded"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0.00"
+                    android:textSize="40sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface"
+                    android:layout_marginTop="16dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Дистанция (км)"
+                    android:textSize="16sp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:alpha="0.72"
+                    android:layout_marginTop="4dp" />
+            </LinearLayout>
+
+            <GridLayout
+                android:id="@+id/grid_additional_metrics"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:columnCount="2"
+                android:rowCount="2"
+                android:useDefaultMargins="true">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="8dp"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/textView_avg_speed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0.00"
+                        android:textSize="24sp"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Средняя скорость (км/ч)"
+                        android:textSize="14sp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:alpha="0.72" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="8dp"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/textView_current_pace"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--:--"
+                        android:textSize="24sp"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Текущий темп (мин/км)"
+                        android:textSize="14sp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:alpha="0.72" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="8dp"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/textView_workout_pace"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--:--"
+                        android:textSize="24sp"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Средний темп (мин/км)"
+                        android:textSize="14sp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:alpha="0.72" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="8dp"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/textView_calories_burned"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textSize="24sp"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Калории (ккал)"
+                        android:textSize="14sp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:alpha="0.72" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_columnWeight="1"
+                    android:layout_margin="8dp"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:layout_columnSpan="2">
+
+                    <TextView
+                        android:id="@+id/textView_workout_heart_rate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--"
+                        android:textSize="24sp"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Пульс (уд/мин)"
+                        android:textSize="14sp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:alpha="0.72" />
+                </LinearLayout>
+            </GridLayout>
+        </LinearLayout>
+
+        <!-- Основная строка: Время, Кнопки, Дистанция -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="8dp">
+
+            <!-- Время тренировки -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <TextView
+                    android:id="@+id/textView_workout_time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="00:00:00"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <TextView
+                    android:id="@+id/textView_workout_time_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Время (ч:мин:с)"
+                    android:textSize="10sp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:alpha="0.72" />
+            </LinearLayout>
+
+            <!-- Кнопки управления -->
+            <LinearLayout
+                android:id="@+id/layout_control_buttons"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center">
+
+                <!-- Кнопка пауза (изначально скрыта) -->
+                <ImageButton
+                    android:id="@+id/button_pause"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/button_pause_background"
+                    android:src="@drawable/ic_pause"
+                    android:scaleType="centerInside"
+                    android:padding="12dp"
+                    android:layout_marginEnd="8dp"
+                    android:visibility="gone"
+                    android:contentDescription="Пауза"
+                    android:tint="?attr/colorOnSecondary" />
+
+                <!-- Кнопка старт -->
+                <ImageButton
+                    android:id="@+id/button_start"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/button_start_background"
+                    android:src="@drawable/ic_play_arrow"
+                    android:scaleType="centerInside"
+                    android:padding="12dp"
+                    android:contentDescription="Старт"
+                    android:tint="?attr/colorOnPrimary" />
+
+                <!-- Кнопка стоп (изначально скрыта) -->
+                <ImageButton
+                    android:id="@+id/button_stop"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:background="@drawable/button_stop_background"
+                    android:src="@drawable/ic_stop"
+                    android:scaleType="centerInside"
+                    android:padding="12dp"
+                    android:layout_marginStart="8dp"
+                    android:visibility="gone"
+                    android:contentDescription="Стоп"
+                    app:tint="@color/stop_button_icon_tint" />
+            </LinearLayout>
+
+            <!-- Дистанция -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <TextView
+                    android:id="@+id/textView_workout_distance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0.00"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <TextView
+                    android:id="@+id/textView_workout_distance_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Дистанция (км)"
+                    android:textSize="10sp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:alpha="0.72" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.example.runner.ui.tracking.TouchInterceptingLinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_stop_hold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingLeft="24dp"
+        android:paddingTop="24dp"
+        android:paddingRight="24dp"
+        android:paddingBottom="24dp"
+        android:background="@drawable/stop_hold_overlay_background"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:id="@+id/progressBar_stop_hold"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:indeterminate="false"
+            android:max="100"
+            android:progress="0" />
+
+        <TextView
+            android:id="@+id/textView_stop_hold_hint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/stop_hold_hint_initial"
+            android:textColor="?attr/colorOnSurface"
+            android:textStyle="bold"
+            android:textSize="16sp" />
+
+    </LinearLayout>
+
+    <!-- Индикатор точности GPS (скрыт по умолчанию) -->
+    <TextView
+        android:id="@+id/textView_gps_accuracy"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/accuracy_background"
+        android:padding="8dp"
+            android:text="@string/gps_accuracy_searching"
+        android:textColor="?attr/colorOnSurface"
+        android:textSize="14sp"
+        android:visibility="gone" />
+
+</RelativeLayout>
