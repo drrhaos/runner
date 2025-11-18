@@ -376,10 +376,30 @@
                 android:textColor="?attr/colorOnSurface"
                 android:layout_marginBottom="8dp" />
 
-            <com.github.mikephil.charting.charts.LineChart
-                android:id="@+id/chart_pace_speed_heart"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="250dp" />
+                android:layout_height="250dp">
+
+                <com.github.mikephil.charting.charts.LineChart
+                    android:id="@+id/chart_pace_speed_heart"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <TextView
+                    android:id="@+id/textView_chart_pace_speed_heart_values"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="8dp"
+                    android:text=""
+                    android:textSize="12sp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:background="#E0000000"
+                    android:padding="8dp"
+                    android:gravity="start"
+                    android:visibility="gone" />
+
+            </FrameLayout>
 
         </LinearLayout>
 
@@ -408,10 +428,30 @@
                 android:textColor="?attr/colorOnSurface"
                 android:layout_marginBottom="8dp" />
 
-            <com.github.mikephil.charting.charts.LineChart
-                android:id="@+id/chart_elevation"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="250dp" />
+                android:layout_height="250dp">
+
+                <com.github.mikephil.charting.charts.LineChart
+                    android:id="@+id/chart_elevation"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <TextView
+                    android:id="@+id/textView_chart_elevation_values"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="8dp"
+                    android:text=""
+                    android:textSize="12sp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:background="#E0000000"
+                    android:padding="8dp"
+                    android:gravity="start"
+                    android:visibility="gone" />
+
+            </FrameLayout>
 
         </LinearLayout>
 
@@ -473,10 +513,30 @@
 
             </LinearLayout>
 
-            <com.github.mikephil.charting.charts.BarChart
-                android:id="@+id/chart_segments"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="250dp" />
+                android:layout_height="250dp">
+
+                <com.github.mikephil.charting.charts.BarChart
+                    android:id="@+id/chart_segments"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <TextView
+                    android:id="@+id/textView_chart_segments_values"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="8dp"
+                    android:text=""
+                    android:textSize="12sp"
+                    android:textColor="?attr/colorOnSurface"
+                    android:background="#E0000000"
+                    android:padding="8dp"
+                    android:gravity="start"
+                    android:visibility="gone" />
+
+            </FrameLayout>
 
         </LinearLayout>
 
