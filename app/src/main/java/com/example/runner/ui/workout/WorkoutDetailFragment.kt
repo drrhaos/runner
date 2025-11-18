@@ -27,6 +27,14 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import java.text.SimpleDateFormat
 import java.util.*
+import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.charts.BarChart
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.components.YAxis
+import com.github.mikephil.charting.data.*
+import com.github.mikephil.charting.formatter.ValueFormatter
+import android.location.Location
+import androidx.core.content.ContextCompat
 
 class WorkoutDetailFragment : Fragment() {
 
@@ -44,6 +52,13 @@ class WorkoutDetailFragment : Fragment() {
     private var currentWorkout: com.example.runner.data.Workout? = null
     private var mapView: MapView? = null
     private var trackPolyline: Polyline? = null
+    private var currentTrackData: com.example.runner.data.TrackData? = null
+    private var userPreferences: com.example.runner.util.UserPreferences? = null
+    private var segmentsDisplayMode: SegmentsDisplayMode = SegmentsDisplayMode.PACE
+
+    enum class SegmentsDisplayMode {
+        PACE, SPEED
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -57,6 +72,7 @@ class WorkoutDetailFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        userPreferences = com.example.runner.util.UserPreferences(requireContext())
         setupMap()
         setupClickListeners()
         loadWorkout()
@@ -102,6 +118,39 @@ class WorkoutDetailFragment : Fragment() {
 
         binding.buttonDelete.setOnClickListener {
             showDeleteConfirmationDialog()
+        }
+
+        // Устанавливаем первую кнопку как выбранную по умолчанию
+        binding.buttonBasicInfo.isChecked = true
+        
+        // Обработчик переключения между основными параметрами и графиками
+        binding.toggleGroupAnalysis.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (isChecked) {
+                when (checkedId) {
+                    binding.buttonBasicInfo.id -> {
+                        binding.layoutBasicInfo.visibility = View.VISIBLE
+                        binding.layoutCharts.visibility = View.GONE
+                    }
+                    binding.buttonCharts.id -> {
+                        binding.layoutBasicInfo.visibility = View.GONE
+                        binding.layoutCharts.visibility = View.VISIBLE
+                    }
+                }
+            }
+        }
+
+        // Обработчик для переключения режима отображения сегментов
+        binding.chipGroupSegmentDisplay.setOnCheckedStateChangeListener { group, checkedIds ->
+            when {
+                binding.chipPace.isChecked -> {
+                    segmentsDisplayMode = SegmentsDisplayMode.PACE
+                    currentTrackData?.let { updateSegmentsChart(it) }
+                }
+                binding.chipSpeed.isChecked -> {
+                    segmentsDisplayMode = SegmentsDisplayMode.SPEED
+                    currentTrackData?.let { updateSegmentsChart(it) }
+                }
+            }
         }
     }
 
@@ -309,6 +358,9 @@ class WorkoutDetailFragment : Fragment() {
                     
                     android.util.Log.d("WorkoutDetail", "Using ${cleanedTrackData.points.size} points for display")
                     
+                    // Сохраняем данные трека для графиков
+                    currentTrackData = cleanedTrackData
+                    
                     // Создаем GeoPoints из очищенных данных
                     val geoPoints = cleanedTrackData.points.map { trackPoint ->
                         GeoPoint(trackPoint.latitude, trackPoint.longitude)
@@ -334,6 +386,9 @@ class WorkoutDetailFragment : Fragment() {
                     }
                     
                     mapView?.invalidate()
+                    
+                    // Обновляем графики
+                    updateCharts(cleanedTrackData)
                     
                     android.util.Log.d("WorkoutDetail", "Successfully loaded track with ${geoPoints.size} points")
                 } else {
@@ -404,5 +459,329 @@ class WorkoutDetailFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun updateCharts(trackData: com.example.runner.data.TrackData) {
+        if (trackData.points.isEmpty()) return
+
+        updatePaceSpeedHeartChart(trackData)
+        updateElevationChart(trackData)
+        updateSegmentsChart(trackData)
+    }
+
+    private fun updatePaceSpeedHeartChart(trackData: com.example.runner.data.TrackData) {
+        val chart = binding.chartPaceSpeedHeart
+        val points = trackData.points
+
+        if (points.size < 2) {
+            chart.visibility = View.GONE
+            return
+        }
+
+        chart.visibility = View.VISIBLE
+        chart.description.isEnabled = false
+        chart.setTouchEnabled(true)
+        chart.setDragEnabled(true)
+        chart.setScaleEnabled(true)
+        chart.setPinchZoom(true)
+        chart.legend.isEnabled = true
+
+        // Настройка цветов для темной темы
+        val isDarkTheme = isDarkTheme()
+        val textColor = if (isDarkTheme) Color.WHITE else Color.BLACK
+        val gridColor = if (isDarkTheme) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
+
+        val entriesPace = mutableListOf<Entry>()
+        val entriesSpeed = mutableListOf<Entry>()
+
+        var cumulativeDistance = 0f
+        val startTime = points.firstOrNull()?.timestamp ?: 0L
+
+        for (i in 0 until points.size) {
+            val point = points[i]
+            
+            // Вычисляем накопленную дистанцию
+            if (i > 0) {
+                val prevPoint = points[i - 1]
+                val location1 = Location("").apply {
+                    latitude = prevPoint.latitude
+                    longitude = prevPoint.longitude
+                }
+                val location2 = Location("").apply {
+                    latitude = point.latitude
+                    longitude = point.longitude
+                }
+                cumulativeDistance += location1.distanceTo(location2) / 1000f // в км
+            }
+
+            // Темп (минуты на км) - вычисляем из скорости
+            val speedMs = point.speed ?: 0f
+            val speedKmh = speedMs * 3.6f
+            val pace = if (speedKmh > 0) 60f / speedKmh else 0f
+
+            // Время относительно начала (в минутах)
+            val timeMinutes = if (startTime > 0) (point.timestamp - startTime) / 60000f else 0f
+
+            entriesPace.add(Entry(timeMinutes, pace))
+            entriesSpeed.add(Entry(timeMinutes, speedKmh))
+            // Пульс пока не доступен в данных, оставляем пустым
+        }
+
+        val dataSetPace = LineDataSet(entriesPace, "Темп (мин/км)").apply {
+            color = Color.parseColor("#FF9800")
+            lineWidth = 2f
+            setCircleColor(Color.parseColor("#FF9800"))
+            setDrawCircles(false)
+            setDrawValues(false)
+            axisDependency = YAxis.AxisDependency.LEFT
+        }
+
+        val dataSetSpeed = LineDataSet(entriesSpeed, "Скорость (км/ч)").apply {
+            color = Color.parseColor("#2196F3")
+            lineWidth = 2f
+            setCircleColor(Color.parseColor("#2196F3"))
+            setDrawCircles(false)
+            setDrawValues(false)
+            axisDependency = YAxis.AxisDependency.LEFT
+        }
+
+        val lineData = LineData(dataSetPace, dataSetSpeed)
+        chart.data = lineData
+
+        // Настройка осей
+        val xAxis = chart.xAxis
+        xAxis.position = XAxis.XAxisPosition.BOTTOM
+        xAxis.setDrawGridLines(true)
+        xAxis.gridColor = gridColor
+        xAxis.textColor = textColor
+        xAxis.axisLineColor = textColor
+        xAxis.granularity = 1f
+        xAxis.valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                val minutes = value.toInt()
+                return "${minutes} мин"
+            }
+        }
+
+        val leftAxis = chart.axisLeft
+        leftAxis.setDrawGridLines(true)
+        leftAxis.gridColor = gridColor
+        leftAxis.textColor = textColor
+        leftAxis.axisLineColor = textColor
+        leftAxis.axisMinimum = 0f
+
+        chart.axisRight.isEnabled = false
+        chart.legend.textColor = textColor
+        chart.invalidate()
+    }
+
+    private fun updateElevationChart(trackData: com.example.runner.data.TrackData) {
+        val chart = binding.chartElevation
+        val points = trackData.points
+
+        if (points.isEmpty() || points.all { it.altitude == null }) {
+            chart.visibility = View.GONE
+            return
+        }
+
+        chart.visibility = View.VISIBLE
+        chart.description.isEnabled = false
+        chart.setTouchEnabled(true)
+        chart.setDragEnabled(true)
+        chart.setScaleEnabled(true)
+        chart.setPinchZoom(true)
+        chart.legend.isEnabled = false
+        
+        // Настройка цветов для темной темы
+        val isDarkTheme = isDarkTheme()
+        val textColor = if (isDarkTheme) Color.WHITE else Color.BLACK
+        val gridColor = if (isDarkTheme) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
+
+        val entries = mutableListOf<Entry>()
+        var cumulativeDistance = 0f
+
+        for (i in 0 until points.size) {
+            val point = points[i]
+            
+            if (i > 0) {
+                val prevPoint = points[i - 1]
+                val location1 = Location("").apply {
+                    latitude = prevPoint.latitude
+                    longitude = prevPoint.longitude
+                }
+                val location2 = Location("").apply {
+                    latitude = point.latitude
+                    longitude = point.longitude
+                }
+                cumulativeDistance += location1.distanceTo(location2) / 1000f // в км
+            }
+
+            val altitude = point.altitude ?: 0.0
+            entries.add(Entry(cumulativeDistance, altitude.toFloat()))
+        }
+
+        val dataSet = LineDataSet(entries, "Высота").apply {
+            color = Color.parseColor("#4CAF50")
+            lineWidth = 2f
+            setCircleColor(Color.parseColor("#4CAF50"))
+            setDrawCircles(false)
+            setDrawValues(false)
+            setDrawFilled(true)
+            fillColor = Color.parseColor("#4CAF50")
+            fillAlpha = 50
+        }
+
+        val lineData = LineData(dataSet)
+        chart.data = lineData
+
+        val xAxis = chart.xAxis
+        xAxis.position = XAxis.XAxisPosition.BOTTOM
+        xAxis.setDrawGridLines(true)
+        xAxis.gridColor = gridColor
+        xAxis.textColor = textColor
+        xAxis.axisLineColor = textColor
+        xAxis.granularity = 0.5f
+        xAxis.valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                return String.format("%.1f км", value)
+            }
+        }
+
+        val leftAxis = chart.axisLeft
+        leftAxis.setDrawGridLines(true)
+        leftAxis.gridColor = gridColor
+        leftAxis.textColor = textColor
+        leftAxis.axisLineColor = textColor
+        leftAxis.valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                return "${value.toInt()} м"
+            }
+        }
+
+        chart.axisRight.isEnabled = false
+        chart.invalidate()
+    }
+
+    private fun updateSegmentsChart(trackData: com.example.runner.data.TrackData) {
+        val chart = binding.chartSegments
+        val points = trackData.points
+
+        if (points.size < 2) {
+            chart.visibility = View.GONE
+            return
+        }
+
+        chart.visibility = View.VISIBLE
+        chart.description.isEnabled = false
+        chart.setTouchEnabled(true)
+        chart.setDragEnabled(true)
+        chart.setScaleEnabled(true)
+        chart.setPinchZoom(true)
+        chart.legend.isEnabled = true
+
+        // Настройка цветов для темной темы
+        val isDarkTheme = isDarkTheme()
+        val textColor = if (isDarkTheme) Color.WHITE else Color.BLACK
+        val gridColor = if (isDarkTheme) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
+
+        // Используем настройки приложения для определения единиц измерения
+        val isMetric = userPreferences?.isMetricSystem() ?: true
+        val segmentSize = if (isMetric) 1.0f else 1.60934f // 1 миля = 1.60934 км
+        val unitLabel = if (isMetric) "км" else "миля"
+        val segments = mutableListOf<Pair<Float, Float>>() // (pace, speed)
+        var currentSegmentDistance = 0f
+        var segmentStartTime = points.firstOrNull()?.timestamp ?: 0L
+
+        for (i in 1 until points.size) {
+            val prevPoint = points[i - 1]
+            val point = points[i]
+
+            val location1 = Location("").apply {
+                latitude = prevPoint.latitude
+                longitude = prevPoint.longitude
+            }
+            val location2 = Location("").apply {
+                latitude = point.latitude
+                longitude = point.longitude
+            }
+            val segmentDistance = location1.distanceTo(location2) / 1000f // в км
+            currentSegmentDistance += segmentDistance
+
+            if (currentSegmentDistance >= segmentSize || i == points.size - 1) {
+                val segmentDuration = point.timestamp - segmentStartTime
+                val segmentDurationMinutes = segmentDuration / 60000f
+                val pace = if (currentSegmentDistance > 0) segmentDurationMinutes / currentSegmentDistance else 0f
+                var speed = if (segmentDurationMinutes > 0) currentSegmentDistance / (segmentDurationMinutes / 60f) else 0f
+                
+                // Конвертируем скорость в мили/ч, если используется имперская система
+                if (!isMetric) {
+                    speed = speed / 1.60934f // конвертация из км/ч в миль/ч
+                }
+
+                segments.add(Pair(pace, speed))
+                currentSegmentDistance = 0f
+                segmentStartTime = point.timestamp
+            }
+        }
+
+        if (segments.isEmpty()) {
+            chart.visibility = View.GONE
+            return
+        }
+
+        val dataSet: BarDataSet = when (segmentsDisplayMode) {
+            SegmentsDisplayMode.PACE -> {
+                val entriesPace = segments.mapIndexed { index, pair -> BarEntry(index.toFloat(), pair.first) }
+                BarDataSet(entriesPace, "Темп (мин/$unitLabel)").apply {
+                    color = Color.parseColor("#FF9800")
+                    setDrawValues(false)
+                }
+            }
+            SegmentsDisplayMode.SPEED -> {
+                val entriesSpeed = segments.mapIndexed { index, pair -> BarEntry(index.toFloat(), pair.second) }
+                val speedUnit = if (isMetric) "км/ч" else "миль/ч"
+                BarDataSet(entriesSpeed, "Скорость ($speedUnit)").apply {
+                    color = Color.parseColor("#2196F3")
+                    setDrawValues(false)
+                }
+            }
+        }
+
+        val barData = BarData(dataSet).apply {
+            // Увеличиваем ширину столбцов
+            barWidth = 0.6f
+        }
+        chart.data = barData
+
+        val xAxis = chart.xAxis
+        xAxis.position = XAxis.XAxisPosition.BOTTOM
+        xAxis.setDrawGridLines(true)
+        xAxis.gridColor = gridColor
+        xAxis.textColor = textColor
+        xAxis.axisLineColor = textColor
+        xAxis.granularity = 1f
+        xAxis.valueFormatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                val segmentNum = value.toInt() + 1
+                return "$unitLabel $segmentNum"
+            }
+        }
+
+        val leftAxis = chart.axisLeft
+        leftAxis.setDrawGridLines(true)
+        leftAxis.gridColor = gridColor
+        leftAxis.textColor = textColor
+        leftAxis.axisLineColor = textColor
+        leftAxis.axisMinimum = 0f
+
+        chart.axisRight.isEnabled = false
+        chart.legend.textColor = textColor
+        chart.setFitBars(true)
+        chart.invalidate()
+    }
+
+    private fun isDarkTheme(): Boolean {
+        val nightModeFlags = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        return nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
     }
 }
