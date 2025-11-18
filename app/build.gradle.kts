@@ -77,6 +77,9 @@ dependencies {
     // JSON serialization
     implementation("com.google.code.gson:gson:2.10.1")
     
+    // Charts
+    implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    
     // Unit testing
     testImplementation(libs.junit)
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
