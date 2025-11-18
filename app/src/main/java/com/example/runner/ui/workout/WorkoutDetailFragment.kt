@@ -33,8 +33,15 @@ import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.components.YAxis
 import com.github.mikephil.charting.data.*
 import com.github.mikephil.charting.formatter.ValueFormatter
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
+import com.github.mikephil.charting.interfaces.datasets.IBarDataSet
+import com.github.mikephil.charting.highlight.Highlight
+import com.github.mikephil.charting.utils.MPPointF
 import android.location.Location
 import androidx.core.content.ContextCompat
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
 
 class WorkoutDetailFragment : Fragment() {
 
@@ -55,6 +62,8 @@ class WorkoutDetailFragment : Fragment() {
     private var currentTrackData: com.example.runner.data.TrackData? = null
     private var userPreferences: com.example.runner.util.UserPreferences? = null
     private var segmentsDisplayMode: SegmentsDisplayMode = SegmentsDisplayMode.PACE
+    private var positionMarker: org.osmdroid.views.overlay.Marker? = null
+    private var positionMarkerEnd: org.osmdroid.views.overlay.Marker? = null
 
     enum class SegmentsDisplayMode {
         PACE, SPEED
@@ -98,7 +107,48 @@ class WorkoutDetailFragment : Fragment() {
         }
         mapView?.overlays?.add(trackPolyline)
         
+        // Инициализация маркеров для отображения выбранных точек
+        mapView?.let { view ->
+            // Маркер начала отрезка (синий)
+            positionMarker = org.osmdroid.views.overlay.Marker(view).apply {
+                icon = createDefaultMarkerIcon(Color.BLUE)
+                setVisible(false)
+                // Центрируем маркер относительно точки (0.5, 0.5 = центр)
+                setAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_CENTER)
+                setInfoWindowAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_TOP)
+            }
+            view.overlays.add(positionMarker)
+            
+            // Маркер конца отрезка (синий, как и начало)
+            positionMarkerEnd = org.osmdroid.views.overlay.Marker(view).apply {
+                icon = createDefaultMarkerIcon(Color.BLUE)
+                setVisible(false)
+                setAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_CENTER)
+                setInfoWindowAnchor(org.osmdroid.views.overlay.Marker.ANCHOR_CENTER, org.osmdroid.views.overlay.Marker.ANCHOR_TOP)
+            }
+            view.overlays.add(positionMarkerEnd)
+        }
+        
         android.util.Log.d("WorkoutDetail", "Map setup completed")
+    }
+    
+    private fun createDefaultMarkerIcon(color: Int = Color.BLUE): android.graphics.drawable.Drawable {
+        // Уменьшаем размер в 3 раза: было 32dp, стало ~11dp
+        val size = (32 * resources.displayMetrics.density / 3f).toInt()
+        val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = color
+            style = android.graphics.Paint.Style.FILL
+        }
+        // Рисуем круг, уменьшаем отступы пропорционально
+        val radius = size / 2f - 2f
+        canvas.drawCircle(size / 2f, size / 2f, radius, paint)
+        paint.color = Color.WHITE
+        paint.style = android.graphics.Paint.Style.STROKE
+        paint.strokeWidth = 2f // Уменьшаем толщину обводки пропорционально
+        canvas.drawCircle(size / 2f, size / 2f, radius, paint)
+        return android.graphics.drawable.BitmapDrawable(resources, bitmap)
     }
 
     private fun setupClickListeners() {
@@ -624,6 +674,43 @@ class WorkoutDetailFragment : Fragment() {
 
         chart.axisRight.isEnabled = false
         chart.legend.textColor = textColor
+        
+        // Добавляем маркер для отображения значений
+        val marker = ValueMarker { xValue, yValue, label ->
+            when (label) {
+                "Темп (мин/км)" -> String.format("Время: %.0f мин\nТемп: %.2f мин/км", xValue, yValue)
+                "Скорость (км/ч)" -> String.format("Время: %.0f мин\nСкорость: %.1f км/ч", xValue, yValue)
+                else -> String.format("Время: %.0f мин\nЗначение: %.2f", xValue, yValue)
+            }
+        }
+        chart.marker = marker
+        chart.setDrawMarkers(true)
+        
+        // Добавляем слушатель для отображения точки на карте
+        chart.setOnChartValueSelectedListener(object : com.github.mikephil.charting.listener.OnChartValueSelectedListener {
+            override fun onValueSelected(e: Entry?, h: Highlight?) {
+                if (e != null && currentTrackData != null) {
+                    val trackPoints = currentTrackData!!.points
+                    val startTime = trackPoints.firstOrNull()?.timestamp ?: 0L
+                    val selectedTimeMinutes = e.x
+                    val selectedTime = startTime + (selectedTimeMinutes * 60000).toLong()
+                    
+                    // Находим ближайшую точку по времени
+                    val selectedPoint = trackPoints.minByOrNull { 
+                        kotlin.math.abs(it.timestamp - selectedTime) 
+                    }
+                    
+                    selectedPoint?.let { point ->
+                        showPositionOnMap(point)
+                    }
+                }
+            }
+            
+            override fun onNothingSelected() {
+                hidePositionMarker()
+            }
+        })
+        
         chart.invalidate()
     }
 
@@ -711,6 +798,63 @@ class WorkoutDetailFragment : Fragment() {
         }
 
         chart.axisRight.isEnabled = false
+        
+        // Добавляем маркер для отображения значений
+        val marker = ValueMarker { xValue, yValue, _ ->
+            String.format("Дистанция: %.2f км\nВысота: %.0f м", xValue, yValue)
+        }
+        chart.marker = marker
+        chart.setDrawMarkers(true)
+        
+        // Добавляем слушатель для отображения точки на карте
+        chart.setOnChartValueSelectedListener(object : com.github.mikephil.charting.listener.OnChartValueSelectedListener {
+            override fun onValueSelected(e: Entry?, h: Highlight?) {
+                if (e != null && currentTrackData != null) {
+                    val trackPoints = currentTrackData!!.points
+                    val selectedDistance = e.x // дистанция в км
+                    
+                    // Находим точку по накопленной дистанции
+                    var cumulativeDistance = 0f
+                    var selectedPoint: com.example.runner.data.TrackPoint? = null
+                    
+                    for (i in 0 until trackPoints.size) {
+                        val point = trackPoints[i]
+                        
+                        if (i > 0) {
+                            val prevPoint = trackPoints[i - 1]
+                            val location1 = Location("").apply {
+                                latitude = prevPoint.latitude
+                                longitude = prevPoint.longitude
+                            }
+                            val location2 = Location("").apply {
+                                latitude = point.latitude
+                                longitude = point.longitude
+                            }
+                            cumulativeDistance += location1.distanceTo(location2) / 1000f
+                        }
+                        
+                        if (cumulativeDistance >= selectedDistance) {
+                            selectedPoint = point
+                            break
+                        }
+                    }
+                    
+                    // Если не нашли, берем последнюю точку
+                    if (selectedPoint == null && trackPoints.isNotEmpty()) {
+                        selectedPoint = trackPoints.last()
+                    }
+                    
+                    selectedPoint?.let { point ->
+                        showPositionOnMap(point)
+                    }
+                }
+            }
+            
+            override fun onNothingSelected() {
+                hidePositionMarker()
+            }
+        })
+        
         chart.invalidate()
     }
 
@@ -829,11 +973,203 @@ class WorkoutDetailFragment : Fragment() {
         chart.axisRight.isEnabled = false
         chart.legend.textColor = textColor
         chart.setFitBars(true)
+        
+        // Добавляем маркер для отображения значений
+        val marker = ValueMarker { xValue, yValue, label ->
+            val segmentNum = xValue.toInt() + 1
+            when (label) {
+                "Темп" -> String.format("Отрезок: %d\nТемп: %.2f мин/%s", segmentNum, yValue, unitLabel)
+                "Скорость" -> {
+                    val speedUnit = if (isMetric) "км/ч" else "миль/ч"
+                    String.format("Отрезок: %d\nСкорость: %.1f %s", segmentNum, yValue, speedUnit)
+                }
+                else -> String.format("Отрезок: %d\nЗначение: %.2f", segmentNum, yValue)
+            }
+        }
+        chart.marker = marker
+        chart.setDrawMarkers(true)
+        
+        // Добавляем слушатель для отображения точек на карте (начало и конец отрезка)
+        chart.setOnChartValueSelectedListener(object : com.github.mikephil.charting.listener.OnChartValueSelectedListener {
+            override fun onValueSelected(e: Entry?, h: Highlight?) {
+                if (e != null && currentTrackData != null) {
+                    val trackPoints = currentTrackData!!.points
+                    val segmentIndex = e.x.toInt()
+                    
+                    // Вычисляем точки для каждого отрезка
+                    var currentSegmentDistance = 0f
+                    var segmentStartIndex = 0
+                    var segmentCount = 0
+                    var segmentStartPoint: com.example.runner.data.TrackPoint? = null
+                    var segmentEndPoint: com.example.runner.data.TrackPoint? = null
+                    
+                    for (i in 1 until trackPoints.size) {
+                        val prevPoint = trackPoints[i - 1]
+                        val point = trackPoints[i]
+                        
+                        // Сохраняем начальную точку отрезка
+                        if (segmentCount == segmentIndex && segmentStartPoint == null) {
+                            segmentStartPoint = trackPoints[segmentStartIndex]
+                        }
+                        
+                        val location1 = Location("").apply {
+                            latitude = prevPoint.latitude
+                            longitude = prevPoint.longitude
+                        }
+                        val location2 = Location("").apply {
+                            latitude = point.latitude
+                            longitude = point.longitude
+                        }
+                        val segmentDistance = location1.distanceTo(location2) / 1000f
+                        currentSegmentDistance += segmentDistance
+                        
+                        if (currentSegmentDistance >= segmentSize || i == trackPoints.size - 1) {
+                            if (segmentCount == segmentIndex) {
+                                // Находим начало и конец отрезка
+                                segmentStartPoint = trackPoints[segmentStartIndex]
+                                segmentEndPoint = point
+                                
+                                // Показываем обе точки на карте
+                                segmentStartPoint?.let { start ->
+                                    showPositionOnMap(start)
+                                }
+                                segmentEndPoint?.let { end ->
+                                    showPositionOnMapEnd(end)
+                                }
+                                
+                                // Центрируем карту на середине отрезка
+                                if (segmentStartPoint != null && segmentEndPoint != null) {
+                                    val midLat = (segmentStartPoint!!.latitude + segmentEndPoint!!.latitude) / 2.0
+                                    val midLon = (segmentStartPoint!!.longitude + segmentEndPoint!!.longitude) / 2.0
+                                    val midPoint = GeoPoint(midLat, midLon)
+                                    mapView?.controller?.animateTo(midPoint)
+                                }
+                                break
+                            }
+                            segmentCount++
+                            segmentStartIndex = i
+                            currentSegmentDistance = 0f
+                        }
+                    }
+                }
+            }
+            
+            override fun onNothingSelected() {
+                hidePositionMarkers()
+            }
+        })
+        
         chart.invalidate()
     }
 
     private fun isDarkTheme(): Boolean {
         val nightModeFlags = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         return nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
+    }
+
+    /**
+     * Кастомный маркер для отображения значений на графиках
+     */
+    private inner class ValueMarker(
+        private val valueFormatter: (Float, Float, String?) -> String
+    ) : com.github.mikephil.charting.components.MarkerView(requireContext(), com.example.runner.R.layout.marker_view) {
+        
+        private val textView: android.widget.TextView by lazy {
+            rootView.findViewById<android.widget.TextView>(android.R.id.text1) ?: 
+            android.widget.TextView(requireContext()).apply {
+                id = android.R.id.text1
+            }
+        }
+        
+        init {
+            val isDarkTheme = isDarkTheme()
+            val textView = rootView.findViewById<android.widget.TextView>(android.R.id.text1)
+            textView?.let {
+                it.setTextColor(if (isDarkTheme) Color.WHITE else Color.BLACK)
+                it.setBackgroundColor(if (isDarkTheme) Color.parseColor("#E0000000") else Color.parseColor("#E0FFFFFF"))
+                it.textSize = 12f
+                it.setPadding(16, 8, 16, 8)
+            }
+        }
+        
+        override fun refreshContent(e: Entry?, highlight: Highlight?) {
+            if (e == null || highlight == null) {
+                return
+            }
+            
+            val xValue = e.x
+            val yValue = e.y
+            
+            // Получаем название датасета для форматирования
+            val dataSetIndex = highlight.dataSetIndex
+            val dataSetLabel = when (val chartView = chartView) {
+                is LineChart -> {
+                    val lineData = chartView.data as? LineData
+                    lineData?.getDataSetByIndex(dataSetIndex)?.label
+                }
+                is BarChart -> {
+                    val barData = chartView.data as? BarData
+                    barData?.getDataSetByIndex(dataSetIndex)?.label
+                }
+                else -> null
+            }
+            
+            val formattedValue = valueFormatter(xValue, yValue, dataSetLabel)
+            val textView = rootView.findViewById<android.widget.TextView>(android.R.id.text1)
+            textView?.text = formattedValue
+            
+            super.refreshContent(e, highlight)
+        }
+        
+        override fun getOffset(): MPPointF {
+            return MPPointF(-width / 2f, -height.toFloat() - 10f)
+        }
+    }
+    
+    /**
+     * Показывает позицию на карте для выбранной точки трека (начало отрезка)
+     */
+    private fun showPositionOnMap(trackPoint: com.example.runner.data.TrackPoint) {
+        positionMarker?.let { marker ->
+            val geoPoint = GeoPoint(trackPoint.latitude, trackPoint.longitude)
+            marker.position = geoPoint
+            marker.setVisible(true)
+            
+            // Включаем масштабирование маркера вместе с картой
+            // flat = false означает, что маркер будет масштабироваться при зуме
+            marker.isFlat = false
+            
+            mapView?.invalidate()
+        }
+    }
+    
+    /**
+     * Показывает позицию конца отрезка на карте
+     */
+    private fun showPositionOnMapEnd(trackPoint: com.example.runner.data.TrackPoint) {
+        positionMarkerEnd?.let { marker ->
+            val geoPoint = GeoPoint(trackPoint.latitude, trackPoint.longitude)
+            marker.position = geoPoint
+            marker.setVisible(true)
+            marker.isFlat = false
+            
+            mapView?.invalidate()
+        }
+    }
+    
+    /**
+     * Скрывает маркеры позиции на карте
+     */
+    private fun hidePositionMarkers() {
+        positionMarker?.setVisible(false)
+        positionMarkerEnd?.setVisible(false)
+        mapView?.invalidate()
+    }
+    
+    /**
+     * Скрывает маркер позиции на карте (для других графиков)
+     */
+    private fun hidePositionMarker() {
+        hidePositionMarkers()
     }
 }
