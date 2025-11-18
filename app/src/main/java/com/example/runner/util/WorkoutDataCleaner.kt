@@ -67,6 +67,9 @@ object WorkoutDataCleaner {
         location.accuracy = trackPoint.accuracy ?: 100f
         location.speed = trackPoint.speed ?: 0f
         location.time = trackPoint.timestamp
+        trackPoint.altitude?.let { altitude ->
+            location.altitude = altitude
+        }
         return location
     }
     

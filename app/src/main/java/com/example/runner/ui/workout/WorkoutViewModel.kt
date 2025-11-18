@@ -112,8 +112,9 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     
     /**
      * Очищает данные тренировки от GPS выбросов
+     * @param forceClean если true, очистка выполняется принудительно, даже если needsCleaning возвращает false
      */
-    suspend fun cleanWorkoutData(workout: Workout): Workout? {
+    suspend fun cleanWorkoutData(workout: Workout, forceClean: Boolean = false): Workout? {
         return try {
             if (workout.trackData == null) {
                 android.util.Log.d("WorkoutViewModel", "Workout has no track data to clean")
@@ -123,14 +124,16 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
             val gson = com.google.gson.Gson()
             val trackData = gson.fromJson(workout.trackData, com.example.runner.data.TrackData::class.java)
             
-            // Проверяем, нужна ли очистка
-            val needsCleaning = WorkoutDataCleaner.needsCleaning(trackData)
-            if (!needsCleaning) {
-                android.util.Log.d("WorkoutViewModel", "Workout data doesn't need cleaning")
-                return workout
+            // Проверяем, нужна ли очистка (если не принудительная)
+            if (!forceClean) {
+                val needsCleaning = WorkoutDataCleaner.needsCleaning(trackData)
+                if (!needsCleaning) {
+                    android.util.Log.d("WorkoutViewModel", "Workout data doesn't need cleaning")
+                    return workout
+                }
             }
             
-            android.util.Log.d("WorkoutViewModel", "Cleaning workout data for workout ${workout.id}")
+            android.util.Log.d("WorkoutViewModel", "Cleaning workout data for workout ${workout.id} (forceClean=$forceClean)")
             
             // Очищаем данные
             val cleanedTrackData = WorkoutDataCleaner.cleanTrackData(trackData)
