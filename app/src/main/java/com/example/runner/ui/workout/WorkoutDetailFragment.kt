@@ -675,38 +675,51 @@ class WorkoutDetailFragment : Fragment() {
         chart.axisRight.isEnabled = false
         chart.legend.textColor = textColor
         
-        // Добавляем маркер для отображения значений
-        val marker = ValueMarker { xValue, yValue, label ->
-            when (label) {
-                "Темп (мин/км)" -> String.format("Время: %.0f мин\nТемп: %.2f мин/км", xValue, yValue)
-                "Скорость (км/ч)" -> String.format("Время: %.0f мин\nСкорость: %.1f км/ч", xValue, yValue)
-                else -> String.format("Время: %.0f мин\nЗначение: %.2f", xValue, yValue)
-            }
-        }
-        chart.marker = marker
-        chart.setDrawMarkers(true)
+        // Отключаем маркер, так как используем TextView
+        chart.setDrawMarkers(false)
         
-        // Добавляем слушатель для отображения точки на карте
+        // Настраиваем фон TextView в зависимости от темы
+        binding.textViewChartPaceSpeedHeartValues.setBackgroundColor(
+            if (isDarkTheme) Color.parseColor("#E0FFFFFF") else Color.parseColor("#E0000000")
+        )
+        binding.textViewChartPaceSpeedHeartValues.setTextColor(
+            if (isDarkTheme) Color.BLACK else Color.WHITE
+        )
+        
+        // Добавляем слушатель для отображения значений в TextView и точки на карте
         chart.setOnChartValueSelectedListener(object : com.github.mikephil.charting.listener.OnChartValueSelectedListener {
             override fun onValueSelected(e: Entry?, h: Highlight?) {
-                if (e != null && currentTrackData != null) {
-                    val trackPoints = currentTrackData!!.points
-                    val startTime = trackPoints.firstOrNull()?.timestamp ?: 0L
-                    val selectedTimeMinutes = e.x
-                    val selectedTime = startTime + (selectedTimeMinutes * 60000).toLong()
-                    
-                    // Находим ближайшую точку по времени
-                    val selectedPoint = trackPoints.minByOrNull { 
+                if (e != null) {
+                    val startTime = points.firstOrNull()?.timestamp ?: 0L
+                    val selectedTime = startTime + (e.x * 60000).toLong()
+                    val selectedPoint = points.minByOrNull { 
                         kotlin.math.abs(it.timestamp - selectedTime) 
                     }
                     
-                    selectedPoint?.let { point ->
-                        showPositionOnMap(point)
+                    if (selectedPoint != null) {
+                        // Получаем скорость в м/с
+                        val speedMs = selectedPoint.speed ?: 0f
+                        // Вычисляем темп (минуты на км)
+                        val speedKmh = speedMs * 3.6f
+                        val pace = if (speedKmh > 0) 60f / speedKmh else 0f
+                        
+                        // Форматируем время
+                        val timeMinutes = e.x.toInt()
+                        
+                        // Обновляем TextView
+                        val valuesText = String.format("время: %d мин.\nскорость: %.0f м/сек\nтемп: %.2f", 
+                            timeMinutes, speedMs, pace)
+                        binding.textViewChartPaceSpeedHeartValues.text = valuesText
+                        binding.textViewChartPaceSpeedHeartValues.visibility = View.VISIBLE
+                        
+                        // Показываем точку на карте
+                        showPositionOnMap(selectedPoint)
                     }
                 }
             }
             
             override fun onNothingSelected() {
+                binding.textViewChartPaceSpeedHeartValues.visibility = View.GONE
                 hidePositionMarker()
             }
         })
@@ -799,19 +812,30 @@ class WorkoutDetailFragment : Fragment() {
 
         chart.axisRight.isEnabled = false
         
-        // Добавляем маркер для отображения значений
-        val marker = ValueMarker { xValue, yValue, _ ->
-            String.format("Дистанция: %.2f км\nВысота: %.0f м", xValue, yValue)
-        }
-        chart.marker = marker
-        chart.setDrawMarkers(true)
+        // Отключаем маркер, так как используем TextView
+        chart.setDrawMarkers(false)
         
-        // Добавляем слушатель для отображения точки на карте
+        // Настраиваем фон TextView в зависимости от темы
+        binding.textViewChartElevationValues.setBackgroundColor(
+            if (isDarkTheme) Color.parseColor("#E0FFFFFF") else Color.parseColor("#E0000000")
+        )
+        binding.textViewChartElevationValues.setTextColor(
+            if (isDarkTheme) Color.BLACK else Color.WHITE
+        )
+        
+        // Добавляем слушатель для отображения значений в TextView и точки на карте
         chart.setOnChartValueSelectedListener(object : com.github.mikephil.charting.listener.OnChartValueSelectedListener {
             override fun onValueSelected(e: Entry?, h: Highlight?) {
                 if (e != null && currentTrackData != null) {
                     val trackPoints = currentTrackData!!.points
                     val selectedDistance = e.x // дистанция в км
+                    val selectedElevation = e.y // высота в метрах
+                    
+                    // Обновляем TextView
+                    val valuesText = String.format("дистанция: %.2f км\nвысота: %.0f м", 
+                        selectedDistance, selectedElevation)
+                    binding.textViewChartElevationValues.text = valuesText
+                    binding.textViewChartElevationValues.visibility = View.VISIBLE
                     
                     // Находим точку по накопленной дистанции
                     var cumulativeDistance = 0f
@@ -851,6 +875,7 @@ class WorkoutDetailFragment : Fragment() {
             }
             
             override fun onNothingSelected() {
+                binding.textViewChartElevationValues.visibility = View.GONE
                 hidePositionMarker()
             }
         })
@@ -930,7 +955,14 @@ class WorkoutDetailFragment : Fragment() {
                 val entriesPace = segments.mapIndexed { index, pair -> BarEntry(index.toFloat(), pair.first) }
                 BarDataSet(entriesPace, "Темп (мин/$unitLabel)").apply {
                     color = Color.parseColor("#FF9800")
-                    setDrawValues(false)
+                    setDrawValues(true)
+                    valueTextColor = textColor
+                    valueTextSize = 10f
+                    valueFormatter = object : ValueFormatter() {
+                        override fun getFormattedValue(value: Float): String {
+                            return String.format("%.2f", value)
+                        }
+                    }
                 }
             }
             SegmentsDisplayMode.SPEED -> {
@@ -938,7 +970,14 @@ class WorkoutDetailFragment : Fragment() {
                 val speedUnit = if (isMetric) "км/ч" else "миль/ч"
                 BarDataSet(entriesSpeed, "Скорость ($speedUnit)").apply {
                     color = Color.parseColor("#2196F3")
-                    setDrawValues(false)
+                    setDrawValues(true)
+                    valueTextColor = textColor
+                    valueTextSize = 10f
+                    valueFormatter = object : ValueFormatter() {
+                        override fun getFormattedValue(value: Float): String {
+                            return String.format("%.1f", value)
+                        }
+                    }
                 }
             }
         }
@@ -974,22 +1013,10 @@ class WorkoutDetailFragment : Fragment() {
         chart.legend.textColor = textColor
         chart.setFitBars(true)
         
-        // Добавляем маркер для отображения значений
-        val marker = ValueMarker { xValue, yValue, label ->
-            val segmentNum = xValue.toInt() + 1
-            when (label) {
-                "Темп" -> String.format("Отрезок: %d\nТемп: %.2f мин/%s", segmentNum, yValue, unitLabel)
-                "Скорость" -> {
-                    val speedUnit = if (isMetric) "км/ч" else "миль/ч"
-                    String.format("Отрезок: %d\nСкорость: %.1f %s", segmentNum, yValue, speedUnit)
-                }
-                else -> String.format("Отрезок: %d\nЗначение: %.2f", segmentNum, yValue)
-            }
-        }
-        chart.marker = marker
-        chart.setDrawMarkers(true)
+        // Отключаем маркер, так как значения отображаются над столбцами
+        chart.setDrawMarkers(false)
         
-        // Добавляем слушатель для отображения точек на карте (начало и конец отрезка)
+        // Добавляем слушатель для отображения точек на карте
         chart.setOnChartValueSelectedListener(object : com.github.mikephil.charting.listener.OnChartValueSelectedListener {
             override fun onValueSelected(e: Entry?, h: Highlight?) {
                 if (e != null && currentTrackData != null) {
