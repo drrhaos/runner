@@ -21,34 +21,35 @@ object GpsFilter {
     // Максимальная скорость движения (м/с) - 50 км/ч для велосипеда
     private const val MAX_REASONABLE_SPEED = 14.0 // 14 м/с = 50 км/ч
     
+    // Максимальное изменение высоты между точками (в метрах) для фильтрации выбросов
+    private const val MAX_ALTITUDE_CHANGE = 50.0 // 50 метров
+    
     /**
      * Проверяет, является ли GPS координата валидной
      */
     fun isValidGpsLocation(location: Location): Boolean {
-        Log.d("GpsFilter", "Validating GPS location: lat=${location.latitude}, lon=${location.longitude}, accuracy=${location.accuracy}m, speed=${location.speed}m/s")
+        Log.d("GpsFilter", "Validating GPS location: lat=${location.latitude}, lon=${location.longitude}, accuracy=${if (location.hasAccuracy()) location.accuracy else "N/A"}m, speed=${if (location.hasSpeed()) location.speed else "N/A"}m/s")
         
-        // Проверяем базовые параметры
-        if (!location.hasAccuracy() || !location.hasSpeed()) {
-            Log.w("GpsFilter", "Location missing accuracy or speed data")
-            return false
-        }
-        
-        // Проверяем точность GPS
-        if (location.accuracy > MAX_ACCEPTABLE_ACCURACY) {
-            Log.w("GpsFilter", "GPS accuracy too poor: ${location.accuracy}m > ${MAX_ACCEPTABLE_ACCURACY}m")
-            return false
-        }
-        
-        // Проверяем скорость (если слишком высокая, возможно это выброс)
-        if (location.speed > MAX_REASONABLE_SPEED) {
-            Log.w("GpsFilter", "Speed too high: ${location.speed}m/s > ${MAX_REASONABLE_SPEED}m/s")
-            return false
-        }
-        
-        // Проверяем координаты на валидность
+        // Проверяем координаты на валидность (обязательная проверка)
         if (!isValidCoordinate(location.latitude, location.longitude)) {
             Log.w("GpsFilter", "Invalid coordinates: lat=${location.latitude}, lon=${location.longitude}")
             return false
+        }
+        
+        // Проверяем точность GPS (если доступна)
+        if (location.hasAccuracy()) {
+            if (location.accuracy > MAX_ACCEPTABLE_ACCURACY) {
+                Log.w("GpsFilter", "GPS accuracy too poor: ${location.accuracy}m > ${MAX_ACCEPTABLE_ACCURACY}m")
+                return false
+            }
+        }
+        
+        // Проверяем скорость точки (если доступна и слишком высокая, возможно это выброс)
+        if (location.hasSpeed()) {
+            if (location.speed > MAX_REASONABLE_SPEED) {
+                Log.w("GpsFilter", "Speed too high: ${location.speed}m/s > ${MAX_REASONABLE_SPEED}m/s")
+                return false
+            }
         }
         
         Log.d("GpsFilter", "GPS location validation passed")
@@ -91,19 +92,44 @@ object GpsFilter {
             return null
         }
         
-        // Вычисляем расстояние между точками
-        val distance = newLocation.distanceTo(previousLocation)
-        
-        // Если расстояние слишком большое, считаем это выбросом
-        if (distance > MAX_DISTANCE_BETWEEN_POINTS) {
-            Log.w("GpsFilter", "GPS outlier detected: distance=${distance}m")
-            return null
-        }
-        
         // Проверяем, не является ли это "прыжком" назад по времени
         if (newLocation.time < previousLocation.time) {
             Log.w("GpsFilter", "GPS point with earlier timestamp rejected")
             return null
+        }
+        
+        // Вычисляем расстояние между точками
+        val distance = newLocation.distanceTo(previousLocation)
+        
+        // Если расстояние слишком большое, считаем это выбросом (проверяем первым)
+        if (distance > MAX_DISTANCE_BETWEEN_POINTS) {
+            Log.w("GpsFilter", "GPS outlier detected: distance=${distance}m > ${MAX_DISTANCE_BETWEEN_POINTS}m")
+            return null
+        }
+        
+        // Вычисляем время между точками
+        val timeDiff = newLocation.time - previousLocation.time
+        val timeDiffSeconds = timeDiff / 1000.0
+        
+        // Проверяем скорость между точками (если время > 0)
+        if (timeDiffSeconds > 0) {
+            // Вычисляем скорость между точками (м/с)
+            val calculatedSpeed = distance / timeDiffSeconds
+            
+            // Если вычисленная скорость превышает допустимую, считаем это выбросом
+            if (calculatedSpeed > MAX_REASONABLE_SPEED) {
+                Log.w("GpsFilter", "GPS outlier detected: calculated speed=${calculatedSpeed}m/s (${calculatedSpeed * 3.6}km/h) > ${MAX_REASONABLE_SPEED}m/s, distance=${distance}m, time=${timeDiffSeconds}s")
+                return null
+            }
+        }
+        
+        // Проверяем резкие изменения высоты (если обе точки имеют данные о высоте)
+        if (newLocation.hasAltitude() && previousLocation.hasAltitude()) {
+            val altitudeChange = kotlin.math.abs(newLocation.altitude - previousLocation.altitude)
+            if (altitudeChange > MAX_ALTITUDE_CHANGE) {
+                Log.w("GpsFilter", "GPS outlier detected: altitude change=${altitudeChange}m (from ${previousLocation.altitude}m to ${newLocation.altitude}m)")
+                return null
+            }
         }
         
         // Если новая точка имеет очень хорошую точность, принимаем её
@@ -113,7 +139,6 @@ object GpsFilter {
         }
         
         // Для точек со средней точностью проверяем дополнительно
-        val timeDiff = newLocation.time - previousLocation.time
         val expectedMaxDistance = calculateExpectedMaxDistance(previousLocation, timeDiff)
         
         if (distance > expectedMaxDistance) {

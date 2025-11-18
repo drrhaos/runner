@@ -120,6 +120,14 @@ class WorkoutDetailFragment : Fragment() {
             showDeleteConfirmationDialog()
         }
 
+        binding.buttonFix.setOnClickListener {
+            currentWorkout?.let { workout ->
+                fixWorkoutData(workout)
+            } ?: run {
+                Toast.makeText(requireContext(), "Тренировка не загружена", Toast.LENGTH_SHORT).show()
+            }
+        }
+
         // Устанавливаем первую кнопку как выбранную по умолчанию
         binding.buttonBasicInfo.isChecked = true
         
@@ -245,6 +253,50 @@ class WorkoutDetailFragment : Fragment() {
         }
         
         startActivity(android.content.Intent.createChooser(shareIntent, "Поделиться тренировкой"))
+    }
+
+    private fun fixWorkoutData(workout: com.example.runner.data.Workout) {
+        if (workout.trackData == null) {
+            Toast.makeText(requireContext(), "Нет данных трека для исправления", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // Показываем индикатор загрузки
+        binding.progressBarMapLoading.visibility = View.VISIBLE
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                // Очищаем данные тренировки от GPS выбросов (принудительно)
+                val cleanedWorkout = viewModel.cleanWorkoutData(workout, forceClean = true)
+                
+                if (cleanedWorkout != null) {
+                    // Обновляем текущую тренировку
+                    currentWorkout = cleanedWorkout
+                    
+                    // Обновляем отображение
+                    displayWorkout(cleanedWorkout)
+                    displayTrackOnMap(cleanedWorkout)
+                    
+                    // Обновляем графики, если они открыты
+                    cleanedWorkout.trackData?.let { trackDataJson ->
+                        val gson = com.google.gson.Gson()
+                        val cleanedTrackData = gson.fromJson(trackDataJson, com.example.runner.data.TrackData::class.java)
+                        currentTrackData = cleanedTrackData
+                        updateCharts(cleanedTrackData)
+                    }
+                    
+                    Toast.makeText(requireContext(), "Данные тренировки исправлены", Toast.LENGTH_SHORT).show()
+                } else {
+                    Toast.makeText(requireContext(), "Не удалось исправить данные", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("WorkoutDetail", "Error fixing workout data: ${e.message}", e)
+                Toast.makeText(requireContext(), "Ошибка при исправлении данных: ${e.message}", Toast.LENGTH_LONG).show()
+            } finally {
+                // Скрываем индикатор загрузки
+                binding.progressBarMapLoading.visibility = View.GONE
+            }
+        }
     }
 
     private fun loadWorkout() {
