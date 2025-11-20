@@ -14,6 +14,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.OnBackPressedCallback
 import android.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
@@ -134,6 +135,7 @@ class WorkoutTrackingFragment : Fragment() {
     private var lastTapTime = 0L
     private var stopHoldJob: Job? = null
     private var stopHoldStartTime = 0L
+    private var isStoppingWorkout = false
     private fun updateGpsSignalIndicator(status: GpsStatus, accuracy: Float) {
         when (status) {
             GpsStatus.SEARCHING -> {
@@ -278,6 +280,7 @@ class WorkoutTrackingFragment : Fragment() {
         observeViewModel()
         requestLocationPermission()
         updateCenterButtonVisibility()
+        setupBackButtonHandler()
         
         // Инициализируем GPS статус
         try {
@@ -299,6 +302,45 @@ class WorkoutTrackingFragment : Fragment() {
         }
         
         // Сервис инициализируется только при старте тренировки для экономии батареи
+    }
+    
+    private fun setupBackButtonHandler() {
+        val callback = object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                val currentState = viewModel.workoutState.value
+                val session = viewModel.workoutSession.value
+                
+                // Если тренировка активна (запущена или на паузе), останавливаем её
+                if (currentState == WorkoutState.RUNNING || currentState == WorkoutState.PAUSED) {
+                    android.util.Log.d("WorkoutTracking", "Back button pressed during active workout, stopping workout")
+                    
+                    // Если уже идет процесс остановки, не делаем ничего
+                    if (isStoppingWorkout) {
+                        return
+                    }
+                    
+                    isStoppingWorkout = true
+                    
+                    // Отменяем удержание кнопки остановки, если оно активно
+                    cancelStopHold()
+                    
+                    // Останавливаем тренировку
+                    viewModel.stopWorkout()
+                    
+                    // Если есть данные для сохранения, сохраняем и переходим к деталям
+                    if (session.distance > 0 && session.currentTime > 0) {
+                        navigateToWorkoutDetails()
+                    } else {
+                        // Если данных нет, просто возвращаемся назад
+                        findNavController().navigateUp()
+                    }
+                } else {
+                    // Если тренировка не активна, просто возвращаемся назад
+                    findNavController().navigateUp()
+                }
+            }
+        }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, callback)
     }
 
     private fun setupMap() {
@@ -701,9 +743,14 @@ class WorkoutTrackingFragment : Fragment() {
         binding.progressBarStopHold.progress = 0
         binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
         binding.buttonStop.isPressed = false
+        // Не сбрасываем isStoppingWorkout здесь, так как тренировка может быть остановлена
     }
 
     private fun completeStopHold() {
+        if (isStoppingWorkout) {
+            return // Уже идет процесс остановки
+        }
+        isStoppingWorkout = true
         stopHoldStartTime = 0L
         binding.layoutStopHold.visibility = View.GONE
         binding.progressBarStopHold.progress = 0
@@ -1063,6 +1110,8 @@ class WorkoutTrackingFragment : Fragment() {
             }
 
             dialog.dismiss()
+            // Сбрасываем флаг остановки при старте новой тренировки
+            isStoppingWorkout = false
             // Запрашиваем отключение оптимизации батареи для стабильной работы
             requestBatteryOptimizationExemption()
             // Инициализируем сервис только при старте тренировки для экономии батареи
@@ -1097,6 +1146,7 @@ class WorkoutTrackingFragment : Fragment() {
                 
                 // Сбрасываем данные тренировки после сохранения
                 viewModel.resetWorkout()
+                isStoppingWorkout = false
                 // Возвращаемся к списку тренировок
                 findNavController().navigateUp()
             }
@@ -1105,6 +1155,7 @@ class WorkoutTrackingFragment : Fragment() {
             Toast.makeText(context, "Тренировка слишком короткая для сохранения", Toast.LENGTH_SHORT).show()
             // Сбрасываем данные тренировки даже если не сохраняем
             viewModel.resetWorkout()
+            isStoppingWorkout = false
             findNavController().navigateUp()
         }
     }
@@ -1140,10 +1191,12 @@ class WorkoutTrackingFragment : Fragment() {
                     
                     // Сбрасываем данные тренировки после сохранения
                     viewModel.resetWorkout()
+                    isStoppingWorkout = false
                 }
             }
         } else {
             Toast.makeText(context, "Нет данных для сохранения", Toast.LENGTH_SHORT).show()
+            isStoppingWorkout = false
         }
     }
 
@@ -1174,6 +1227,16 @@ class WorkoutTrackingFragment : Fragment() {
             android.util.Log.e("GPSStatus", "Failed to stop GPS status monitoring: ${e.message}")
         }
         
+        // Проверяем, активна ли тренировка, и если да - останавливаем её
+        val currentState = viewModel.workoutState.value
+        if (currentState == WorkoutState.RUNNING || currentState == WorkoutState.PAUSED) {
+            android.util.Log.d("WorkoutTracking", "Fragment destroyed during active workout, stopping workout")
+            cancelStopHold()
+            viewModel.stopWorkout()
+        } else {
+            cancelStopHold()
+        }
+        
         // Очищаем все обработчики и таймеры
         // locationTimer уже объявлен как var в классе
         
@@ -1189,8 +1252,6 @@ class WorkoutTrackingFragment : Fragment() {
         mapView = null
         locationOverlay = null
         trackPolyline = null
-
-        cancelStopHold()
         
         _binding = null
     }
