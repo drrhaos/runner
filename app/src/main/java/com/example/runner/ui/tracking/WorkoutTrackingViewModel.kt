@@ -32,9 +32,9 @@ data class WorkoutSession(
     val startTime: Long = 0,
     val pauseTime: Long = 0,
     val totalPauseDuration: Long = 0,
-    val currentTime: Long = 0,
-    val distance: Float = 0f,
-    val avgPace: Float = 0f, // средний темп в минутах на километр
+    var currentTime: Long = 0,
+    var distance: Float = 0f,
+    var avgPace: Float = 0f, // средний темп в минутах на километр
     val currentPace: Float = 0f, // текущий темп в минутах на километр
     val avgSpeed: Float = 0f,
     val currentSpeed: Float = 0f,

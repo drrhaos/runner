@@ -41,12 +41,16 @@ import org.osmdroid.events.ZoomEvent
 import android.location.LocationManager
 import android.location.LocationListener
 import android.location.Location
+import android.speech.tts.TextToSpeech
+import android.util.Log
 import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import android.view.MotionEvent
 import android.view.GestureDetector
 import android.view.GestureDetector.SimpleOnGestureListener
+import com.example.runner.util.FormatUtils
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import kotlin.math.ceil
+
 
 class WorkoutTrackingFragment : Fragment() {
 
@@ -74,7 +78,7 @@ class WorkoutTrackingFragment : Fragment() {
 
     private var _binding: FragmentWorkoutTrackingBinding? = null
     private val binding get() = _binding!!
-
+    private var tts: TextToSpeech? = null
     private val viewModel: WorkoutTrackingViewModel by viewModels {
         val database = WorkoutDatabase.getDatabase(requireContext())
         WorkoutTrackingViewModelFactory(database.workoutDao(), requireContext())
@@ -92,6 +96,8 @@ class WorkoutTrackingFragment : Fragment() {
     private var lastUserInteractionTime = 0L
     private var lastMapUpdateTime = 0L
     private var lastUIUpdateTime = 0L
+
+    private var lastDistanceKmVoiceSpoken = 0;
     
     // GPS status tracking
     private var lastGpsAccuracy = 0f
@@ -267,6 +273,7 @@ class WorkoutTrackingFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        initTTS()
         _binding = FragmentWorkoutTrackingBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -858,6 +865,8 @@ class WorkoutTrackingFragment : Fragment() {
                 }
             }
         }
+
+        launchVoiceNotification(session)
     }
 
     private fun updateButtonStates(state: WorkoutState) {
@@ -914,6 +923,20 @@ class WorkoutTrackingFragment : Fragment() {
         }
     }
 
+    private fun launchVoiceNotification(session: WorkoutSession) {
+        val km = session.distance.toInt()
+        if (km > lastDistanceKmVoiceSpoken) {
+            lastDistanceKmVoiceSpoken = km
+
+            val distanceTTS = FormatUtils.formatDistanceForTTS(session.distance, requireContext())
+            val timeTTS = FormatUtils.formatTimeForTTS(session.currentTime, requireContext())
+            val paceTTS = FormatUtils.formatPaceForTTS(session.avgPace, requireContext())
+
+            val notification = getString(R.string.voice_notif_text_each_km, distanceTTS, timeTTS, paceTTS)
+            tts?.speak(notification, TextToSpeech.QUEUE_ADD, null, "distance_${km}km")
+        }
+    }
+
     private fun calculateBearing(from: GeoPoint, to: GeoPoint): Float {
         val lat1 = Math.toRadians(from.latitude)
         val lat2 = Math.toRadians(to.latitude)
@@ -963,7 +986,7 @@ class WorkoutTrackingFragment : Fragment() {
                 android.util.Log.w("WorkoutTracking", "Invalid GPS coordinates for map center")
                 return
             }
-            
+            `
             // Обновляем ориентацию карты по направлению движения
             val bearing = location.bearing
             if (bearing >= 0) {
@@ -1199,6 +1222,43 @@ class WorkoutTrackingFragment : Fragment() {
             isStoppingWorkout = false
         }
     }
+    private fun initTTS() {
+        tts = TextToSpeech(requireContext(), object: TextToSpeech.OnInitListener {
+            override fun onInit(status: Int) {
+                if (status == TextToSpeech.SUCCESS) {
+                    val locale = requireContext().resources.configuration.locales[0]
+                    when (tts?.isLanguageAvailable(locale)) {
+                        TextToSpeech.LANG_AVAILABLE,
+                        TextToSpeech.LANG_COUNTRY_AVAILABLE,
+                        TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE -> {
+                            Log.d(TAG, "TTS onInit: setting language ${locale.language}")
+                            tts?.language = locale
+                        }
+                        // errors
+                        TextToSpeech.LANG_MISSING_DATA -> {
+                            Log.d(TAG, "TTS onInit: missing language data")
+                            destroyTTS()
+                        }
+                        TextToSpeech.LANG_NOT_SUPPORTED -> {
+                            Log.d(TAG, "TTS onInit: language unsupported")
+                            destroyTTS()
+                        }
+                    }
+                } else {
+                    Log.d(TAG, "TTS onInit: failure")
+                    destroyTTS()
+                }
+            }
+        })
+    }
+    private fun destroyTTS() {
+        val _tts = tts
+        if (_tts != null) {
+            _tts.stop()
+            _tts.shutdown()
+            tts = null
+        }
+    }
 
     override fun onResume() {
         super.onResume()
@@ -1246,7 +1306,7 @@ class WorkoutTrackingFragment : Fragment() {
         } catch (e: Exception) {
             // ViewModel может быть не инициализирован
         }
-        
+        destroyTTS()
         // Очищаем карту
         mapView?.onDetach()
         mapView = null
