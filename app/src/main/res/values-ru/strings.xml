@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="navigation_drawer_open">Открыть боковую панель</string>
+    <string name="navigation_drawer_close">Скрыть боковую панель</string>
+    <string name="nav_header_subtitle">Твой персональный тренер</string>
+    <string name="nav_header_desc">Иконка приложения</string>
+    <string name="action_settings">Настройки</string>
+    <string name="menu_workouts">Мои тренировки</string>
+    <string name="menu_add_workout">Добавить тренировку</string>
+    <string name="menu_statistics">Статистика</string>
+    <string name="menu_settings">Настройки</string>
+    <string name="workout_type_easy_run">Легкий бег</string>
+    <string name="workout_type_tempo_run">Темповый бег</string>
+    <string name="workout_type_interval_training">Интервальная тренировка</string>
+    <string name="workout_type_long_run">Длинный бег</string>
+    <string name="workout_type_recovery_run">Восстановительный бег</string>
+    <string name="workout_type_race">Соревнование</string>
+    <string name="workout_saved">Тренировка сохранена</string>
+    <string name="workout_deleted">Тренировка удалена</string>
+    <string name="confirm_delete">Вы уверены, что хотите удалить эту тренировку?</string>
+    <string name="error_save_workout">Ошибка при сохранении тренировки</string>
+    <string name="error_delete_workout">Ошибка при удалении тренировки</string>
+    <string name="fill_required_fields">Заполните обязательные поля</string>
+    <string name="save">Сохранить</string>
+    <string name="cancel">Отмена</string>
+    <string name="edit">Редактировать</string>
+    <string name="delete">Удалить</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+    <string name="stop_hold_hint_initial">Удерживайте 3 сек. для остановки</string>
+    <string name="stop_hold_hint">Удерживайте %1$d сек. для остановки</string>
+    <string name="gps_signal_searching">Поиск</string>
+    <string name="gps_signal_weak">Слабый</string>
+    <string name="gps_signal_medium">Средний</string>
+    <string name="gps_signal_strong">Сильный</string>
+    <string name="gps_signal_lost">Потерян</string>
+    <string name="gps_signal_denied">Нет доступа</string>
+    <string name="gps_accuracy_searching">Ищем спутники…</string>
+    <string name="gps_accuracy_value">Точность: %1$d м</string>
+    <string name="gps_accuracy_lost">Сигнал потерян</string>
+    <string name="gps_accuracy_denied">Нет доступа к GPS</string>
+    <string name="kilometers_per_hour_float">%.1f км/ч</string>
+    <string name="kilometers_per_hour_float_tts">%.1f километров в час</string>
+    <string name="miles_per_hour_float">%.1f миль/ч</string>
+    <string name="miles_per_hour_float_tts">%.1f миль в час</string>
+    <string name="per_km">на километр</string>
+    <string name="voice_notif_text_each_km">Дистанция: %1$s, время: %2$s, средний темп: %3$s.</string>
+
+    <plurals name="hours">
+        <item quantity="one">%d час</item>
+        <item quantity="few">%d часа</item>
+        <item quantity="many">%d часов</item>
+        <item quantity="other">%d часа</item>
+    </plurals>
+
+    <plurals name="minutes">
+        <item quantity="one">%d минута</item>
+        <item quantity="few">%d минуты</item>
+        <item quantity="many">%d минут</item>
+        <item quantity="other">%d минуты</item>
+    </plurals>
+
+    <plurals name="seconds">
+        <item quantity="one">%d секунда</item>
+        <item quantity="few">%d секунды</item>
+        <item quantity="many">%d секунд</item>
+        <item quantity="other">%d секунды</item>
+    </plurals>
+
+    <plurals name="meters">
+        <item quantity="one">%d метр</item>
+        <item quantity="few">%d метра</item>
+        <item quantity="many">%d метров</item>
+        <item quantity="other">%d метра</item>
+    </plurals>
+
+    <plurals name="kilometers">
+        <item quantity="one">%d километр</item>
+        <item quantity="few">%d километра</item>
+        <item quantity="many">%d километров</item>
+        <item quantity="other">%d километра</item>
+    </plurals>
+
+    <plurals name="miles">
+        <item quantity="one">%d миля</item>
+        <item quantity="few">%d мили</item>
+        <item quantity="many">%d миль</item>
+        <item quantity="other">%d мили</item>
+    </plurals>
+
+    <plurals name="minutes_per_kilometer">
+        <item quantity="one">%d минута на километр</item>
+        <item quantity="few">%d минуты на километр</item>
+        <item quantity="many">%d минут на километр</item>
+        <item quantity="other">%d минуты на километр</item>
+    </plurals>
+
+    <plurals name="kilometers_per_hour">
+        <item quantity="one">%d километр в час</item>
+        <item quantity="few">%d километра в час</item>
+        <item quantity="many">%d километров в час</item>
+        <item quantity="other">%d километра в час</item>
+    </plurals>
+</resources>
