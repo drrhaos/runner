@@ -57,6 +57,11 @@
     <string name="per_km">per kilometer</string>
     <string name="voice_notif_text_each_km">Distance: %1$s, time: %2$s, average pace: %3$s.</string>
 
+    <string name="workout_distance_label">Distance</string>
+    <string name="workout_time_label">Time</string>
+    <string name="workout_pace_label_km">Pace min/km</string>
+    <string name="workout_pace_label_miles">Pace min/mi</string>
+    <string name="workout_summary_good">Good workout…</string>
 
     <plurals name="hours">
         <item quantity="one">%d hour</item>
