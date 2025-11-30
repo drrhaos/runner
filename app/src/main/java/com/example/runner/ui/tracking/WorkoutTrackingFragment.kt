@@ -986,7 +986,7 @@ class WorkoutTrackingFragment : Fragment() {
                 android.util.Log.w("WorkoutTracking", "Invalid GPS coordinates for map center")
                 return
             }
-            `
+
             // Обновляем ориентацию карты по направлению движения
             val bearing = location.bearing
             if (bearing >= 0) {
