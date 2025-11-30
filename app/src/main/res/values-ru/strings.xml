@@ -14,7 +14,7 @@
     <string name="workout_type_interval_training">Интервальная тренировка</string>
     <string name="workout_type_long_run">Длинный бег</string>
     <string name="workout_type_recovery_run">Восстановительный бег</string>
-    <string name="workout_type_race">Соревнование</string>
+    <string name="workout_type_competition">Соревнование</string>
     <string name="workout_saved">Тренировка сохранена</string>
     <string name="workout_deleted">Тренировка удалена</string>
     <string name="confirm_delete">Вы уверены, что хотите удалить эту тренировку?</string>
@@ -52,6 +52,9 @@
     <string name="workout_pace_label_km">Темп мин/км</string>
     <string name="workout_pace_label_miles">Темп мин/милю</string>
     <string name="workout_summary_good">Хорошая тренировка…</string>
+
+    <string name="dialog_choose_workout_title">Выберите тип тренировки</string>
+    <string name="dialog_start_workout">Начать</string>
 
     <plurals name="hours">
         <item quantity="one">%d час</item>
