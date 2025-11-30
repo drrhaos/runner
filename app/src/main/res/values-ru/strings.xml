@@ -56,6 +56,22 @@
     <string name="dialog_choose_workout_title">Выберите тип тренировки</string>
     <string name="dialog_start_workout">Начать</string>
 
+    <string name="add_workout_title">Добавить тренировку</string>
+    <string name="add_workout_label_date">Дата тренировки:</string>
+    <string name="add_workout_label_type">Тип тренировки:</string>
+    <string name="add_workout_label_distance">Дистанция (км):</string>
+    <string name="add_workout_label_time">Время (часы:минуты:секунды):</string>
+    <string name="add_workout_label_calories">Калории (опционально):</string>
+    <string name="add_workout_label_notes">Заметки:</string>
+    <string name="add_workout_hint_date">Выберите дату</string>
+    <string name="add_workout_hint_type">Выберите тип тренировки</string>
+    <string name="add_workout_hint_time_hours">Часы</string>
+    <string name="add_workout_hint_time_minutes">Минуты</string>
+    <string name="add_workout_hint_time_seconds">Секунды</string>
+    <string name="add_workout_hint_distance">Введите дистанцию</string>
+    <string name="add_workout_hint_calories">Введите количество калорий</string>
+    <string name="add_workout_hint_notes">Пару слов о тренировке</string>
+
     <plurals name="hours">
         <item quantity="one">%d час</item>
         <item quantity="few">%d часа</item>
