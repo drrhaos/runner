@@ -82,6 +82,30 @@
     <string name="add_workout_hint_calories">Insert calories amount</string>
     <string name="add_workout_hint_notes">Few words about workout</string>
 
+    <string name="settings_title">Settings</string>
+    <string name="settings_profile_title">User profile</string>
+    <string name="settings_label_weight">Weight</string>
+    <string name="settings_label_growth">Growth</string>
+    <string name="settings_label_age">Age</string>
+    <string name="settings_label_gender">Gender</string>
+    <string name="settings_profile_gender_male">Male</string>
+    <string name="settings_profile_gender_female">Female</string>
+    <string name="settings_app_settings_title">Application settings</string>
+    <string name="settings_label_units_type">Units type</string>
+    <string name="settings_units_metric">Metric</string>
+    <string name="settings_units_imperial">Imperial</string>
+    <string name="settings_label_gps_accuracy">GPS accuracy</string>
+    <string name="settings_gps_accuracy_high">High</string>
+    <string name="settings_gps_accuracy_medium">Medium</string>
+    <string name="settings_gps_accuracy_low">Low</string>
+    <string name="settings_label_theme">Application theme</string>
+    <string name="settings_theme_system">As in the system</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_label_autopause">Automatic pause</string>
+    <string name="settings_label_voice_notifications">Voice notifications</string>
+    <string name="settings_btn_reset">Reset settings</string>
+
     <plurals name="hours">
         <item quantity="one">%d hour</item>
         <item quantity="other">%d hours</item>

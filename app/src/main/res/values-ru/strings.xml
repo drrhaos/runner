@@ -72,6 +72,30 @@
     <string name="add_workout_hint_calories">Введите количество калорий</string>
     <string name="add_workout_hint_notes">Пару слов о тренировке</string>
 
+    <string name="settings_title">Настройки</string>
+    <string name="settings_profile_title">Профиль пользователя</string>
+    <string name="settings_label_weight">Вес</string>
+    <string name="settings_label_growth">Рост</string>
+    <string name="settings_label_age">Возраст</string>
+    <string name="settings_label_gender">Пол</string>
+    <string name="settings_profile_gender_male">Мужской</string>
+    <string name="settings_profile_gender_female">Женский</string>
+    <string name="settings_app_settings_title">Настройки приложения</string>
+    <string name="settings_label_units_type">Система единиц</string>
+    <string name="settings_units_metric">Метрическая (км)</string>
+    <string name="settings_units_imperial">Имперская (мили)</string>
+    <string name="settings_label_gps_accuracy">Точность GPS</string>
+    <string name="settings_gps_accuracy_high">Высокая</string>
+    <string name="settings_gps_accuracy_medium">Срелняя</string>
+    <string name="settings_gps_accuracy_low">Низкая</string>
+    <string name="settings_label_theme">Тема приложения</string>
+    <string name="settings_theme_system">Как в системе</string>
+    <string name="settings_theme_light">Светлая</string>
+    <string name="settings_theme_dark">Темная</string>
+    <string name="settings_label_autopause">Автоматическая пауза</string>
+    <string name="settings_label_voice_notifications">Голосовые уведомления</string>
+    <string name="settings_btn_reset">Сбросить настройки</string>
+
     <plurals name="hours">
         <item quantity="one">%d час</item>
         <item quantity="few">%d часа</item>
