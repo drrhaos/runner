@@ -66,6 +66,22 @@
     <string name="dialog_choose_workout_title">Choose type of workout</string>
     <string name="dialog_start_workout">Start</string>
 
+    <string name="add_workout_title">Add workout</string>
+    <string name="add_workout_label_date">Training date:</string>
+    <string name="add_workout_label_type">Training type:</string>
+    <string name="add_workout_label_distance">Distance (km):</string>
+    <string name="add_workout_label_time">Time (hours:minutes:seconds):</string>
+    <string name="add_workout_label_calories">Calories (optional):</string>
+    <string name="add_workout_label_notes">Notes:</string>
+    <string name="add_workout_hint_date">Select date</string>
+    <string name="add_workout_hint_type">Select workout type</string>
+    <string name="add_workout_hint_time_hours">Hours</string>
+    <string name="add_workout_hint_time_minutes">Minutes</string>
+    <string name="add_workout_hint_time_seconds">Seconds</string>
+    <string name="add_workout_hint_distance">Insert distance</string>
+    <string name="add_workout_hint_calories">Insert calories amount</string>
+    <string name="add_workout_hint_notes">Few words about workout</string>
+
     <plurals name="hours">
         <item quantity="one">%d hour</item>
         <item quantity="other">%d hours</item>
