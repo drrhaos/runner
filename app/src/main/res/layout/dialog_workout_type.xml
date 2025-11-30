@@ -9,12 +9,13 @@
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Выберите тип тренировки"
+        android:text="@string/dialog_choose_workout_title"
         android:textSize="18sp"
         android:textStyle="bold"
         android:textColor="@android:color/black"
         android:layout_marginBottom="16dp" />
 
+<!-- TODO: color gradiend backgroung for each type -->
     <RadioGroup
         android:id="@+id/radioGroup_workout_type"
         android:layout_width="match_parent"
@@ -25,7 +26,7 @@
             android:id="@+id/radio_easy_run"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Легкий бег"
+            android:text="@string/workout_type_easy_run"
             android:checked="true"
             android:layout_marginBottom="8dp" />
 
@@ -33,35 +34,35 @@
             android:id="@+id/radio_tempo_run"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Темповый бег"
+            android:text="@string/workout_type_tempo_run"
             android:layout_marginBottom="8dp" />
 
         <RadioButton
             android:id="@+id/radio_interval_training"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Интервальная тренировка"
+            android:text="@string/workout_type_interval_training"
             android:layout_marginBottom="8dp" />
 
         <RadioButton
             android:id="@+id/radio_long_run"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Длинный бег"
+            android:text="@string/workout_type_long_run"
             android:layout_marginBottom="8dp" />
 
         <RadioButton
             android:id="@+id/radio_recovery_run"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Восстановительный бег"
+            android:text="@string/workout_type_recovery_run"
             android:layout_marginBottom="8dp" />
 
         <RadioButton
             android:id="@+id/radio_race"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Соревнование" />
+            android:text="@string/workout_type_competition" />
 
     </RadioGroup>
 
@@ -77,7 +78,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:layout_marginEnd="8dp"
-            android:text="Отмена"
+            android:text="@string/cancel"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
         <com.google.android.material.button.MaterialButton
@@ -85,7 +86,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Начать"
+            android:text="@string/dialog_start_workout"
             style="@style/Widget.MaterialComponents.Button" />
 
     </LinearLayout>
