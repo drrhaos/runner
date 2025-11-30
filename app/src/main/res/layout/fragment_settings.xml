@@ -16,9 +16,10 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Настройки"
+            android:text="@string/settings_title"
             android:textSize="28sp"
             android:textStyle="bold"
+            android:layout_marginStart="16dp"
             android:textColor="?attr/colorOnBackground"
             android:layout_marginBottom="24dp" />
 
@@ -41,7 +42,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Профиль пользователя"
+                    android:text="@string/settings_profile_title"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface"
@@ -67,7 +68,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Вес"
+                        android:text="@string/settings_label_weight"
                         android:textSize="16sp"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -75,7 +76,7 @@
                         android:id="@+id/textView_weight_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="70 кг"
+                        tools:text="70 кг"
                         android:textSize="16sp"
                         android:textColor="?attr/colorPrimary" />
 
@@ -101,7 +102,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Рост"
+                        android:text="@string/settings_label_growth"
                         android:textSize="16sp"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -109,7 +110,7 @@
                         android:id="@+id/textView_height_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="175 см"
+                        tools:text="175 см"
                         android:textSize="16sp"
                         android:textColor="?attr/colorPrimary" />
 
@@ -135,7 +136,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Возраст"
+                        android:text="@string/settings_label_age"
                         android:textSize="16sp"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -143,7 +144,7 @@
                         android:id="@+id/textView_age_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="25 лет"
+                        tools:text="25 лет"
                         android:textSize="16sp"
                         android:textColor="?attr/colorPrimary" />
 
@@ -168,7 +169,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Пол"
+                        android:text="@string/settings_label_gender"
                         android:textSize="16sp"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -176,7 +177,7 @@
                         android:id="@+id/textView_gender_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Мужской"
+                        tools:text="@string/settings_profile_gender_male"
                         android:textSize="16sp"
                         android:textColor="?attr/colorPrimary" />
 
@@ -205,7 +206,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Настройки приложения"
+                    android:text="@string/settings_app_settings_title"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface"
@@ -231,7 +232,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Система единиц"
+                        android:text="@string/settings_label_units_type"
                         android:textSize="16sp"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -239,7 +240,7 @@
                         android:id="@+id/textView_unit_system_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Метрическая"
+                        tools:text="@string/settings_units_metric"
                         android:textSize="16sp"
                         android:textColor="?attr/colorPrimary" />
 
@@ -265,7 +266,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Точность GPS"
+                        android:text="@string/settings_label_gps_accuracy"
                         android:textSize="16sp"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -273,7 +274,7 @@
                         android:id="@+id/textView_gps_accuracy_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Высокая"
+                        android:text="@string/settings_gps_accuracy_high"
                         android:textSize="16sp"
                         android:textColor="?attr/colorPrimary" />
 
@@ -299,7 +300,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Тема приложения"
+                        android:text="@string/settings_label_theme"
                         android:textSize="16sp"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -307,7 +308,7 @@
                         android:id="@+id/textView_theme_mode_value"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Как в системе"
+                        android:text="@string/settings_theme_system"
                         android:textSize="16sp"
                         android:textColor="?attr/colorPrimary" />
 
@@ -325,7 +326,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Автоматическая пауза"
+                        android:text="@string/settings_label_autopause"
                         android:textSize="16sp"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -333,7 +334,7 @@
                         android:id="@+id/switch_auto_pause"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="true" />
+                        tools:checked="true" />
 
                 </LinearLayout>
 
@@ -348,7 +349,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Голосовые уведомления"
+                        android:text="@string/settings_label_voice_notifications"
                         android:textSize="16sp"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -356,7 +357,7 @@
                         android:id="@+id/switch_voice_feedback"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:checked="false" />
+                        tools:checked="false" />
 
                 </LinearLayout>
 
@@ -369,7 +370,7 @@
             android:id="@+id/button_reset_settings"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Сбросить настройки"
+            android:text="@string/settings_btn_reset"
             android:textColor="@color/red_500"
             android:background="?attr/colorSurface"
             app:strokeColor="@color/red_500"
