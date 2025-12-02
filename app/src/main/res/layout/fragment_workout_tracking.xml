@@ -93,7 +93,7 @@
                     android:scaleType="centerInside"
                     android:padding="8dp"
                     android:rotation="45"
-                    android:contentDescription="Мое местоположение" />
+                    android:contentDescription="@string/btn_my_location_description" />
             </FrameLayout>
         </LinearLayout>
 
@@ -137,7 +137,8 @@
             android:visibility="gone"
             android:layout_marginTop="12dp"
             android:padding="16dp"
-            android:gravity="center_horizontal">
+            android:gravity="center_horizontal"
+            tools:visibility="visible">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -150,15 +151,15 @@
                     android:id="@+id/textView_workout_time_expanded"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="00:00:00"
                     android:textSize="40sp"
                     android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurface" />
+                    android:textColor="?attr/colorOnSurface"
+                    tools:text="00:00:00" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Время (ч:мин:с)"
+                    android:text="@string/track_info_time_label"
                     android:textSize="16sp"
                     android:textColor="?attr/colorOnSurface"
                     android:alpha="0.72"
@@ -168,7 +169,7 @@
                     android:id="@+id/textView_workout_distance_expanded"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0.00"
+                    tools:text="0.00"
                     android:textSize="40sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface"
@@ -177,7 +178,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Дистанция (км)"
+                    android:text="@string/track_info_distance_label_km"
                     android:textSize="16sp"
                     android:textColor="?attr/colorOnSurface"
                     android:alpha="0.72"
@@ -204,14 +205,14 @@
                         android:id="@+id/textView_avg_speed"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0.00"
+                        tools:text="0.00"
                         android:textSize="24sp"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Средняя скорость (км/ч)"
+                        android:text="@string/track_info_average_speed_label_km"
                         android:textSize="14sp"
                         android:textColor="?attr/colorOnSurface"
                         android:alpha="0.72" />
@@ -229,14 +230,14 @@
                         android:id="@+id/textView_current_pace"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="--:--"
+                        android:text="@string/track_info_time_placeholder"
                         android:textSize="24sp"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Текущий темп (мин/км)"
+                        android:text="@string/track_info_current_pace_label_km"
                         android:textSize="14sp"
                         android:textColor="?attr/colorOnSurface"
                         android:alpha="0.72" />
@@ -254,14 +255,14 @@
                         android:id="@+id/textView_workout_pace"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="--:--"
+                        android:text="@string/track_info_time_placeholder"
                         android:textSize="24sp"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Средний темп (мин/км)"
+                        android:text="@string/track_info_average_pace_label_km"
                         android:textSize="14sp"
                         android:textColor="?attr/colorOnSurface"
                         android:alpha="0.72" />
@@ -279,14 +280,14 @@
                         android:id="@+id/textView_calories_burned"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0"
+                        tools:text="0"
                         android:textSize="24sp"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Калории (ккал)"
+                        android:text="@string/track_info_calories_label"
                         android:textSize="14sp"
                         android:textColor="?attr/colorOnSurface"
                         android:alpha="0.72" />
@@ -305,14 +306,14 @@
                         android:id="@+id/textView_workout_heart_rate"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="--"
+                        android:text="@string/track_info_pulse_placeholder"
                         android:textSize="24sp"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Пульс (уд/мин)"
+                        android:text="@string/track_info_pulse_label"
                         android:textSize="14sp"
                         android:textColor="?attr/colorOnSurface"
                         android:alpha="0.72" />
@@ -340,7 +341,7 @@
                     android:id="@+id/textView_workout_time"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="00:00:00"
+                    tools:text="00:00:00"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
@@ -349,7 +350,7 @@
                     android:id="@+id/textView_workout_time_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Время (ч:мин:с)"
+                    android:text="@string/track_info_time_label"
                     android:textSize="10sp"
                     android:textColor="?attr/colorOnSurface"
                     android:alpha="0.72" />
@@ -374,7 +375,7 @@
                     android:padding="12dp"
                     android:layout_marginEnd="8dp"
                     android:visibility="gone"
-                    android:contentDescription="Пауза"
+                    android:contentDescription="@string/btn_pause_description"
                     android:tint="?attr/colorOnSecondary" />
 
                 <!-- Кнопка старт -->
@@ -386,7 +387,7 @@
                     android:src="@drawable/ic_play_arrow"
                     android:scaleType="centerInside"
                     android:padding="12dp"
-                    android:contentDescription="Старт"
+                    android:contentDescription="@string/btn_start_description"
                     android:tint="?attr/colorOnPrimary" />
 
                 <!-- Кнопка стоп (изначально скрыта) -->
@@ -400,7 +401,7 @@
                     android:padding="12dp"
                     android:layout_marginStart="8dp"
                     android:visibility="gone"
-                    android:contentDescription="Стоп"
+                    android:contentDescription="@string/btn_stop_description"
                     app:tint="@color/stop_button_icon_tint" />
             </LinearLayout>
 
@@ -416,7 +417,7 @@
                     android:id="@+id/textView_workout_distance"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0.00"
+                    tools:text="0.00"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
@@ -425,7 +426,7 @@
                     android:id="@+id/textView_workout_distance_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Дистанция (км)"
+                    android:text="@string/track_info_distance_label_km"
                     android:textSize="10sp"
                     android:textColor="?attr/colorOnSurface"
                     android:alpha="0.72" />
