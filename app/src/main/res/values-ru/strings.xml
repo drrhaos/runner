@@ -27,6 +27,10 @@
     <string name="delete">Удалить</string>
     <string name="yes">Да</string>
     <string name="no">Нет</string>
+    <string name="btn_stop_description">Стоп</string>
+    <string name="btn_start_description">Старт</string>
+    <string name="btn_pause_description">Пауза</string>
+    <string name="btn_my_location_description">Мое местоположение</string>
     <string name="stop_hold_hint_initial">Удерживайте 3 сек. для остановки</string>
     <string name="stop_hold_hint">Удерживайте %1$d сек. для остановки</string>
     <string name="gps_signal_searching">Поиск</string>
@@ -43,7 +47,7 @@
     <string name="kilometers_per_hour_float">%.1f км/ч</string>
     <string name="kilometers_per_hour_float_tts">%.1f километров в час</string>
     <string name="miles_per_hour_float">%.1f миль/ч</string>
-    <string name="miles_per_hour_float_tts">%.1f миль в час</string>
+    <strстополоing name="miles_per_hour_float_tts">%.1f миль в час</strстополоing>
     <string name="per_km">на километр</string>
     <string name="voice_notif_text_each_km">Дистанция: %1$s, время: %2$s, средний темп: %3$s.</string>
 
@@ -95,6 +99,19 @@
     <string name="settings_label_autopause">Автоматическая пауза</string>
     <string name="settings_label_voice_notifications">Голосовые уведомления</string>
     <string name="settings_btn_reset">Сбросить настройки</string>
+
+    <string name="track_info_time_label">Время (ч:мин:с)</string>
+    <string name="track_info_distance_label_km">Дистанция (км)</string>
+    <string name="track_info_distance_label_miles">Дистанция (миль)</string>
+    <string name="track_info_average_speed_label_km">Средняя скорость (км/ч)</string>
+    <string name="track_info_average_speed_label_miles">Средняя скорость (миль/ч)</string>
+    <string name="track_info_current_pace_label_km">Текущий темп (мин/км)</string>
+    <string name="track_info_current_pace_label_miles">Текущий темп (мин/милю)</string>
+    <string name="track_info_average_pace_label_km">Средний темп (мин/км)</string>
+    <string name="track_info_average_pace_label_miles">Средний темп (мин/милю)</string>
+    <string name="track_info_calories_label">Калории (ккал)</string>
+    <string name="track_info_pulse_label">Пульс (уд/мин)</string>
+
 
     <plurals name="hours">
         <item quantity="one">%d час</item>
