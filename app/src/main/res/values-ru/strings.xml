@@ -47,7 +47,7 @@
     <string name="kilometers_per_hour_float">%.1f км/ч</string>
     <string name="kilometers_per_hour_float_tts">%.1f километров в час</string>
     <string name="miles_per_hour_float">%.1f миль/ч</string>
-    <strстополоing name="miles_per_hour_float_tts">%.1f миль в час</strстополоing>
+    <string name="miles_per_hour_float_tts">%.1f миль в час</string>
     <string name="per_km">на километр</string>
     <string name="voice_notif_text_each_km">Дистанция: %1$s, время: %2$s, средний темп: %3$s.</string>
 
@@ -112,6 +112,19 @@
     <string name="track_info_calories_label">Калории (ккал)</string>
     <string name="track_info_pulse_label">Пульс (уд/мин)</string>
 
+    <string name="workout_details_basic_params">Основные параметры</string>
+    <string name="workout_details_charts">Графики</string>
+    <string name="workout_details_average_speed">Средняя скорость</string>
+    <string name="workout_details_calories">Калории</string>
+    <string name="workout_details_btn_share">Поделиться</string>
+    <string name="workout_details_btn_export_gpx">Экспорт GPX</string>
+    <string name="workout_details_btn_edit">Исправить</string>
+    <string name="workout_details_btn_delete">Удалить</string>
+    <string name="workout_details_pace_speed_pulse_title">Темп / Скорость / Пульс</string>
+    <string name="workout_details_height_title">Высота</string>
+    <string name="workout_details_pace_speed_title">Темп / Скорость по сегментам</string>
+    <string name="workout_details_pace">Темп</string>
+    <string name="workout_details_speed">Скорость</string>
 
     <plurals name="hours">
         <item quantity="one">%d час</item>
