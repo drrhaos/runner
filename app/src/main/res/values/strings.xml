@@ -165,6 +165,11 @@
     <string name="statistics_by_workout_type">By workout type</string>
     <string name="statistics_message_no_data">There is no data to display.\Start training sessions to see statistics.</string>
 
+    <string name="workout_list_num_workouts">Training sessions</string>
+    <string name="workout_list_average_temp">Average pace</string>
+    <string name="workout_list_message_no_workouts">No training sessions yet</string>
+    <string name="workout_list_message_start_workout">Start training to create a record"</string>
+
     <plurals name="hours">
         <item quantity="one">%d hour</item>
         <item quantity="other">%d hours</item>

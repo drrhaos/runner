@@ -152,6 +152,11 @@
     <string name="statistics_by_workout_type">По типам тренировок</string>
     <string name="statistics_message_no_data">Нет данных для отображения.\nНачните тренировки, чтобы увидеть статистику.</string>
 
+    <string name="workout_list_num_workouts">Тренировок</string>
+    <string name="workout_list_average_temp">Средний темп</string>
+    <string name="workout_list_message_no_workouts">Пока нет тренировок</string>
+    <string name="workout_list_message_start_workout">Начните тренировку для создания записи"</string>
+
     <plurals name="hours">
         <item quantity="one">%d час</item>
         <item quantity="few">%d часа</item>
