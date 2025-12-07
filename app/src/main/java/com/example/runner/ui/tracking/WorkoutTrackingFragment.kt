@@ -47,6 +47,8 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import android.view.MotionEvent
 import android.view.GestureDetector
 import android.view.GestureDetector.SimpleOnGestureListener
+import com.example.runner.ui.settings.SettingsViewModel
+import com.example.runner.ui.settings.SettingsViewModelFactory
 import com.example.runner.util.FormatUtils
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import kotlin.math.ceil
@@ -84,6 +86,10 @@ class WorkoutTrackingFragment : Fragment() {
         WorkoutTrackingViewModelFactory(database.workoutDao(), requireContext())
     }
 
+    private val settingsViewModel: SettingsViewModel by viewModels {
+        SettingsViewModelFactory(requireContext())
+    }
+
     // Map components
     private var mapView: MapView? = null
     private var locationOverlay: MyLocationNewOverlay? = null
@@ -97,8 +103,10 @@ class WorkoutTrackingFragment : Fragment() {
     private var lastMapUpdateTime = 0L
     private var lastUIUpdateTime = 0L
 
+    // Voice notification stuff
     private var lastDistanceKmVoiceSpoken = 0;
-    
+    private var isVoiceEnabled = false
+
     // GPS status tracking
     private var lastGpsAccuracy = 0f
     private var lastGpsUpdateTime = 0L
@@ -791,6 +799,18 @@ class WorkoutTrackingFragment : Fragment() {
                 android.util.Log.d("WorkoutTracking", "State loading cancelled")
             }
         }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                settingsViewModel.settingsState.collect { state ->
+                    if (isAdded && !isDetached) {
+                        isVoiceEnabled = state.voiceFeedback
+                    }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                android.util.Log.d("WorkoutTracking", "Settings loading cancelled")
+            }
+        }
     }
 
     private fun updateUI(session: WorkoutSession) {
@@ -866,7 +886,8 @@ class WorkoutTrackingFragment : Fragment() {
             }
         }
 
-        launchVoiceNotification(session)
+        if (isVoiceEnabled)
+            launchVoiceNotification(session)
     }
 
     private fun updateButtonStates(state: WorkoutState) {
