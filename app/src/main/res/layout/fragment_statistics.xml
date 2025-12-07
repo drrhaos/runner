@@ -27,14 +27,14 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="16dp"
-                android:text="Статистика"
+                android:text="@string/statistics_title"
                 style="@style/RunnerStatisticsScreenTitle" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonExportCsv"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Экспорт CSV"
+                android:text="@string/statistics_btn_export_csv"
                 android:drawableStart="@android:drawable/ic_menu_upload"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:textSize="12sp"
@@ -67,7 +67,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Общая статистика"
+                    android:text="@string/statistics_general"
                     android:layout_marginBottom="12dp"
                     style="@style/RunnerStatisticsSectionTitle" />
 
@@ -81,14 +81,14 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Всего тренировок:"
+                        android:text="@string/statistics_total_workouts_label"
                         style="@style/RunnerStatisticsLabel" />
 
                     <TextView
                         android:id="@+id/textViewTotalWorkouts"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0"
+                        tools:text="0"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
 
@@ -102,14 +102,14 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Общая дистанция:"
+                        android:text="@string/statistics_total_distance_label"
                         style="@style/RunnerStatisticsLabel" />
 
                     <TextView
                         android:id="@+id/textViewTotalDistance"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0.00 км"
+                        android:text="@string/statistics_distance_placeholder"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
 
@@ -123,14 +123,14 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Общее время:"
+                        android:text="@string/statistics_total_time_label"
                         style="@style/RunnerStatisticsLabel" />
 
                     <TextView
                         android:id="@+id/textViewTotalDuration"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="00:00:00"
+                        tools:text="@string/statistics_time_placeholder"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
 
@@ -143,14 +143,14 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Всего калорий:"
+                        android:text="@string/statistics_total_calories_label"
                         style="@style/RunnerStatisticsLabel" />
 
                     <TextView
                         android:id="@+id/textViewTotalCalories"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0 ккал"
+                        tools:text="0 ккал"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
             </LinearLayout>
@@ -173,7 +173,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Лучшие результаты"
+                    android:text="@string/statistics_best_results"
                     android:layout_marginBottom="12dp"
                     style="@style/RunnerStatisticsSectionTitle" />
 
@@ -187,14 +187,14 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Лучший темп:"
+                        android:text="@string/statistics_best_pace"
                         style="@style/RunnerStatisticsLabel" />
 
                     <TextView
                         android:id="@+id/textViewBestPace"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="--:-- /км"
+                        android:text="@string/statistics_pace_placeholder"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
 
@@ -208,14 +208,14 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Максимальная дистанция:"
+                        android:text="@string/statistics_maximum_distance"
                         style="@style/RunnerStatisticsLabel" />
 
                     <TextView
                         android:id="@+id/textViewLongestDistance"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0.00 км"
+                        android:text="@string/statistics_distance_placeholder"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
 
@@ -228,14 +228,14 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Самая длинная тренировка:"
+                        android:text="@string/statistics_longest_training"
                         style="@style/RunnerStatisticsLabel" />
 
                     <TextView
                         android:id="@+id/textViewLongestDuration"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="00:00:00"
+                        android:text="@string/statistics_time_placeholder"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
             </LinearLayout>
@@ -258,7 +258,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Средние показатели"
+                    android:text="@string/statistics_average_values"
                     android:layout_marginBottom="12dp"
                     style="@style/RunnerStatisticsSectionTitle" />
 
@@ -272,14 +272,14 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Средний темп:"
+                        android:text="@string/statistics_average_pace_label"
                         style="@style/RunnerStatisticsLabel" />
 
                     <TextView
                         android:id="@+id/textViewAveragePace"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="--:-- /км"
+                        android:text="@string/statistics_pace_placeholder"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
 
@@ -293,14 +293,14 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Средняя дистанция:"
+                        android:text="@string/statistics_average_distance_label"
                         style="@style/RunnerStatisticsLabel" />
 
                     <TextView
                         android:id="@+id/textViewAverageDistance"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0.00 км"
+                        android:text="@string/statistics_distance_placeholder"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
 
@@ -313,14 +313,14 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Среднее время:"
+                        android:text="@string/statistics_average_time_label"
                         style="@style/RunnerStatisticsLabel" />
 
                     <TextView
                         android:id="@+id/textViewAverageDuration"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="00:00:00"
+                        android:text="@string/statistics_time_placeholder"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
             </LinearLayout>
@@ -343,7 +343,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Активность"
+                    android:text="@string/statistics_activity_label"
                     android:layout_marginBottom="12dp"
                     style="@style/RunnerStatisticsSectionTitle" />
 
@@ -357,14 +357,14 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Тренировок на этой неделе:"
+                        android:text="@string/statistics_sessions_this_week_label"
                         style="@style/RunnerStatisticsLabel" />
 
                     <TextView
                         android:id="@+id/textViewWorkoutsThisWeek"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0"
+                        tools:text="0"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
 
@@ -377,14 +377,14 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Тренировок в этом месяце:"
+                        android:text="@string/statistics_sessions_this_month_label"
                         style="@style/RunnerStatisticsLabel" />
 
                     <TextView
                         android:id="@+id/textViewWorkoutsThisMonth"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0"
+                        tools:text="0"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
             </LinearLayout>
@@ -407,7 +407,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="По типам тренировок"
+                    android:text="@string/statistics_by_workout_type"
                     android:layout_marginBottom="12dp"
                     style="@style/RunnerStatisticsSectionTitle" />
 
@@ -425,7 +425,7 @@
             android:id="@+id/textViewEmptyState"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Нет данных для отображения.\nНачните тренировки, чтобы увидеть статистику."
+            android:text="@string/statistics_message_no_data"
             android:gravity="center"
             android:padding="32dp"
             android:visibility="gone"

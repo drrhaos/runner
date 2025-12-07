@@ -126,6 +126,32 @@
     <string name="workout_details_pace">Темп</string>
     <string name="workout_details_speed">Скорость</string>
 
+    <string name="statistics_title">Статистика</string>
+    <string name="statistics_btn_export_csv">Экспорт CSV</string>
+    <string name="statistics_general">Общая статистика</string>
+    <string name="statistics_total_workouts_label">Всего тренировок:</string>
+    <string name="statistics_total_distance_label">Общая дистанция:</string>
+    <string name="statistics_total_time_label">Общее время:</string>
+    <string name="statistics_total_calories_label">Всего калорий:</string>
+    <string name="statistics_best_results">Лучшие результаты</string>
+    <string name="statistics_best_pace">Лучший темп:</string>
+    <string name="statistics_pace_placeholder">--:-- /км</string>
+    <string name="statistics_maximum_distance">Максимальная дистанция:</string>
+    <string name="statistics_distance_placeholder">0.00 км</string>
+    <string name="statistics_longest_training">Самая длинная тренировка:</string>
+    <string name="statistics_time_placeholder">00:00:00</string>
+    <string name="statistics_average_values">Средние показатели</string>
+    <string name="statistics_average_pace_label">Средний темп:</string>
+    <string name="statistics_average_pace_placeholder">--:--</string>
+    <string name="statistics_average_distance_label">Средняя дистанция:</string>
+    <string name="statistics_average_time_label">Среднее время:</string>
+    <string name="statistics_average_time_placeholder">00:00:00</string>
+    <string name="statistics_activity_label">Активность</string>
+    <string name="statistics_sessions_this_week_label">Тренировок на этой неделе:</string>
+    <string name="statistics_sessions_this_month_label">Тренировок в этом месяце:</string>
+    <string name="statistics_by_workout_type">По типам тренировок</string>
+    <string name="statistics_message_no_data">Нет данных для отображения.\nНачните тренировки, чтобы увидеть статистику.</string>
+
     <plurals name="hours">
         <item quantity="one">%d час</item>
         <item quantity="few">%d часа</item>
