@@ -125,6 +125,19 @@
     <string name="track_info_pulse_placeholder" translatable="false">--</string>
     <string name="track_info_pulse_label">Pulse rate (beats/min)</string>
 
+    <string name="workout_details_basic_params">Basic parameters</string>
+    <string name="workout_details_charts">Charts</string>
+    <string name="workout_details_average_speed">Average speed</string>
+    <string name="workout_details_calories">Calories</string>
+    <string name="workout_details_btn_share">Share</string>
+    <string name="workout_details_btn_export_gpx">GPX export</string>
+    <string name="workout_details_btn_edit">Edit</string>
+    <string name="workout_details_btn_delete">Delete</string>
+    <string name="workout_details_pace_speed_pulse_title">Pace / Speed / Pulse</string>
+    <string name="workout_details_height_title">Height</string>
+    <string name="workout_details_pace_speed_title">Pace / Speed by segment</string>
+    <string name="workout_details_pace">Pace</string>
+    <string name="workout_details_speed">Speed</string>
 
     <plurals name="hours">
         <item quantity="one">%d hour</item>
