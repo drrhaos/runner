@@ -6,8 +6,6 @@
     android:layout_height="match_parent"
     tools:context=".ui.workout.WorkoutListFragment">
 
-
-
     <!-- Статистика -->
     <androidx.cardview.widget.CardView
         android:id="@+id/cardView_stats"
@@ -46,7 +44,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Тренировок"
+                    android:text="@string/workout_list_num_workouts"
                     android:textSize="12sp"
                     android:textColor="@android:color/darker_gray" />
             </LinearLayout>
@@ -67,7 +65,7 @@
                     android:id="@+id/textView_total_distance"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0 км"
+                    tools:text="0 км"
                     android:textSize="24sp"
                     android:textStyle="bold"
                     android:textColor="@android:color/holo_green_dark" />
@@ -75,7 +73,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Дистанция"
+                    android:text="@string/workout_distance_label"
                     android:textSize="12sp"
                     android:textColor="@android:color/darker_gray" />
             </LinearLayout>
@@ -96,7 +94,7 @@
                     android:id="@+id/textView_avg_pace"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0:00"
+                    tools:text="0:00"
                     android:textSize="24sp"
                     android:textStyle="bold"
                     android:textColor="@android:color/holo_orange_dark" />
@@ -146,7 +144,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Пока нет тренировок"
+            android:text="@string/workout_list_message_no_workouts"
             android:textSize="18sp"
             android:textColor="@android:color/darker_gray"
             android:layout_marginTop="16dp" />
@@ -154,7 +152,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Начните тренировку для создания записи"
+            android:text="@string/workout_list_message_start_workout"
             android:textSize="14sp"
             android:textColor="@android:color/darker_gray"
             android:layout_marginTop="8dp" />
