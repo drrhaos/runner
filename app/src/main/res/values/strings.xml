@@ -139,6 +139,32 @@
     <string name="workout_details_pace">Pace</string>
     <string name="workout_details_speed">Speed</string>
 
+    <string name="statistics_title">Statistics</string>
+    <string name="statistics_btn_export_csv">CSV export</string>
+    <string name="statistics_general">General statistics</string>
+    <string name="statistics_total_workouts_label">Total workouts:</string>
+    <string name="statistics_total_distance_label">Total distance:</string>
+    <string name="statistics_total_time_label">Total time:</string>
+    <string name="statistics_total_calories_label">Total calories:</string>
+    <string name="statistics_best_results">Best results</string>
+    <string name="statistics_best_pace">Best pace:</string>
+    <string name="statistics_pace_placeholder">--:-- /km</string>
+    <string name="statistics_maximum_distance">Maximum distance:</string>
+    <string name="statistics_distance_placeholder">0.00 km</string>
+    <string name="statistics_longest_training">Longest training session:</string>
+    <string name="statistics_longest_training_placeholder">00:00:00</string>
+    <string name="statistics_average_values">Average values</string>
+    <string name="statistics_average_pace_label">Average pace:</string>
+    <string name="statistics_average_pace_placeholder">--:-- /km</string>
+    <string name="statistics_average_distance_label">Average distance:</string>
+    <string name="statistics_average_time_label">Average time:</string>
+    <string name="statistics_average_time_placeholder">00:00:00</string>
+    <string name="statistics_activity_label">Activity</string>
+    <string name="statistics_sessions_this_week_label">Training sessions this week:</string>
+    <string name="statistics_sessions_this_month_label">Training sessions this month:</string>
+    <string name="statistics_by_workout_type">By workout type</string>
+    <string name="statistics_message_no_data">There is no data to display.\Start training sessions to see statistics.</string>
+
     <plurals name="hours">
         <item quantity="one">%d hour</item>
         <item quantity="other">%d hours</item>
