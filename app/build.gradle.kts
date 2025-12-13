@@ -114,4 +114,12 @@ android {
             enableUnitTestCoverage = true
         }
     }
+    
+    lint {
+        abortOnError = true
+        checkReleaseBuilds = false
+        warningsAsErrors = false
+        checkDependencies = true
+        quiet = false
+    }
 }
