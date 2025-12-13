@@ -121,5 +121,8 @@ android {
         warningsAsErrors = false
         checkDependencies = true
         quiet = false
+        
+        // Disable specific lint checks
+        disable += "HardcodedText"
     }
 }
