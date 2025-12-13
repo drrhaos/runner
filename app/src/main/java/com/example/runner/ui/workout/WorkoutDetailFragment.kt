@@ -1027,17 +1027,10 @@ class WorkoutDetailFragment : Fragment() {
                     var currentSegmentDistance = 0f
                     var segmentStartIndex = 0
                     var segmentCount = 0
-                    var segmentStartPoint: com.example.runner.data.TrackPoint? = null
-                    var segmentEndPoint: com.example.runner.data.TrackPoint? = null
                     
                     for (i in 1 until trackPoints.size) {
                         val prevPoint = trackPoints[i - 1]
                         val point = trackPoints[i]
-                        
-                        // Сохраняем начальную точку отрезка
-                        if (segmentCount == segmentIndex && segmentStartPoint == null) {
-                            segmentStartPoint = trackPoints[segmentStartIndex]
-                        }
                         
                         val location1 = Location("").apply {
                             latitude = prevPoint.latitude
@@ -1053,24 +1046,18 @@ class WorkoutDetailFragment : Fragment() {
                         if (currentSegmentDistance >= segmentSize || i == trackPoints.size - 1) {
                             if (segmentCount == segmentIndex) {
                                 // Находим начало и конец отрезка
-                                segmentStartPoint = trackPoints[segmentStartIndex]
-                                segmentEndPoint = point
+                                val startPoint = trackPoints[segmentStartIndex]
+                                val endPoint = point
                                 
                                 // Показываем обе точки на карте
-                                segmentStartPoint?.let { start ->
-                                    showPositionOnMap(start)
-                                }
-                                segmentEndPoint?.let { end ->
-                                    showPositionOnMapEnd(end)
-                                }
+                                showPositionOnMap(startPoint)
+                                showPositionOnMapEnd(endPoint)
                                 
                                 // Центрируем карту на середине отрезка
-                                if (segmentStartPoint != null && segmentEndPoint != null) {
-                                    val midLat = (segmentStartPoint!!.latitude + segmentEndPoint!!.latitude) / 2.0
-                                    val midLon = (segmentStartPoint!!.longitude + segmentEndPoint!!.longitude) / 2.0
-                                    val midPoint = GeoPoint(midLat, midLon)
-                                    mapView?.controller?.animateTo(midPoint)
-                                }
+                                val midLat = (startPoint.latitude + endPoint.latitude) / 2.0
+                                val midLon = (startPoint.longitude + endPoint.longitude) / 2.0
+                                val midPoint = GeoPoint(midLat, midLon)
+                                mapView?.controller?.animateTo(midPoint)
                                 break
                             }
                             segmentCount++
