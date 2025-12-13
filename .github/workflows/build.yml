@@ -22,6 +22,17 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
 
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: 8.13
+
+      - name: Setup Gradle Wrapper
+        if: hashFiles('gradle/wrapper/gradle-wrapper.jar') == ''
+        run: |
+          echo "Gradle wrapper not found, generating..."
+          gradle wrapper --gradle-version 8.13 --distribution-type bin
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
