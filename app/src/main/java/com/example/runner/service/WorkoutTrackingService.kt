@@ -552,11 +552,15 @@ class WorkoutTrackingService : Service() {
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastLocationTime > NO_LOCATION_UPDATE_TIMEOUT_MS) {
                     // Принудительно запрашиваем местоположение
-                    fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
-                        location?.let {
-                            updateLocation(it)
-                            lastLocationTime = currentTime
+                    try {
+                        fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
+                            location?.let {
+                                updateLocation(it)
+                                lastLocationTime = currentTime
+                            }
                         }
+                    } catch (e: SecurityException) {
+                        android.util.Log.e("WorkoutTrackingService", "Location permission denied", e)
                     }
                 }
             }
@@ -646,11 +650,15 @@ class WorkoutTrackingService : Service() {
                     
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastLocationTime > NO_LOCATION_UPDATE_TIMEOUT_MS) {
-                        fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
-                            location?.let {
-                                updateLocation(it)
-                                lastLocationTime = currentTime
+                        try {
+                            fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
+                                location?.let {
+                                    updateLocation(it)
+                                    lastLocationTime = currentTime
+                                }
                             }
+                        } catch (e: SecurityException) {
+                            android.util.Log.e("WorkoutTrackingService", "Location permission denied", e)
                         }
                     }
                 }
