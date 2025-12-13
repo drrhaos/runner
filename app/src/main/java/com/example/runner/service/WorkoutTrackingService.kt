@@ -474,10 +474,27 @@ class WorkoutTrackingService : Service() {
         stopSelf()
     }
 
+    private fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
     private fun startLocationUpdates() {
         // Используем оптимизированные настройки GPS
         val locationRequest = com.example.runner.util.GpsConfig.createWorkoutLocationRequest()
         currentLocationRequest = locationRequest
+
+        // Проверяем разрешения перед вызовом методов
+        if (!hasLocationPermission()) {
+            android.util.Log.e("WorkoutTrackingService", "Location permission not granted")
+            currentSession = currentSession.copy(
+                gpsStatus = com.example.runner.ui.tracking.GpsStatus.DENIED
+            )
+            sessionUpdateCallback?.invoke(currentSession)
+            return
+        }
 
         try {
             // Запрашиваем обновления с высоким приоритетом
@@ -488,9 +505,11 @@ class WorkoutTrackingService : Service() {
             )
             
             // Дополнительно запрашиваем последнее известное местоположение
-            fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
-                location?.let {
-                    updateLocation(it)
+            if (hasLocationPermission()) {
+                fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
+                    location?.let {
+                        updateLocation(it)
+                    }
                 }
             }
             
@@ -524,6 +543,11 @@ class WorkoutTrackingService : Service() {
         locationTimer = Timer()
         locationTimer?.scheduleAtFixedRate(object : TimerTask() {
             override fun run() {
+                // Проверяем разрешения перед запросом местоположения
+                if (!hasLocationPermission()) {
+                    return
+                }
+                
                 // Проверяем, не прошло ли слишком много времени с последнего обновления
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastLocationTime > NO_LOCATION_UPDATE_TIMEOUT_MS) {
@@ -563,6 +587,12 @@ class WorkoutTrackingService : Service() {
         
         android.util.Log.d("WorkoutTrackingService", "Updating location request interval to $adaptiveInterval ms (speed: $currentSpeed km/h)")
         
+        // Проверяем разрешения перед обновлением запросов местоположения
+        if (!hasLocationPermission()) {
+            android.util.Log.w("WorkoutTrackingService", "Location permission not granted, cannot update location request interval")
+            return
+        }
+        
         try {
             // Останавливаем текущие обновления
             locationCallback?.let { callback ->
@@ -572,7 +602,7 @@ class WorkoutTrackingService : Service() {
             // Создаем новый LocationRequest с адаптивным интервалом
             val newLocationRequest = GpsConfig.createAdaptiveLocationRequest(adaptiveInterval)
             currentLocationRequest = newLocationRequest
-            
+
             // Перезапускаем обновления с новым интервалом
             fusedLocationClient?.requestLocationUpdates(
                 newLocationRequest,
@@ -609,6 +639,11 @@ class WorkoutTrackingService : Service() {
             locationTimer = Timer()
             locationTimer?.scheduleAtFixedRate(object : TimerTask() {
                 override fun run() {
+                    // Проверяем разрешения перед запросом местоположения
+                    if (!hasLocationPermission()) {
+                        return
+                    }
+                    
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastLocationTime > NO_LOCATION_UPDATE_TIMEOUT_MS) {
                         fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
