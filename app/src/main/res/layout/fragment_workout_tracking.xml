@@ -433,7 +433,17 @@
             </LinearLayout>
         </LinearLayout>
     </com.example.runner.ui.tracking.TouchInterceptingLinearLayout>
-
+    <!--  Серый фон окна с отсчетом  -->
+    <FrameLayout
+        android:id="@+id/stop_hold_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/black_transparent"
+        android:elevation="12dp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        />
+    <!-- Окно с обратным отсчетом -->
     <LinearLayout
         android:id="@+id/layout_stop_hold"
         android:layout_width="wrap_content"
@@ -445,8 +455,10 @@
         android:paddingTop="24dp"
         android:paddingRight="24dp"
         android:paddingBottom="24dp"
+        android:elevation="12dp"
         android:background="@drawable/stop_hold_overlay_background"
-        android:visibility="gone">
+        android:visibility="gone"
+        tools:visibility="visible">
 
         <ProgressBar
             android:id="@+id/progressBar_stop_hold"
@@ -465,7 +477,8 @@
             android:text="@string/stop_hold_hint_initial"
             android:textColor="?attr/colorOnSurface"
             android:textStyle="bold"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            />
 
     </LinearLayout>
 
