@@ -156,6 +156,9 @@
     <string name="workout_list_average_temp">Средний темп</string>
     <string name="workout_list_message_no_workouts">Пока нет тренировок</string>
     <string name="workout_list_message_start_workout">Начните тренировку для создания записи"</string>
+    <string name="workout_fragment_label">Тренировка</string>
+    <string name="workout_details_label">Детали тренировки</string>
+    <string name="start_workout">Начать тренировку</string>
 
     <plurals name="hours">
         <item quantity="one">%d час</item>
