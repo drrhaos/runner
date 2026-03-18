@@ -725,6 +725,7 @@ class WorkoutTrackingFragment : Fragment() {
         stopHoldJob?.cancel()
         stopHoldStartTime = SystemClock.elapsedRealtime()
         binding.layoutStopHold.visibility = View.VISIBLE
+        binding.stopHoldBackground.visibility = View.VISIBLE
         binding.progressBarStopHold.progress = 0
         binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
 
@@ -755,6 +756,7 @@ class WorkoutTrackingFragment : Fragment() {
         stopHoldJob = null
         stopHoldStartTime = 0L
         binding.layoutStopHold.visibility = View.GONE
+        binding.stopHoldBackground.visibility = View.GONE
         binding.progressBarStopHold.progress = 0
         binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
         binding.buttonStop.isPressed = false
@@ -768,6 +770,7 @@ class WorkoutTrackingFragment : Fragment() {
         isStoppingWorkout = true
         stopHoldStartTime = 0L
         binding.layoutStopHold.visibility = View.GONE
+        binding.stopHoldBackground.visibility = View.GONE
         binding.progressBarStopHold.progress = 0
         binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
         binding.buttonStop.isPressed = false
