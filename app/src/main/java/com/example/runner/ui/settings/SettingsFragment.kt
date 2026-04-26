@@ -1,6 +1,5 @@
 package com.example.runner.ui.settings
 
-import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -10,6 +9,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.example.runner.databinding.FragmentSettingsBinding
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 
 class SettingsFragment : Fragment() {
@@ -119,7 +119,7 @@ class SettingsFragment : Fragment() {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
         }
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Вес пользователя")
             .setMessage("Введите ваш вес в килограммах:")
             .setView(input)
@@ -142,7 +142,7 @@ class SettingsFragment : Fragment() {
         val currentSystem = viewModel.settingsState.value.unitSystem
         val currentIndex = options.indexOf(currentSystem)
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Система единиц")
             .setSingleChoiceItems(
                 options.map { viewModel.getUnitSystemDisplayName(it) }.toTypedArray(),
@@ -161,7 +161,7 @@ class SettingsFragment : Fragment() {
         val currentAccuracy = viewModel.settingsState.value.gpsAccuracy
         val currentIndex = options.indexOf(currentAccuracy)
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Точность GPS")
             .setMessage("Выберите уровень точности GPS. Высокая точность потребляет больше батареи.")
             .setSingleChoiceItems(
@@ -181,7 +181,7 @@ class SettingsFragment : Fragment() {
         val currentMode = viewModel.settingsState.value.themeMode
         val currentIndex = options.indexOf(currentMode).coerceAtLeast(0)
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Тема приложения")
             .setSingleChoiceItems(
                 options.map { viewModel.getThemeModeDisplayName(it) }.toTypedArray(),
@@ -196,7 +196,7 @@ class SettingsFragment : Fragment() {
     }
 
     private fun showResetConfirmationDialog() {
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Сброс настроек")
             .setMessage("Вы уверены, что хотите сбросить все настройки к значениям по умолчанию?")
             .setPositiveButton("Сбросить") { _, _ ->
@@ -215,7 +215,7 @@ class SettingsFragment : Fragment() {
             inputType = android.text.InputType.TYPE_CLASS_NUMBER
         }
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Рост пользователя")
             .setMessage("Введите ваш рост в сантиметрах:")
             .setView(input)
@@ -250,7 +250,7 @@ class SettingsFragment : Fragment() {
             null
         )
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Дата рождения")
             .setMessage("Выберите вашу дату рождения:")
             .setView(datePicker)
@@ -269,7 +269,7 @@ class SettingsFragment : Fragment() {
         val currentGender = viewModel.settingsState.value.userGender
         val currentIndex = options.indexOf(currentGender)
 
-        AlertDialog.Builder(requireContext())
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle("Пол пользователя")
             .setMessage("Выберите ваш пол:")
             .setSingleChoiceItems(
