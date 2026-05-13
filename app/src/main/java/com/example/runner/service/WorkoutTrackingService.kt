@@ -22,12 +22,14 @@ import com.example.runner.MainActivity
 import com.example.runner.R
 import com.example.runner.data.TrackPoint
 import com.example.runner.data.WorkoutType
+import com.example.runner.data.maxReasonableGpsSpeedMps
 import com.example.runner.ui.tracking.WorkoutSession
 import com.example.runner.util.GpsFilter
 import com.example.runner.util.GpsConfig
 import com.example.runner.util.FormatUtils
 import com.example.runner.util.UserPreferences
 import com.google.android.gms.location.*
+import org.osmdroid.util.GeoPoint
 import java.util.*
 
 class WorkoutTrackingService : Service() {
@@ -44,6 +46,10 @@ class WorkoutTrackingService : Service() {
         const val NO_LOCATION_UPDATE_TIMEOUT_MS = 5000L
         const val PERIODIC_LOCATION_REQUEST_INTERVAL_MS = 2000L
         const val WORKOUT_TIMER_INTERVAL_MS = 1000L
+        /** Лимит точек карты / отфильтрованного трека в RAM при длительных тренировках */
+        const val MAX_TRACK_POINTS_DISPLAY = 8000
+        /** Лимит сырых точек (все приходящие от Fused) */
+        const val MAX_RAW_TRACK_POINTS = 15000
         // Интервал продления wake lock (обновляем каждые 9 минут, чтобы не допустить истечения)
         const val WAKE_LOCK_RENEWAL_INTERVAL_MS = 9 * 60 * 1000L
     }
@@ -67,7 +73,9 @@ class WorkoutTrackingService : Service() {
     // Таймер для периодического запроса местоположения
     private var locationTimer: Timer? = null
     private var lastLocationTime: Long = 0
-    
+    /** Последний применённый интервал Fused Location (мс) — не пересоздаём request без смены «корзины». */
+    private var lastAppliedAdaptiveIntervalMs: Long = -1L
+
     // Обновление времени тренировки только на главном потоке (избегаем гонок с LocationCallback)
     private val mainHandler = Handler(Looper.getMainLooper())
     private var workoutTimeRunnable: Runnable? = null
@@ -144,7 +152,8 @@ class WorkoutTrackingService : Service() {
 
     private fun createNotification(): Notification {
         val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(MainActivity.EXTRA_OPEN_TRACKING, true)
         }
         val pendingIntent = PendingIntent.getActivity(
             this, 0, intent,
@@ -184,19 +193,22 @@ class WorkoutTrackingService : Service() {
     private fun acquireWakeLock() {
         wakeLock?.let {
             if (!it.isHeld) {
-                // Используем бесконечный wake lock для надежного трекинга длительных тренировок
-                // Wake lock будет освобожден при паузе или остановке тренировки
                 it.acquire()
                 android.util.Log.d("WorkoutTrackingService", "Wake lock acquired")
             } else {
-                // Если wake lock уже удерживается, обновляем его таймаут
-                // Это предотвращает истечение во время длительных тренировок
-                try {
-                    it.acquire(WAKE_LOCK_RENEWAL_INTERVAL_MS)
-                    android.util.Log.d("WorkoutTrackingService", "Wake lock renewed")
-                } catch (e: Exception) {
-                    android.util.Log.w("WorkoutTrackingService", "Could not renew wake lock: ${e.message}")
-                }
+                android.util.Log.d("WorkoutTrackingService", "Wake lock already held, skipping extra acquire")
+            }
+        }
+    }
+
+    private fun renewWakeLockIfHeld() {
+        wakeLock?.let {
+            if (!it.isHeld) return@let
+            try {
+                it.acquire(WAKE_LOCK_RENEWAL_INTERVAL_MS)
+                android.util.Log.d("WorkoutTrackingService", "Wake lock renewed (timed)")
+            } catch (e: Exception) {
+                android.util.Log.w("WorkoutTrackingService", "Could not renew wake lock: ${e.message}")
             }
         }
     }
@@ -247,9 +259,14 @@ class WorkoutTrackingService : Service() {
             )
             newRawTrackDataPoints.add(rawTrackPoint)
 
-            val filteredLocation = GpsFilter.filterGpsOutlier(location, previousLocation)
+            val filteredLocation = GpsFilter.filterGpsOutlier(
+                location,
+                previousLocation,
+                selectedWorkoutType.maxReasonableGpsSpeedMps()
+            )
             if (filteredLocation == null) {
                 android.util.Log.w("WorkoutTrackingService", "GPS point filtered as outlier/invalid: lat=${location.latitude}, lon=${location.longitude}, acc=${location.accuracy}m")
+                decimateRawPointsIfNeeded(newRawTrackDataPoints)
                 currentSession = currentSession.copy(
                     currentLocation = location,
                     rawTrackDataPoints = newRawTrackDataPoints
@@ -264,6 +281,7 @@ class WorkoutTrackingService : Service() {
                 val distanceToLastMeters = filteredLocation.distanceTo(previousLocation)
                 if (distanceToLastMeters < MIN_POINT_DISTANCE_METERS) {
                     android.util.Log.d("WorkoutTrackingService", "Point too close to previous: ${distanceToLastMeters}m — skipped")
+                    decimateRawPointsIfNeeded(newRawTrackDataPoints)
                     currentSession = currentSession.copy(
                         currentLocation = filteredLocation,
                         rawTrackDataPoints = newRawTrackDataPoints
@@ -288,6 +306,11 @@ class WorkoutTrackingService : Service() {
                 altitude = filteredLocation.altitude
             )
             newTrackDataPoints.add(trackPoint)
+
+            if (newTrackPoints.size == newTrackDataPoints.size) {
+                decimateSyncedTrackPoints(newTrackPoints, newTrackDataPoints)
+            }
+            decimateRawPointsIfNeeded(newRawTrackDataPoints)
 
             var newDistance = currentSession.distance
             if (previousLocation != null) {
@@ -346,6 +369,7 @@ class WorkoutTrackingService : Service() {
                             altitude = location.altitude
                         )
                         it.add(rawTrackPoint)
+                        decimateRawPointsIfNeeded(it)
                     }
                 } else currentSession.rawTrackDataPoints,
                 gpsStatus = com.example.runner.ui.tracking.GpsStatus.FOUND
@@ -354,6 +378,32 @@ class WorkoutTrackingService : Service() {
 
         sessionUpdateCallback?.invoke(currentSession)
         updateNotification()
+    }
+
+    private fun decimateSyncedTrackPoints(
+        trackPoints: MutableList<GeoPoint>,
+        trackDataPoints: MutableList<TrackPoint>
+    ) {
+        while (trackPoints.size > MAX_TRACK_POINTS_DISPLAY) {
+            val before = trackPoints.size
+            val newTp = trackPoints.filterIndexed { i, _ -> i % 2 == 0 || i == trackPoints.lastIndex }.toMutableList()
+            val newTd = trackDataPoints.filterIndexed { i, _ -> i % 2 == 0 || i == trackDataPoints.lastIndex }.toMutableList()
+            trackPoints.clear()
+            trackPoints.addAll(newTp)
+            trackDataPoints.clear()
+            trackDataPoints.addAll(newTd)
+            if (trackPoints.size >= before) break
+        }
+    }
+
+    private fun decimateRawPointsIfNeeded(raw: MutableList<TrackPoint>) {
+        while (raw.size > MAX_RAW_TRACK_POINTS) {
+            val before = raw.size
+            val newR = raw.filterIndexed { i, _ -> i % 2 == 0 || i == raw.lastIndex }.toMutableList()
+            raw.clear()
+            raw.addAll(newR)
+            if (raw.size >= before) break
+        }
     }
 
     private fun computeCurrentSpeed(previous: Location?, current: Location, timeDiffMs: Long): Float {
@@ -383,6 +433,16 @@ class WorkoutTrackingService : Service() {
 
     fun startWorkout() {
         android.util.Log.d("WorkoutTrackingService", "startWorkout called")
+
+        if (currentSession.isTracking && currentSession.isPaused) {
+            android.util.Log.w("WorkoutTrackingService", "startWorkout ignored: workout is paused, use resume")
+            return
+        }
+
+        if (isCurrentlyTracking && currentSession.isTracking && !currentSession.isPaused) {
+            android.util.Log.w("WorkoutTrackingService", "startWorkout ignored: workout already running")
+            return
+        }
         
         // Проверяем разрешения GPS
         if (ContextCompat.checkSelfPermission(
@@ -395,6 +455,11 @@ class WorkoutTrackingService : Service() {
             sessionUpdateCallback?.invoke(currentSession)
             return
         }
+
+        lastLocation = null
+        lastUpdateTime = 0L
+        lastLocationTime = 0L
+        lastAppliedAdaptiveIntervalMs = -1L
         
         acquireWakeLock()
         startWakeLockRenewal()
@@ -402,11 +467,25 @@ class WorkoutTrackingService : Service() {
         val currentTime = System.currentTimeMillis()
         isCurrentlyTracking = true
         android.util.Log.d("WorkoutTrackingService", "Setting isCurrentlyTracking = true")
-        currentSession = currentSession.copy(
+        currentSession = WorkoutSession(
             isTracking = true,
+            isPaused = false,
             startTime = currentTime,
-            pauseTime = 0,
-            totalPauseDuration = 0
+            pauseTime = 0L,
+            totalPauseDuration = 0L,
+            currentTime = 0L,
+            distance = 0f,
+            avgPace = 0f,
+            currentPace = 0f,
+            avgSpeed = 0f,
+            currentSpeed = 0f,
+            heartRate = 0,
+            calories = 0,
+            gpsStatus = com.example.runner.ui.tracking.GpsStatus.SEARCHING,
+            trackPoints = emptyList(),
+            trackDataPoints = emptyList(),
+            rawTrackDataPoints = emptyList(),
+            currentLocation = null
         )
         
         startLocationUpdates()
@@ -459,6 +538,7 @@ class WorkoutTrackingService : Service() {
 
     fun stopWorkout() {
         isCurrentlyTracking = false
+        lastAppliedAdaptiveIntervalMs = -1L
         currentSession = currentSession.copy(
             isTracking = false,
             isPaused = false
@@ -485,6 +565,7 @@ class WorkoutTrackingService : Service() {
                 locationCallback!!,
                 mainLooper
             )
+            lastAppliedAdaptiveIntervalMs = GpsConfig.HIGH_ACCURACY_INTERVAL
             
             // Дополнительно запрашиваем последнее известное местоположение
             fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
@@ -547,8 +628,10 @@ class WorkoutTrackingService : Service() {
             return
         }
         
-        // Вычисляем адаптивный интервал на основе скорости
         val adaptiveInterval = GpsConfig.getAdaptiveInterval(currentSpeed)
+        if (adaptiveInterval == lastAppliedAdaptiveIntervalMs) {
+            return
+        }
 
         android.util.Log.d("WorkoutTrackingService", "Updating location request interval to $adaptiveInterval ms (speed: $currentSpeed km/h)")
         
@@ -570,6 +653,7 @@ class WorkoutTrackingService : Service() {
             )
             
             android.util.Log.d("WorkoutTrackingService", "Location request updated successfully")
+            lastAppliedAdaptiveIntervalMs = adaptiveInterval
             
         } catch (e: SecurityException) {
             android.util.Log.e("WorkoutTrackingService", "SecurityException updating location request: ${e.message}", e)
@@ -630,7 +714,7 @@ class WorkoutTrackingService : Service() {
             override fun run() {
                 // Продлеваем wake lock только во время активного трекинга
                 if (isCurrentlyTracking && !currentSession.isPaused) {
-                    acquireWakeLock()
+                    renewWakeLockIfHeld()
                     android.util.Log.d("WorkoutTrackingService", "Wake lock automatically renewed")
                 } else {
                     // Если тренировка на паузе или остановлена, останавливаем обновления

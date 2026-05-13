@@ -26,6 +26,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import com.example.runner.util.GpsFilter
+import java.util.Date
 
 data class WorkoutSession(
     val isTracking: Boolean = false,
@@ -33,9 +34,9 @@ data class WorkoutSession(
     val startTime: Long = 0,
     val pauseTime: Long = 0,
     val totalPauseDuration: Long = 0,
-    var currentTime: Long = 0,
-    var distance: Float = 0f,
-    var avgPace: Float = 0f, // средний темп в минутах на километр
+    val currentTime: Long = 0,
+    val distance: Float = 0f,
+    val avgPace: Float = 0f, // средний темп в минутах на километр
     val currentPace: Float = 0f, // текущий темп в минутах на километр
     val avgSpeed: Float = 0f,
     val currentSpeed: Float = 0f,
@@ -128,6 +129,10 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
     }
 
     fun initializeService() {
+        if (isServiceBound) {
+            android.util.Log.d("WorkoutTrackingViewModel", "initializeService skipped: already bound")
+            return
+        }
         android.util.Log.d("WorkoutTrackingViewModel", "initializeService called")
         val intent = Intent(context, WorkoutTrackingService::class.java)
         val result = context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
@@ -398,15 +403,24 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
         lastLocation = null
         lastUpdateTime = 0
         stopLocalWorkoutTimer()
-        _workoutSession.value = WorkoutSession()
-        _workoutState.value = WorkoutState.NOT_STARTED
-        
-        // Останавливаем сервис если он запущен
+
         if (isServiceBound) {
-            context.unbindService(serviceConnection)
+            try {
+                context.unbindService(serviceConnection)
+            } catch (_: Exception) { }
             isServiceBound = false
             trackingService = null
         }
+
+        try {
+            val stopIntent = Intent(context, WorkoutTrackingService::class.java).apply {
+                action = WorkoutTrackingService.ACTION_STOP_WORKOUT
+            }
+            context.startService(stopIntent)
+        } catch (_: Exception) { }
+
+        _workoutSession.value = WorkoutSession()
+        _workoutState.value = WorkoutState.NOT_STARTED
     }
 
     private fun updateWorkoutState() {
