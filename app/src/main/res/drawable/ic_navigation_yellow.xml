@@ -5,15 +5,9 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="@color/map_navigation_shadow"
-        android:pathData="M13,3L5,21h16L13,3z"
-        android:alpha="0.8" />
+        android:fillColor="#1976D2"
+        android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10s10,-4.48 10,-10S17.52,2 12,2z" />
     <path
-        android:fillColor="@color/map_navigation_icon"
-        android:pathData="M12,2L4,20h16L12,2z" />
-    <path
-        android:fillColor="@color/map_navigation_highlight"
-        android:pathData="M12,2L8,14h4L12,2z"
-        android:alpha="0.6" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,7C9.24,7 7,9.24 7,12s2.24,5 5,5s5,-2.24 5,-5s-2.24,-5 -5,-5z" />
 </vector>
-
