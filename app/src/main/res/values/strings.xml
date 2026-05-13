@@ -88,6 +88,7 @@
 
     <string name="settings_title">Settings</string>
     <string name="settings_profile_title">User profile</string>
+    <string name="settings_profile_subtitle">Used for calorie estimates</string>
     <string name="settings_label_weight">Weight</string>
     <string name="settings_label_growth">Growth</string>
     <string name="settings_label_age">Age</string>
@@ -95,6 +96,7 @@
     <string name="settings_profile_gender_male">Male</string>
     <string name="settings_profile_gender_female">Female</string>
     <string name="settings_app_settings_title">Application settings</string>
+    <string name="settings_app_subtitle">Map, units, and feedback</string>
     <string name="settings_label_units_type">Units type</string>
     <string name="settings_units_metric">Metric</string>
     <string name="settings_units_imperial">Imperial</string>
@@ -163,12 +165,17 @@
     <string name="statistics_sessions_this_week_label">Training sessions this week:</string>
     <string name="statistics_sessions_this_month_label">Training sessions this month:</string>
     <string name="statistics_by_workout_type">By workout type</string>
-    <string name="statistics_message_no_data">There is no data to display.\Start training sessions to see statistics.</string>
+    <string name="statistics_message_no_data">There is no data to display. Start training sessions to see statistics.</string>
 
     <string name="workout_list_num_workouts">Training sessions</string>
-    <string name="workout_list_average_temp">Average pace</string>
+    <string name="workout_list_average_pace">Average pace</string>
     <string name="workout_list_message_no_workouts">No training sessions yet</string>
-    <string name="workout_list_message_start_workout">Start training to create a record"</string>
+    <string name="workout_list_message_start_workout">Start training to create a record.</string>
+    <string name="workout_list_empty_start">Start workout</string>
+    <string name="workout_list_content_description_empty">No workouts yet</string>
+
+    <string name="gps_label">GPS</string>
+    <string name="gps_status_a11y">GPS signal: %1$s</string>
     <string name="workout_fragment_label">Workout</string>
     <string name="workout_details_label">Workout details</string>
     <string name="start_workout">Start workout</string>

@@ -39,9 +39,6 @@
     <color name="gps_signal_level_3">#FFFBC02D</color>
     <color name="gps_signal_level_4">#FF43A047</color>
     <color name="gps_signal_inactive">#40888888</color>
-    <color name="map_navigation_icon">#FFFFC107</color>
-    <color name="map_navigation_shadow">#FF8E6C02</color>
-    <color name="map_navigation_highlight">#FFFFD54F</color>
     <color name="map_navigation_circle_fill">#33FFC107</color>
     <color name="map_navigation_circle_stroke">#80FFC107</color>
 </resources>

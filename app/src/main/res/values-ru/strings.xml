@@ -78,6 +78,7 @@
 
     <string name="settings_title">Настройки</string>
     <string name="settings_profile_title">Профиль пользователя</string>
+    <string name="settings_profile_subtitle">Для расчёта калорий</string>
     <string name="settings_label_weight">Вес</string>
     <string name="settings_label_growth">Рост</string>
     <string name="settings_label_age">Возраст</string>
@@ -85,6 +86,7 @@
     <string name="settings_profile_gender_male">Мужской</string>
     <string name="settings_profile_gender_female">Женский</string>
     <string name="settings_app_settings_title">Настройки приложения</string>
+    <string name="settings_app_subtitle">Карта, единицы и обратная связь</string>
     <string name="settings_label_units_type">Система единиц</string>
     <string name="settings_units_metric">Метрическая (км)</string>
     <string name="settings_units_imperial">Имперская (мили)</string>
@@ -153,9 +155,13 @@
     <string name="statistics_message_no_data">Нет данных для отображения.\nНачните тренировки, чтобы увидеть статистику.</string>
 
     <string name="workout_list_num_workouts">Тренировок</string>
-    <string name="workout_list_average_temp">Средний темп</string>
+    <string name="workout_list_average_pace">Средний темп</string>
     <string name="workout_list_message_no_workouts">Пока нет тренировок</string>
-    <string name="workout_list_message_start_workout">Начните тренировку для создания записи"</string>
+    <string name="workout_list_message_start_workout">Начните тренировку, чтобы появилась первая запись.</string>
+    <string name="workout_list_empty_start">Начать тренировку</string>
+    <string name="workout_list_content_description_empty">Пока нет тренировок</string>
+    <string name="gps_label">GPS</string>
+    <string name="gps_status_a11y">Сигнал GPS: %1$s</string>
     <string name="workout_fragment_label">Тренировка</string>
     <string name="workout_details_label">Детали тренировки</string>
     <string name="start_workout">Начать тренировку</string>
