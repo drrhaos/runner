@@ -18,6 +18,9 @@ import androidx.activity.OnBackPressedCallback
 import android.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.example.runner.data.WorkoutDatabase
@@ -150,6 +153,16 @@ class WorkoutTrackingFragment : Fragment() {
     private var stopHoldJob: Job? = null
     private var stopHoldStartTime = 0L
     private var isStoppingWorkout = false
+
+    private fun gpsStatusShortLabel(status: GpsStatus): String = when (status) {
+        GpsStatus.SEARCHING -> getString(R.string.gps_signal_searching)
+        GpsStatus.WEAK -> getString(R.string.gps_signal_weak)
+        GpsStatus.MEDIUM -> getString(R.string.gps_signal_medium)
+        GpsStatus.STRONG, GpsStatus.FOUND -> getString(R.string.gps_signal_strong)
+        GpsStatus.LOST -> getString(R.string.gps_signal_lost)
+        GpsStatus.DENIED -> getString(R.string.gps_signal_denied)
+    }
+
     private fun updateGpsSignalIndicator(status: GpsStatus, accuracy: Float) {
         when (status) {
             GpsStatus.SEARCHING -> {
@@ -187,11 +200,10 @@ class WorkoutTrackingFragment : Fragment() {
                 binding.textViewGpsAccuracy.visibility = View.VISIBLE
                 binding.textViewGpsAccuracy.text = getString(R.string.gps_accuracy_denied)
             }
-            else -> {
-                binding.layoutGpsStatus.visibility = View.GONE
-                binding.textViewGpsAccuracy.visibility = View.GONE
-            }
         }
+        val label = gpsStatusShortLabel(status)
+        binding.textViewGpsStatusLabel.text = "${getString(R.string.gps_label)} · $label"
+        binding.layoutGpsStatus.contentDescription = getString(R.string.gps_status_a11y, label)
     }
 
     private fun setGpsBarsLevel(level: Int) {
@@ -296,7 +308,8 @@ class WorkoutTrackingFragment : Fragment() {
         requestLocationPermission()
         updateCenterButtonVisibility()
         setupBackButtonHandler()
-        
+        setupWindowInsets()
+
         // Инициализируем GPS статус
         try {
             android.util.Log.d("GPSStatus", "Initializing GPS status indicator")
@@ -658,6 +671,22 @@ class WorkoutTrackingFragment : Fragment() {
         }
     }
 
+    private fun setupWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.layoutWorkoutPanel) { v, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            v.updatePadding(left = bars.left, right = bars.right, bottom = bars.bottom)
+            insets
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(binding.layoutGpsStatus) { v, insets ->
+            val cut = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+            val base = resources.getDimensionPixelSize(R.dimen.activity_vertical_margin)
+            v.updatePadding(top = base + cut.top)
+            insets
+        }
+    }
+
     private fun setupClickListeners() {
         binding.buttonStart.setOnClickListener {
             showWorkoutTypeDialog()
@@ -733,6 +762,7 @@ class WorkoutTrackingFragment : Fragment() {
         binding.stopHoldBackground.visibility = View.VISIBLE
         binding.progressBarStopHold.progress = 0
         binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
+        binding.textViewStopHoldCountdown.text = STOP_HOLD_SECONDS.toString()
 
         stopHoldJob = viewLifecycleOwner.lifecycleScope.launch {
             while (true) {
@@ -749,6 +779,7 @@ class WorkoutTrackingFragment : Fragment() {
 
                 val remainingMillis = (STOP_HOLD_DURATION_MS - elapsed).coerceAtLeast(0L)
                 val remainingSeconds = ceil(remainingMillis / 1000.0).toInt().coerceAtLeast(1)
+                binding.textViewStopHoldCountdown.text = remainingSeconds.toString()
                 binding.textViewStopHoldHint.text =
                     getString(R.string.stop_hold_hint, remainingSeconds)
                 delay(50)
@@ -764,6 +795,7 @@ class WorkoutTrackingFragment : Fragment() {
         binding.stopHoldBackground.visibility = View.GONE
         binding.progressBarStopHold.progress = 0
         binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
+        binding.textViewStopHoldCountdown.text = STOP_HOLD_SECONDS.toString()
         binding.buttonStop.isPressed = false
         // Не сбрасываем isStoppingWorkout здесь, так как тренировка может быть остановлена
     }
@@ -778,6 +810,7 @@ class WorkoutTrackingFragment : Fragment() {
         binding.stopHoldBackground.visibility = View.GONE
         binding.progressBarStopHold.progress = 0
         binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
+        binding.textViewStopHoldCountdown.text = STOP_HOLD_SECONDS.toString()
         binding.buttonStop.isPressed = false
         viewModel.stopWorkout()
         navigateToWorkoutDetails()
