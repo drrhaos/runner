@@ -202,7 +202,6 @@ class WorkoutTrackingFragment : Fragment() {
             }
         }
         val label = gpsStatusShortLabel(status)
-        binding.textViewGpsStatusLabel.text = "${getString(R.string.gps_label)} · $label"
         binding.layoutGpsStatus.contentDescription = getString(R.string.gps_status_a11y, label)
     }
 
