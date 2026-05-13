@@ -24,17 +24,6 @@
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
-            <TextView
-                android:id="@+id/text_view_gps_status_label"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
-                android:textSize="@dimen/tracking_metric_caption"
-                android:textColor="?attr/colorOnSurface"
-                android:maxLines="1"
-                android:ellipsize="end"
-                tools:text="GPS · Strong" />
-
             <LinearLayout
                 android:id="@+id/layout_gps_signal_bars"
                 android:layout_width="wrap_content"
