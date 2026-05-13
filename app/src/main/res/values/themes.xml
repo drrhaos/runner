@@ -1,27 +1,24 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme. -->
-    <style name="Theme.Runner" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Primary brand color. -->
+    <style name="Theme.Runner" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/blue_500</item>
         <item name="colorPrimaryVariant">@color/blue_700</item>
         <item name="colorOnPrimary">@color/white</item>
-        <!-- Secondary brand color. -->
         <item name="colorSecondary">@color/blue_300</item>
-        <item name="colorSecondaryVariant">@color/blue_800</item>
         <item name="colorOnSecondary">@color/white</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+        <item name="colorTertiary">@color/orange_500</item>
+        <item name="colorOnTertiary">@color/white</item>
+        <item name="android:statusBarColor">@color/blue_700</item>
     </style>
 
     <style name="Theme.Runner.NoActionBar" parent="Theme.Runner" />
 
-    <style name="Theme.Runner.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+    <style name="Theme.Runner.AppBarOverlay" parent="ThemeOverlay.Material3.Dark.ActionBar" />
 
-    <style name="Theme.Runner.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+    <style name="Theme.Runner.PopupOverlay" parent="ThemeOverlay.Material3.Light" />
 
     <!-- Стили для настроек -->
-    <style name="SettingsButtonStyle" parent="Widget.MaterialComponents.Button.TextButton">
+    <style name="SettingsButtonStyle" parent="Widget.Material3.Button.TextButton">
         <item name="android:textColor">@color/settings_accent</item>
         <item name="android:textSize">14sp</item>
         <item name="android:textStyle">normal</item>

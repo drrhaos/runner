@@ -32,6 +32,10 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         loadStatistics()
     }
 
+    fun refreshStatistics() {
+        loadStatistics()
+    }
+
     fun insertWorkout(workout: Workout) {
         viewModelScope.launch {
             try {
