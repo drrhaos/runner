@@ -23,11 +23,22 @@
             android:layout_margin="16dp"
             android:orientation="horizontal"
             android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/text_view_gps_status_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:textSize="@dimen/tracking_metric_caption"
+                android:textColor="?attr/colorOnSurface"
+                android:maxLines="1"
+                android:ellipsize="end"
+                tools:text="GPS · Strong" />
+
             <LinearLayout
                 android:id="@+id/layout_gps_signal_bars"
                 android:layout_width="wrap_content"
                 android:layout_height="16dp"
-                android:layout_marginStart="8dp"
                 android:gravity="bottom"
                 android:orientation="horizontal">
 
@@ -351,7 +362,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/track_info_time_label"
-                    android:textSize="10sp"
+                    android:textSize="@dimen/tracking_metric_caption"
                     android:textColor="?attr/colorOnSurface"
                     android:alpha="0.72" />
             </LinearLayout>
@@ -427,7 +438,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/track_info_distance_label_km"
-                    android:textSize="10sp"
+                    android:textSize="@dimen/tracking_metric_caption"
                     android:textColor="?attr/colorOnSurface"
                     android:alpha="0.72" />
             </LinearLayout>
@@ -459,6 +470,15 @@
         android:background="@drawable/stop_hold_overlay_background"
         android:visibility="gone"
         tools:visibility="visible">
+
+        <TextView
+            android:id="@+id/text_view_stop_hold_countdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="?attr/colorPrimary"
+            android:textStyle="bold"
+            android:textSize="@dimen/stop_hold_countdown_text"
+            tools:text="3" />
 
         <ProgressBar
             android:id="@+id/progressBar_stop_hold"
