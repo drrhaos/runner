@@ -12,7 +12,9 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Binder
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -21,15 +23,11 @@ import com.example.runner.R
 import com.example.runner.data.TrackPoint
 import com.example.runner.data.WorkoutType
 import com.example.runner.ui.tracking.WorkoutSession
-import com.example.runner.ui.tracking.WorkoutState
 import com.example.runner.util.GpsFilter
 import com.example.runner.util.GpsConfig
 import com.example.runner.util.FormatUtils
 import com.example.runner.util.UserPreferences
 import com.google.android.gms.location.*
-import com.google.android.gms.location.ActivityRecognition
-import kotlinx.coroutines.*
-import org.osmdroid.util.GeoPoint
 import java.util.*
 
 class WorkoutTrackingService : Service() {
@@ -53,10 +51,7 @@ class WorkoutTrackingService : Service() {
     private val binder = WorkoutTrackingBinder()
     private var fusedLocationClient: FusedLocationProviderClient? = null
     private var locationCallback: LocationCallback? = null
-    private var activityRecognitionClient: ActivityRecognitionClient? = null
     private var wakeLock: PowerManager.WakeLock? = null
-    private var serviceJob = SupervisorJob()
-    private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
     private var currentLocationRequest: LocationRequest? = null
 
     // Данные тренировки
@@ -73,8 +68,9 @@ class WorkoutTrackingService : Service() {
     private var locationTimer: Timer? = null
     private var lastLocationTime: Long = 0
     
-    // Таймер для обновления времени тренировки
-    private var workoutTimer: Timer? = null
+    // Обновление времени тренировки только на главном потоке (избегаем гонок с LocationCallback)
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var workoutTimeRunnable: Runnable? = null
     
     // Таймер для продления wake lock во время длительных тренировок
     private var wakeLockRenewalTimer: Timer? = null
@@ -87,7 +83,6 @@ class WorkoutTrackingService : Service() {
         super.onCreate()
         createNotificationChannel()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        activityRecognitionClient = ActivityRecognition.getClient(this)
         setupLocationCallback()
         // Не приобретаем wake lock сразу - только при старте тренировки
         initializeWakeLock()
@@ -124,11 +119,11 @@ class WorkoutTrackingService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        stopWorkoutTimer()
         stopLocationUpdates()
         stopPeriodicLocationRequest()
         stopWakeLockRenewal()
         releaseWakeLock()
-        serviceJob.cancel()
     }
 
     private fun createNotificationChannel() {
@@ -228,6 +223,10 @@ class WorkoutTrackingService : Service() {
     }
 
     private fun updateLocation(location: Location) {
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            mainHandler.post { updateLocation(location) }
+            return
+        }
         android.util.Log.d("WorkoutTrackingService", "updateLocation called: lat=${location.latitude}, lon=${location.longitude}, accuracy=${location.accuracy}m, speed=${location.speed}m/s")
         
         val newTrackPoints = currentSession.trackPoints.toMutableList()
@@ -550,17 +549,7 @@ class WorkoutTrackingService : Service() {
         
         // Вычисляем адаптивный интервал на основе скорости
         val adaptiveInterval = GpsConfig.getAdaptiveInterval(currentSpeed)
-        
-        // Проверяем, нужно ли обновить LocationRequest
-        // Note: interval property is deprecated, so we always recreate the request
-        // to ensure we have the latest adaptive interval
-        val shouldUpdate = true // Always update to ensure adaptive interval is applied
-        if (!shouldUpdate) {
-            // Интервал не изменился, обновляем только периодический таймер если нужно
-            updatePeriodicTimerInterval(currentSpeed)
-            return
-        }
-        
+
         android.util.Log.d("WorkoutTrackingService", "Updating location request interval to $adaptiveInterval ms (speed: $currentSpeed km/h)")
         
         try {
@@ -661,26 +650,30 @@ class WorkoutTrackingService : Service() {
     
     private fun startWorkoutTimer() {
         android.util.Log.d("WorkoutTrackingService", "Starting workout timer")
-        workoutTimer?.cancel()
-        workoutTimer = Timer()
-        workoutTimer?.scheduleAtFixedRate(object : TimerTask() {
+        stopWorkoutTimer()
+        val r = object : Runnable {
             override fun run() {
-                if (isCurrentlyTracking && !currentSession.isPaused) {
-                    val currentTime = System.currentTimeMillis()
-                    val elapsedTime = currentTime - currentSession.startTime - currentSession.totalPauseDuration
-                    currentSession = currentSession.copy(currentTime = elapsedTime)
-                    sessionUpdateCallback?.invoke(currentSession)
-                    android.util.Log.d("WorkoutTrackingService", "Updated workout time: $elapsedTime")
-                    updateNotification()
+                if (!isCurrentlyTracking || currentSession.isPaused) {
+                    workoutTimeRunnable = null
+                    return
                 }
+                val currentTime = System.currentTimeMillis()
+                val elapsedTime = currentTime - currentSession.startTime - currentSession.totalPauseDuration
+                currentSession = currentSession.copy(currentTime = elapsedTime)
+                sessionUpdateCallback?.invoke(currentSession)
+                android.util.Log.d("WorkoutTrackingService", "Updated workout time: $elapsedTime")
+                updateNotification()
+                mainHandler.postDelayed(this, WORKOUT_TIMER_INTERVAL_MS)
             }
-        }, 0, WORKOUT_TIMER_INTERVAL_MS)
+        }
+        workoutTimeRunnable = r
+        mainHandler.post(r)
     }
     
     private fun stopWorkoutTimer() {
         android.util.Log.d("WorkoutTrackingService", "Stopping workout timer")
-        workoutTimer?.cancel()
-        workoutTimer = null
+        workoutTimeRunnable?.let { mainHandler.removeCallbacks(it) }
+        workoutTimeRunnable = null
     }
 
     // Методы для взаимодействия с UI

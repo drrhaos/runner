@@ -27,16 +27,22 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+            enableUnitTestCoverage = true
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
     buildFeatures {
         viewBinding = true
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
     }
 }
 
@@ -59,12 +65,8 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     
-    // Date picker
-    implementation("com.google.android.material:material:1.11.0")
-    
     // Maps and location
     implementation("org.osmdroid:osmdroid-android:6.1.18")
-    implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     
     // Location services
@@ -106,12 +108,4 @@ dependencies {
 // JaCoCo configuration
 jacoco {
     toolVersion = "0.8.8"
-}
-
-android {
-    buildTypes {
-        debug {
-            enableUnitTestCoverage = true
-        }
-    }
 }
