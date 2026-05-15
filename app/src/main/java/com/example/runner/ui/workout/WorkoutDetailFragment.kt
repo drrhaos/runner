@@ -412,7 +412,7 @@ class WorkoutDetailFragment : Fragment() {
             textViewDetailType.text = getWorkoutTypeDisplayName(workout.type)
 
             // Дистанция - используем данные из workout (уже могут быть очищены)
-            textViewDetailDistance.text = com.example.runner.util.FormatUtils.formatDistance(workout.distance)
+            textViewDetailDistance.text = com.example.runner.util.FormatUtils.formatDistance(workout.distance, requireContext())
 
             // Время
             textViewDetailDuration.text = viewModel.formatDuration(workout.duration)
@@ -422,10 +422,10 @@ class WorkoutDetailFragment : Fragment() {
 
             // Средняя скорость
             val avgSpeed = com.example.runner.util.FormatUtils.calculateAverageSpeed(workout.distance, workout.duration)
-            textViewDetailAvgSpeed.text = com.example.runner.util.FormatUtils.formatSpeed(avgSpeed)
+            textViewDetailAvgSpeed.text = com.example.runner.util.FormatUtils.formatSpeed(avgSpeed, true, requireContext())
 
             // Калории
-            textViewDetailCalories.text = com.example.runner.util.FormatUtils.formatCalories(workout.calories ?: 0)
+            textViewDetailCalories.text = com.example.runner.util.FormatUtils.formatCalories(workout.calories ?: 0, requireContext())
         }
     }
 

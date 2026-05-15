@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.runner.R
 import com.example.runner.util.ThemeUtils
 import com.example.runner.util.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow

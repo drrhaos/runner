@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.runner.R
 import com.example.runner.data.Workout
 import com.example.runner.data.WorkoutDao
 import com.example.runner.data.WorkoutDatabase
