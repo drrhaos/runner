@@ -17,10 +17,11 @@
         <LinearLayout
             android:id="@+id/layout_gps_status"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="72dp"
             android:layout_alignParentTop="true"
             android:layout_alignParentStart="true"
-            android:layout_margin="16dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="16dp"
             android:orientation="horizontal"
             android:gravity="center_vertical">
 
@@ -66,7 +67,8 @@
             android:layout_height="wrap_content"
             android:layout_alignParentTop="true"
             android:layout_alignParentEnd="true"
-            android:layout_margin="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="16dp"
             android:orientation="vertical"
             android:gravity="center_horizontal">
 
@@ -76,12 +78,6 @@
                 android:layout_height="72dp"
                 android:visibility="gone"
                 android:id="@+id/button_my_location_container">
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_gravity="center"
-                    android:background="@drawable/map_center_circle" />
 
                 <ImageButton
                     android:id="@+id/button_my_location"
