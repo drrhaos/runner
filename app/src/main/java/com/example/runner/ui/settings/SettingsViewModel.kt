@@ -1,6 +1,8 @@
 package com.example.runner.ui.settings
 
 import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -23,6 +25,7 @@ data class SettingsState(
     val voiceFeedback: Boolean = false,
     val gpsAccuracy: String = "high",
     val themeMode: String = ThemeUtils.THEME_SYSTEM,
+    val appLanguage: String = "en",
     val isFirstLaunch: Boolean = true
 )
 
@@ -50,6 +53,7 @@ class SettingsViewModel(private val context: Context) : ViewModel() {
                 voiceFeedback = userPreferences.voiceFeedback,
                 gpsAccuracy = userPreferences.gpsAccuracy,
                 themeMode = userPreferences.themeMode,
+                appLanguage = userPreferences.appLanguage,
                 isFirstLaunch = userPreferences.isFirstLaunch
             )
             applyTheme(userPreferences.themeMode)
@@ -107,6 +111,13 @@ class SettingsViewModel(private val context: Context) : ViewModel() {
         applyTheme(sanitized)
     }
 
+    fun updateAppLanguage(language: String) {
+        userPreferences.appLanguage = language
+        _settingsState.value = _settingsState.value.copy(appLanguage = language)
+        val localeList = LocaleListCompat.forLanguageTags(language)
+        AppCompatDelegate.setApplicationLocales(localeList)
+    }
+
     fun markFirstLaunchCompleted() {
         userPreferences.isFirstLaunch = false
         _settingsState.value = _settingsState.value.copy(isFirstLaunch = false)
@@ -127,6 +138,10 @@ class SettingsViewModel(private val context: Context) : ViewModel() {
 
     fun getThemeModeOptions(): List<String> {
         return listOf(ThemeUtils.THEME_SYSTEM, ThemeUtils.THEME_LIGHT, ThemeUtils.THEME_DARK)
+    }
+
+    fun getLanguageOptions(): List<String> {
+        return listOf("en", "ru")
     }
 
     fun getUnitSystemDisplayName(unitSystem: String): String {
@@ -151,6 +166,14 @@ class SettingsViewModel(private val context: Context) : ViewModel() {
             ThemeUtils.THEME_LIGHT -> context.getString(R.string.settings_theme_light)
             ThemeUtils.THEME_DARK -> context.getString(R.string.settings_theme_dark)
             else -> context.getString(R.string.settings_theme_system)
+        }
+    }
+
+    fun getLanguageDisplayName(language: String): String {
+        return when (language) {
+            "en" -> context.getString(R.string.settings_language_en)
+            "ru" -> context.getString(R.string.settings_language_ru)
+            else -> language
         }
     }
 

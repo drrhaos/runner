@@ -24,6 +24,7 @@ class UserPreferences(context: Context) {
         private const val KEY_GPS_ACCURACY = "gps_accuracy"
         private const val KEY_FIRST_LAUNCH = "first_launch"
         private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_APP_LANGUAGE = "app_language"
         
         // Значения по умолчанию
         private const val DEFAULT_WEIGHT = 70f
@@ -36,6 +37,7 @@ class UserPreferences(context: Context) {
         private const val DEFAULT_GPS_ACCURACY = "high"
         private const val DEFAULT_FIRST_LAUNCH = true
         private val DEFAULT_THEME_MODE = ThemeUtils.THEME_SYSTEM
+        private const val DEFAULT_APP_LANGUAGE = "en"
     }
     
     /**
@@ -122,7 +124,14 @@ class UserPreferences(context: Context) {
     var isFirstLaunch: Boolean
         get() = prefs.getBoolean(KEY_FIRST_LAUNCH, DEFAULT_FIRST_LAUNCH)
         set(value) = prefs.edit().putBoolean(KEY_FIRST_LAUNCH, value).apply()
-    
+
+    /**
+     * Язык приложения (en/ru)
+     */
+    var appLanguage: String
+        get() = prefs.getString(KEY_APP_LANGUAGE, DEFAULT_APP_LANGUAGE) ?: DEFAULT_APP_LANGUAGE
+        set(value) = prefs.edit().putString(KEY_APP_LANGUAGE, value).apply()
+
     /**
      * Сбрасывает все настройки к значениям по умолчанию
      */

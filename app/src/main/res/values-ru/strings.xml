@@ -129,6 +129,11 @@
     <string name="settings_dialog_theme_title">Тема приложения</string>
     <string name="settings_dialog_reset_title">Сброс настроек</string>
     <string name="settings_dialog_reset_message">Вы уверены, что хотите сбросить все настройки к значениям по умолчанию?</string>
+    <string name="settings_label_language">Язык</string>
+    <string name="settings_language_en">Английский</string>
+    <string name="settings_language_ru">Русский</string>
+    <string name="settings_dialog_language_title">Язык приложения</string>
+    <string name="settings_language_changed">Язык изменён</string>
 
     <string name="track_info_time_label">Время (ч:мин:с)</string>
     <string name="track_info_distance_label_km">Дистанция (км)</string>
