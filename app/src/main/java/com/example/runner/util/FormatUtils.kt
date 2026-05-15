@@ -52,11 +52,20 @@ object FormatUtils {
     /**
      * Форматирует скорость в км/ч
      */
-    fun formatSpeed(speedKmh: Float, kph: Boolean = true): String {
+    fun formatSpeed(speedKmh: Float, kph: Boolean = true, context: Context? = null): String {
         return if (kph) {
-            String.format("%.1f км/ч", speedKmh)
+            if (context != null) {
+                context.getString(R.string.kilometers_per_hour_float, speedKmh)
+            } else {
+                String.format("%.1f км/ч", speedKmh)
+            }
         } else {
-            String.format("%.1f миль/ч", speedKmh*KPH_TO_MPH_COEF)
+            val speedMph = speedKmh * KPH_TO_MPH_COEF
+            if (context != null) {
+                context.getString(R.string.miles_per_hour_float, speedMph)
+            } else {
+                String.format("%.1f миль/ч", speedMph)
+            }
         }
     }
 
@@ -72,13 +81,18 @@ object FormatUtils {
     /**
      * Форматирует темп в минутах на километр
      */
-    fun formatPace(paceMinutesPerKm: Float): String {
-        if (paceMinutesPerKm <= 0) return "--:-- /км"
+    fun formatPace(paceMinutesPerKm: Float, context: Context? = null): String {
+        if (paceMinutesPerKm <= 0) return context?.getString(R.string.statistics_pace_placeholder) ?: "--:-- /км"
         
         val minutes = paceMinutesPerKm.toInt()
         val seconds = ((paceMinutesPerKm - minutes) * 60).toInt()
         
-        return String.format("%d:%02d /км", minutes, seconds)
+        val paceStr = String.format("%d:%02d", minutes, seconds)
+        return if (context != null) {
+            context.getString(R.string.statistics_pace_placeholder).replace("--:--", paceStr)
+        } else {
+            "$paceStr /км"
+        }
     }
 
     fun formatPaceForTTS(paceMinutesPerKm: Float, context: Context): String {
@@ -97,8 +111,12 @@ object FormatUtils {
     /**
      * Форматирует дистанцию в километрах
      */
-    fun formatDistance(distanceKm: Float): String {
-        return String.format("%.2f км", distanceKm)
+    fun formatDistance(distanceKm: Float, context: Context? = null): String {
+        return if (context != null) {
+            String.format("%.2f %s", distanceKm, context.getString(R.string.unit_km))
+        } else {
+            String.format("%.2f км", distanceKm)
+        }
     }
 
     fun formatDistanceForTTS(distanceKm: Float, context: Context, kph: Boolean = true): String {
@@ -143,8 +161,12 @@ object FormatUtils {
     /**
      * Форматирует калории
      */
-    fun formatCalories(calories: Int): String {
-        return "$calories ккал"
+    fun formatCalories(calories: Int, context: Context? = null): String {
+        return if (context != null) {
+            "$calories ${context.getString(R.string.workout_details_calories)}"
+        } else {
+            "$calories ккал"
+        }
     }
     
     /**

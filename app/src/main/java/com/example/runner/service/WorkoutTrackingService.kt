@@ -138,10 +138,10 @@ class WorkoutTrackingService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Трекинг тренировок",
+                getString(R.string.notification_channel_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Уведомления о активной тренировке"
+                description = getString(R.string.notification_channel_description)
                 setShowBadge(false)
             }
             
@@ -161,11 +161,11 @@ class WorkoutTrackingService : Service() {
         )
 
         val timeText = formatTime(currentSession.currentTime)
-        val distanceText = String.format("%.2f км", currentSession.distance)
+        val distanceText = String.format("%.2f %s", currentSession.distance, getString(R.string.unit_km))
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText("$timeText • $distanceText")
+            .setContentText(getString(R.string.notification_workout_format, timeText, distanceText))
             .setSmallIcon(R.drawable.ic_menu_run)
             .setContentIntent(pendingIntent)
             .setOngoing(true)

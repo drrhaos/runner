@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.example.runner.R
 import com.example.runner.data.WorkoutDatabase
 import com.example.runner.data.WorkoutType
 import com.example.runner.databinding.FragmentWorkoutDetailBinding
@@ -162,7 +163,7 @@ class WorkoutDetailFragment : Fragment() {
             currentWorkout?.let { workout ->
                 exportWorkoutToGpx(workout)
             } ?: run {
-                Toast.makeText(requireContext(), "Тренировка не загружена", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.workout_not_loaded), Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -174,7 +175,7 @@ class WorkoutDetailFragment : Fragment() {
             currentWorkout?.let { workout ->
                 fixWorkoutData(workout)
             } ?: run {
-                Toast.makeText(requireContext(), "Тренировка не загружена", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.workout_not_loaded), Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -221,25 +222,25 @@ class WorkoutDetailFragment : Fragment() {
             }
             
             if (trackData == null || trackData.points.isEmpty()) {
-                Toast.makeText(requireContext(), "Нет данных трека для экспорта", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.track_no_data_export), Toast.LENGTH_SHORT).show()
                 return
             }
             
             // Создаем GPX файл
-            val gpxContent = com.example.runner.util.GpxExporter.exportWorkoutToGpx(workout, trackData)
+            val gpxContent = com.example.runner.util.GpxExporter.exportWorkoutToGpx(workout, trackData, requireContext())
             
             // Сохраняем файл и делится им
             saveAndShareGpxFile(gpxContent, workout)
             
         } catch (e: Exception) {
             android.util.Log.e("WorkoutDetail", "Error exporting GPX: ${e.message}", e)
-            Toast.makeText(requireContext(), "Ошибка экспорта: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), getString(R.string.export_error, e.message), Toast.LENGTH_LONG).show()
         }
     }
     
     private fun saveAndShareGpxFile(gpxContent: String, workout: com.example.runner.data.Workout) {
         try {
-            val fileName = com.example.runner.util.GpxExporter.getGpxFileName(workout)
+            val fileName = com.example.runner.util.GpxExporter.getGpxFileName(workout, requireContext())
             
             // Создаем временный файл
             val file = java.io.File.createTempFile(
@@ -271,12 +272,12 @@ class WorkoutDetailFragment : Fragment() {
                 addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             
-            startActivity(android.content.Intent.createChooser(shareIntent, "Экспортировать GPX"))
-            Toast.makeText(requireContext(), "GPX файл готов к экспорту", Toast.LENGTH_SHORT).show()
+            startActivity(android.content.Intent.createChooser(shareIntent, getString(R.string.export_gpx_title)))
+            Toast.makeText(requireContext(), getString(R.string.gpx_file_ready), Toast.LENGTH_SHORT).show()
             
         } catch (e: Exception) {
             android.util.Log.e("WorkoutDetail", "Error saving GPX file: ${e.message}", e)
-            Toast.makeText(requireContext(), "Ошибка сохранения файла: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), getString(R.string.file_save_error, e.message), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -285,16 +286,10 @@ class WorkoutDetailFragment : Fragment() {
         val duration = viewModel.formatDuration(workout.duration)
         val pace = viewModel.formatPace(workout.avgPace)
         
-        val shareText = """
-            🏃‍♂️ Тренировка: ${viewModel.getWorkoutTypeDisplayName(workout.type)}
-            📅 Дата: ${dateFormat.format(workout.date)}
-            📏 Дистанция: ${String.format("%.2f", workout.distance)} км
-            ⏱️ Время: $duration
-            🏃 Темп: $pace /км
-            ${if (workout.calories != null) "🔥 Калории: ${workout.calories} ккал" else ""}
-            
-            #тренировка #бег #здоровье
-        """.trimIndent()
+        val dateStr = dateFormat.format(workout.date)
+        val distanceStr = String.format("%.2f", workout.distance)
+        val caloriesStr = if (workout.calories != null) "${workout.calories} ккал" else ""
+        val shareText = String.format(getString(R.string.workout_share_text), dateStr, distanceStr, duration, pace, caloriesStr)
         
         val shareIntent = android.content.Intent().apply {
             action = android.content.Intent.ACTION_SEND
@@ -302,12 +297,12 @@ class WorkoutDetailFragment : Fragment() {
             putExtra(android.content.Intent.EXTRA_TEXT, shareText)
         }
         
-        startActivity(android.content.Intent.createChooser(shareIntent, "Поделиться тренировкой"))
+        startActivity(android.content.Intent.createChooser(shareIntent, getString(R.string.share_workout_title)))
     }
 
     private fun fixWorkoutData(workout: com.example.runner.data.Workout) {
         if (workout.trackData == null) {
-            Toast.makeText(requireContext(), "Нет данных трека для исправления", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.track_no_data_fix), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -335,13 +330,13 @@ class WorkoutDetailFragment : Fragment() {
                         updateCharts(cleanedTrackData)
                     }
                     
-                    Toast.makeText(requireContext(), "Данные тренировки исправлены", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.workout_data_fixed), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(requireContext(), "Не удалось исправить данные", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.workout_data_fix_failed), Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutDetail", "Error fixing workout data: ${e.message}", e)
-                Toast.makeText(requireContext(), "Ошибка при исправлении данных: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.workout_data_fix_error, e.message), Toast.LENGTH_LONG).show()
             } finally {
                 // Скрываем индикатор загрузки
                 binding.progressBarMapLoading.visibility = View.GONE
@@ -354,7 +349,7 @@ class WorkoutDetailFragment : Fragment() {
         
         if (workoutId == -1L) {
             android.util.Log.e("WorkoutDetail", "Invalid workout ID: $workoutId")
-            Toast.makeText(requireContext(), "Ошибка: неверный ID тренировки", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.workout_invalid_id), Toast.LENGTH_SHORT).show()
             findNavController().navigateUp()
             return
         }
@@ -495,28 +490,28 @@ class WorkoutDetailFragment : Fragment() {
                     android.util.Log.d("WorkoutDetail", "Successfully loaded track with ${geoPoints.size} points")
                 } else {
                     android.util.Log.w("WorkoutDetail", "Track data is empty")
-                    android.widget.Toast.makeText(context, "Маршрут пуст", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(context, getString(R.string.route_empty), android.widget.Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutDetail", "Error parsing track data: ${e.message}", e)
                 // Показываем пользователю, что маршрут недоступен
-                android.widget.Toast.makeText(context, "Ошибка загрузки маршрута", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, getString(R.string.route_load_error), android.widget.Toast.LENGTH_SHORT).show()
             }
         } ?: run {
             android.util.Log.w("WorkoutDetail", "No track data available for workout ${workout.id}")
             // Показываем пользователю, что маршрут недоступен
-            android.widget.Toast.makeText(context, "Маршрут не сохранен", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, getString(R.string.route_not_saved), android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun getWorkoutTypeDisplayName(type: WorkoutType): String {
         return when (type) {
-            WorkoutType.EASY_RUN -> "Легкий бег"
-            WorkoutType.TEMPO_RUN -> "Темповый бег"
-            WorkoutType.INTERVAL_TRAINING -> "Интервальная тренировка"
-            WorkoutType.LONG_RUN -> "Длинный бег"
-            WorkoutType.RECOVERY_RUN -> "Восстановительный бег"
-            WorkoutType.RACE -> "Соревнование"
+            WorkoutType.EASY_RUN -> getString(R.string.workout_type_easy_run)
+            WorkoutType.TEMPO_RUN -> getString(R.string.workout_type_tempo_run)
+            WorkoutType.INTERVAL_TRAINING -> getString(R.string.workout_type_interval_training)
+            WorkoutType.LONG_RUN -> getString(R.string.workout_type_long_run)
+            WorkoutType.RECOVERY_RUN -> getString(R.string.workout_type_recovery_run)
+            WorkoutType.RACE -> getString(R.string.workout_type_competition)
         }
     }
 
@@ -538,12 +533,12 @@ class WorkoutDetailFragment : Fragment() {
 
     private fun showDeleteConfirmationDialog() {
         androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("Удалить тренировку")
-            .setMessage("Вы уверены, что хотите удалить эту тренировку? Это действие нельзя отменить.")
-            .setPositiveButton("Удалить") { _, _ ->
+            .setTitle(getString(R.string.delete_workout_title))
+            .setMessage(getString(R.string.delete_workout_message))
+            .setPositiveButton(getString(R.string.delete)) { _, _ ->
                 deleteWorkout()
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .setIcon(android.R.drawable.ic_dialog_alert)
             .show()
     }
@@ -553,7 +548,7 @@ class WorkoutDetailFragment : Fragment() {
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
                     viewModel.deleteWorkout(workout)
-                    android.widget.Toast.makeText(context, "Тренировка удалена", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(context, getString(R.string.workout_deleted), android.widget.Toast.LENGTH_SHORT).show()
                     findNavController().navigateUp()
                 } catch (e: Exception) {
                     android.util.Log.e("WorkoutDetail", "Error deleting workout: ${e.message}", e)
@@ -629,7 +624,7 @@ class WorkoutDetailFragment : Fragment() {
             // Пульс пока не доступен в данных, оставляем пустым
         }
 
-        val dataSetPace = LineDataSet(entriesPace, "Темп (мин/км)").apply {
+        val dataSetPace = LineDataSet(entriesPace, getString(R.string.chart_pace_label)).apply {
             color = Color.parseColor("#FF9800")
             lineWidth = 2f
             setCircleColor(Color.parseColor("#FF9800"))
@@ -638,7 +633,7 @@ class WorkoutDetailFragment : Fragment() {
             axisDependency = YAxis.AxisDependency.LEFT
         }
 
-        val dataSetSpeed = LineDataSet(entriesSpeed, "Скорость (км/ч)").apply {
+        val dataSetSpeed = LineDataSet(entriesSpeed, getString(R.string.chart_speed_label)).apply {
             color = Color.parseColor("#2196F3")
             lineWidth = 2f
             setCircleColor(Color.parseColor("#2196F3"))
@@ -661,7 +656,7 @@ class WorkoutDetailFragment : Fragment() {
         xAxis.valueFormatter = object : ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
                 val minutes = value.toInt()
-                return "${minutes} мин"
+                return getString(R.string.chart_time_format, minutes)
             }
         }
 
@@ -711,8 +706,9 @@ class WorkoutDetailFragment : Fragment() {
                         val paceSeconds = ((pace - paceMinutes) * 60).toInt().coerceIn(0, 59)
 
                         // Обновляем TextView
-                        val valuesText = String.format("время: %d мин.\nскорость: %.0f м/сек\nтемп: %d:%02d мин/км",
-                            timeMinutes, speedMs, paceMinutes, paceSeconds)
+                        val valuesText = getString(R.string.chart_time_format, timeMinutes) + "\n" +
+                            "${getString(R.string.workout_details_speed)}: %.0f м/сек\n".format(speedMs) +
+                            "${getString(R.string.workout_details_pace)}: %d:%02d мин/км".format(paceMinutes, paceSeconds)
                         binding.textViewChartPaceSpeedHeartValues.text = valuesText
                         binding.textViewChartPaceSpeedHeartValues.visibility = View.VISIBLE
                         
@@ -776,7 +772,7 @@ class WorkoutDetailFragment : Fragment() {
             entries.add(Entry(cumulativeDistance, altitude.toFloat()))
         }
 
-        val dataSet = LineDataSet(entries, "Высота").apply {
+        val dataSet = LineDataSet(entries, getString(R.string.chart_elevation_title)).apply {
             color = Color.parseColor("#4CAF50")
             lineWidth = 2f
             setCircleColor(Color.parseColor("#4CAF50"))
@@ -799,7 +795,7 @@ class WorkoutDetailFragment : Fragment() {
         xAxis.granularity = 0.5f
         xAxis.valueFormatter = object : ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
-                return String.format("%.1f км", value)
+                return getString(R.string.chart_elevation_x_format, value)
             }
         }
 
@@ -810,7 +806,7 @@ class WorkoutDetailFragment : Fragment() {
         leftAxis.axisLineColor = textColor
         leftAxis.valueFormatter = object : ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
-                return "${value.toInt()} м"
+                return getString(R.string.chart_elevation_y_format, value.toInt())
             }
         }
 
@@ -836,8 +832,8 @@ class WorkoutDetailFragment : Fragment() {
                     val selectedElevation = e.y // высота в метрах
                     
                     // Обновляем TextView
-                    val valuesText = String.format("дистанция: %.2f км\nвысота: %.0f м", 
-                        selectedDistance, selectedElevation)
+                    val valuesText = getString(R.string.chart_elevation_x_format, selectedDistance) + "\n" + 
+                        getString(R.string.chart_elevation_y_format, selectedElevation.toInt())
                     binding.textViewChartElevationValues.text = valuesText
                     binding.textViewChartElevationValues.visibility = View.VISIBLE
                     
@@ -912,7 +908,7 @@ class WorkoutDetailFragment : Fragment() {
         // Используем настройки приложения для определения единиц измерения
         val isMetric = userPreferences?.isMetricSystem() ?: true
         val segmentSize = if (isMetric) 1.0f else 1.60934f // 1 миля = 1.60934 км
-        val unitLabel = if (isMetric) "км" else "миля"
+        val unitLabel = if (isMetric) getString(R.string.unit_km) else getString(R.string.unit_mile)
         val segments = mutableListOf<Pair<Float, Float>>() // (pace, speed)
         var currentSegmentDistance = 0f
         var segmentStartTime = points.firstOrNull()?.timestamp ?: 0L
@@ -957,7 +953,9 @@ class WorkoutDetailFragment : Fragment() {
         val dataSet: BarDataSet = when (segmentsDisplayMode) {
             SegmentsDisplayMode.PACE -> {
                 val entriesPace = segments.mapIndexed { index, pair -> BarEntry(index.toFloat(), pair.first) }
-                BarDataSet(entriesPace, "Темп (мин/$unitLabel)").apply {
+                val paceLabel = if (isMetric) getString(R.string.chart_pace_label)
+                    else "${getString(R.string.workout_details_pace)} (мин/$unitLabel)"
+                BarDataSet(entriesPace, paceLabel).apply {
                     color = Color.parseColor("#FF9800")
                     setDrawValues(true)
                     valueTextColor = textColor
@@ -971,8 +969,10 @@ class WorkoutDetailFragment : Fragment() {
             }
             SegmentsDisplayMode.SPEED -> {
                 val entriesSpeed = segments.mapIndexed { index, pair -> BarEntry(index.toFloat(), pair.second) }
-                val speedUnit = if (isMetric) "км/ч" else "миль/ч"
-                BarDataSet(entriesSpeed, "Скорость ($speedUnit)").apply {
+                val speedUnit = if (isMetric) getString(R.string.unit_kmh) else getString(R.string.unit_mph)
+                val speedLabel = if (isMetric) getString(R.string.chart_speed_label)
+                    else "${getString(R.string.workout_details_speed)} ($speedUnit)"
+                BarDataSet(entriesSpeed, speedLabel).apply {
                     color = Color.parseColor("#2196F3")
                     setDrawValues(true)
                     valueTextColor = textColor

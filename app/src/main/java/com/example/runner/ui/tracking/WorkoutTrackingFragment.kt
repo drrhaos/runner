@@ -264,10 +264,10 @@ class WorkoutTrackingFragment : Fragment() {
             }
             permissions.getOrDefault(Manifest.permission.ACTIVITY_RECOGNITION, false) -> {
                 // Разрешение на распознавание физической активности предоставлено
-                Toast.makeText(context, "Разрешение на физическую активность предоставлено", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, getString(R.string.permission_activity_granted), Toast.LENGTH_SHORT).show()
             }
             else -> {
-                Toast.makeText(context, "Разрешение на местоположение необходимо для трекинга", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, getString(R.string.permission_location_needed), Toast.LENGTH_LONG).show()
                 findNavController().navigateUp()
             }
         }
@@ -277,7 +277,7 @@ class WorkoutTrackingFragment : Fragment() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (!isGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Toast.makeText(requireContext(), "Разрешение на уведомления необходимо для фонового трекинга", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), getString(R.string.permission_notification_needed), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -1138,7 +1138,7 @@ class WorkoutTrackingFragment : Fragment() {
                     // Если не удается открыть настройки, показываем уведомление
                     Toast.makeText(
                         requireContext(),
-                        "Для стабильной работы приложения отключите оптимизацию батареи в настройках",
+                        getString(R.string.battery_optimization_hint),
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -1217,12 +1217,12 @@ class WorkoutTrackingFragment : Fragment() {
                 try {
                     val workoutId = viewModel.saveWorkoutToDatabase(selectedWorkoutType)
                     if (workoutId != null) {
-                        Toast.makeText(context, "Тренировка сохранена: ${String.format("%.2f км за %s", session.distance, viewModel.formatTime(session.currentTime))}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, String.format(getString(R.string.workout_saved_format), session.distance, viewModel.formatTime(session.currentTime)), Toast.LENGTH_LONG).show()
                     } else {
-                        Toast.makeText(context, "Ошибка при сохранении тренировки", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, getString(R.string.workout_save_error), Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Ошибка при сохранении тренировки: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, getString(R.string.workout_save_error_format, e.message), Toast.LENGTH_SHORT).show()
                 }
                 
                 // Сбрасываем данные тренировки после сохранения
@@ -1233,7 +1233,7 @@ class WorkoutTrackingFragment : Fragment() {
             }
         } else {
             // Если тренировка слишком короткая, не сохраняем
-            Toast.makeText(context, "Тренировка слишком короткая для сохранения", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.workout_too_short), Toast.LENGTH_SHORT).show()
             // Сбрасываем данные тренировки даже если не сохраняем
             viewModel.resetWorkout()
             isStoppingWorkout = false
@@ -1253,7 +1253,7 @@ class WorkoutTrackingFragment : Fragment() {
                 try {
                     val workoutId = viewModel.saveWorkoutToDatabase(selectedWorkoutType)
                     if (workoutId != null) {
-                        Toast.makeText(context, "Тренировка сохранена: ${String.format("%.2f км за %s", session.distance, viewModel.formatTime(session.currentTime))}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, String.format(getString(R.string.workout_saved_format), session.distance, viewModel.formatTime(session.currentTime)), Toast.LENGTH_LONG).show()
                         
                         // Переходим к экрану деталей тренировки
                         val bundle = Bundle().apply {
@@ -1276,7 +1276,7 @@ class WorkoutTrackingFragment : Fragment() {
                 }
             }
         } else {
-            Toast.makeText(context, "Нет данных для сохранения", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.no_data_to_save), Toast.LENGTH_SHORT).show()
             isStoppingWorkout = false
         }
     }
