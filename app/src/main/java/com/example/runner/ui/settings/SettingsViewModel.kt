@@ -130,26 +130,26 @@ class SettingsViewModel(private val context: Context) : ViewModel() {
 
     fun getUnitSystemDisplayName(unitSystem: String): String {
         return when (unitSystem) {
-            "metric" -> "Метрическая (км, кг)"
-            "imperial" -> "Имперская (мили, фунты)"
+            "metric" -> context.getString(R.string.settings_units_metric)
+            "imperial" -> context.getString(R.string.settings_units_imperial)
             else -> unitSystem
         }
     }
 
     fun getGpsAccuracyDisplayName(gpsAccuracy: String): String {
         return when (gpsAccuracy) {
-            "high" -> "Высокая точность"
-            "medium" -> "Средняя точность"
-            "low" -> "Низкая точность"
+            "high" -> context.getString(R.string.settings_gps_accuracy_high)
+            "medium" -> context.getString(R.string.settings_gps_accuracy_medium)
+            "low" -> context.getString(R.string.settings_gps_accuracy_low)
             else -> gpsAccuracy
         }
     }
 
     fun getThemeModeDisplayName(themeMode: String): String {
         return when (ThemeUtils.ensureValidMode(themeMode)) {
-            ThemeUtils.THEME_LIGHT -> "Светлая тема"
-            ThemeUtils.THEME_DARK -> "Тёмная тема"
-            else -> "Как в системе"
+            ThemeUtils.THEME_LIGHT -> context.getString(R.string.settings_theme_light)
+            ThemeUtils.THEME_DARK -> context.getString(R.string.settings_theme_dark)
+            else -> context.getString(R.string.settings_theme_system)
         }
     }
 

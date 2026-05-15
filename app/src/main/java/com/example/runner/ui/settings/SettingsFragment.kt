@@ -99,9 +99,9 @@ class SettingsFragment : Fragment() {
 
     private fun updateUI(settings: SettingsState) {
         // Профиль пользователя
-        binding.textViewWeightValue.text = "${settings.userWeight.toInt()} кг"
-        binding.textViewHeightValue.text = "${settings.userHeight.toInt()} см"
-        binding.textViewAgeValue.text = if (settings.userAge > 0) "${settings.userAge} лет" else "Не указан"
+        binding.textViewWeightValue.text = getString(R.string.settings_weight_format, settings.userWeight.toInt())
+        binding.textViewHeightValue.text = getString(R.string.settings_height_format, settings.userHeight.toInt())
+        binding.textViewAgeValue.text = if (settings.userAge > 0) getString(R.string.settings_age_format, settings.userAge) else getString(R.string.settings_gender_unknown)
         binding.textViewGenderValue.text = getGenderDisplayName(settings.userGender)
         
         // Настройки приложения
@@ -120,20 +120,20 @@ class SettingsFragment : Fragment() {
         }
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Вес пользователя")
-            .setMessage("Введите ваш вес в килограммах:")
+            .setTitle(getString(R.string.settings_dialog_weight_title))
+            .setMessage(getString(R.string.settings_dialog_weight_message))
             .setView(input)
-            .setPositiveButton("Сохранить") { _, _ ->
+            .setPositiveButton(getString(R.string.save)) { _, _ ->
                 val weightText = input.text.toString()
                 val weight = weightText.toFloatOrNull()
                 if (weight != null && weight > 0 && weight <= 300) {
                     viewModel.updateUserWeight(weight)
-                    Toast.makeText(requireContext(), "Вес сохранен", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.settings_weight_saved), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(requireContext(), "Введите корректный вес (1-300 кг)", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.settings_dialog_weight_invalid), Toast.LENGTH_SHORT).show()
                 }
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 
@@ -143,16 +143,16 @@ class SettingsFragment : Fragment() {
         val currentIndex = options.indexOf(currentSystem)
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Система единиц")
+            .setTitle(getString(R.string.settings_dialog_units_title))
             .setSingleChoiceItems(
                 options.map { viewModel.getUnitSystemDisplayName(it) }.toTypedArray(),
                 currentIndex
             ) { dialog, which ->
                 viewModel.updateUnitSystem(options[which])
                 dialog.dismiss()
-                Toast.makeText(requireContext(), "Система единиц изменена", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.settings_units_changed), Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 
@@ -162,17 +162,17 @@ class SettingsFragment : Fragment() {
         val currentIndex = options.indexOf(currentAccuracy)
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Точность GPS")
-            .setMessage("Выберите уровень точности GPS. Высокая точность потребляет больше батареи.")
+            .setTitle(getString(R.string.settings_dialog_gps_title))
+            .setMessage(getString(R.string.settings_dialog_gps_message))
             .setSingleChoiceItems(
                 options.map { viewModel.getGpsAccuracyDisplayName(it) }.toTypedArray(),
                 currentIndex
             ) { dialog, which ->
                 viewModel.updateGpsAccuracy(options[which])
                 dialog.dismiss()
-                Toast.makeText(requireContext(), "Точность GPS изменена", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.settings_gps_accuracy_changed), Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 
@@ -182,28 +182,28 @@ class SettingsFragment : Fragment() {
         val currentIndex = options.indexOf(currentMode).coerceAtLeast(0)
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Тема приложения")
+            .setTitle(getString(R.string.settings_dialog_theme_title))
             .setSingleChoiceItems(
                 options.map { viewModel.getThemeModeDisplayName(it) }.toTypedArray(),
                 currentIndex
             ) { dialog, which ->
                 viewModel.updateThemeMode(options[which])
                 dialog.dismiss()
-                Toast.makeText(requireContext(), "Тема изменена", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.settings_theme_changed), Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 
     private fun showResetConfirmationDialog() {
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Сброс настроек")
-            .setMessage("Вы уверены, что хотите сбросить все настройки к значениям по умолчанию?")
-            .setPositiveButton("Сбросить") { _, _ ->
+            .setTitle(getString(R.string.settings_dialog_reset_title))
+            .setMessage(getString(R.string.settings_dialog_reset_message))
+            .setPositiveButton(getString(R.string.settings_dialog_reset_title)) { _, _ ->
                 viewModel.resetToDefaults()
-                Toast.makeText(requireContext(), "Настройки сброшены", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.settings_reset_done), Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .setIcon(android.R.drawable.ic_dialog_alert)
             .show()
     }
@@ -216,19 +216,19 @@ class SettingsFragment : Fragment() {
         }
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Рост пользователя")
-            .setMessage("Введите ваш рост в сантиметрах:")
+            .setTitle(getString(R.string.settings_dialog_height_title))
+            .setMessage(getString(R.string.settings_dialog_height_message))
             .setView(input)
-            .setPositiveButton("Сохранить") { _, _ ->
+            .setPositiveButton(getString(R.string.save)) { _, _ ->
                 val height = input.text.toString().toFloatOrNull()
                 if (height != null && height > 0 && height < 250) {
                     viewModel.updateUserHeight(height)
-                    Toast.makeText(requireContext(), "Рост сохранен", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.settings_height_saved), Toast.LENGTH_SHORT).show()
                 } else {
-                    Toast.makeText(requireContext(), "Введите корректный рост (1-250 см)", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.settings_dialog_height_invalid), Toast.LENGTH_SHORT).show()
                 }
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 
@@ -251,16 +251,16 @@ class SettingsFragment : Fragment() {
         )
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Дата рождения")
-            .setMessage("Выберите вашу дату рождения:")
+            .setTitle(getString(R.string.settings_dialog_birthdate_title))
+            .setMessage(getString(R.string.settings_dialog_birthdate_message))
             .setView(datePicker)
-            .setPositiveButton("Сохранить") { _, _ ->
+            .setPositiveButton(getString(R.string.save)) { _, _ ->
                 val selectedCalendar = java.util.Calendar.getInstance()
                 selectedCalendar.set(datePicker.year, datePicker.month, datePicker.dayOfMonth)
                 viewModel.updateUserBirthDate(selectedCalendar.timeInMillis)
-                Toast.makeText(requireContext(), "Дата рождения сохранена", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.settings_birthdate_saved), Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 
@@ -270,25 +270,25 @@ class SettingsFragment : Fragment() {
         val currentIndex = options.indexOf(currentGender)
 
         MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Пол пользователя")
-            .setMessage("Выберите ваш пол:")
+            .setTitle(getString(R.string.settings_dialog_gender_title))
+            .setMessage(getString(R.string.settings_dialog_gender_message))
             .setSingleChoiceItems(
-                listOf("Мужской", "Женский").toTypedArray(),
+                listOf(getString(R.string.settings_profile_gender_male), getString(R.string.settings_profile_gender_female)).toTypedArray(),
                 currentIndex
             ) { dialog, which ->
                 viewModel.updateUserGender(options[which])
                 dialog.dismiss()
-                Toast.makeText(requireContext(), "Пол сохранен", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.settings_gender_saved), Toast.LENGTH_SHORT).show()
             }
-            .setNegativeButton("Отмена", null)
+            .setNegativeButton(getString(R.string.cancel), null)
             .show()
     }
 
     private fun getGenderDisplayName(gender: String): String {
         return when (gender) {
-            "male" -> "Мужской"
-            "female" -> "Женский"
-            else -> "Не указан"
+            "male" -> getString(R.string.settings_profile_gender_male)
+            "female" -> getString(R.string.settings_profile_gender_female)
+            else -> getString(R.string.settings_gender_unknown)
         }
     }
 

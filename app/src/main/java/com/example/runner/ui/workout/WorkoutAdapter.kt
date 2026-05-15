@@ -1,10 +1,12 @@
 package com.example.runner.ui.workout
 
+import android.content.Context
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.example.runner.R
 import com.example.runner.data.Workout
 import com.example.runner.data.WorkoutType
 import com.example.runner.databinding.ItemWorkoutBinding
@@ -12,6 +14,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class WorkoutAdapter(
+    private val context: Context,
     private val onItemClick: (Workout) -> Unit
 ) : ListAdapter<Workout, WorkoutAdapter.WorkoutViewHolder>(WorkoutDiffCallback()) {
 
@@ -42,7 +45,7 @@ class WorkoutAdapter(
                 textViewWorkoutType.text = getWorkoutTypeDisplayName(workout.type)
 
                 // Дистанция
-                textViewDistance.text = String.format("%.1f км", workout.distance)
+                textViewDistance.text = String.format("%.1f %s", workout.distance, context.getString(R.string.unit_km))
 
                 // Время
                 textViewDuration.text = formatDuration(workout.duration)
@@ -55,7 +58,7 @@ class WorkoutAdapter(
                     layoutCalories.visibility = android.view.View.VISIBLE
                     
                     if (workout.calories != null) {
-                        textViewCalories.text = "${workout.calories} ккал"
+                        textViewCalories.text = "${workout.calories} ${context.getString(R.string.workout_details_calories)}"
                     }
                     
                     if (!workout.notes.isNullOrEmpty()) {
@@ -74,12 +77,12 @@ class WorkoutAdapter(
 
         private fun getWorkoutTypeDisplayName(type: WorkoutType): String {
             return when (type) {
-                WorkoutType.EASY_RUN -> "Легкий бег"
-                WorkoutType.TEMPO_RUN -> "Темповый бег"
-                WorkoutType.INTERVAL_TRAINING -> "Интервальная тренировка"
-                WorkoutType.LONG_RUN -> "Длинный бег"
-                WorkoutType.RECOVERY_RUN -> "Восстановительный бег"
-                WorkoutType.RACE -> "Соревнование"
+                WorkoutType.EASY_RUN -> context.getString(R.string.workout_type_easy_run)
+                WorkoutType.TEMPO_RUN -> context.getString(R.string.workout_type_tempo_run)
+                WorkoutType.INTERVAL_TRAINING -> context.getString(R.string.workout_type_interval_training)
+                WorkoutType.LONG_RUN -> context.getString(R.string.workout_type_long_run)
+                WorkoutType.RECOVERY_RUN -> context.getString(R.string.workout_type_recovery_run)
+                WorkoutType.RACE -> context.getString(R.string.workout_type_competition)
             }
         }
 

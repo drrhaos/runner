@@ -56,7 +56,7 @@ class WorkoutListFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        workoutAdapter = WorkoutAdapter { workout ->
+        workoutAdapter = WorkoutAdapter(requireContext()) { workout ->
             // Переход к детальному просмотру тренировки
             val bundle = Bundle().apply {
                 putLong("workoutId", workout.id)
