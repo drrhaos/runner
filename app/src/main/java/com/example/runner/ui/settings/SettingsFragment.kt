@@ -74,6 +74,11 @@ class SettingsFragment : Fragment() {
             showThemeModeDialog()
         }
 
+        // Язык приложения
+        binding.rowLanguage.setOnClickListener {
+            showLanguageDialog()
+        }
+
         // Автоматическая пауза
         binding.switchAutoPause.setOnCheckedChangeListener { _, isChecked ->
             viewModel.updateAutoPause(isChecked)
@@ -109,6 +114,7 @@ class SettingsFragment : Fragment() {
         binding.textViewUnitSystemValue.text = viewModel.getUnitSystemDisplayName(settings.unitSystem)
         binding.textViewGpsAccuracyValue.text = viewModel.getGpsAccuracyDisplayName(settings.gpsAccuracy)
         binding.textViewThemeModeValue.text = viewModel.getThemeModeDisplayName(settings.themeMode)
+        binding.textViewLanguageValue.text = viewModel.getLanguageDisplayName(settings.appLanguage)
         binding.switchAutoPause.isChecked = settings.autoPause
         binding.switchVoiceFeedback.isChecked = settings.voiceFeedback
     }
@@ -191,6 +197,25 @@ class SettingsFragment : Fragment() {
                 viewModel.updateThemeMode(options[which])
                 dialog.dismiss()
                 Toast.makeText(requireContext(), getString(R.string.settings_theme_changed), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+
+    private fun showLanguageDialog() {
+        val options = viewModel.getLanguageOptions()
+        val currentLanguage = viewModel.settingsState.value.appLanguage
+        val currentIndex = options.indexOf(currentLanguage).coerceAtLeast(0)
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.settings_dialog_language_title))
+            .setSingleChoiceItems(
+                options.map { viewModel.getLanguageDisplayName(it) }.toTypedArray(),
+                currentIndex
+            ) { dialog, which ->
+                viewModel.updateAppLanguage(options[which])
+                dialog.dismiss()
+                Toast.makeText(requireContext(), getString(R.string.settings_language_changed), Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(getString(R.string.cancel), null)
             .show()
