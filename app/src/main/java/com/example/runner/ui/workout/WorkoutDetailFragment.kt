@@ -705,10 +705,14 @@ class WorkoutDetailFragment : Fragment() {
                         
                         // Форматируем время
                         val timeMinutes = e.x.toInt()
-                        
+
+                        // Форматируем темп в мин:сек
+                        val paceMinutes = pace.toInt()
+                        val paceSeconds = ((pace - paceMinutes) * 60).toInt().coerceIn(0, 59)
+
                         // Обновляем TextView
-                        val valuesText = String.format("время: %d мин.\nскорость: %.0f м/сек\nтемп: %.2f", 
-                            timeMinutes, speedMs, pace)
+                        val valuesText = String.format("время: %d мин.\nскорость: %.0f м/сек\nтемп: %d:%02d мин/км",
+                            timeMinutes, speedMs, paceMinutes, paceSeconds)
                         binding.textViewChartPaceSpeedHeartValues.text = valuesText
                         binding.textViewChartPaceSpeedHeartValues.visibility = View.VISIBLE
                         
