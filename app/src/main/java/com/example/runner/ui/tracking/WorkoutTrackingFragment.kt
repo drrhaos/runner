@@ -15,7 +15,6 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.OnBackPressedCallback
-import android.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
@@ -156,6 +155,7 @@ class WorkoutTrackingFragment : Fragment() {
     private var stopHoldJob: Job? = null
     private var stopHoldStartTime = 0L
     private var isStoppingWorkout = false
+    private var countdownJob: Job? = null
 
     private fun gpsStatusShortLabel(status: GpsStatus): String = when (status) {
         GpsStatus.SEARCHING -> getString(R.string.gps_signal_searching)
@@ -304,6 +304,7 @@ class WorkoutTrackingFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupMap()
+        setupWorkoutTypeSpinner()
         setupClickListeners()
         setupSwipeGesture()
         observeViewModel()
@@ -444,6 +445,73 @@ class WorkoutTrackingFragment : Fragment() {
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
         return bitmap
+    }
+
+    private fun setupWorkoutTypeSpinner() {
+        val workoutTypes = listOf(
+            WorkoutType.EASY_RUN,
+            WorkoutType.TEMPO_RUN,
+            WorkoutType.INTERVAL_TRAINING,
+            WorkoutType.LONG_RUN,
+            WorkoutType.RECOVERY_RUN,
+            WorkoutType.RACE
+        )
+        val typeNames = workoutTypes.map { type ->
+            when (type) {
+                WorkoutType.EASY_RUN -> getString(R.string.workout_type_easy_run)
+                WorkoutType.TEMPO_RUN -> getString(R.string.workout_type_tempo_run)
+                WorkoutType.INTERVAL_TRAINING -> getString(R.string.workout_type_interval_training)
+                WorkoutType.LONG_RUN -> getString(R.string.workout_type_long_run)
+                WorkoutType.RECOVERY_RUN -> getString(R.string.workout_type_recovery_run)
+                WorkoutType.RACE -> getString(R.string.workout_type_competition)
+            }
+        }
+        val adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, typeNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerWorkoutType.adapter = adapter
+        binding.spinnerWorkoutType.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                selectedWorkoutType = workoutTypes[position]
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        }
+    }
+
+    private fun startCountdown() {
+        if (countdownJob != null) return
+        val prefs = com.example.runner.util.UserPreferences(requireContext())
+        val countdownSeconds = prefs.startCountdownSeconds
+        if (countdownSeconds <= 0) {
+            beginWorkout()
+            return
+        }
+        binding.spinnerWorkoutType.visibility = View.GONE
+        binding.buttonStart.visibility = View.GONE
+        binding.textViewCountdown.visibility = View.VISIBLE
+        binding.textViewCountdown.text = countdownSeconds.toString()
+        countdownJob = viewLifecycleOwner.lifecycleScope.launch {
+            for (i in countdownSeconds downTo 1) {
+                binding.textViewCountdown.text = i.toString()
+                if (i > 1) {
+                    delay(1000)
+                }
+            }
+            binding.textViewCountdown.visibility = View.GONE
+            countdownJob = null
+            beginWorkout()
+        }
+    }
+
+    private fun beginWorkout() {
+        isStoppingWorkout = false
+        lastDistanceKmVoiceSpoken = -1
+        requestBatteryOptimizationExemption()
+        viewModel.initializeService()
+        viewLifecycleOwner.lifecycleScope.launch {
+            delay(500)
+            viewModel.startWorkoutWithRetry(selectedWorkoutType)
+        }
+        binding.textViewGpsAccuracy.visibility = View.GONE
     }
 
     private fun setupMapInteractionListeners() {
@@ -691,7 +759,7 @@ class WorkoutTrackingFragment : Fragment() {
 
     private fun setupClickListeners() {
         binding.buttonStart.setOnClickListener {
-            showWorkoutTypeDialog()
+            startCountdown()
         }
 
         binding.buttonPause.setOnClickListener {
@@ -935,6 +1003,7 @@ class WorkoutTrackingFragment : Fragment() {
             WorkoutState.NOT_STARTED -> {
                 android.util.Log.d("WorkoutTracking", "Setting buttons to NOT_STARTED state")
                 // 1. активна кнопка старта (не запущена)
+                binding.spinnerWorkoutType.visibility = View.VISIBLE
                 binding.buttonStart.visibility = View.VISIBLE
                 binding.buttonPause.visibility = View.GONE
                 binding.buttonStop.visibility = View.GONE
@@ -942,6 +1011,7 @@ class WorkoutTrackingFragment : Fragment() {
             WorkoutState.RUNNING -> {
                 android.util.Log.d("WorkoutTracking", "Setting buttons to RUNNING state")
                 // 2. активна кнопка паузы и остановки (запущена)
+                binding.spinnerWorkoutType.visibility = View.GONE
                 binding.buttonStart.visibility = View.GONE
                 binding.buttonPause.visibility = View.VISIBLE
                 binding.buttonStop.visibility = View.VISIBLE
@@ -950,6 +1020,7 @@ class WorkoutTrackingFragment : Fragment() {
             WorkoutState.PAUSED -> {
                 android.util.Log.d("WorkoutTracking", "Setting buttons to PAUSED state")
                 // 3. активна кнопка возобновить и стоп (пауза)
+                binding.spinnerWorkoutType.visibility = View.GONE
                 binding.buttonStart.visibility = View.GONE
                 binding.buttonPause.visibility = View.VISIBLE
                 binding.buttonStop.visibility = View.VISIBLE
@@ -958,6 +1029,7 @@ class WorkoutTrackingFragment : Fragment() {
             WorkoutState.STOPPED -> {
                 android.util.Log.d("WorkoutTracking", "Setting buttons to STOPPED state")
                 // Возвращаемся к начальному состоянию
+                binding.spinnerWorkoutType.visibility = View.VISIBLE
                 binding.buttonStart.visibility = View.VISIBLE
                 binding.buttonPause.visibility = View.GONE
                 binding.buttonStop.visibility = View.GONE
@@ -1171,51 +1243,6 @@ class WorkoutTrackingFragment : Fragment() {
                 }
             }
         }
-    }
-
-    private fun showWorkoutTypeDialog() {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_workout_type, null)
-        
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .create()
-
-        dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.button_cancel).setOnClickListener {
-            dialog.dismiss()
-        }
-
-        dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.button_start).setOnClickListener {
-            // Определяем выбранный тип тренировки
-            val radioGroup = dialogView.findViewById<android.widget.RadioGroup>(R.id.radioGroup_workout_type)
-            val selectedId = radioGroup.checkedRadioButtonId
-            
-            selectedWorkoutType = when (selectedId) {
-                R.id.radio_easy_run -> WorkoutType.EASY_RUN
-                R.id.radio_tempo_run -> WorkoutType.TEMPO_RUN
-                R.id.radio_interval_training -> WorkoutType.INTERVAL_TRAINING
-                R.id.radio_long_run -> WorkoutType.LONG_RUN
-                R.id.radio_recovery_run -> WorkoutType.RECOVERY_RUN
-                R.id.radio_race -> WorkoutType.RACE
-                else -> WorkoutType.EASY_RUN
-            }
-
-            dialog.dismiss()
-            // Сбрасываем флаг остановки при старте новой тренировки
-            isStoppingWorkout = false
-            lastDistanceKmVoiceSpoken = -1
-            // Запрашиваем отключение оптимизации батареи для стабильной работы
-            requestBatteryOptimizationExemption()
-            // Инициализируем сервис только при старте тренировки для экономии батареи
-            viewModel.initializeService()
-            // Используем retry механизм для надежного запуска
-            viewLifecycleOwner.lifecycleScope.launch {
-                kotlinx.coroutines.delay(500) // Небольшая задержка для инициализации
-                viewModel.startWorkoutWithRetry(selectedWorkoutType)
-            }
-            binding.textViewGpsAccuracy.visibility = View.GONE
-        }
-
-        dialog.show()
     }
 
     private fun saveWorkoutAndNavigateBack() {

@@ -140,6 +140,10 @@
     <string name="settings_dialog_reset_title">Reset settings</string>
     <string name="settings_dialog_reset_message">Are you sure you want to reset all settings to default values?</string>
     <string name="settings_label_language">Language</string>
+    <string name="settings_label_start_countdown">Start countdown</string>
+    <string name="settings_dialog_start_countdown_title">Countdown seconds before start</string>
+    <string name="settings_start_countdown_changed">Countdown seconds changed</string>
+    <string name="workout_starting_in">Start in %d…</string>
     <string name="settings_language_en">English</string>
     <string name="settings_language_ru">Russian</string>
     <string name="settings_dialog_language_title">Application language</string>
