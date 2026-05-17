@@ -4,6 +4,15 @@
 
 Android приложение для отслеживания беговых тренировок с GPS-трекингом, картами, статистикой и экспортом данных.
 
+## 📸 Скриншоты
+
+<p align="center">
+  <img src="screenshot/Workout.png" width="200" alt="Трекинг тренировки" />
+  <img src="screenshot/Run.png" width="200" alt="Активная тренировка" />
+  <img src="screenshot/SideBar.png" width="200" alt="Боковое меню" />
+  <img src="screenshot/Settings.png" width="200" alt="Настройки" />
+</p>
+
 ## 📱 Описание
 
 Runner - это полнофункциональное приложение для бегунов, которое позволяет:

@@ -4,6 +4,15 @@
 
 Android application for tracking running workouts with GPS tracking, maps, statistics, and data export.
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="screenshot/Workout.png" width="200" alt="Workout tracking" />
+  <img src="screenshot/Run.png" width="200" alt="Active workout" />
+  <img src="screenshot/SideBar.png" width="200" alt="Side menu" />
+  <img src="screenshot/Settings.png" width="200" alt="Settings" />
+</p>
+
 ## 📱 Description
 
 Runner is a full-featured running app that allows you to:
