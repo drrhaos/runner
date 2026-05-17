@@ -427,8 +427,8 @@ Contributions are welcome! Please:
 - [ ] Fitness tracker integration
 - [ ] Social features (share workouts)
 - [ ] Workout plans
-- [ ] Progress analysis with charts
-- [ ] Voice prompts during workout
+- [x] Progress analysis with charts
+- [x] Voice prompts during workout
 - [ ] Import workouts from other apps (TCX, FIT, GPX)
 
 ## 📞 Support
