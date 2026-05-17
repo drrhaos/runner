@@ -354,6 +354,40 @@
 
                 </LinearLayout>
 
+                <!-- Обратный отсчет перед стартом -->
+                <LinearLayout
+                    android:id="@+id/row_start_countdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/settings_label_start_countdown"
+                        android:textSize="16sp"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:id="@+id/textView_start_countdown_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        tools:text="5 s"
+                        android:textSize="16sp"
+                        android:textColor="?attr/colorPrimary" />
+
+                </LinearLayout>
+
                 <!-- Автоматическая пауза -->
                 <LinearLayout
                     android:layout_width="match_parent"

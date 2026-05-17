@@ -26,7 +26,8 @@ data class SettingsState(
     val gpsAccuracy: String = "high",
     val themeMode: String = ThemeUtils.THEME_SYSTEM,
     val appLanguage: String = "en",
-    val isFirstLaunch: Boolean = true
+    val isFirstLaunch: Boolean = true,
+    val startCountdownSeconds: Int = 5
 )
 
 class SettingsViewModel(private val context: Context) : ViewModel() {
@@ -54,7 +55,8 @@ class SettingsViewModel(private val context: Context) : ViewModel() {
                 gpsAccuracy = userPreferences.gpsAccuracy,
                 themeMode = userPreferences.themeMode,
                 appLanguage = userPreferences.appLanguage,
-                isFirstLaunch = userPreferences.isFirstLaunch
+                isFirstLaunch = userPreferences.isFirstLaunch,
+                startCountdownSeconds = userPreferences.startCountdownSeconds
             )
             applyTheme(userPreferences.themeMode)
         }
@@ -121,6 +123,15 @@ class SettingsViewModel(private val context: Context) : ViewModel() {
     fun markFirstLaunchCompleted() {
         userPreferences.isFirstLaunch = false
         _settingsState.value = _settingsState.value.copy(isFirstLaunch = false)
+    }
+
+    fun updateStartCountdownSeconds(seconds: Int) {
+        userPreferences.startCountdownSeconds = seconds
+        _settingsState.value = _settingsState.value.copy(startCountdownSeconds = seconds)
+    }
+
+    fun getStartCountdownOptions(): List<Int> {
+        return listOf(3, 5, 10, 15, 30)
     }
 
     fun resetToDefaults() {

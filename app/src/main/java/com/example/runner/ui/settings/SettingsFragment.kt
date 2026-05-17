@@ -79,6 +79,11 @@ class SettingsFragment : Fragment() {
             showLanguageDialog()
         }
 
+        // Обратный отсчет перед стартом
+        binding.rowStartCountdown.setOnClickListener {
+            showStartCountdownDialog()
+        }
+
         // Автоматическая пауза
         binding.switchAutoPause.setOnCheckedChangeListener { _, isChecked ->
             viewModel.updateAutoPause(isChecked)
@@ -115,6 +120,7 @@ class SettingsFragment : Fragment() {
         binding.textViewGpsAccuracyValue.text = viewModel.getGpsAccuracyDisplayName(settings.gpsAccuracy)
         binding.textViewThemeModeValue.text = viewModel.getThemeModeDisplayName(settings.themeMode)
         binding.textViewLanguageValue.text = viewModel.getLanguageDisplayName(settings.appLanguage)
+        binding.textViewStartCountdownValue.text = "${settings.startCountdownSeconds} s"
         binding.switchAutoPause.isChecked = settings.autoPause
         binding.switchVoiceFeedback.isChecked = settings.voiceFeedback
     }
@@ -216,6 +222,25 @@ class SettingsFragment : Fragment() {
                 viewModel.updateAppLanguage(options[which])
                 dialog.dismiss()
                 Toast.makeText(requireContext(), getString(R.string.settings_language_changed), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+
+    private fun showStartCountdownDialog() {
+        val options = viewModel.getStartCountdownOptions()
+        val current = viewModel.settingsState.value.startCountdownSeconds
+        val currentIndex = options.indexOf(current).coerceAtLeast(0)
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.settings_dialog_start_countdown_title))
+            .setSingleChoiceItems(
+                options.map { "${it} s" }.toTypedArray(),
+                currentIndex
+            ) { dialog, which ->
+                viewModel.updateStartCountdownSeconds(options[which])
+                dialog.dismiss()
+                Toast.makeText(requireContext(), getString(R.string.settings_start_countdown_changed), Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(getString(R.string.cancel), null)
             .show()
