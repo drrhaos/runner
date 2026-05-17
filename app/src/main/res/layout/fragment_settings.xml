@@ -421,9 +421,9 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/settings_btn_reset"
-            android:textColor="@color/red_500"
+            android:textColor="?attr/colorError"
             android:background="?attr/colorSurface"
-            app:strokeColor="@color/red_500"
+            app:strokeColor="?attr/colorError"
             app:strokeWidth="2dp"
             style="@style/Widget.Material3.Button.OutlinedButton" />
 

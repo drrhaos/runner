@@ -128,8 +128,8 @@
                         android:layout_height="wrap_content"
                         tools:text="14:30"
                         android:textSize="14sp"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:layout_marginTop="2dp" />
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:layout_marginTop="2dp" />
                 </LinearLayout>
 
                 <TextView
@@ -138,7 +138,7 @@
                     android:layout_height="wrap_content"
                     tools:text="@string/workout_type_easy_run"
                     android:textSize="14sp"
-                    android:textColor="@android:color/white"
+                    android:textColor="?attr/colorOnPrimary"
                     android:background="@drawable/type_chip_background"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
@@ -168,14 +168,14 @@
                         tools:text="5.0 км"
                         android:textSize="24sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/holo_green_dark" />
+                        android:textColor="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/workout_distance_label"
                         android:textSize="12sp"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
 
                 <!-- Время -->
@@ -194,14 +194,14 @@
                         tools:text="25:30"
                         android:textSize="24sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/holo_blue_dark" />
+                        android:textColor="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/workout_time_label"
                         android:textSize="12sp"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
 
                 <!-- Средний темп -->
@@ -219,14 +219,14 @@
                         tools:text="5:06"
                         android:textSize="24sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/holo_orange_dark" />
+                        android:textColor="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/workout_pace_label_km"
                         android:textSize="12sp"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -252,14 +252,14 @@
                         tools:text="11.8 км/ч"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/holo_purple" />
+                        android:textColor="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/workout_details_average_speed"
                         android:textSize="10sp"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
 
                 <!-- Калории -->
@@ -277,14 +277,14 @@
                         tools:text="300 ккал"
                         android:textSize="18sp"
                         android:textStyle="bold"
-                        android:textColor="@android:color/holo_red_dark" />
+                        android:textColor="?attr/colorPrimary" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/workout_details_calories"
                         android:textSize="10sp"
-                        android:textColor="?android:attr/textColorSecondary" />
+                        android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -340,8 +340,8 @@
                     android:text="@string/workout_details_btn_delete"
                     android:drawableStart="@android:drawable/ic_menu_delete"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:textColor="@color/design_default_color_on_primary"
-                    app:backgroundTint="@color/red_500" />
+                    android:textColor="?attr/colorOnError"
+                    app:backgroundTint="?attr/colorError" />
 
             </LinearLayout>
 
@@ -401,7 +401,7 @@
                     android:text=""
                     android:textSize="12sp"
                     android:textColor="?attr/colorOnSurface"
-                    android:background="#E0000000"
+                    android:background="@color/panel_surface_color"
                     android:padding="8dp"
                     android:gravity="start"
                     android:visibility="gone" />
@@ -453,7 +453,7 @@
                     android:text=""
                     android:textSize="12sp"
                     android:textColor="?attr/colorOnSurface"
-                    android:background="#E0000000"
+                    android:background="@color/panel_surface_color"
                     android:padding="8dp"
                     android:gravity="start"
                     android:visibility="gone" />
@@ -538,7 +538,7 @@
                     android:text=""
                     android:textSize="12sp"
                     android:textColor="?attr/colorOnSurface"
-                    android:background="#E0000000"
+                    android:background="@color/panel_surface_color"
                     android:padding="8dp"
                     android:gravity="start"
                     android:visibility="gone" />
