@@ -28,4 +28,7 @@
     <!-- Map navigation colors for dark theme -->
     <color name="map_navigation_circle_fill">#33FFC107</color>
     <color name="map_navigation_circle_stroke">#80FFC107</color>
+
+    <!-- AppBar colors -->
+    <color name="app_bar_background">#80000000</color>
 </resources>

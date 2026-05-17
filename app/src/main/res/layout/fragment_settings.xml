@@ -13,16 +13,6 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/settings_title"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:layout_marginStart="16dp"
-            android:textColor="?attr/colorOnBackground"
-            android:layout_marginBottom="24dp" />
-
         <!-- Профиль пользователя -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
