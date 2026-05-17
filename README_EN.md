@@ -260,7 +260,7 @@ Each track point contains:
 
 - **Language**: Kotlin
 - **Minimum Android version**: 8.0 (API 26)
-- **Target Android version**: 14 (API 34)
+- **Target Android version**: 16 (API 36)
 - **Architecture**: MVVM (Model-View-ViewModel)
 - **Database**: Room Database
 - **Maps**: OSMDroid (OpenStreetMap)
