@@ -20,7 +20,9 @@ Runner is a full-featured running app that allows you to:
 - **GPS signal quality indicator** with colored bars (red/orange/yellow/green)
 - **Automatic map centering** on current location
 - **Centering button** appears when map is shifted (yellow navigation icon)
-- **Current location display** with 3D yellow marker
+- **Current location display** with blue circle marker
+- **Workout type selection** from dropdown menu before start (Easy run, Tempo run, Interval, etc.)
+- **Countdown timer** before workout start (configurable 3–30 s)
 - **Pause and resume** workout
 - **Long press** stop button (3 seconds) to prevent accidental stops
 
@@ -52,6 +54,7 @@ Runner is a full-featured running app that allows you to:
 - Theme mode (light/dark/system)
 - Auto-pause on stop
 - Voice feedback
+- **Start countdown** (3, 5, 10, 15, or 30 seconds)
 
 ### 💾 Data Export
 - Export workouts to **GPX format** (compatible with Strava, Garmin, and others)
@@ -314,8 +317,10 @@ cd runner
 ### Starting a Workout
 1. Open **"Start Workout"** section from the side menu
 2. Wait for GPS signal (indicator will turn green)
-3. Press the **"Start"** button
-4. During the workout you can:
+3. Select **workout type** from the dropdown in the bottom panel
+4. Press the **"Start"** button — the countdown will begin
+5. After the countdown finishes, the workout starts automatically
+6. During the workout you can:
    - View the map with route
    - See current metrics
    - Expand panel for detailed statistics
@@ -396,7 +401,8 @@ Run tests:
 
 ## 👥 Authors
 
-[Specify project authors]
+- [DrHaos](https://github.com/drrhaos)
+- [john-krasinski](https://github.com/john-krasinski)
 
 ## 🤝 Contributing
 
@@ -408,6 +414,14 @@ Contributions are welcome! Please:
 5. Open a Pull Request
 
 ## 📝 Changelog
+
+### Version 1.1
+- Workout type selection from dropdown menu before start
+- Countdown timer before workout start
+- Configurable countdown duration in settings
+- Movement direction calculated from last 10 track points
+- Track polyline connects to current position
+- Original location icon (blue circle with arrow)
 
 ### Version 1.0
 - Initial release
