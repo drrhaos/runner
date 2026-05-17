@@ -27,4 +27,7 @@
     <color name="gps_signal_inactive">#40888888</color>
     <color name="map_navigation_circle_fill">#33FFC107</color>
     <color name="map_navigation_circle_stroke">#80FFC107</color>
+
+    <!-- AppBar colors -->
+    <color name="app_bar_background">#E0FFFFFF</color>
 </resources>

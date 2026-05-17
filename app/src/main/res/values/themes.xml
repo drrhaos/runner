@@ -18,7 +18,7 @@
 
     <style name="Theme.Runner.NoActionBar" parent="Theme.Runner" />
 
-    <style name="Theme.Runner.AppBarOverlay" parent="ThemeOverlay.Material3.Dark.ActionBar" />
+    <style name="Theme.Runner.AppBarOverlay" parent="ThemeOverlay.Material3.Light" />
 
     <style name="Theme.Runner.PopupOverlay" parent="ThemeOverlay.Material3.Light" />
 
