@@ -260,7 +260,7 @@ Workout {
 
 - **Язык**: Kotlin
 - **Минимальная версия Android**: 8.0 (API 26)
-- **Целевая версия Android**: 14 (API 34)
+- **Целевая версия Android**: 16 (API 36)
 - **Архитектура**: MVVM (Model-View-ViewModel)
 - **База данных**: Room Database
 - **Карты**: OSMDroid (OpenStreetMap)
