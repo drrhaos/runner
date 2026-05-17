@@ -79,6 +79,9 @@ class WorkoutTrackingFragment : Fragment() {
         private const val EXCELLENT_ACCURACY = 5f
         private const val GOOD_ACCURACY = 10f
         private const val FAIR_ACCURACY = 20f
+
+        // Direction calculation
+        private const val DIRECTION_WINDOW_SIZE = 10
     }
 
     private var _binding: FragmentWorkoutTrackingBinding? = null
@@ -520,7 +523,7 @@ class WorkoutTrackingFragment : Fragment() {
             }
             
             // Обновляем ориентацию карты по направлению движения
-            val bearing = location.bearing
+            val bearing = getDirectionBearing(session.trackPoints)
             if (bearing >= 0) {
                 try {
                     val mapOrientation = -bearing
@@ -857,7 +860,7 @@ class WorkoutTrackingFragment : Fragment() {
         val now = System.currentTimeMillis()
 
         // Карта и ориентация — всегда, чтобы трек не «отставал» от метрик при троттлинге текста
-        updateTrackOnMap(session.trackPoints)
+        updateTrackOnMap(session.trackPoints, session.currentLocation)
         updateMapOrientation(session)
 
         val forceNumericRefresh = session.gpsStatus == GpsStatus.LOST
@@ -962,18 +965,20 @@ class WorkoutTrackingFragment : Fragment() {
         }
     }
 
-    private fun updateTrackOnMap(trackPoints: List<GeoPoint>) {
+    private fun updateTrackOnMap(trackPoints: List<GeoPoint>, currentLocation: Location? = null) {
         if (trackPoints.isNotEmpty()) {
-            // Обновляем трек только если есть новые точки
+            val pointsWithCurrent = trackPoints.toMutableList()
+            currentLocation?.let {
+                pointsWithCurrent.add(GeoPoint(it.latitude, it.longitude))
+            }
             @Suppress("DEPRECATION")
             val currentPoints = trackPolyline?.points ?: emptyList()
-            if (trackPoints.size != currentPoints.size) {
-                trackPolyline?.setPoints(trackPoints.toMutableList())
+            if (pointsWithCurrent.size != currentPoints.size) {
+                trackPolyline?.setPoints(pointsWithCurrent)
                 mapView?.invalidate()
-                android.util.Log.d(TAG, "Track updated: ${trackPoints.size} points")
+                android.util.Log.d(TAG, "Track updated: ${pointsWithCurrent.size} points")
             }
         } else {
-            // Очищаем трек если нет точек
             trackPolyline?.setPoints(mutableListOf())
             mapView?.invalidate()
         }
@@ -1008,14 +1013,19 @@ class WorkoutTrackingFragment : Fragment() {
         return bearing.toFloat()
     }
 
+    private fun getDirectionBearing(trackPoints: List<GeoPoint>): Float {
+        if (trackPoints.size < 2) return -1f
+        val windowSize = minOf(DIRECTION_WINDOW_SIZE, trackPoints.size)
+        val from = trackPoints[trackPoints.size - windowSize]
+        val to = trackPoints.last()
+        return calculateBearing(from, to)
+    }
+
     private fun updateMapOrientation(session: WorkoutSession) {
-        session.currentLocation?.let { currentLocation ->
-            val bearing = currentLocation.bearing
+        if (session.currentLocation != null) {
+            val bearing = getDirectionBearing(session.trackPoints)
             if (bearing >= 0) {
                 try {
-                    // Поворачиваем карту так, чтобы направление движения было вверх
-                    // bearing - это угол от севера по часовой стрелке
-                    // Для OSMDroid нужно инвертировать угол, чтобы направление было вверх
                     val mapOrientation = -bearing
                     mapView?.mapOrientation = mapOrientation
                     android.util.Log.d("MapOrientation", "Updated map orientation: bearing=$bearing, mapOrientation=$mapOrientation")
@@ -1045,7 +1055,7 @@ class WorkoutTrackingFragment : Fragment() {
             }
 
             // Обновляем ориентацию карты по направлению движения
-            val bearing = location.bearing
+            val bearing = getDirectionBearing(session.trackPoints)
             if (bearing >= 0) {
                 try {
                     val mapOrientation = -bearing
