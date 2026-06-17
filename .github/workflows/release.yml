@@ -30,6 +30,12 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install SDK components
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
@@ -68,7 +74,7 @@ jobs:
 
       - name: Build release APK
         run: |
-          ./gradlew assembleRelease \
+          ./gradlew :app:assembleRelease \
             -PversionName="${{ env.VERSION_NAME }}" \
             -PversionCode="${{ env.VERSION_CODE }}" \
             --stacktrace
