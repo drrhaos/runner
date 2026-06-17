@@ -37,6 +37,16 @@ jobs:
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest --stacktrace
 
+      - name: Upload unit test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-report
+          path: |
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/test-results/testDebugUnitTest/
+          retention-days: 14
+
       - name: Lint debug
         run: ./gradlew :app:lintDebug --stacktrace
 

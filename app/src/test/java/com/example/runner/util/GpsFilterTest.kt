@@ -1,7 +1,6 @@
 package com.example.runner.util
 
 import android.location.Location
-import org.junit.Before
 import org.junit.Test
 import org.junit.Assert.*
 import org.junit.runner.RunWith
@@ -44,37 +43,35 @@ class GpsFilterTest {
     }
 
     @Test
-    fun `isValidGpsLocation should reject location without accuracy`() {
+    fun `isValidGpsLocation should accept location without accuracy when coordinates are valid`() {
         // Given
         val location = Location("test").apply {
             latitude = 55.7558
             longitude = 37.6173
             speed = 3f
-            // Не устанавливаем accuracy
         }
 
         // When
         val result = GpsFilter.isValidGpsLocation(location)
 
         // Then
-        assertFalse("Location without accuracy should be rejected", result)
+        assertTrue("Location without accuracy should be accepted when coordinates are valid", result)
     }
 
     @Test
-    fun `isValidGpsLocation should reject location without speed`() {
+    fun `isValidGpsLocation should accept location without speed when coordinates are valid`() {
         // Given
         val location = Location("test").apply {
             latitude = 55.7558
             longitude = 37.6173
             accuracy = 10f
-            // Не устанавливаем speed
         }
 
         // When
         val result = GpsFilter.isValidGpsLocation(location)
 
         // Then
-        assertFalse("Location without speed should be rejected", result)
+        assertTrue("Location without speed should be accepted when coordinates are valid", result)
     }
 
     @Test

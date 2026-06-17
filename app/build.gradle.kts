@@ -64,6 +64,12 @@ android {
         viewBinding = true
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
     lint {
         abortOnError = true
         checkReleaseBuilds = false
