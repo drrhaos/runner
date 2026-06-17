@@ -18,8 +18,8 @@ object GpsFilter {
     // Минимальная точность GPS (в метрах) - точки с лучшей точностью всегда принимаются
     private const val MIN_ACCEPTABLE_ACCURACY = 20.0 // 20 метров
     
-    // Максимальная скорость движения (м/с) - 50 км/ч для велосипеда
-    private const val MAX_REASONABLE_SPEED = 14.0 // 14 м/с = 50 км/ч
+    // По умолчанию: ~50 км/ч; для других типов тренировки передаётся свой порог
+    private const val DEFAULT_MAX_REASONABLE_SPEED_MPS = 14.0 // 14 м/с ≈ 50 км/ч
     
     // Максимальное изменение высоты между точками (в метрах) для фильтрации выбросов
     private const val MAX_ALTITUDE_CHANGE = 50.0 // 50 метров
@@ -46,8 +46,8 @@ object GpsFilter {
         
         // Проверяем скорость точки (если доступна и слишком высокая, возможно это выброс)
         if (location.hasSpeed()) {
-            if (location.speed > MAX_REASONABLE_SPEED) {
-                Log.w("GpsFilter", "Speed too high: ${location.speed}m/s > ${MAX_REASONABLE_SPEED}m/s")
+            if (location.speed > DEFAULT_MAX_REASONABLE_SPEED_MPS) {
+                Log.w("GpsFilter", "Speed too high: ${location.speed}m/s > ${DEFAULT_MAX_REASONABLE_SPEED_MPS}m/s")
                 return false
             }
         }
@@ -72,8 +72,9 @@ object GpsFilter {
      * Фильтрует GPS выбросы, сравнивая с предыдущей точкой
      */
     fun filterGpsOutlier(
-        newLocation: Location, 
-        previousLocation: Location?
+        newLocation: Location,
+        previousLocation: Location?,
+        maxReasonableSpeedMps: Float = DEFAULT_MAX_REASONABLE_SPEED_MPS.toFloat()
     ): Location? {
         // Если это первая точка, проверяем только базовую валидность
         if (previousLocation == null) {
@@ -117,8 +118,8 @@ object GpsFilter {
             val calculatedSpeed = distance / timeDiffSeconds
             
             // Если вычисленная скорость превышает допустимую, считаем это выбросом
-            if (calculatedSpeed > MAX_REASONABLE_SPEED) {
-                Log.w("GpsFilter", "GPS outlier detected: calculated speed=${calculatedSpeed}m/s (${calculatedSpeed * 3.6}km/h) > ${MAX_REASONABLE_SPEED}m/s, distance=${distance}m, time=${timeDiffSeconds}s")
+            if (calculatedSpeed > maxReasonableSpeedMps) {
+                Log.w("GpsFilter", "GPS outlier detected: calculated speed=${calculatedSpeed}m/s (${calculatedSpeed * 3.6}km/h) > ${maxReasonableSpeedMps}m/s, distance=${distance}m, time=${timeDiffSeconds}s")
                 return null
             }
         }
@@ -139,7 +140,7 @@ object GpsFilter {
         }
         
         // Для точек со средней точностью проверяем дополнительно
-        val expectedMaxDistance = calculateExpectedMaxDistance(previousLocation, timeDiff)
+        val expectedMaxDistance = calculateExpectedMaxDistance(previousLocation, timeDiff, maxReasonableSpeedMps)
         
         if (distance > expectedMaxDistance) {
             Log.w("GpsFilter", "GPS point exceeds expected distance: ${distance}m > ${expectedMaxDistance}m")
@@ -153,12 +154,16 @@ object GpsFilter {
     /**
      * Вычисляет максимально ожидаемое расстояние на основе скорости и времени
      */
-    private fun calculateExpectedMaxDistance(previousLocation: Location, timeDiffMs: Long): Double {
+    private fun calculateExpectedMaxDistance(
+        previousLocation: Location,
+        timeDiffMs: Long,
+        maxReasonableSpeedMps: Float
+    ): Double {
         val timeDiffSeconds = timeDiffMs / 1000.0
         val speed = previousLocation.speed
         
         // Максимальная скорость для бега + 50% запас
-        val maxSpeed = minOf(speed * 1.5, MAX_REASONABLE_SPEED)
+        val maxSpeed = minOf(speed * 1.5, maxReasonableSpeedMps.toDouble())
         
         return maxSpeed * timeDiffSeconds
     }

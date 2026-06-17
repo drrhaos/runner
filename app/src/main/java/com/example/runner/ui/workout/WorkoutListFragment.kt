@@ -39,11 +39,24 @@ class WorkoutListFragment : Fragment() {
 
         setupRecyclerView()
         setupClickListeners()
+        setupSwipeRefresh()
         observeViewModel()
     }
 
+    private fun setupSwipeRefresh() {
+        binding.swipeRefreshWorkouts.setOnRefreshListener {
+            viewModel.refreshStatistics()
+            viewLifecycleOwner.lifecycleScope.launch {
+                kotlinx.coroutines.delay(350)
+                if (_binding != null) {
+                    binding.swipeRefreshWorkouts.isRefreshing = false
+                }
+            }
+        }
+    }
+
     private fun setupRecyclerView() {
-        workoutAdapter = WorkoutAdapter { workout ->
+        workoutAdapter = WorkoutAdapter(requireContext()) { workout ->
             // Переход к детальному просмотру тренировки
             val bundle = Bundle().apply {
                 putLong("workoutId", workout.id)
@@ -61,6 +74,9 @@ class WorkoutListFragment : Fragment() {
         // FAB кнопка добавления тренировки
         binding.fabAddWorkout.setOnClickListener {
             findNavController().navigate(com.example.runner.R.id.nav_add_workout)
+        }
+        binding.buttonEmptyStartWorkout.setOnClickListener {
+            findNavController().navigate(com.example.runner.R.id.nav_tracking)
         }
     }
 

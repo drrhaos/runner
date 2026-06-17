@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Blue palette for dark theme (same hue, adapted for dark backgrounds) -->
+    <color name="blue_50">#FF1A237E</color>
+    <color name="blue_100">#FF283593</color>
+    <color name="blue_200">#FF303F9F</color>
+    <color name="blue_300">#FF3949AB</color>
+    <color name="blue_400">#FF5C6BC0</color>
+    <color name="blue_500">#FF42A5F5</color>
+    <color name="blue_600">#FF64B5F6</color>
+    <color name="blue_700">#FF90CAF9</color>
+    <color name="blue_800">#FFBBDEFB</color>
+    <color name="blue_900">#FFE3F2FD</color>
+
+    <!-- Additional colors for GPS status (adjusted for dark theme) -->
+    <color name="green_500">#FF81C784</color>
+    <color name="yellow_500">#FFFFF176</color>
+    <color name="orange_500">#FFFFB74D</color>
+    <color name="red_500">#FFE57373</color>
+
+    <!-- GPS signal indicators for dark theme -->
+    <color name="gps_signal_level_1">#FFEF5350</color>
+    <color name="gps_signal_level_2">#FFFF9800</color>
+    <color name="gps_signal_level_3">#FFFFD54F</color>
+    <color name="gps_signal_level_4">#FF66BB6A</color>
+    <color name="gps_signal_inactive">#40888888</color>
+
+    <!-- Map navigation colors for dark theme -->
+    <color name="map_navigation_circle_fill">#33FFC107</color>
+    <color name="map_navigation_circle_stroke">#80FFC107</color>
+
+    <!-- AppBar colors -->
+    <color name="app_bar_background">#80000000</color>
+</resources>

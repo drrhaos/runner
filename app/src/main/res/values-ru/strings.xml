@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="navigation_drawer_open">Открыть боковую панель</string>
+    <string name="navigation_drawer_close">Скрыть боковую панель</string>
+    <string name="nav_header_subtitle">Твой персональный тренер</string>
+    <string name="nav_header_desc">Иконка приложения</string>
+    <string name="action_settings">Настройки</string>
+    <string name="menu_workouts">Мои тренировки</string>
+    <string name="menu_add_workout">Добавить тренировку</string>
+    <string name="menu_statistics">Статистика</string>
+    <string name="menu_settings">Настройки</string>
+    <string name="workout_type_easy_run">Легкий бег</string>
+    <string name="workout_type_tempo_run">Темповый бег</string>
+    <string name="workout_type_interval_training">Интервальная тренировка</string>
+    <string name="workout_type_long_run">Длинный бег</string>
+    <string name="workout_type_recovery_run">Восстановительный бег</string>
+    <string name="workout_type_competition">Соревнование</string>
+    <string name="workout_saved">Тренировка сохранена</string>
+    <string name="workout_deleted">Тренировка удалена</string>
+    <string name="confirm_delete">Вы уверены, что хотите удалить эту тренировку?</string>
+    <string name="error_save_workout">Ошибка при сохранении тренировки</string>
+    <string name="error_delete_workout">Ошибка при удалении тренировки</string>
+    <string name="fill_required_fields">Заполните обязательные поля</string>
+    <string name="save">Сохранить</string>
+    <string name="cancel">Отмена</string>
+    <string name="edit">Редактировать</string>
+    <string name="delete">Удалить</string>
+    <string name="yes">Да</string>
+    <string name="no">Нет</string>
+    <string name="btn_stop_description">Стоп</string>
+    <string name="btn_start_description">Старт</string>
+    <string name="btn_pause_description">Пауза</string>
+    <string name="btn_my_location_description">Мое местоположение</string>
+    <string name="stop_hold_hint_initial">Удерживайте 3 сек. для остановки</string>
+    <string name="stop_hold_hint">Удерживайте %1$d сек. для остановки</string>
+    <string name="gps_signal_searching">Поиск</string>
+    <string name="gps_signal_weak">Слабый</string>
+    <string name="gps_signal_medium">Средний</string>
+    <string name="gps_signal_strong">Сильный</string>
+    <string name="gps_signal_lost">Потерян</string>
+    <string name="gps_signal_denied">Нет доступа</string>
+    <string name="gps_accuracy_searching">Ищем спутники…</string>
+    <string name="gps_accuracy_value">Точность: %1$d м</string>
+    <string name="gps_accuracy_lost">Сигнал потерян</string>
+    <string name="gps_accuracy_denied">Нет доступа к GPS</string>
+
+    <string name="kilometers_per_hour_float">%.1f км/ч</string>
+    <string name="kilometers_per_hour_float_tts">%.1f километров в час</string>
+    <string name="miles_per_hour_float">%.1f миль/ч</string>
+    <string name="miles_per_hour_float_tts">%.1f миль в час</string>
+    <string name="per_km">на километр</string>
+    <string name="voice_notif_text_each_km">Дистанция: %1$s, время: %2$s, средний темп: %3$s.</string>
+
+    <string name="workout_distance_label">Дистанция</string>
+    <string name="workout_time_label">Время</string>
+    <string name="workout_pace_label_km">Темп мин/км</string>
+    <string name="workout_pace_label_miles">Темп мин/милю</string>
+    <string name="workout_summary_good">Хорошая тренировка…</string>
+
+    <string name="dialog_choose_workout_title">Выберите тип тренировки</string>
+    <string name="dialog_start_workout">Начать</string>
+
+    <string name="add_workout_title">Добавить тренировку</string>
+    <string name="add_workout_label_date">Дата тренировки:</string>
+    <string name="add_workout_label_type">Тип тренировки:</string>
+    <string name="add_workout_label_distance">Дистанция (км):</string>
+    <string name="add_workout_label_time">Время (часы:минуты:секунды):</string>
+    <string name="add_workout_label_calories">Калории (опционально):</string>
+    <string name="add_workout_label_notes">Заметки:</string>
+    <string name="add_workout_hint_date">Выберите дату</string>
+    <string name="add_workout_hint_type">Выберите тип тренировки</string>
+    <string name="add_workout_hint_time_hours">Часы</string>
+    <string name="add_workout_hint_time_minutes">Минуты</string>
+    <string name="add_workout_hint_time_seconds">Секунды</string>
+    <string name="add_workout_hint_distance">Введите дистанцию</string>
+    <string name="add_workout_hint_calories">Введите количество калорий</string>
+    <string name="add_workout_hint_notes">Пару слов о тренировке</string>
+
+    <string name="settings_title">Настройки</string>
+    <string name="settings_profile_title">Профиль пользователя</string>
+    <string name="settings_profile_subtitle">Для расчёта калорий</string>
+    <string name="settings_label_weight">Вес</string>
+    <string name="settings_label_growth">Рост</string>
+    <string name="settings_label_age">Возраст</string>
+    <string name="settings_label_gender">Пол</string>
+    <string name="settings_profile_gender_male">Мужской</string>
+    <string name="settings_profile_gender_female">Женский</string>
+    <string name="settings_app_settings_title">Настройки приложения</string>
+    <string name="settings_app_subtitle">Карта, единицы и обратная связь</string>
+    <string name="settings_label_units_type">Система единиц</string>
+    <string name="settings_units_metric">Метрическая (км)</string>
+    <string name="settings_units_imperial">Имперская (мили)</string>
+    <string name="settings_label_gps_accuracy">Точность GPS</string>
+    <string name="settings_gps_accuracy_high">Высокая</string>
+    <string name="settings_gps_accuracy_medium">Срелняя</string>
+    <string name="settings_gps_accuracy_low">Низкая</string>
+    <string name="settings_label_theme">Тема приложения</string>
+    <string name="settings_theme_system">Как в системе</string>
+    <string name="settings_theme_light">Светлая</string>
+    <string name="settings_theme_dark">Темная</string>
+    <string name="settings_label_autopause">Автоматическая пауза</string>
+    <string name="settings_label_voice_notifications">Голосовые уведомления</string>
+    <string name="settings_btn_reset">Сбросить настройки</string>
+    <string name="settings_weight_saved">Вес сохранен</string>
+    <string name="settings_height_saved">Рост сохранен</string>
+    <string name="settings_birthdate_saved">Дата рождения сохранена</string>
+    <string name="settings_gender_saved">Пол сохранен</string>
+    <string name="settings_units_changed">Система единиц изменена</string>
+    <string name="settings_gps_accuracy_changed">Точность GPS изменена</string>
+    <string name="settings_theme_changed">Тема изменена</string>
+    <string name="settings_reset_done">Настройки сброшены</string>
+    <string name="settings_weight_format">%d кг</string>
+    <string name="settings_height_format">%d см</string>
+    <string name="settings_age_format">%d лет</string>
+    <string name="settings_gender_unknown">Не указан</string>
+    <string name="settings_dialog_weight_title">Вес пользователя</string>
+    <string name="settings_dialog_weight_message">Введите ваш вес в килограммах:</string>
+    <string name="settings_dialog_weight_invalid">Введите корректный вес (1-300 кг)</string>
+    <string name="settings_dialog_height_title">Рост пользователя</string>
+    <string name="settings_dialog_height_message">Введите ваш рост в сантиметрах:</string>
+    <string name="settings_dialog_height_invalid">Введите корректный рост (1-250 см)</string>
+    <string name="settings_dialog_birthdate_title">Дата рождения</string>
+    <string name="settings_dialog_birthdate_message">Выберите вашу дату рождения:</string>
+    <string name="settings_dialog_gender_title">Пол пользователя</string>
+    <string name="settings_dialog_gender_message">Выберите ваш пол:</string>
+    <string name="settings_dialog_units_title">Система единиц</string>
+    <string name="settings_dialog_gps_title">Точность GPS</string>
+    <string name="settings_dialog_gps_message">Выберите уровень точности GPS. Высокая точность потребляет больше батареи.</string>
+    <string name="settings_dialog_theme_title">Тема приложения</string>
+    <string name="settings_dialog_reset_title">Сброс настроек</string>
+    <string name="settings_dialog_reset_message">Вы уверены, что хотите сбросить все настройки к значениям по умолчанию?</string>
+    <string name="settings_label_language">Язык</string>
+    <string name="settings_language_en">Английский</string>
+    <string name="settings_language_ru">Русский</string>
+    <string name="settings_dialog_language_title">Язык приложения</string>
+    <string name="settings_language_changed">Язык изменён</string>
+
+    <string name="track_info_time_label">Время (ч:мин:с)</string>
+    <string name="track_info_distance_label_km">Дистанция (км)</string>
+    <string name="track_info_distance_label_miles">Дистанция (миль)</string>
+    <string name="track_info_average_speed_label_km">Средняя скорость (км/ч)</string>
+    <string name="track_info_average_speed_label_miles">Средняя скорость (миль/ч)</string>
+    <string name="track_info_current_pace_label_km">Текущий темп (мин/км)</string>
+    <string name="track_info_current_pace_label_miles">Текущий темп (мин/милю)</string>
+    <string name="track_info_average_pace_label_km">Средний темп (мин/км)</string>
+    <string name="track_info_average_pace_label_miles">Средний темп (мин/милю)</string>
+    <string name="track_info_calories_label">Калории (ккал)</string>
+    <string name="track_info_pulse_label">Пульс (уд/мин)</string>
+
+    <string name="workout_details_basic_params">Основные параметры</string>
+    <string name="workout_details_charts">Графики</string>
+    <string name="workout_details_average_speed">Средняя скорость</string>
+    <string name="workout_details_calories">Калории</string>
+    <string name="workout_details_btn_share">Поделиться</string>
+    <string name="workout_details_btn_export_gpx">Экспорт GPX</string>
+    <string name="workout_details_btn_edit">Исправить</string>
+    <string name="workout_details_btn_delete">Удалить</string>
+    <string name="workout_details_pace_speed_pulse_title">Темп / Скорость / Пульс</string>
+    <string name="workout_details_height_title">Высота</string>
+    <string name="workout_details_pace_speed_title">Темп / Скорость по сегментам</string>
+    <string name="workout_details_pace">Темп</string>
+    <string name="workout_details_speed">Скорость</string>
+    <string name="workout_not_loaded">Тренировка не загружена</string>
+    <string name="track_no_data_export">Нет данных трека для экспорта</string>
+    <string name="export_error">Ошибка экспорта: %1$s</string>
+    <string name="export_gpx_title">Экспортировать GPX</string>
+    <string name="gpx_file_ready">GPX файл готов к экспорту</string>
+    <string name="file_save_error">Ошибка сохранения файла: %1$s</string>
+    <string name="share_workout_title">Поделиться тренировкой</string>
+    <string name="track_no_data_fix">Нет данных трека для исправления</string>
+    <string name="workout_data_fixed">Данные тренировки исправлены</string>
+    <string name="workout_data_fix_failed">Не удалось исправить данные</string>
+    <string name="workout_data_fix_error">Ошибка при исправлении данных: %1$s</string>
+    <string name="workout_invalid_id">Ошибка: неверный ID тренировки</string>
+    <string name="route_empty">Маршрут пуст</string>
+    <string name="route_load_error">Ошибка загрузки маршрута</string>
+    <string name="route_not_saved">Маршрут не сохранен</string>
+    <string name="delete_workout_title">Удалить тренировку</string>
+    <string name="delete_workout_message">Вы уверены, что хотите удалить эту тренировку? Это действие нельзя отменить.</string>
+    <string name="chart_pace_label">Темп (мин/км)</string>
+    <string name="chart_speed_label">Скорость (км/ч)</string>
+    <string name="chart_time_format">%d мин</string>
+    <string name="chart_elevation_title">Высота</string>
+    <string name="chart_elevation_x_format">%.1f км</string>
+    <string name="chart_elevation_y_format">%d м</string>
+    <string name="unit_km">км</string>
+    <string name="unit_mile">миля</string>
+    <string name="unit_kmh">км/ч</string>
+    <string name="unit_mph">миль/ч</string>
+    <string name="workout_share_text">🏃 Тренировка:
+📅 Дата: %1$s
+📏 Дистанция: %2$s
+⏱ Время: %3$s
+🏃 Темп: %4$s
+🔥 Калории: %5$s
+#тренировка #бег #здоровье</string>
+
+    <string name="statistics_title">Статистика</string>
+    <string name="statistics_btn_export_csv">Экспорт CSV</string>
+    <string name="statistics_general">Общая статистика</string>
+    <string name="statistics_total_workouts_label">Всего тренировок:</string>
+    <string name="statistics_total_distance_label">Общая дистанция:</string>
+    <string name="statistics_total_time_label">Общее время:</string>
+    <string name="statistics_total_calories_label">Всего калорий:</string>
+    <string name="statistics_best_results">Лучшие результаты</string>
+    <string name="statistics_best_pace">Лучший темп:</string>
+    <string name="statistics_pace_placeholder">--:-- /км</string>
+    <string name="statistics_maximum_distance">Максимальная дистанция:</string>
+    <string name="statistics_distance_placeholder">0.00 км</string>
+    <string name="statistics_longest_training">Самая длинная тренировка:</string>
+    <string name="statistics_time_placeholder">00:00:00</string>
+    <string name="statistics_average_values">Средние показатели</string>
+    <string name="statistics_average_pace_label">Средний темп:</string>
+    <string name="statistics_average_pace_placeholder">--:--</string>
+    <string name="statistics_average_distance_label">Средняя дистанция:</string>
+    <string name="statistics_average_time_label">Среднее время:</string>
+    <string name="statistics_average_time_placeholder">00:00:00</string>
+    <string name="export_csv_title">Экспортировать CSV</string>
+    <string name="csv_file_ready">CSV файл готов к экспорту</string>
+    <string name="no_data_export">Нет данных для экспорта</string>
+    <string name="no_data_text">Нет данных</string>
+    <string name="statistics_activity_label">Активность</string>
+    <string name="statistics_sessions_this_week_label">Тренировок на этой неделе:</string>
+    <string name="statistics_sessions_this_month_label">Тренировок в этом месяце:</string>
+    <string name="statistics_by_workout_type">По типам тренировок</string>
+    <string name="statistics_message_no_data">Нет данных для отображения.\nНачните тренировки, чтобы увидеть статистику.</string>
+
+    <string name="workout_list_num_workouts">Тренировок</string>
+    <string name="workout_list_average_pace">Средний темп</string>
+    <string name="workout_list_message_no_workouts">Пока нет тренировок</string>
+    <string name="workout_list_message_start_workout">Начните тренировку, чтобы появилась первая запись.</string>
+    <string name="workout_list_empty_start">Начать тренировку</string>
+    <string name="workout_list_content_description_empty">Пока нет тренировок</string>
+    <string name="gps_label">GPS</string>
+    <string name="gps_status_a11y">Сигнал GPS: %1$s</string>
+    <string name="workout_fragment_label">Тренировка</string>
+    <string name="workout_details_label">Детали тренировки</string>
+    <string name="start_workout">Начать тренировку</string>
+
+    <string name="permission_activity_granted">Разрешение на физическую активность предоставлено</string>
+    <string name="permission_location_needed">Разрешение на местоположение необходимо для трекинга</string>
+    <string name="permission_notification_needed">Разрешение на уведомления необходимо для фонового трекинга</string>
+    <string name="battery_optimization_hint">Для стабильной работы приложения отключите оптимизацию батареи в настройках</string>
+    <string name="workout_too_short">Тренировка слишком короткая для сохранения</string>
+    <string name="no_data_to_save">Нет данных для сохранения</string>
+    <string name="workout_saved_format">Тренировка сохранена: %.2f км за %s</string>
+    <string name="workout_save_error">Ошибка при сохранении тренировки</string>
+    <string name="workout_save_error_format">Ошибка при сохранении тренировки: %1$s</string>
+    <string name="distance_must_be_positive">Дистанция должна быть больше 0</string>
+    <string name="time_must_be_positive">Время должно быть больше 0</string>
+    <string name="check_input_data">Проверьте правильность введенных данных</string>
+
+    <string name="gps_denied_message">GPS недоступен. Включите GPS в настройках.</string>
+    <string name="gps_lost_message">Потерян сигнал GPS. Проверьте соединение.</string>
+    <string name="gps_searching_message">Поиск GPS сигнала…</string>
+    <string name="gps_weak_message">GPS сигнал слабый. Точность может быть низкой.</string>
+    <string name="gps_medium_message">GPS сигнал средний.</string>
+    <string name="gps_strong_message">GPS сигнал сильный.</string>
+    <string name="error_database_save">Ошибка базы данных. Попробуйте еще раз.</string>
+    <string name="error_io_save">Ошибка записи данных. Проверьте место на диске.</string>
+    <string name="error_save_format">Ошибка сохранения: %1$s</string>
+    <string name="error_database_load">Ошибка загрузки данных из базы.</string>
+    <string name="error_io_load">Ошибка чтения данных.</string>
+    <string name="error_load_format">Ошибка загрузки: %1$s</string>
+
+    <string name="notification_channel_name">Трекинг тренировок</string>
+    <string name="notification_channel_description">Уведомления о активной тренировке</string>
+    <string name="notification_workout_format">%1$s • %2$s</string>
+
+    <string name="csv_header">Дата,Время,Тип тренировки,Дистанция (км),Длительность (мин),Темп (мин/км),Калории,Заметки\n</string>
+    <string name="csv_statistics_header">Статистика тренировок\n\nКатегория,Значение\n</string>
+    <string name="csv_total_workouts">Всего тренировок</string>
+    <string name="csv_total_distance">Общая дистанция (км)</string>
+    <string name="csv_total_time">Общее время (часы)</string>
+    <string name="csv_total_calories">Всего калорий</string>
+    <string name="csv_average_pace">Средний темп (мин/км)</string>
+    <string name="csv_average_distance">Средняя дистанция (км)</string>
+    <string name="csv_average_time">Среднее время (минуты)</string>
+    <string name="csv_best_pace">Лучший темп (мин/км)</string>
+    <string name="csv_max_distance">Максимальная дистанция (км)</string>
+    <string name="csv_longest_time">Самая длинная тренировка (минуты)</string>
+    <string name="csv_breakdown_header">\nРаспределение по типам тренировок\nТип тренировки,Количество,Дистанция (км)\n</string>
+
+    <string name="gpx_note_distance">Дистанция: %.2f км</string>
+    <string name="gpx_note_time">Время: %s</string>
+    <string name="gpx_note_pace">Темп: %s</string>
+    <string name="gpx_note_calories">Калории: %d ккал</string>
+    <string name="gpx_note_notes">Заметки: %s</string>
+
+    <plurals name="hours">
+        <item quantity="one">%d час</item>
+        <item quantity="few">%d часа</item>
+        <item quantity="many">%d часов</item>
+        <item quantity="other">%d часа</item>
+    </plurals>
+
+    <plurals name="minutes">
+        <item quantity="one">%d минута</item>
+        <item quantity="few">%d минуты</item>
+        <item quantity="many">%d минут</item>
+        <item quantity="other">%d минуты</item>
+    </plurals>
+
+    <plurals name="seconds">
+        <item quantity="one">%d секунда</item>
+        <item quantity="few">%d секунды</item>
+        <item quantity="many">%d секунд</item>
+        <item quantity="other">%d секунды</item>
+    </plurals>
+
+    <plurals name="meters">
+        <item quantity="one">%d метр</item>
+        <item quantity="few">%d метра</item>
+        <item quantity="many">%d метров</item>
+        <item quantity="other">%d метра</item>
+    </plurals>
+
+    <plurals name="kilometers">
+        <item quantity="one">%d километр</item>
+        <item quantity="few">%d километра</item>
+        <item quantity="many">%d километров</item>
+        <item quantity="other">%d километра</item>
+    </plurals>
+
+    <plurals name="miles">
+        <item quantity="one">%d миля</item>
+        <item quantity="few">%d мили</item>
+        <item quantity="many">%d миль</item>
+        <item quantity="other">%d мили</item>
+    </plurals>
+
+    <plurals name="minutes_per_kilometer">
+        <item quantity="one">%d минута на километр</item>
+        <item quantity="few">%d минуты на километр</item>
+        <item quantity="many">%d минут на километр</item>
+        <item quantity="other">%d минуты на километр</item>
+    </plurals>
+
+    <plurals name="kilometers_per_hour">
+        <item quantity="one">%d километр в час</item>
+        <item quantity="few">%d километра в час</item>
+        <item quantity="many">%d километров в час</item>
+        <item quantity="other">%d километра в час</item>
+    </plurals>
+</resources>
