@@ -11,7 +11,6 @@ import com.google.android.gms.location.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
-import java.util.*
 import com.example.runner.data.Workout
 import com.example.runner.data.WorkoutType
 import com.example.runner.data.WorkoutDao
@@ -23,8 +22,11 @@ import com.example.runner.service.WorkoutTrackingService
 import android.content.Intent
 import android.content.ComponentName
 import android.content.ServiceConnection
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import com.example.runner.util.GpsFilter
+import java.util.Date
 
 data class WorkoutSession(
     val isTracking: Boolean = false,
@@ -78,7 +80,8 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
     private var lastUpdateTime: Long = 0
     private var isCurrentlyTracking: Boolean = false // отслеживаем только активное состояние
 
-    private val timer = Timer()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var workoutTimeTickRunnable: Runnable? = null
     private val gson = Gson()
     
     // Работа с сервисом
@@ -102,6 +105,12 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
                 _workoutSession.value = session
                 updateWorkoutState()
             }
+
+            // Сразу подтягиваем состояние из сервиса (после пересоздания UI / переподключения)
+            trackingService?.let { svc ->
+                _workoutSession.value = svc.getCurrentSession()
+                updateWorkoutState()
+            }
             
             android.util.Log.d("WorkoutTrackingViewModel", "Service fully initialized and ready")
         }
@@ -120,6 +129,10 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
     }
 
     fun initializeService() {
+        if (isServiceBound) {
+            android.util.Log.d("WorkoutTrackingViewModel", "initializeService skipped: already bound")
+            return
+        }
         android.util.Log.d("WorkoutTrackingViewModel", "initializeService called")
         val intent = Intent(context, WorkoutTrackingService::class.java)
         val result = context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
@@ -381,7 +394,7 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
             )
             _workoutState.value = WorkoutState.STOPPED
             stopLocationUpdates()
-            timer.cancel()
+            stopLocalWorkoutTimer()
         }
     }
 
@@ -389,15 +402,25 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
         isCurrentlyTracking = false
         lastLocation = null
         lastUpdateTime = 0
-        _workoutSession.value = WorkoutSession()
-        _workoutState.value = WorkoutState.NOT_STARTED
-        
-        // Останавливаем сервис если он запущен
+        stopLocalWorkoutTimer()
+
         if (isServiceBound) {
-            context.unbindService(serviceConnection)
+            try {
+                context.unbindService(serviceConnection)
+            } catch (_: Exception) { }
             isServiceBound = false
             trackingService = null
         }
+
+        try {
+            val stopIntent = Intent(context, WorkoutTrackingService::class.java).apply {
+                action = WorkoutTrackingService.ACTION_STOP_WORKOUT
+            }
+            context.startService(stopIntent)
+        } catch (_: Exception) { }
+
+        _workoutSession.value = WorkoutSession()
+        _workoutState.value = WorkoutState.NOT_STARTED
     }
 
     private fun updateWorkoutState() {
@@ -422,20 +445,30 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
     }
 
     private fun startTimer() {
-        android.util.Log.d("WorkoutTrackingViewModel", "Starting timer")
-        timer.scheduleAtFixedRate(object : TimerTask() {
+        android.util.Log.d("WorkoutTrackingViewModel", "Starting timer (main thread)")
+        stopLocalWorkoutTimer()
+        val r = object : Runnable {
             override fun run() {
                 val session = _workoutSession.value
                 android.util.Log.d("WorkoutTrackingViewModel", "Timer tick: isTracking=${session.isTracking}, isPaused=${session.isPaused}, startTime=${session.startTime}")
-                
                 if (session.isTracking && !session.isPaused) {
                     val currentTime = System.currentTimeMillis()
                     val elapsedTime = currentTime - session.startTime - session.totalPauseDuration
                     android.util.Log.d("WorkoutTrackingViewModel", "Updating time: elapsedTime=$elapsedTime")
                     _workoutSession.value = session.copy(currentTime = elapsedTime)
+                    mainHandler.postDelayed(this, 1000)
+                } else {
+                    workoutTimeTickRunnable = null
                 }
             }
-        }, 0, 1000)
+        }
+        workoutTimeTickRunnable = r
+        mainHandler.post(r)
+    }
+
+    private fun stopLocalWorkoutTimer() {
+        workoutTimeTickRunnable?.let { mainHandler.removeCallbacks(it) }
+        workoutTimeTickRunnable = null
     }
 
     private fun stopLocationUpdates() {
@@ -611,7 +644,7 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
 
     fun cleanup() {
         stopLocationUpdates()
-        timer.cancel()
+        stopLocalWorkoutTimer()
         
         // Отключаемся от сервиса
         if (isServiceBound) {

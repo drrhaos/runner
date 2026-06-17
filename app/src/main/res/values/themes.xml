@@ -1,28 +1,29 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.Runner" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Primary brand color. -->
+    <style name="Theme.Runner" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/blue_500</item>
-        <item name="colorPrimaryVariant">@color/blue_700</item>
         <item name="colorOnPrimary">@color/white</item>
-        <!-- Secondary brand color. -->
+        <item name="colorPrimaryContainer">@color/blue_100</item>
+        <item name="colorOnPrimaryContainer">@color/blue_900</item>
         <item name="colorSecondary">@color/blue_300</item>
-        <item name="colorSecondaryVariant">@color/blue_800</item>
         <item name="colorOnSecondary">@color/white</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+        <item name="colorSecondaryContainer">@color/blue_50</item>
+        <item name="colorOnSecondaryContainer">@color/blue_900</item>
+        <item name="colorTertiary">@color/orange_500</item>
+        <item name="colorOnTertiary">@color/white</item>
+        <item name="colorError">@color/red_500</item>
+        <item name="colorOnError">@color/white</item>
+        <item name="android:statusBarColor">@color/blue_700</item>
+        <item name="android:navigationBarColor">@color/white</item>
     </style>
 
     <style name="Theme.Runner.NoActionBar" parent="Theme.Runner" />
 
-    <style name="Theme.Runner.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+    <style name="Theme.Runner.AppBarOverlay" parent="ThemeOverlay.Material3.Light" />
 
-    <style name="Theme.Runner.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+    <style name="Theme.Runner.PopupOverlay" parent="ThemeOverlay.Material3.Light" />
 
-    <!-- Стили для настроек -->
-    <style name="SettingsButtonStyle" parent="Widget.MaterialComponents.Button.TextButton">
-        <item name="android:textColor">@color/settings_accent</item>
+    <style name="SettingsButtonStyle" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">?attr/colorPrimary</item>
         <item name="android:textSize">14sp</item>
         <item name="android:textStyle">normal</item>
         <item name="android:background">@android:color/transparent</item>

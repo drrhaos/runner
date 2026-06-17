@@ -7,6 +7,7 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import com.example.runner.R
 import com.example.runner.ui.tracking.GpsStatus
 
 /**
@@ -79,13 +80,13 @@ object ErrorHandler {
      */
     fun handleGpsError(context: Context, gpsStatus: GpsStatus, showToast: Boolean = true) {
         val message = when (gpsStatus) {
-            GpsStatus.DENIED -> "GPS недоступен. Включите GPS в настройках."
-            GpsStatus.LOST -> "Потерян сигнал GPS. Проверьте соединение."
-            GpsStatus.SEARCHING -> "Поиск GPS сигнала..."
-            GpsStatus.WEAK -> "GPS сигнал слабый. Точность может быть низкой."
-            GpsStatus.MEDIUM -> "GPS сигнал средний."
-            GpsStatus.STRONG -> "GPS сигнал сильный."
-            GpsStatus.FOUND -> return // Не показываем сообщение для успешного статуса
+            GpsStatus.DENIED -> context.getString(R.string.gps_denied_message)
+            GpsStatus.LOST -> context.getString(R.string.gps_lost_message)
+            GpsStatus.SEARCHING -> context.getString(R.string.gps_searching_message)
+            GpsStatus.WEAK -> context.getString(R.string.gps_weak_message)
+            GpsStatus.MEDIUM -> context.getString(R.string.gps_medium_message)
+            GpsStatus.STRONG -> context.getString(R.string.gps_strong_message)
+            GpsStatus.FOUND -> return
         }
         
         Log.w(TAG, "GPS Error: $message")
@@ -100,9 +101,9 @@ object ErrorHandler {
      */
     fun handleSaveError(context: Context, error: Throwable, showToast: Boolean = true) {
         val message = when (error) {
-            is java.sql.SQLException -> "Ошибка базы данных. Попробуйте еще раз."
-            is java.io.IOException -> "Ошибка записи данных. Проверьте место на диске."
-            else -> "Ошибка сохранения: ${error.message}"
+            is java.sql.SQLException -> context.getString(R.string.error_database_save)
+            is java.io.IOException -> context.getString(R.string.error_io_save)
+            else -> context.getString(R.string.error_save_format, error.message)
         }
         
         Log.e(TAG, "Save Error: $message", error)
@@ -117,9 +118,9 @@ object ErrorHandler {
      */
     fun handleLoadError(context: Context, error: Throwable, showToast: Boolean = true) {
         val message = when (error) {
-            is java.sql.SQLException -> "Ошибка загрузки данных из базы."
-            is java.io.IOException -> "Ошибка чтения данных."
-            else -> "Ошибка загрузки: ${error.message}"
+            is java.sql.SQLException -> context.getString(R.string.error_database_load)
+            is java.io.IOException -> context.getString(R.string.error_io_load)
+            else -> context.getString(R.string.error_load_format, error.message)
         }
         
         Log.e(TAG, "Load Error: $message", error)

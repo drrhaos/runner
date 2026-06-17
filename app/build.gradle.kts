@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "com.example.runner"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.runner"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -27,16 +27,33 @@ android {
                 "proguard-rules.pro"
             )
         }
+        debug {
+            enableUnitTestCoverage = true
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
     buildFeatures {
         viewBinding = true
+    }
+
+    lint {
+        abortOnError = true
+        checkReleaseBuilds = false
+        warningsAsErrors = false
+        checkDependencies = true
+        quiet = false
+
+        // Disable specific lint checks
+        disable += "HardcodedText"
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
     }
 }
 
@@ -50,6 +67,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     
     // Room database
     implementation("androidx.room:room-runtime:2.6.1")
@@ -59,12 +77,8 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     
-    // Date picker
-    implementation("com.google.android.material:material:1.11.0")
-    
     // Maps and location
     implementation("org.osmdroid:osmdroid-android:6.1.18")
-    implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     
     // Location services
@@ -106,23 +120,4 @@ dependencies {
 // JaCoCo configuration
 jacoco {
     toolVersion = "0.8.8"
-}
-
-android {
-    buildTypes {
-        debug {
-            enableUnitTestCoverage = true
-        }
-    }
-    
-    lint {
-        abortOnError = true
-        checkReleaseBuilds = false
-        warningsAsErrors = false
-        checkDependencies = true
-        quiet = false
-        
-        // Disable specific lint checks
-        disable += "HardcodedText"
-    }
 }

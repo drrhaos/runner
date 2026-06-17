@@ -57,7 +57,7 @@ class StatisticsFragment : Fragment() {
                 val data = viewModel.statisticsData.value
                 
                 if (data.totalWorkouts == 0) {
-                    Toast.makeText(requireContext(), "Нет данных для экспорта", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), getString(R.string.no_data_export), Toast.LENGTH_SHORT).show()
                     return@launch
                 }
                 
@@ -74,7 +74,8 @@ class StatisticsFragment : Fragment() {
                     longestDistance = data.longestDistance,
                     longestDuration = data.longestDuration,
                     workoutsByType = data.workoutsByType,
-                    distanceByType = data.distanceByType
+                    distanceByType = data.distanceByType,
+                    context = requireContext()
                 )
                 
                 // Сохраняем и делимся файлом
@@ -82,7 +83,7 @@ class StatisticsFragment : Fragment() {
                 
             } catch (e: Exception) {
                 android.util.Log.e("Statistics", "Error exporting CSV: ${e.message}", e)
-                Toast.makeText(requireContext(), "Ошибка экспорта: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.export_error, e.message), Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -119,12 +120,12 @@ class StatisticsFragment : Fragment() {
                 addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             
-            startActivity(android.content.Intent.createChooser(shareIntent, "Экспортировать CSV"))
-            Toast.makeText(requireContext(), "CSV файл готов к экспорту", Toast.LENGTH_SHORT).show()
+            startActivity(android.content.Intent.createChooser(shareIntent, getString(R.string.export_csv_title)))
+            Toast.makeText(requireContext(), getString(R.string.csv_file_ready), Toast.LENGTH_SHORT).show()
             
         } catch (e: Exception) {
             android.util.Log.e("Statistics", "Error saving CSV file: ${e.message}", e)
-            Toast.makeText(requireContext(), "Ошибка сохранения файла: ${e.message}", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), getString(R.string.file_save_error, e.message), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -157,26 +158,26 @@ class StatisticsFragment : Fragment() {
 
         // Общая статистика
         binding.textViewTotalWorkouts.text = data.totalWorkouts.toString()
-        binding.textViewTotalDistance.text = String.format("%.2f км", data.totalDistance)
+        binding.textViewTotalDistance.text = String.format("%.2f %s", data.totalDistance, getString(R.string.unit_km))
         binding.textViewTotalDuration.text = FormatUtils.formatTime(data.totalDuration)
-        binding.textViewTotalCalories.text = "${data.totalCalories} ккал"
+        binding.textViewTotalCalories.text = String.format("%s %s", data.totalCalories, getString(R.string.workout_details_calories))
 
         // Лучшие результаты
         binding.textViewBestPace.text = if (data.bestPace > 0) {
-            FormatUtils.formatPace(data.bestPace)
+            FormatUtils.formatPace(data.bestPace, requireContext())
         } else {
-            "--:-- /км"
+            getString(R.string.statistics_pace_placeholder)
         }
-        binding.textViewLongestDistance.text = String.format("%.2f км", data.longestDistance)
+        binding.textViewLongestDistance.text = String.format("%.2f %s", data.longestDistance, getString(R.string.unit_km))
         binding.textViewLongestDuration.text = FormatUtils.formatTime(data.longestDuration)
 
         // Средние показатели
         binding.textViewAveragePace.text = if (data.averagePace > 0) {
-            FormatUtils.formatPace(data.averagePace)
+            FormatUtils.formatPace(data.averagePace, requireContext())
         } else {
-            "--:-- /км"
+            getString(R.string.statistics_pace_placeholder)
         }
-        binding.textViewAverageDistance.text = String.format("%.2f км", data.averageDistance)
+        binding.textViewAverageDistance.text = String.format("%.2f %s", data.averageDistance, getString(R.string.unit_km))
         binding.textViewAverageDuration.text = FormatUtils.formatTime(data.averageDuration)
 
         // Активность
@@ -196,7 +197,7 @@ class StatisticsFragment : Fragment() {
 
         if (workoutsByType.isEmpty()) {
             val emptyText = TextView(requireContext()).apply {
-                text = "Нет данных"
+                text = getString(R.string.no_data_text)
                 textSize = 14f
                 setTextColor(
                     MaterialColors.getColor(
@@ -240,7 +241,7 @@ class StatisticsFragment : Fragment() {
             }
 
             val countText = TextView(requireContext()).apply {
-                text = "$count тренировок (${String.format("%.2f км", distance)})"
+                text = "$count ${getString(R.string.workout_list_num_workouts)} (${String.format("%.2f %s", distance, getString(R.string.unit_km))})"
                 textSize = 14f
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(
@@ -269,12 +270,12 @@ class StatisticsFragment : Fragment() {
 
     private fun getWorkoutTypeDisplayName(type: WorkoutType): String {
         return when (type) {
-            WorkoutType.EASY_RUN -> "Легкий бег"
-            WorkoutType.TEMPO_RUN -> "Темповый бег"
-            WorkoutType.INTERVAL_TRAINING -> "Интервальная тренировка"
-            WorkoutType.LONG_RUN -> "Длинный бег"
-            WorkoutType.RECOVERY_RUN -> "Восстановительный бег"
-            WorkoutType.RACE -> "Соревнование"
+            WorkoutType.EASY_RUN -> getString(R.string.workout_type_easy_run)
+            WorkoutType.TEMPO_RUN -> getString(R.string.workout_type_tempo_run)
+            WorkoutType.INTERVAL_TRAINING -> getString(R.string.workout_type_interval_training)
+            WorkoutType.LONG_RUN -> getString(R.string.workout_type_long_run)
+            WorkoutType.RECOVERY_RUN -> getString(R.string.workout_type_recovery_run)
+            WorkoutType.RACE -> getString(R.string.workout_type_competition)
         }
     }
 

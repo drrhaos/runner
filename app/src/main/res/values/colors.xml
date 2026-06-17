@@ -1,14 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="purple_200">#FF81C7F4</color>
-    <color name="purple_500">#FF2196F3</color>
-    <color name="purple_700">#FF1976D2</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     
-    <!-- Голубая палитра для бегунов -->
+    <!-- Blue palette -->
     <color name="blue_50">#FFE3F2FD</color>
     <color name="blue_100">#FFBBDEFB</color>
     <color name="blue_200">#FF90CAF9</color>
@@ -20,27 +15,19 @@
     <color name="blue_800">#FF1565C0</color>
     <color name="blue_900">#FF0D47A1</color>
     
-    <!-- Дополнительные цвета для GPS статуса -->
+    <!-- GPS status colors -->
     <color name="green_500">#FF4CAF50</color>
     <color name="yellow_500">#FFFFEB3B</color>
     <color name="orange_500">#FFFF9800</color>
     <color name="red_500">#FFF44336</color>
-    
-    <!-- Цвета для настроек -->
-    <color name="settings_background">#FFF5F5F5</color>
-    <color name="settings_card_background">#FFFFFFFF</color>
-    <color name="settings_text_primary">#FF212121</color>
-    <color name="settings_text_secondary">#FF757575</color>
-    <color name="settings_accent">#FF2196F3</color>
-    <color name="settings_divider">#FFE0E0E0</color>
     <color name="gps_signal_level_1">#FFE53935</color>
     <color name="gps_signal_level_2">#FFF57C00</color>
     <color name="gps_signal_level_3">#FFFBC02D</color>
     <color name="gps_signal_level_4">#FF43A047</color>
     <color name="gps_signal_inactive">#40888888</color>
-    <color name="map_navigation_icon">#FFFFC107</color>
-    <color name="map_navigation_shadow">#FF8E6C02</color>
-    <color name="map_navigation_highlight">#FFFFD54F</color>
     <color name="map_navigation_circle_fill">#33FFC107</color>
     <color name="map_navigation_circle_stroke">#80FFC107</color>
+
+    <!-- AppBar colors -->
+    <color name="app_bar_background">#E0FFFFFF</color>
 </resources>

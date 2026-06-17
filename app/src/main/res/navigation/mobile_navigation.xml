@@ -20,13 +20,13 @@
     <fragment
         android:id="@+id/nav_tracking"
         android:name="com.example.runner.ui.tracking.WorkoutTrackingFragment"
-        android:label="Тренировка"
+        android:label="@string/workout_fragment_label"
         tools:layout="@layout/fragment_workout_tracking" />
 
     <fragment
         android:id="@+id/nav_workout_detail"
         android:name="com.example.runner.ui.workout.WorkoutDetailFragment"
-        android:label="Детали тренировки"
+        android:label="@string/workout_details_label"
         tools:layout="@layout/fragment_workout_detail">
         <argument
             android:name="workoutId"

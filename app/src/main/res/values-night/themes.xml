@@ -1,16 +1,20 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.Runner" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Primary brand color. -->
-        <item name="colorPrimary">@color/purple_200</item>
-        <item name="colorPrimaryVariant">@color/purple_700</item>
+    <style name="Theme.Runner.AppBarOverlay" parent="ThemeOverlay.Material3.Dark.ActionBar" />
+
+    <style name="Theme.Runner" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/blue_400</item>
         <item name="colorOnPrimary">@color/black</item>
-        <!-- Secondary brand color. -->
-        <item name="colorSecondary">@color/teal_200</item>
-        <item name="colorSecondaryVariant">@color/teal_200</item>
+        <item name="colorPrimaryContainer">@color/blue_800</item>
+        <item name="colorOnPrimaryContainer">@color/blue_50</item>
+        <item name="colorSecondary">@color/blue_700</item>
         <item name="colorOnSecondary">@color/black</item>
-        <!-- Status bar color. -->
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
-        <!-- Customize your theme here. -->
+        <item name="colorSecondaryContainer">@color/blue_900</item>
+        <item name="colorOnSecondaryContainer">@color/blue_50</item>
+        <item name="colorTertiary">@color/orange_500</item>
+        <item name="colorOnTertiary">@color/black</item>
+        <item name="colorError">@color/red_500</item>
+        <item name="colorOnError">@color/black</item>
+        <item name="android:statusBarColor">@color/blue_900</item>
+        <item name="android:navigationBarColor">@color/black</item>
     </style>
 </resources>
