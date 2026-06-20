@@ -403,7 +403,7 @@
                     android:layout_marginEnd="8dp"
                     android:visibility="gone"
                     android:contentDescription="@string/btn_pause_description"
-                    android:tint="?attr/colorOnSecondary" />
+                    app:tint="?attr/colorOnSecondary" />
 
                 <!-- Кнопка старт -->
                 <ImageButton
@@ -415,7 +415,7 @@
                     android:scaleType="centerInside"
                     android:padding="12dp"
                     android:contentDescription="@string/btn_start_description"
-                    android:tint="?attr/colorOnPrimary" />
+                    app:tint="?attr/colorOnPrimary" />
 
                 <!-- Кнопка стоп (изначально скрыта) -->
                 <ImageButton
