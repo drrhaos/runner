@@ -47,7 +47,11 @@ proguard/
 # Android Studio captures folder
 captures/
 
-# IntelliJ
+# IntelliJ / Android Studio
+.idea/
+.vscode/
+
+# IntelliJ (legacy granular rules kept for clarity)
 *.iml
 .idea/workspace.xml
 .idea/tasks.xml
@@ -170,6 +174,7 @@ $RECYCLE.BIN/
 
 # Package Files
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear
