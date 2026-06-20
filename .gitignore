@@ -28,6 +28,7 @@ build/
 *.keystore
 *.properties
 !gradle.properties
+!gradle/wrapper/gradle-wrapper.properties
 !**/src/main/**/*.properties
 !**/src/test/**/*.properties
 
