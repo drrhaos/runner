@@ -292,14 +292,14 @@ class GpsFilterTest {
     fun `filterGpsOutlier should handle location at boundary distances`() {
         // Given - расстояние близко к MAX_DISTANCE_BETWEEN_POINTS (500м)
         val previousLocation = createLocation(55.7558, 37.6173, accuracy = 10f, speed = 3f)
-        // Примерно 450 метров от предыдущей точки
+        // Примерно 450 метров от предыдущей точки; интервал ~35 с, чтобы скорость была < 14 м/с
         val newLocation = createLocation(55.7598, 37.6173, accuracy = 10f, speed = 3f,
-            time = previousLocation.time + 2000)
+            time = previousLocation.time + 35_000)
 
         // When
         val result = GpsFilter.filterGpsOutlier(newLocation, previousLocation)
 
-        // Then - должно быть принято, так как < 500м
+        // Then - должно быть принято: расстояние < 500м и скорость в допустимых пределах
         assertNotNull("Location at boundary distance should be accepted", result)
     }
 
