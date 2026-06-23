@@ -91,7 +91,8 @@ android {
         abortOnError = true
         checkReleaseBuilds = true
         warningsAsErrors = false
-        checkDependencies = true
+        // checkDependencies scans all AARs and is very slow on shared/network FS
+        checkDependencies = false
         quiet = false
     }
 }

@@ -243,7 +243,7 @@
     <string name="battery_optimization_hint">Для стабильной работы приложения отключите оптимизацию батареи в настройках</string>
     <string name="workout_too_short">Тренировка слишком короткая для сохранения</string>
     <string name="no_data_to_save">Нет данных для сохранения</string>
-    <string name="workout_saved_format">Тренировка сохранена: %.2f км за %s</string>
+    <string name="workout_saved_format">Тренировка сохранена: %1$.2f км за %2$s</string>
     <string name="workout_save_error">Ошибка при сохранении тренировки</string>
     <string name="workout_save_error_format">Ошибка при сохранении тренировки: %1$s</string>
     <string name="distance_must_be_positive">Дистанция должна быть больше 0</string>
