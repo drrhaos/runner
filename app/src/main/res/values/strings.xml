@@ -215,6 +215,7 @@
     <string name="statistics_btn_export_csv">CSV export</string>
     <string name="statistics_general">General statistics</string>
     <string name="statistics_total_workouts_label">Total workouts:</string>
+    <string name="statistics_count_zero" translatable="false">0</string>
     <string name="statistics_total_distance_label">Total distance:</string>
     <string name="statistics_total_time_label">Total time:</string>
     <string name="statistics_total_calories_label">Total calories:</string>
