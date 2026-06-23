@@ -35,7 +35,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       - name: Run unit tests
-        run: ./gradlew :app:testDebugUnitTest --stacktrace
+        run: ./gradlew :app:testDebugUnitTest :app:jacocoTestReport --stacktrace
 
       - name: Upload unit test report
         uses: actions/upload-artifact@v4
@@ -45,10 +45,19 @@ jobs:
           path: |
             app/build/reports/tests/testDebugUnitTest/
             app/build/test-results/testDebugUnitTest/
+            app/build/reports/jacoco/jacocoTestReport/
           retention-days: 14
 
       - name: Lint debug
         run: ./gradlew :app:lintDebug --stacktrace
+
+      - name: Upload lint report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results-debug.html
+          retention-days: 14
 
       - name: Assemble debug APK
         run: ./gradlew :app:assembleDebug --stacktrace
