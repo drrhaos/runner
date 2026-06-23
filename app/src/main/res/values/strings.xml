@@ -261,7 +261,7 @@
     <string name="battery_optimization_hint">For stable operation, disable battery optimization in settings</string>
     <string name="workout_too_short">Workout too short to save</string>
     <string name="no_data_to_save">No data to save</string>
-    <string name="workout_saved_format">Workout saved: %.2f km in %s</string>
+    <string name="workout_saved_format">Workout saved: %1$.2f km in %2$s</string>
     <string name="workout_save_error">Error saving workout</string>
     <string name="workout_save_error_format">Error saving workout: %1$s</string>
     <string name="distance_must_be_positive">Distance must be greater than 0</string>
