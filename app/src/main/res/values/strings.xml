@@ -88,6 +88,7 @@
 
     <string name="settings_title">Settings</string>
     <string name="settings_profile_title">User profile</string>
+    <string name="settings_profile_subtitle">Used for calorie estimates</string>
     <string name="settings_label_weight">Weight</string>
     <string name="settings_label_growth">Growth</string>
     <string name="settings_label_age">Age</string>
@@ -95,6 +96,7 @@
     <string name="settings_profile_gender_male">Male</string>
     <string name="settings_profile_gender_female">Female</string>
     <string name="settings_app_settings_title">Application settings</string>
+    <string name="settings_app_subtitle">Map, units, and feedback</string>
     <string name="settings_label_units_type">Units type</string>
     <string name="settings_units_metric">Metric</string>
     <string name="settings_units_imperial">Imperial</string>
@@ -109,7 +111,43 @@
     <string name="settings_label_autopause">Automatic pause</string>
     <string name="settings_label_voice_notifications">Voice notifications</string>
     <string name="settings_btn_reset">Reset settings</string>
-
+    <string name="settings_weight_saved">Weight saved</string>
+    <string name="settings_height_saved">Height saved</string>
+    <string name="settings_birthdate_saved">Date of birth saved</string>
+    <string name="settings_gender_saved">Gender saved</string>
+    <string name="settings_units_changed">Units system changed</string>
+    <string name="settings_gps_accuracy_changed">GPS accuracy changed</string>
+    <string name="settings_theme_changed">Theme changed</string>
+    <string name="settings_reset_done">Settings reset</string>
+    <string name="settings_weight_format">%d kg</string>
+    <string name="settings_height_format">%d cm</string>
+    <string name="settings_age_format">%d years</string>
+    <string name="settings_gender_unknown">Not specified</string>
+    <string name="settings_dialog_weight_title">User weight</string>
+    <string name="settings_dialog_weight_message">Enter your weight in kilograms:</string>
+    <string name="settings_dialog_weight_invalid">Enter a valid weight (1-300 kg)</string>
+    <string name="settings_dialog_height_title">User height</string>
+    <string name="settings_dialog_height_message">Enter your height in centimeters:</string>
+    <string name="settings_dialog_height_invalid">Enter a valid height (1-250 cm)</string>
+    <string name="settings_dialog_birthdate_title">Date of birth</string>
+    <string name="settings_dialog_birthdate_message">Select your date of birth:</string>
+    <string name="settings_dialog_gender_title">User gender</string>
+    <string name="settings_dialog_gender_message">Select your gender:</string>
+    <string name="settings_dialog_units_title">Units system</string>
+    <string name="settings_dialog_gps_title">GPS accuracy</string>
+    <string name="settings_dialog_gps_message">Select GPS accuracy level. High accuracy consumes more battery.</string>
+    <string name="settings_dialog_theme_title">Application theme</string>
+    <string name="settings_dialog_reset_title">Reset settings</string>
+    <string name="settings_dialog_reset_message">Are you sure you want to reset all settings to default values?</string>
+    <string name="settings_label_language">Language</string>
+    <string name="settings_label_start_countdown">Start countdown</string>
+    <string name="settings_dialog_start_countdown_title">Countdown seconds before start</string>
+    <string name="settings_start_countdown_changed">Countdown seconds changed</string>
+    <string name="workout_starting_in">Start in %d…</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_ru">Russian</string>
+    <string name="settings_dialog_language_title">Application language</string>
+    <string name="settings_language_changed">Language changed</string>
 
     <string name="track_info_time_label">Time (h:min:s)</string>
     <string name="track_info_distance_label_km">Distance (km)</string>
@@ -138,6 +176,40 @@
     <string name="workout_details_pace_speed_title">Pace / Speed by segment</string>
     <string name="workout_details_pace">Pace</string>
     <string name="workout_details_speed">Speed</string>
+    <string name="workout_not_loaded">Workout not loaded</string>
+    <string name="track_no_data_export">No track data to export</string>
+    <string name="export_error">Export error: %1$s</string>
+    <string name="export_gpx_title">Export GPX</string>
+    <string name="gpx_file_ready">GPX file ready to export</string>
+    <string name="file_save_error">File save error: %1$s</string>
+    <string name="share_workout_title">Share workout</string>
+    <string name="track_no_data_fix">No track data to fix</string>
+    <string name="workout_data_fixed">Workout data fixed</string>
+    <string name="workout_data_fix_failed">Could not fix data</string>
+    <string name="workout_data_fix_error">Error fixing data: %1$s</string>
+    <string name="workout_invalid_id">Error: invalid workout ID</string>
+    <string name="route_empty">Route is empty</string>
+    <string name="route_load_error">Error loading route</string>
+    <string name="route_not_saved">Route not saved</string>
+    <string name="delete_workout_title">Delete workout</string>
+    <string name="delete_workout_message">Are you sure you want to delete this workout? This action cannot be undone.</string>
+    <string name="chart_pace_label">Pace (min/km)</string>
+    <string name="chart_speed_label">Speed (km/h)</string>
+    <string name="chart_time_format">%d min</string>
+    <string name="chart_elevation_title">Elevation</string>
+    <string name="chart_elevation_x_format">%.1f km</string>
+    <string name="chart_elevation_y_format">%d m</string>
+    <string name="unit_km">km</string>
+    <string name="unit_mile">mile</string>
+    <string name="unit_kmh">km/h</string>
+    <string name="unit_mph">mi/h</string>
+    <string name="workout_share_text">🏃 Workout:
+📅 Date: %1$s
+📏 Distance: %2$s
+⏱ Time: %3$s
+🏃 Pace: %4$s
+🔥 Calories: %5$s
+#workout #running #health</string>
 
     <string name="statistics_title">Statistics</string>
     <string name="statistics_btn_export_csv">CSV export</string>
@@ -159,20 +231,79 @@
     <string name="statistics_average_distance_label">Average distance:</string>
     <string name="statistics_average_time_label">Average time:</string>
     <string name="statistics_average_time_placeholder">00:00:00</string>
+    <string name="export_csv_title">Export CSV</string>
+    <string name="csv_file_ready">CSV file ready to export</string>
+    <string name="no_data_export">No data to export</string>
+    <string name="no_data_text">No data</string>
     <string name="statistics_activity_label">Activity</string>
     <string name="statistics_sessions_this_week_label">Training sessions this week:</string>
     <string name="statistics_sessions_this_month_label">Training sessions this month:</string>
     <string name="statistics_by_workout_type">By workout type</string>
-    <string name="statistics_message_no_data">There is no data to display.\Start training sessions to see statistics.</string>
+    <string name="statistics_message_no_data">There is no data to display. Start training sessions to see statistics.</string>
 
     <string name="workout_list_num_workouts">Training sessions</string>
-    <string name="workout_list_average_temp">Average pace</string>
+    <string name="workout_list_average_pace">Average pace</string>
     <string name="workout_list_message_no_workouts">No training sessions yet</string>
-    <string name="workout_list_message_start_workout">Start training to create a record"</string>
+    <string name="workout_list_message_start_workout">Start training to create a record.</string>
+    <string name="workout_list_empty_start">Start workout</string>
+    <string name="workout_list_content_description_empty">No workouts yet</string>
+
+    <string name="gps_label">GPS</string>
+    <string name="gps_status_a11y">GPS signal: %1$s</string>
     <string name="workout_fragment_label">Workout</string>
     <string name="workout_details_label">Workout details</string>
     <string name="start_workout">Start workout</string>
     <string name="avg_pace_label">Average pace</string>
+
+    <string name="permission_activity_granted">Activity recognition permission granted</string>
+    <string name="permission_location_needed">Location permission is required for tracking</string>
+    <string name="permission_notification_needed">Notification permission is required for background tracking</string>
+    <string name="battery_optimization_hint">For stable operation, disable battery optimization in settings</string>
+    <string name="workout_too_short">Workout too short to save</string>
+    <string name="no_data_to_save">No data to save</string>
+    <string name="workout_saved_format">Workout saved: %.2f km in %s</string>
+    <string name="workout_save_error">Error saving workout</string>
+    <string name="workout_save_error_format">Error saving workout: %1$s</string>
+    <string name="distance_must_be_positive">Distance must be greater than 0</string>
+    <string name="time_must_be_positive">Time must be greater than 0</string>
+    <string name="check_input_data">Check the entered data</string>
+
+    <string name="gps_denied_message">GPS is not available. Turn on GPS in settings.</string>
+    <string name="gps_lost_message">GPS signal lost. Check your connection.</string>
+    <string name="gps_searching_message">Searching for GPS signal…</string>
+    <string name="gps_weak_message">GPS signal is weak. Accuracy may be low.</string>
+    <string name="gps_medium_message">GPS signal is medium.</string>
+    <string name="gps_strong_message">GPS signal is strong.</string>
+    <string name="error_database_save">Database error. Please try again.</string>
+    <string name="error_io_save">Data write error. Check disk space.</string>
+    <string name="error_save_format">Save error: %1$s</string>
+    <string name="error_database_load">Error loading data from database.</string>
+    <string name="error_io_load">Error reading data.</string>
+    <string name="error_load_format">Load error: %1$s</string>
+
+    <string name="notification_channel_name">Workout tracking</string>
+    <string name="notification_channel_description">Active workout notifications</string>
+    <string name="notification_workout_format">%1$s • %2$s</string>
+
+    <string name="csv_header">Date,Time,Workout type,Distance (km),Duration (min),Pace (min/km),Calories,Notes\n</string>
+    <string name="csv_statistics_header">Workout statistics\n\nCategory,Value\n</string>
+    <string name="csv_total_workouts">Total workouts</string>
+    <string name="csv_total_distance">Total distance (km)</string>
+    <string name="csv_total_time">Total time (hours)</string>
+    <string name="csv_total_calories">Total calories</string>
+    <string name="csv_average_pace">Average pace (min/km)</string>
+    <string name="csv_average_distance">Average distance (km)</string>
+    <string name="csv_average_time">Average time (minutes)</string>
+    <string name="csv_best_pace">Best pace (min/km)</string>
+    <string name="csv_max_distance">Maximum distance (km)</string>
+    <string name="csv_longest_time">Longest workout (minutes)</string>
+    <string name="csv_breakdown_header">\nDistribution by workout type\nType,Count,Distance (km)\n</string>
+
+    <string name="gpx_note_distance">Distance: %.2f km</string>
+    <string name="gpx_note_time">Time: %s</string>
+    <string name="gpx_note_pace">Pace: %s</string>
+    <string name="gpx_note_calories">Calories: %d kcal</string>
+    <string name="gpx_note_notes">Notes: %s</string>
 
     <plurals name="hours">
         <item quantity="one">%d hour</item>

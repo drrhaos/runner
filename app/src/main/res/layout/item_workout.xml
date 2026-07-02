@@ -29,7 +29,7 @@
                 android:layout_weight="1"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="@android:color/black"
+                android:textColor="?attr/colorOnSurface"
                 tools:text="01.01.2024"/>
 
             <TextView
@@ -37,7 +37,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
-                android:textColor="@color/gps_indicator_background_color"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:background="@drawable/type_chip_background"
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
@@ -66,14 +66,14 @@
                     android:layout_height="wrap_content"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="@android:color/holo_green_dark"
+                    android:textColor="?attr/colorPrimary"
                     tools:text="5.0 км"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="10sp"
-                    android:textColor="@android:color/darker_gray"
+                    android:textSize="@dimen/workout_item_metric_caption"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:text="@string/workout_distance_label"/>
             </LinearLayout>
 
@@ -90,14 +90,14 @@
                     android:layout_height="wrap_content"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="@android:color/holo_blue_dark"
+                    android:textColor="?attr/colorSecondary"
                     tools:text="25:30"/>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textSize="10sp"
-                    android:textColor="@android:color/darker_gray"
+                    android:textSize="@dimen/workout_item_metric_caption"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:text="@string/workout_time_label" />
             </LinearLayout>
 
@@ -114,15 +114,15 @@
                     android:layout_height="wrap_content"
                     android:textSize="18sp"
                     android:textStyle="bold"
-                    android:textColor="@android:color/holo_orange_dark"
+                    android:textColor="?attr/colorTertiary"
                     tools:text="5:06" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/workout_pace_label_km"
-                    android:textSize="10sp"
-                    android:textColor="@android:color/darker_gray" />
+                    android:textSize="@dimen/workout_item_metric_caption"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
 
         </LinearLayout>
@@ -143,7 +143,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:textSize="12sp"
-                android:textColor="@android:color/darker_gray"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 tools:text="300 ккал"/>
 
             <TextView
@@ -152,7 +152,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="2"
                 android:textSize="12sp"
-                android:textColor="@android:color/darker_gray"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 android:maxLines="1"
                 android:ellipsize="end"
                 tools:text="@string/workout_summary_good"/>

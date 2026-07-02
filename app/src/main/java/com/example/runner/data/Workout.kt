@@ -26,3 +26,13 @@ enum class WorkoutType {
     RECOVERY_RUN,
     RACE
 }
+
+/** Макс. разумная скорость между точками (м/с) для фильтра выбросов GPS — зависит от типа тренировки */
+fun WorkoutType.maxReasonableGpsSpeedMps(): Float = when (this) {
+    WorkoutType.RACE,
+    WorkoutType.INTERVAL_TRAINING -> 18f // ~65 км/ч (спуск / интервалы)
+    WorkoutType.TEMPO_RUN -> 16f
+    WorkoutType.LONG_RUN,
+    WorkoutType.EASY_RUN,
+    WorkoutType.RECOVERY_RUN -> 14f // ~50 км/ч
+}

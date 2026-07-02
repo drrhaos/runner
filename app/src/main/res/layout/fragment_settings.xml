@@ -13,16 +13,6 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/settings_title"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:layout_marginStart="16dp"
-            android:textColor="?attr/colorOnBackground"
-            android:layout_marginBottom="24dp" />
-
         <!-- Профиль пользователя -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
@@ -46,6 +36,14 @@
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_profile_subtitle"
+                    android:textSize="13sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:layout_marginBottom="16dp" />
 
                 <!-- Вес -->
@@ -210,6 +208,14 @@
                     android:textSize="20sp"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface"
+                    android:layout_marginBottom="4dp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_app_subtitle"
+                    android:textSize="13sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
                     android:layout_marginBottom="16dp" />
 
                 <!-- Система единиц -->
@@ -314,6 +320,74 @@
 
                 </LinearLayout>
 
+                <!-- Язык приложения -->
+                <LinearLayout
+                    android:id="@+id/row_language"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/settings_label_language"
+                        android:textSize="16sp"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:id="@+id/textView_language_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_language_en"
+                        android:textSize="16sp"
+                        android:textColor="?attr/colorPrimary" />
+
+                </LinearLayout>
+
+                <!-- Обратный отсчет перед стартом -->
+                <LinearLayout
+                    android:id="@+id/row_start_countdown"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/settings_label_start_countdown"
+                        android:textSize="16sp"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:id="@+id/textView_start_countdown_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        tools:text="5 s"
+                        android:textSize="16sp"
+                        android:textColor="?attr/colorPrimary" />
+
+                </LinearLayout>
+
                 <!-- Автоматическая пауза -->
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -371,11 +445,11 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/settings_btn_reset"
-            android:textColor="@color/red_500"
+            android:textColor="?attr/colorError"
             android:background="?attr/colorSurface"
-            app:strokeColor="@color/red_500"
+            app:strokeColor="?attr/colorError"
             app:strokeWidth="2dp"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+            style="@style/Widget.Material3.Button.OutlinedButton" />
 
     </LinearLayout>
 

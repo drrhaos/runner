@@ -4,6 +4,15 @@
 
 Android application for tracking running workouts with GPS tracking, maps, statistics, and data export.
 
+## 📸 Screenshots
+
+<p align="center">
+  <img src="screenshot/Workout.png" width="200" alt="Workout tracking" />
+  <img src="screenshot/Run.png" width="200" alt="Active workout" />
+  <img src="screenshot/SideBar.png" width="200" alt="Side menu" />
+  <img src="screenshot/Settings.png" width="200" alt="Settings" />
+</p>
+
 ## 📱 Description
 
 Runner is a full-featured running app that allows you to:
@@ -20,7 +29,9 @@ Runner is a full-featured running app that allows you to:
 - **GPS signal quality indicator** with colored bars (red/orange/yellow/green)
 - **Automatic map centering** on current location
 - **Centering button** appears when map is shifted (yellow navigation icon)
-- **Current location display** with 3D yellow marker
+- **Current location display** with blue circle marker
+- **Workout type selection** from dropdown menu before start (Easy run, Tempo run, Interval, etc.)
+- **Countdown timer** before workout start (configurable 3–30 s)
 - **Pause and resume** workout
 - **Long press** stop button (3 seconds) to prevent accidental stops
 
@@ -52,6 +63,7 @@ Runner is a full-featured running app that allows you to:
 - Theme mode (light/dark/system)
 - Auto-pause on stop
 - Voice feedback
+- **Start countdown** (3, 5, 10, 15, or 30 seconds)
 
 ### 💾 Data Export
 - Export workouts to **GPX format** (compatible with Strava, Garmin, and others)
@@ -257,7 +269,7 @@ Each track point contains:
 
 - **Language**: Kotlin
 - **Minimum Android version**: 8.0 (API 26)
-- **Target Android version**: 14 (API 34)
+- **Target Android version**: 16 (API 36)
 - **Architecture**: MVVM (Model-View-ViewModel)
 - **Database**: Room Database
 - **Maps**: OSMDroid (OpenStreetMap)
@@ -314,8 +326,10 @@ cd runner
 ### Starting a Workout
 1. Open **"Start Workout"** section from the side menu
 2. Wait for GPS signal (indicator will turn green)
-3. Press the **"Start"** button
-4. During the workout you can:
+3. Select **workout type** from the dropdown in the bottom panel
+4. Press the **"Start"** button — the countdown will begin
+5. After the countdown finishes, the workout starts automatically
+6. During the workout you can:
    - View the map with route
    - See current metrics
    - Expand panel for detailed statistics
@@ -396,7 +410,8 @@ Run tests:
 
 ## 👥 Authors
 
-[Specify project authors]
+- [DrHaos](https://github.com/drrhaos)
+- [john-krasinski](https://github.com/john-krasinski)
 
 ## 🤝 Contributing
 
@@ -408,6 +423,14 @@ Contributions are welcome! Please:
 5. Open a Pull Request
 
 ## 📝 Changelog
+
+### Version 1.1
+- Workout type selection from dropdown menu before start
+- Countdown timer before workout start
+- Configurable countdown duration in settings
+- Movement direction calculated from last 10 track points
+- Track polyline connects to current position
+- Original location icon (blue circle with arrow)
 
 ### Version 1.0
 - Initial release
@@ -427,8 +450,8 @@ Contributions are welcome! Please:
 - [ ] Fitness tracker integration
 - [ ] Social features (share workouts)
 - [ ] Workout plans
-- [ ] Progress analysis with charts
-- [ ] Voice prompts during workout
+- [x] Progress analysis with charts
+- [x] Voice prompts during workout
 - [ ] Import workouts from other apps (TCX, FIT, GPX)
 
 ## 📞 Support

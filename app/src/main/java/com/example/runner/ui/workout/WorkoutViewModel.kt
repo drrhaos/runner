@@ -1,8 +1,10 @@
 package com.example.runner.ui.workout
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.runner.R
 import com.example.runner.data.Workout
 import com.example.runner.data.WorkoutDao
 import com.example.runner.data.WorkoutDatabase
@@ -29,6 +31,10 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     val averageDuration: StateFlow<Long> = _averageDuration.asStateFlow()
 
     init {
+        loadStatistics()
+    }
+
+    fun refreshStatistics() {
         loadStatistics()
     }
 
@@ -95,14 +101,14 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         return com.example.runner.util.FormatUtils.formatPace(paceMinutes)
     }
 
-    fun getWorkoutTypeDisplayName(type: WorkoutType): String {
+    fun getWorkoutTypeDisplayName(type: WorkoutType, context: Context): String {
         return when (type) {
-            WorkoutType.EASY_RUN -> "Легкий бег"
-            WorkoutType.TEMPO_RUN -> "Темповый бег"
-            WorkoutType.INTERVAL_TRAINING -> "Интервальная тренировка"
-            WorkoutType.LONG_RUN -> "Длинный бег"
-            WorkoutType.RECOVERY_RUN -> "Восстановительный бег"
-            WorkoutType.RACE -> "Соревнование"
+            WorkoutType.EASY_RUN -> context.getString(R.string.workout_type_easy_run)
+            WorkoutType.TEMPO_RUN -> context.getString(R.string.workout_type_tempo_run)
+            WorkoutType.INTERVAL_TRAINING -> context.getString(R.string.workout_type_interval_training)
+            WorkoutType.LONG_RUN -> context.getString(R.string.workout_type_long_run)
+            WorkoutType.RECOVERY_RUN -> context.getString(R.string.workout_type_recovery_run)
+            WorkoutType.RACE -> context.getString(R.string.workout_type_competition)
         }
     }
 
