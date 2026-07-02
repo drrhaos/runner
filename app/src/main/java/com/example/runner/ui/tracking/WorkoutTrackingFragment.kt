@@ -15,9 +15,11 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.OnBackPressedCallback
-import android.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.example.runner.data.WorkoutDatabase
@@ -76,6 +78,9 @@ class WorkoutTrackingFragment : Fragment() {
         private const val EXCELLENT_ACCURACY = 5f
         private const val GOOD_ACCURACY = 10f
         private const val FAIR_ACCURACY = 20f
+
+        // Direction calculation
+        private const val DIRECTION_WINDOW_SIZE = 10
     }
 
     private var _binding: FragmentWorkoutTrackingBinding? = null
@@ -104,7 +109,7 @@ class WorkoutTrackingFragment : Fragment() {
     private var lastUIUpdateTime = 0L
 
     // Voice notification stuff
-    private var lastDistanceKmVoiceSpoken = 0;
+    private var lastDistanceKmVoiceSpoken = -1
     private var isVoiceEnabled = false
 
     // GPS status tracking
@@ -150,6 +155,17 @@ class WorkoutTrackingFragment : Fragment() {
     private var stopHoldJob: Job? = null
     private var stopHoldStartTime = 0L
     private var isStoppingWorkout = false
+    private var countdownJob: Job? = null
+
+    private fun gpsStatusShortLabel(status: GpsStatus): String = when (status) {
+        GpsStatus.SEARCHING -> getString(R.string.gps_signal_searching)
+        GpsStatus.WEAK -> getString(R.string.gps_signal_weak)
+        GpsStatus.MEDIUM -> getString(R.string.gps_signal_medium)
+        GpsStatus.STRONG, GpsStatus.FOUND -> getString(R.string.gps_signal_strong)
+        GpsStatus.LOST -> getString(R.string.gps_signal_lost)
+        GpsStatus.DENIED -> getString(R.string.gps_signal_denied)
+    }
+
     private fun updateGpsSignalIndicator(status: GpsStatus, accuracy: Float) {
         when (status) {
             GpsStatus.SEARCHING -> {
@@ -187,11 +203,9 @@ class WorkoutTrackingFragment : Fragment() {
                 binding.textViewGpsAccuracy.visibility = View.VISIBLE
                 binding.textViewGpsAccuracy.text = getString(R.string.gps_accuracy_denied)
             }
-            else -> {
-                binding.layoutGpsStatus.visibility = View.GONE
-                binding.textViewGpsAccuracy.visibility = View.GONE
-            }
         }
+        val label = gpsStatusShortLabel(status)
+        binding.layoutGpsStatus.contentDescription = getString(R.string.gps_status_a11y, label)
     }
 
     private fun setGpsBarsLevel(level: Int) {
@@ -253,10 +267,10 @@ class WorkoutTrackingFragment : Fragment() {
             }
             permissions.getOrDefault(Manifest.permission.ACTIVITY_RECOGNITION, false) -> {
                 // Разрешение на распознавание физической активности предоставлено
-                Toast.makeText(context, "Разрешение на физическую активность предоставлено", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, getString(R.string.permission_activity_granted), Toast.LENGTH_SHORT).show()
             }
             else -> {
-                Toast.makeText(context, "Разрешение на местоположение необходимо для трекинга", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, getString(R.string.permission_location_needed), Toast.LENGTH_LONG).show()
                 findNavController().navigateUp()
             }
         }
@@ -266,7 +280,7 @@ class WorkoutTrackingFragment : Fragment() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (!isGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Toast.makeText(requireContext(), "Разрешение на уведомления необходимо для фонового трекинга", Toast.LENGTH_LONG).show()
+            Toast.makeText(requireContext(), getString(R.string.permission_notification_needed), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -290,13 +304,15 @@ class WorkoutTrackingFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         setupMap()
+        setupWorkoutTypeSpinner()
         setupClickListeners()
         setupSwipeGesture()
         observeViewModel()
         requestLocationPermission()
         updateCenterButtonVisibility()
         setupBackButtonHandler()
-        
+        setupWindowInsets()
+
         // Инициализируем GPS статус
         try {
             android.util.Log.d("GPSStatus", "Initializing GPS status indicator")
@@ -316,7 +332,12 @@ class WorkoutTrackingFragment : Fragment() {
             android.util.Log.e("GPSStatus", "Failed to initialize GPS status: ${e.message}")
         }
         
-        // Сервис инициализируется только при старте тренировки для экономии батареи
+        // Сервис инициализируется только при старте тренировки для экономии батареи;
+        // при возврате на экран во время активной тренировки — переподключаемся к сервису.
+        val ws = viewModel.workoutSession.value
+        if (ws.isTracking || ws.isPaused) {
+            viewModel.initializeService()
+        }
     }
     
     private fun setupBackButtonHandler() {
@@ -426,6 +447,73 @@ class WorkoutTrackingFragment : Fragment() {
         return bitmap
     }
 
+    private fun setupWorkoutTypeSpinner() {
+        val workoutTypes = listOf(
+            WorkoutType.EASY_RUN,
+            WorkoutType.TEMPO_RUN,
+            WorkoutType.INTERVAL_TRAINING,
+            WorkoutType.LONG_RUN,
+            WorkoutType.RECOVERY_RUN,
+            WorkoutType.RACE
+        )
+        val typeNames = workoutTypes.map { type ->
+            when (type) {
+                WorkoutType.EASY_RUN -> getString(R.string.workout_type_easy_run)
+                WorkoutType.TEMPO_RUN -> getString(R.string.workout_type_tempo_run)
+                WorkoutType.INTERVAL_TRAINING -> getString(R.string.workout_type_interval_training)
+                WorkoutType.LONG_RUN -> getString(R.string.workout_type_long_run)
+                WorkoutType.RECOVERY_RUN -> getString(R.string.workout_type_recovery_run)
+                WorkoutType.RACE -> getString(R.string.workout_type_competition)
+            }
+        }
+        val adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, typeNames)
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerWorkoutType.adapter = adapter
+        binding.spinnerWorkoutType.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                selectedWorkoutType = workoutTypes[position]
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        }
+    }
+
+    private fun startCountdown() {
+        if (countdownJob != null) return
+        val prefs = com.example.runner.util.UserPreferences(requireContext())
+        val countdownSeconds = prefs.startCountdownSeconds
+        if (countdownSeconds <= 0) {
+            beginWorkout()
+            return
+        }
+        binding.spinnerWorkoutType.visibility = View.GONE
+        binding.buttonStart.visibility = View.GONE
+        binding.textViewCountdown.visibility = View.VISIBLE
+        binding.textViewCountdown.text = countdownSeconds.toString()
+        countdownJob = viewLifecycleOwner.lifecycleScope.launch {
+            for (i in countdownSeconds downTo 1) {
+                binding.textViewCountdown.text = i.toString()
+                if (i > 1) {
+                    delay(1000)
+                }
+            }
+            binding.textViewCountdown.visibility = View.GONE
+            countdownJob = null
+            beginWorkout()
+        }
+    }
+
+    private fun beginWorkout() {
+        isStoppingWorkout = false
+        lastDistanceKmVoiceSpoken = -1
+        requestBatteryOptimizationExemption()
+        viewModel.initializeService()
+        viewLifecycleOwner.lifecycleScope.launch {
+            delay(500)
+            viewModel.startWorkoutWithRetry(selectedWorkoutType)
+        }
+        binding.textViewGpsAccuracy.visibility = View.GONE
+    }
+
     private fun setupMapInteractionListeners() {
         // Слушаем изменения масштаба через GestureDetector
         val scaleDetector = android.view.ScaleGestureDetector(requireContext(), object : android.view.ScaleGestureDetector.SimpleOnScaleGestureListener() {
@@ -503,7 +591,7 @@ class WorkoutTrackingFragment : Fragment() {
             }
             
             // Обновляем ориентацию карты по направлению движения
-            val bearing = location.bearing
+            val bearing = getDirectionBearing(session.trackPoints)
             if (bearing >= 0) {
                 try {
                     val mapOrientation = -bearing
@@ -653,9 +741,25 @@ class WorkoutTrackingFragment : Fragment() {
         }
     }
 
+    private fun setupWindowInsets() {
+        ViewCompat.setOnApplyWindowInsetsListener(binding.layoutWorkoutPanel) { v, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            v.updatePadding(left = bars.left, right = bars.right, bottom = bars.bottom)
+            insets
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(binding.layoutGpsStatus) { v, insets ->
+            val cut = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+            val base = resources.getDimensionPixelSize(R.dimen.activity_vertical_margin)
+            v.updatePadding(top = base + cut.top)
+            insets
+        }
+    }
+
     private fun setupClickListeners() {
         binding.buttonStart.setOnClickListener {
-            showWorkoutTypeDialog()
+            startCountdown()
         }
 
         binding.buttonPause.setOnClickListener {
@@ -728,6 +832,7 @@ class WorkoutTrackingFragment : Fragment() {
         binding.stopHoldBackground.visibility = View.VISIBLE
         binding.progressBarStopHold.progress = 0
         binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
+        binding.textViewStopHoldCountdown.text = STOP_HOLD_SECONDS.toString()
 
         stopHoldJob = viewLifecycleOwner.lifecycleScope.launch {
             while (true) {
@@ -744,6 +849,7 @@ class WorkoutTrackingFragment : Fragment() {
 
                 val remainingMillis = (STOP_HOLD_DURATION_MS - elapsed).coerceAtLeast(0L)
                 val remainingSeconds = ceil(remainingMillis / 1000.0).toInt().coerceAtLeast(1)
+                binding.textViewStopHoldCountdown.text = remainingSeconds.toString()
                 binding.textViewStopHoldHint.text =
                     getString(R.string.stop_hold_hint, remainingSeconds)
                 delay(50)
@@ -759,6 +865,7 @@ class WorkoutTrackingFragment : Fragment() {
         binding.stopHoldBackground.visibility = View.GONE
         binding.progressBarStopHold.progress = 0
         binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
+        binding.textViewStopHoldCountdown.text = STOP_HOLD_SECONDS.toString()
         binding.buttonStop.isPressed = false
         // Не сбрасываем isStoppingWorkout здесь, так как тренировка может быть остановлена
     }
@@ -773,6 +880,7 @@ class WorkoutTrackingFragment : Fragment() {
         binding.stopHoldBackground.visibility = View.GONE
         binding.progressBarStopHold.progress = 0
         binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
+        binding.textViewStopHoldCountdown.text = STOP_HOLD_SECONDS.toString()
         binding.buttonStop.isPressed = false
         viewModel.stopWorkout()
         navigateToWorkoutDetails()
@@ -817,20 +925,28 @@ class WorkoutTrackingFragment : Fragment() {
     }
 
     private fun updateUI(session: WorkoutSession) {
-        val currentTime = System.currentTimeMillis()
-        
-        // Throttling UI обновлений для предотвращения дергания
-        if (currentTime - lastUIUpdateTime < UI_UPDATE_THROTTLE) {
+        val now = System.currentTimeMillis()
+
+        // Карта и ориентация — всегда, чтобы трек не «отставал» от метрик при троттлинге текста
+        updateTrackOnMap(session.trackPoints, session.currentLocation)
+        updateMapOrientation(session)
+
+        val forceNumericRefresh = session.gpsStatus == GpsStatus.LOST
+            || session.gpsStatus == GpsStatus.DENIED
+            || session.gpsStatus == GpsStatus.SEARCHING
+
+        if (!forceNumericRefresh && now - lastUIUpdateTime < UI_UPDATE_THROTTLE) {
+            if (isVoiceEnabled) {
+                launchVoiceNotification(session)
+            }
             return
         }
-        lastUIUpdateTime = currentTime
-        
+        lastUIUpdateTime = now
+
         android.util.Log.d("WorkoutTracking", "updateUI called: isTracking=${session.isTracking}, isPaused=${session.isPaused}, currentTime=${session.currentTime}")
-        
-        // Показываем/скрываем индикатор точности GPS
+
         updateGpsSignalIndicator(session.gpsStatus, lastGpsAccuracy)
-        
-        // Обновляем основную информацию
+
         val formattedTime = viewModel.formatTime(session.currentTime)
         val formattedDistance = String.format("%.2f", session.distance)
         binding.textViewWorkoutTime.text = formattedTime
@@ -843,54 +959,41 @@ class WorkoutTrackingFragment : Fragment() {
         binding.textViewCurrentPace.text = stripUnit(viewModel.formatPace(session.currentPace))
         binding.textViewCaloriesBurned.text = session.calories.toString()
 
-        // Обновляем GPS данные
         session.currentLocation?.let { location ->
             lastGpsAccuracy = location.accuracy
             lastGpsUpdateTime = System.currentTimeMillis()
-            
-            
             android.util.Log.d("GPSStatus", "GPS location updated: accuracy=${location.accuracy}m")
         }
 
-        // Обновляем GPS статус (независимо от UI throttling)
         val gpsStatusTime = System.currentTimeMillis()
         if (gpsStatusTime - lastGpsStatusUpdate >= GPS_STATUS_UPDATE_INTERVAL) {
             updateGpsStatusIcon()
             lastGpsStatusUpdate = gpsStatusTime
         }
 
-        // Обновляем трек на карте
-        updateTrackOnMap(session.trackPoints)
-        
-        // Обновляем ориентацию карты по направлению движения
-        updateMapOrientation(session)
-
-        // Автоматически центрируем карту только если пользователь не взаимодействует и прошло достаточно времени
         session.currentLocation?.let { location ->
             if (session.gpsStatus == GpsStatus.FOUND) {
                 if (!isUserInteractingWithMap) {
-                    val currentTime = System.currentTimeMillis()
-                    // Центрируем только если прошло больше 2 секунд с последнего обновления
-                    if (currentTime - lastMapUpdateTime > 2000) {
+                    val mapTick = System.currentTimeMillis()
+                    if (mapTick - lastMapUpdateTime > 2000) {
                         val geoPoint = GpsFilter.createValidGeoPoint(location)
                         if (geoPoint != null) {
-                            // Используем плавную анимацию с меньшей скоростью
                             mapView?.controller?.animateTo(geoPoint, 16.0, 1000L)
                             setMapCenteredState(true)
-                            lastMapUpdateTime = currentTime
+                            lastMapUpdateTime = mapTick
                         } else {
                             android.util.Log.w("WorkoutTracking", "Invalid GPS coordinates for map update")
                         }
                     }
                 } else {
-                    // Если пользователь взаимодействует, планируем автопоиск после завершения взаимодействия
                     scheduleAutoCenter()
                 }
             }
         }
 
-        if (isVoiceEnabled)
+        if (isVoiceEnabled) {
             launchVoiceNotification(session)
+        }
     }
 
     private fun updateButtonStates(state: WorkoutState) {
@@ -900,6 +1003,7 @@ class WorkoutTrackingFragment : Fragment() {
             WorkoutState.NOT_STARTED -> {
                 android.util.Log.d("WorkoutTracking", "Setting buttons to NOT_STARTED state")
                 // 1. активна кнопка старта (не запущена)
+                binding.spinnerWorkoutType.visibility = View.VISIBLE
                 binding.buttonStart.visibility = View.VISIBLE
                 binding.buttonPause.visibility = View.GONE
                 binding.buttonStop.visibility = View.GONE
@@ -907,6 +1011,7 @@ class WorkoutTrackingFragment : Fragment() {
             WorkoutState.RUNNING -> {
                 android.util.Log.d("WorkoutTracking", "Setting buttons to RUNNING state")
                 // 2. активна кнопка паузы и остановки (запущена)
+                binding.spinnerWorkoutType.visibility = View.GONE
                 binding.buttonStart.visibility = View.GONE
                 binding.buttonPause.visibility = View.VISIBLE
                 binding.buttonStop.visibility = View.VISIBLE
@@ -915,6 +1020,7 @@ class WorkoutTrackingFragment : Fragment() {
             WorkoutState.PAUSED -> {
                 android.util.Log.d("WorkoutTracking", "Setting buttons to PAUSED state")
                 // 3. активна кнопка возобновить и стоп (пауза)
+                binding.spinnerWorkoutType.visibility = View.GONE
                 binding.buttonStart.visibility = View.GONE
                 binding.buttonPause.visibility = View.VISIBLE
                 binding.buttonStop.visibility = View.VISIBLE
@@ -923,6 +1029,7 @@ class WorkoutTrackingFragment : Fragment() {
             WorkoutState.STOPPED -> {
                 android.util.Log.d("WorkoutTracking", "Setting buttons to STOPPED state")
                 // Возвращаемся к начальному состоянию
+                binding.spinnerWorkoutType.visibility = View.VISIBLE
                 binding.buttonStart.visibility = View.VISIBLE
                 binding.buttonPause.visibility = View.GONE
                 binding.buttonStop.visibility = View.GONE
@@ -930,35 +1037,38 @@ class WorkoutTrackingFragment : Fragment() {
         }
     }
 
-    private fun updateTrackOnMap(trackPoints: List<GeoPoint>) {
+    private fun updateTrackOnMap(trackPoints: List<GeoPoint>, currentLocation: Location? = null) {
         if (trackPoints.isNotEmpty()) {
-            // Обновляем трек только если есть новые точки
+            val pointsWithCurrent = trackPoints.toMutableList()
+            currentLocation?.let {
+                pointsWithCurrent.add(GeoPoint(it.latitude, it.longitude))
+            }
             @Suppress("DEPRECATION")
             val currentPoints = trackPolyline?.points ?: emptyList()
-            if (trackPoints.size != currentPoints.size) {
-                trackPolyline?.setPoints(trackPoints.toMutableList())
+            if (pointsWithCurrent.size != currentPoints.size) {
+                trackPolyline?.setPoints(pointsWithCurrent)
                 mapView?.invalidate()
-                android.util.Log.d(TAG, "Track updated: ${trackPoints.size} points")
+                android.util.Log.d(TAG, "Track updated: ${pointsWithCurrent.size} points")
             }
         } else {
-            // Очищаем трек если нет точек
             trackPolyline?.setPoints(mutableListOf())
             mapView?.invalidate()
         }
     }
 
     private fun launchVoiceNotification(session: WorkoutSession) {
-        val km = session.distance.toInt()
-        if (km > lastDistanceKmVoiceSpoken) {
-            lastDistanceKmVoiceSpoken = km
+        val completedKm = kotlin.math.floor(session.distance.toDouble()).toInt()
+        if (completedKm < 1) return
+        if (completedKm <= lastDistanceKmVoiceSpoken) return
 
-            val distanceTTS = FormatUtils.formatDistanceForTTS(session.distance, requireContext())
-            val timeTTS = FormatUtils.formatTimeForTTS(session.currentTime, requireContext())
-            val paceTTS = FormatUtils.formatPaceForTTS(session.avgPace, requireContext())
+        lastDistanceKmVoiceSpoken = completedKm
 
-            val notification = getString(R.string.voice_notif_text_each_km, distanceTTS, timeTTS, paceTTS)
-            tts?.speak(notification, TextToSpeech.QUEUE_ADD, null, "distance_${km}km")
-        }
+        val distanceTTS = FormatUtils.formatDistanceForTTS(session.distance, requireContext())
+        val timeTTS = FormatUtils.formatTimeForTTS(session.currentTime, requireContext())
+        val paceTTS = FormatUtils.formatPaceForTTS(session.avgPace, requireContext())
+
+        val notification = getString(R.string.voice_notif_text_each_km, distanceTTS, timeTTS, paceTTS)
+        tts?.speak(notification, TextToSpeech.QUEUE_ADD, null, "distance_${completedKm}km")
     }
 
     private fun calculateBearing(from: GeoPoint, to: GeoPoint): Float {
@@ -975,14 +1085,19 @@ class WorkoutTrackingFragment : Fragment() {
         return bearing.toFloat()
     }
 
+    private fun getDirectionBearing(trackPoints: List<GeoPoint>): Float {
+        if (trackPoints.size < 2) return -1f
+        val windowSize = minOf(DIRECTION_WINDOW_SIZE, trackPoints.size)
+        val from = trackPoints[trackPoints.size - windowSize]
+        val to = trackPoints.last()
+        return calculateBearing(from, to)
+    }
+
     private fun updateMapOrientation(session: WorkoutSession) {
-        session.currentLocation?.let { currentLocation ->
-            val bearing = currentLocation.bearing
+        if (session.currentLocation != null) {
+            val bearing = getDirectionBearing(session.trackPoints)
             if (bearing >= 0) {
                 try {
-                    // Поворачиваем карту так, чтобы направление движения было вверх
-                    // bearing - это угол от севера по часовой стрелке
-                    // Для OSMDroid нужно инвертировать угол, чтобы направление было вверх
                     val mapOrientation = -bearing
                     mapView?.mapOrientation = mapOrientation
                     android.util.Log.d("MapOrientation", "Updated map orientation: bearing=$bearing, mapOrientation=$mapOrientation")
@@ -1012,7 +1127,7 @@ class WorkoutTrackingFragment : Fragment() {
             }
 
             // Обновляем ориентацию карты по направлению движения
-            val bearing = location.bearing
+            val bearing = getDirectionBearing(session.trackPoints)
             if (bearing >= 0) {
                 try {
                     val mapOrientation = -bearing
@@ -1105,7 +1220,7 @@ class WorkoutTrackingFragment : Fragment() {
                     // Если не удается открыть настройки, показываем уведомление
                     Toast.makeText(
                         requireContext(),
-                        "Для стабильной работы приложения отключите оптимизацию батареи в настройках",
+                        getString(R.string.battery_optimization_hint),
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -1130,50 +1245,6 @@ class WorkoutTrackingFragment : Fragment() {
         }
     }
 
-    private fun showWorkoutTypeDialog() {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_workout_type, null)
-        
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .create()
-
-        dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.button_cancel).setOnClickListener {
-            dialog.dismiss()
-        }
-
-        dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.button_start).setOnClickListener {
-            // Определяем выбранный тип тренировки
-            val radioGroup = dialogView.findViewById<android.widget.RadioGroup>(R.id.radioGroup_workout_type)
-            val selectedId = radioGroup.checkedRadioButtonId
-            
-            selectedWorkoutType = when (selectedId) {
-                R.id.radio_easy_run -> WorkoutType.EASY_RUN
-                R.id.radio_tempo_run -> WorkoutType.TEMPO_RUN
-                R.id.radio_interval_training -> WorkoutType.INTERVAL_TRAINING
-                R.id.radio_long_run -> WorkoutType.LONG_RUN
-                R.id.radio_recovery_run -> WorkoutType.RECOVERY_RUN
-                R.id.radio_race -> WorkoutType.RACE
-                else -> WorkoutType.EASY_RUN
-            }
-
-            dialog.dismiss()
-            // Сбрасываем флаг остановки при старте новой тренировки
-            isStoppingWorkout = false
-            // Запрашиваем отключение оптимизации батареи для стабильной работы
-            requestBatteryOptimizationExemption()
-            // Инициализируем сервис только при старте тренировки для экономии батареи
-            viewModel.initializeService()
-            // Используем retry механизм для надежного запуска
-            viewLifecycleOwner.lifecycleScope.launch {
-                kotlinx.coroutines.delay(500) // Небольшая задержка для инициализации
-                viewModel.startWorkoutWithRetry(selectedWorkoutType)
-            }
-            binding.textViewGpsAccuracy.visibility = View.GONE
-        }
-
-        dialog.show()
-    }
-
     private fun saveWorkoutAndNavigateBack() {
         val session = viewModel.workoutSession.value
         
@@ -1183,12 +1254,12 @@ class WorkoutTrackingFragment : Fragment() {
                 try {
                     val workoutId = viewModel.saveWorkoutToDatabase(selectedWorkoutType)
                     if (workoutId != null) {
-                        Toast.makeText(context, "Тренировка сохранена: ${String.format("%.2f км за %s", session.distance, viewModel.formatTime(session.currentTime))}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, String.format(getString(R.string.workout_saved_format), session.distance, viewModel.formatTime(session.currentTime)), Toast.LENGTH_LONG).show()
                     } else {
-                        Toast.makeText(context, "Ошибка при сохранении тренировки", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, getString(R.string.workout_save_error), Toast.LENGTH_SHORT).show()
                     }
                 } catch (e: Exception) {
-                    Toast.makeText(context, "Ошибка при сохранении тренировки: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, getString(R.string.workout_save_error_format, e.message), Toast.LENGTH_SHORT).show()
                 }
                 
                 // Сбрасываем данные тренировки после сохранения
@@ -1199,7 +1270,7 @@ class WorkoutTrackingFragment : Fragment() {
             }
         } else {
             // Если тренировка слишком короткая, не сохраняем
-            Toast.makeText(context, "Тренировка слишком короткая для сохранения", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.workout_too_short), Toast.LENGTH_SHORT).show()
             // Сбрасываем данные тренировки даже если не сохраняем
             viewModel.resetWorkout()
             isStoppingWorkout = false
@@ -1219,7 +1290,7 @@ class WorkoutTrackingFragment : Fragment() {
                 try {
                     val workoutId = viewModel.saveWorkoutToDatabase(selectedWorkoutType)
                     if (workoutId != null) {
-                        Toast.makeText(context, "Тренировка сохранена: ${String.format("%.2f км за %s", session.distance, viewModel.formatTime(session.currentTime))}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, String.format(getString(R.string.workout_saved_format), session.distance, viewModel.formatTime(session.currentTime)), Toast.LENGTH_LONG).show()
                         
                         // Переходим к экрану деталей тренировки
                         val bundle = Bundle().apply {
@@ -1242,7 +1313,7 @@ class WorkoutTrackingFragment : Fragment() {
                 }
             }
         } else {
-            Toast.makeText(context, "Нет данных для сохранения", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.no_data_to_save), Toast.LENGTH_SHORT).show()
             isStoppingWorkout = false
         }
     }
@@ -1310,21 +1381,10 @@ class WorkoutTrackingFragment : Fragment() {
         } catch (e: Exception) {
             android.util.Log.e("GPSStatus", "Failed to stop GPS status monitoring: ${e.message}")
         }
-        
-        // Проверяем, активна ли тренировка, и если да - останавливаем её
-        val currentState = viewModel.workoutState.value
-        if (currentState == WorkoutState.RUNNING || currentState == WorkoutState.PAUSED) {
-            android.util.Log.d("WorkoutTracking", "Fragment destroyed during active workout, stopping workout")
-            cancelStopHold()
-            viewModel.stopWorkout()
-        } else {
-            cancelStopHold()
-        }
-        
-        // Очищаем все обработчики и таймеры
-        // locationTimer уже объявлен как var в классе
-        
-        // Отключаемся от сервиса если подключены
+
+        cancelStopHold()
+
+        // Отключаемся от сервиса если подключены (тренировка в foreground-сервисе продолжается)
         try {
             viewModel.cleanup()
         } catch (e: Exception) {

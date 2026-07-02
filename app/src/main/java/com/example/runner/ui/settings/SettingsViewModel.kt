@@ -1,9 +1,12 @@
 package com.example.runner.ui.settings
 
 import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.runner.R
 import com.example.runner.util.ThemeUtils
 import com.example.runner.util.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,7 +25,9 @@ data class SettingsState(
     val voiceFeedback: Boolean = false,
     val gpsAccuracy: String = "high",
     val themeMode: String = ThemeUtils.THEME_SYSTEM,
-    val isFirstLaunch: Boolean = true
+    val appLanguage: String = "en",
+    val isFirstLaunch: Boolean = true,
+    val startCountdownSeconds: Int = 5
 )
 
 class SettingsViewModel(private val context: Context) : ViewModel() {
@@ -49,7 +54,9 @@ class SettingsViewModel(private val context: Context) : ViewModel() {
                 voiceFeedback = userPreferences.voiceFeedback,
                 gpsAccuracy = userPreferences.gpsAccuracy,
                 themeMode = userPreferences.themeMode,
-                isFirstLaunch = userPreferences.isFirstLaunch
+                appLanguage = userPreferences.appLanguage,
+                isFirstLaunch = userPreferences.isFirstLaunch,
+                startCountdownSeconds = userPreferences.startCountdownSeconds
             )
             applyTheme(userPreferences.themeMode)
         }
@@ -106,9 +113,25 @@ class SettingsViewModel(private val context: Context) : ViewModel() {
         applyTheme(sanitized)
     }
 
+    fun updateAppLanguage(language: String) {
+        userPreferences.appLanguage = language
+        _settingsState.value = _settingsState.value.copy(appLanguage = language)
+        val localeList = LocaleListCompat.forLanguageTags(language)
+        AppCompatDelegate.setApplicationLocales(localeList)
+    }
+
     fun markFirstLaunchCompleted() {
         userPreferences.isFirstLaunch = false
         _settingsState.value = _settingsState.value.copy(isFirstLaunch = false)
+    }
+
+    fun updateStartCountdownSeconds(seconds: Int) {
+        userPreferences.startCountdownSeconds = seconds
+        _settingsState.value = _settingsState.value.copy(startCountdownSeconds = seconds)
+    }
+
+    fun getStartCountdownOptions(): List<Int> {
+        return listOf(3, 5, 10, 15, 30)
     }
 
     fun resetToDefaults() {
@@ -128,28 +151,40 @@ class SettingsViewModel(private val context: Context) : ViewModel() {
         return listOf(ThemeUtils.THEME_SYSTEM, ThemeUtils.THEME_LIGHT, ThemeUtils.THEME_DARK)
     }
 
+    fun getLanguageOptions(): List<String> {
+        return listOf("en", "ru")
+    }
+
     fun getUnitSystemDisplayName(unitSystem: String): String {
         return when (unitSystem) {
-            "metric" -> "Метрическая (км, кг)"
-            "imperial" -> "Имперская (мили, фунты)"
+            "metric" -> context.getString(R.string.settings_units_metric)
+            "imperial" -> context.getString(R.string.settings_units_imperial)
             else -> unitSystem
         }
     }
 
     fun getGpsAccuracyDisplayName(gpsAccuracy: String): String {
         return when (gpsAccuracy) {
-            "high" -> "Высокая точность"
-            "medium" -> "Средняя точность"
-            "low" -> "Низкая точность"
+            "high" -> context.getString(R.string.settings_gps_accuracy_high)
+            "medium" -> context.getString(R.string.settings_gps_accuracy_medium)
+            "low" -> context.getString(R.string.settings_gps_accuracy_low)
             else -> gpsAccuracy
         }
     }
 
     fun getThemeModeDisplayName(themeMode: String): String {
         return when (ThemeUtils.ensureValidMode(themeMode)) {
-            ThemeUtils.THEME_LIGHT -> "Светлая тема"
-            ThemeUtils.THEME_DARK -> "Тёмная тема"
-            else -> "Как в системе"
+            ThemeUtils.THEME_LIGHT -> context.getString(R.string.settings_theme_light)
+            ThemeUtils.THEME_DARK -> context.getString(R.string.settings_theme_dark)
+            else -> context.getString(R.string.settings_theme_system)
+        }
+    }
+
+    fun getLanguageDisplayName(language: String): String {
+        return when (language) {
+            "en" -> context.getString(R.string.settings_language_en)
+            "ru" -> context.getString(R.string.settings_language_ru)
+            else -> language
         }
     }
 

@@ -1,5 +1,7 @@
 package com.example.runner.util
 
+import android.content.Context
+import com.example.runner.R
 import com.example.runner.data.TrackData
 import com.example.runner.data.TrackPoint
 import com.example.runner.data.Workout
@@ -21,7 +23,7 @@ object GpxExporter {
     /**
      * Экспортирует тренировку в GPX формат
      */
-    fun exportWorkoutToGpx(workout: Workout, trackData: TrackData?): String {
+    fun exportWorkoutToGpx(workout: Workout, trackData: TrackData?, context: Context): String {
         val builder = StringBuilder()
         
         // GPX заголовок
@@ -36,17 +38,17 @@ object GpxExporter {
         // Метаданные
         val workoutStartTime = trackData?.points?.firstOrNull()?.timestamp ?: workout.date.time
         builder.append("  <metadata>\n")
-        builder.append("    <name>").append(escapeXml(getWorkoutTypeName(workout.type))).append("</name>\n")
+        builder.append("    <name>").append(escapeXml(getWorkoutTypeName(workout.type, context))).append("</name>\n")
         builder.append("    <time>").append(formatIso8601(Date(workoutStartTime))).append("</time>\n")
         builder.append("  </metadata>\n")
         
         // Трек
         builder.append("  <trk>\n")
-        builder.append("    <name>").append(escapeXml(getWorkoutTypeName(workout.type))).append("</name>\n")
+        builder.append("    <name>").append(escapeXml(getWorkoutTypeName(workout.type, context))).append("</name>\n")
         builder.append("    <type>Running</type>\n")
         
         // Описание
-        val description = buildDescription(workout)
+        val description = buildDescription(workout, context)
         if (description.isNotEmpty()) {
             builder.append("    <desc>").append(escapeXml(description)).append("</desc>\n")
         }
@@ -94,34 +96,34 @@ object GpxExporter {
         return builder.toString()
     }
     
-    private fun buildDescription(workout: Workout): String {
+    private fun buildDescription(workout: Workout, context: Context): String {
         val parts = mutableListOf<String>()
         
-        parts.add("Дистанция: ${String.format("%.2f", workout.distance)} км")
-        parts.add("Время: ${FormatUtils.formatTime(workout.duration)}")
-        parts.add("Темп: ${FormatUtils.formatPace(workout.avgPace)}")
+        parts.add(context.getString(R.string.gpx_note_distance, workout.distance))
+        parts.add(context.getString(R.string.gpx_note_time, FormatUtils.formatTime(workout.duration)))
+        parts.add(context.getString(R.string.gpx_note_pace, FormatUtils.formatPace(workout.avgPace, context)))
         
         workout.calories?.let { calories ->
-            parts.add("Калории: $calories ккал")
+            parts.add(context.getString(R.string.gpx_note_calories, calories))
         }
         
         workout.notes?.let { notes ->
             if (notes.isNotEmpty()) {
-                parts.add("Заметки: $notes")
+                parts.add(context.getString(R.string.gpx_note_notes, notes))
             }
         }
         
         return parts.joinToString("; ")
     }
     
-    private fun getWorkoutTypeName(type: WorkoutType): String {
+    private fun getWorkoutTypeName(type: WorkoutType, context: Context): String {
         return when (type) {
-            WorkoutType.EASY_RUN -> "Легкий бег"
-            WorkoutType.TEMPO_RUN -> "Темповый бег"
-            WorkoutType.INTERVAL_TRAINING -> "Интервальная тренировка"
-            WorkoutType.LONG_RUN -> "Длинный бег"
-            WorkoutType.RECOVERY_RUN -> "Восстановительный бег"
-            WorkoutType.RACE -> "Соревнование"
+            WorkoutType.EASY_RUN -> context.getString(R.string.workout_type_easy_run)
+            WorkoutType.TEMPO_RUN -> context.getString(R.string.workout_type_tempo_run)
+            WorkoutType.INTERVAL_TRAINING -> context.getString(R.string.workout_type_interval_training)
+            WorkoutType.LONG_RUN -> context.getString(R.string.workout_type_long_run)
+            WorkoutType.RECOVERY_RUN -> context.getString(R.string.workout_type_recovery_run)
+            WorkoutType.RACE -> context.getString(R.string.workout_type_competition)
         }
     }
     
@@ -140,10 +142,10 @@ object GpxExporter {
     /**
      * Получает имя файла для экспорта GPX
      */
-    fun getGpxFileName(workout: Workout): String {
+    fun getGpxFileName(workout: Workout, context: Context): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault())
         val dateStr = dateFormat.format(workout.date)
-        val typeStr = getWorkoutTypeName(workout.type).replace(" ", "_")
+        val typeStr = getWorkoutTypeName(workout.type, context).replace(" ", "_")
         return "workout_${dateStr}_${typeStr}.gpx"
     }
 }

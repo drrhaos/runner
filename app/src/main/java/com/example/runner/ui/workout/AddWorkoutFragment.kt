@@ -50,7 +50,7 @@ class AddWorkoutFragment : Fragment() {
 
     private fun setupWorkoutTypeSpinner() {
         val workoutTypes = viewModel.getWorkoutTypes()
-        val typeNames = workoutTypes.map { viewModel.getWorkoutTypeDisplayName(it) }
+        val typeNames = workoutTypes.map { viewModel.getWorkoutTypeDisplayName(it, requireContext()) }
         
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, typeNames)
         binding.autoCompleteTextViewType.setAdapter(adapter)
@@ -103,7 +103,7 @@ class AddWorkoutFragment : Fragment() {
 
         // Валидация обязательных полей
         if (distanceText.isBlank() || hoursText.isBlank() || minutesText.isBlank() || secondsText.isBlank()) {
-            Toast.makeText(context, "Заполните все обязательные поля", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.fill_required_fields), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -114,7 +114,7 @@ class AddWorkoutFragment : Fragment() {
             val seconds = secondsText.toInt()
             
             if (distance <= 0) {
-                Toast.makeText(context, "Дистанция должна быть больше 0", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, getString(R.string.distance_must_be_positive), Toast.LENGTH_SHORT).show()
                 return
             }
 
@@ -122,7 +122,7 @@ class AddWorkoutFragment : Fragment() {
             val duration = totalSeconds * 1000L // конвертируем в миллисекунды
             
             if (duration <= 0) {
-                Toast.makeText(context, "Время должно быть больше 0", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, getString(R.string.time_must_be_positive), Toast.LENGTH_SHORT).show()
                 return
             }
 
@@ -145,11 +145,11 @@ class AddWorkoutFragment : Fragment() {
 
             viewModel.insertWorkout(workout)
             
-            Toast.makeText(context, "Тренировка сохранена", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.workout_saved), Toast.LENGTH_SHORT).show()
             findNavController().navigateUp()
             
         } catch (e: NumberFormatException) {
-            Toast.makeText(context, "Проверьте правильность введенных данных", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, getString(R.string.check_input_data), Toast.LENGTH_SHORT).show()
         }
     }
 

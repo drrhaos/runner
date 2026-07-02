@@ -2,17 +2,15 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="32dp"
     android:height="32dp"
-    android:viewportWidth="24"
-    android:viewportHeight="24">
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
     <path
-        android:fillColor="@color/map_navigation_shadow"
-        android:pathData="M13,3L5,21h16L13,3z"
-        android:alpha="0.8" />
+        android:fillColor="#2B67ED"
+        android:pathData="M347.884419 381.606799L511.927479 0l164.188102 381.606799" />
     <path
-        android:fillColor="@color/map_navigation_icon"
-        android:pathData="M12,2L4,20h16L12,2z" />
+        android:fillColor="#4381EF"
+        android:pathData="M511.927479 574.368272m-261.22153 0a261.22153 261.22153 0 1 0 522.443059 0 261.22153 261.22153 0 1 0-522.443059 0Z" />
     <path
-        android:fillColor="@color/map_navigation_highlight"
-        android:pathData="M12,2L8,14h4L12,2z"
-        android:alpha="0.6" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M511.927479 835.734844a261.076487 261.076487 0 1 1 261.076487-261.076487 261.076487 261.076487 0 0 1-261.076487 261.076487z m0-493.144476a232.067989 232.067989 0 1 0 232.067988 232.067989 232.067989 232.067989 0 0 0-232.067988-232.648159z" />
 </vector>
