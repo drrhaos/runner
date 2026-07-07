@@ -14,6 +14,7 @@ import com.drrhaos.runner.R
 import com.drrhaos.runner.data.Workout
 import com.drrhaos.runner.data.WorkoutDatabase
 import com.drrhaos.runner.data.WorkoutType
+import com.drrhaos.runner.data.displayName
 import com.drrhaos.runner.databinding.FragmentAddWorkoutBinding
 import java.text.SimpleDateFormat
 import java.util.*
@@ -49,8 +50,8 @@ class AddWorkoutFragment : Fragment() {
     }
 
     private fun setupWorkoutTypeSpinner() {
-        val workoutTypes = viewModel.getWorkoutTypes()
-        val typeNames = workoutTypes.map { viewModel.getWorkoutTypeDisplayName(it, requireContext()) }
+        val workoutTypes = WorkoutType.entries
+        val typeNames = workoutTypes.map { it.displayName(requireContext()) }
         
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, typeNames)
         binding.autoCompleteTextViewType.setAdapter(adapter)

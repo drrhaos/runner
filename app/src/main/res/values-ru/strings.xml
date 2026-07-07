@@ -250,12 +250,6 @@
     <string name="time_must_be_positive">Время должно быть больше 0</string>
     <string name="check_input_data">Проверьте правильность введенных данных</string>
 
-    <string name="gps_denied_message">GPS недоступен. Включите GPS в настройках.</string>
-    <string name="gps_lost_message">Потерян сигнал GPS. Проверьте соединение.</string>
-    <string name="gps_searching_message">Поиск GPS сигнала…</string>
-    <string name="gps_weak_message">GPS сигнал слабый. Точность может быть низкой.</string>
-    <string name="gps_medium_message">GPS сигнал средний.</string>
-    <string name="gps_strong_message">GPS сигнал сильный.</string>
     <string name="error_database_save">Ошибка базы данных. Попробуйте еще раз.</string>
     <string name="error_io_save">Ошибка записи данных. Проверьте место на диске.</string>
     <string name="error_save_format">Ошибка сохранения: %1$s</string>

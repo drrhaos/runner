@@ -5,7 +5,7 @@ import com.drrhaos.runner.R
 import com.drrhaos.runner.data.TrackData
 import com.drrhaos.runner.data.TrackPoint
 import com.drrhaos.runner.data.Workout
-import com.drrhaos.runner.data.WorkoutType
+import com.drrhaos.runner.data.displayName
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -38,13 +38,13 @@ object GpxExporter {
         // Метаданные
         val workoutStartTime = trackData?.points?.firstOrNull()?.timestamp ?: workout.date.time
         builder.append("  <metadata>\n")
-        builder.append("    <name>").append(escapeXml(getWorkoutTypeName(workout.type, context))).append("</name>\n")
+        builder.append("    <name>").append(escapeXml(workout.type.displayName(context))).append("</name>\n")
         builder.append("    <time>").append(formatIso8601(Date(workoutStartTime))).append("</time>\n")
         builder.append("  </metadata>\n")
         
         // Трек
         builder.append("  <trk>\n")
-        builder.append("    <name>").append(escapeXml(getWorkoutTypeName(workout.type, context))).append("</name>\n")
+        builder.append("    <name>").append(escapeXml(workout.type.displayName(context))).append("</name>\n")
         builder.append("    <type>Running</type>\n")
         
         // Описание
@@ -116,17 +116,6 @@ object GpxExporter {
         return parts.joinToString("; ")
     }
     
-    private fun getWorkoutTypeName(type: WorkoutType, context: Context): String {
-        return when (type) {
-            WorkoutType.EASY_RUN -> context.getString(R.string.workout_type_easy_run)
-            WorkoutType.TEMPO_RUN -> context.getString(R.string.workout_type_tempo_run)
-            WorkoutType.INTERVAL_TRAINING -> context.getString(R.string.workout_type_interval_training)
-            WorkoutType.LONG_RUN -> context.getString(R.string.workout_type_long_run)
-            WorkoutType.RECOVERY_RUN -> context.getString(R.string.workout_type_recovery_run)
-            WorkoutType.RACE -> context.getString(R.string.workout_type_competition)
-        }
-    }
-    
     private fun formatIso8601(date: Date): String {
         return dateFormat.format(date)
     }
@@ -145,7 +134,7 @@ object GpxExporter {
     fun getGpxFileName(workout: Workout, context: Context): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault())
         val dateStr = dateFormat.format(workout.date)
-        val typeStr = getWorkoutTypeName(workout.type, context).replace(" ", "_")
+        val typeStr = workout.type.displayName(context).replace(" ", "_")
         return "workout_${dateStr}_${typeStr}.gpx"
     }
 }

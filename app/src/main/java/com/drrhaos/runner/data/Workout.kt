@@ -1,7 +1,9 @@
 package com.drrhaos.runner.data
 
+import android.content.Context
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.drrhaos.runner.R
 import java.util.Date
 
 @Entity(tableName = "workouts")
@@ -25,6 +27,15 @@ enum class WorkoutType {
     LONG_RUN,
     RECOVERY_RUN,
     RACE
+}
+
+fun WorkoutType.displayName(context: Context): String = when (this) {
+    WorkoutType.EASY_RUN -> context.getString(R.string.workout_type_easy_run)
+    WorkoutType.TEMPO_RUN -> context.getString(R.string.workout_type_tempo_run)
+    WorkoutType.INTERVAL_TRAINING -> context.getString(R.string.workout_type_interval_training)
+    WorkoutType.LONG_RUN -> context.getString(R.string.workout_type_long_run)
+    WorkoutType.RECOVERY_RUN -> context.getString(R.string.workout_type_recovery_run)
+    WorkoutType.RACE -> context.getString(R.string.workout_type_competition)
 }
 
 /** Макс. разумная скорость между точками (м/с) для фильтра выбросов GPS — зависит от типа тренировки */

@@ -89,23 +89,6 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `handleGpsError should not show toast for FOUND status`() {
-        // When - handleGpsError должен вернуться сразу для FOUND
-        // Then - не должно быть исключений
-        ErrorHandler.handleGpsError(context, GpsStatus.FOUND, showToast = true)
-        assertTrue("Should handle FOUND status without exception", true)
-    }
-
-    @Test
-    fun `handleGpsError should handle all status types without exception`() {
-        // When & Then - все статусы должны обрабатываться без исключений
-        GpsStatus.values().forEach { status ->
-            ErrorHandler.handleGpsError(context, status, showToast = false)
-        }
-        assertTrue("Should handle all GPS statuses", true)
-    }
-
-    @Test
     fun `handleSaveError should handle SQLException`() {
         // Given
         val error = java.sql.SQLException("Database error")

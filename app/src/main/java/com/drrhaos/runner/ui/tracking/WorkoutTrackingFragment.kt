@@ -24,6 +24,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.drrhaos.runner.data.WorkoutDatabase
 import com.drrhaos.runner.data.WorkoutType
+import com.drrhaos.runner.data.displayName
 import com.drrhaos.runner.util.GpsFilter
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -448,24 +449,8 @@ class WorkoutTrackingFragment : Fragment() {
     }
 
     private fun setupWorkoutTypeSpinner() {
-        val workoutTypes = listOf(
-            WorkoutType.EASY_RUN,
-            WorkoutType.TEMPO_RUN,
-            WorkoutType.INTERVAL_TRAINING,
-            WorkoutType.LONG_RUN,
-            WorkoutType.RECOVERY_RUN,
-            WorkoutType.RACE
-        )
-        val typeNames = workoutTypes.map { type ->
-            when (type) {
-                WorkoutType.EASY_RUN -> getString(R.string.workout_type_easy_run)
-                WorkoutType.TEMPO_RUN -> getString(R.string.workout_type_tempo_run)
-                WorkoutType.INTERVAL_TRAINING -> getString(R.string.workout_type_interval_training)
-                WorkoutType.LONG_RUN -> getString(R.string.workout_type_long_run)
-                WorkoutType.RECOVERY_RUN -> getString(R.string.workout_type_recovery_run)
-                WorkoutType.RACE -> getString(R.string.workout_type_competition)
-            }
-        }
+        val workoutTypes = WorkoutType.entries
+        val typeNames = workoutTypes.map { it.displayName(requireContext()) }
         val adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, typeNames)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerWorkoutType.adapter = adapter

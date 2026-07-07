@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import com.drrhaos.runner.R
 import com.drrhaos.runner.data.WorkoutDatabase
 import com.drrhaos.runner.data.WorkoutType
+import com.drrhaos.runner.data.displayName
 import com.drrhaos.runner.databinding.FragmentStatisticsBinding
 import com.drrhaos.runner.util.FormatUtils
 import com.google.android.material.color.MaterialColors
@@ -224,7 +225,7 @@ class StatisticsFragment : Fragment() {
             }
 
             val typeText = TextView(requireContext()).apply {
-                text = "${getWorkoutTypeDisplayName(type)}:"
+                text = "${type.displayName(requireContext())}:"
                 textSize = 14f
                 setTextColor(
                     MaterialColors.getColor(
@@ -266,17 +267,6 @@ class StatisticsFragment : Fragment() {
     private fun Int.dpToPx(): Int {
         val density = resources.displayMetrics.density
         return (this * density).toInt()
-    }
-
-    private fun getWorkoutTypeDisplayName(type: WorkoutType): String {
-        return when (type) {
-            WorkoutType.EASY_RUN -> getString(R.string.workout_type_easy_run)
-            WorkoutType.TEMPO_RUN -> getString(R.string.workout_type_tempo_run)
-            WorkoutType.INTERVAL_TRAINING -> getString(R.string.workout_type_interval_training)
-            WorkoutType.LONG_RUN -> getString(R.string.workout_type_long_run)
-            WorkoutType.RECOVERY_RUN -> getString(R.string.workout_type_recovery_run)
-            WorkoutType.RACE -> getString(R.string.workout_type_competition)
-        }
     }
 
     override fun onDestroyView() {

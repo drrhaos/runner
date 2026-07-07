@@ -268,12 +268,6 @@
     <string name="time_must_be_positive">Time must be greater than 0</string>
     <string name="check_input_data">Check the entered data</string>
 
-    <string name="gps_denied_message">GPS is not available. Turn on GPS in settings.</string>
-    <string name="gps_lost_message">GPS signal lost. Check your connection.</string>
-    <string name="gps_searching_message">Searching for GPS signal…</string>
-    <string name="gps_weak_message">GPS signal is weak. Accuracy may be low.</string>
-    <string name="gps_medium_message">GPS signal is medium.</string>
-    <string name="gps_strong_message">GPS signal is strong.</string>
     <string name="error_database_save">Database error. Please try again.</string>
     <string name="error_io_save">Data write error. Check disk space.</string>
     <string name="error_save_format">Save error: %1$s</string>

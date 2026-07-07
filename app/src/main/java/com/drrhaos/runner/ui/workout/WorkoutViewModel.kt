@@ -1,14 +1,11 @@
 package com.drrhaos.runner.ui.workout
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.drrhaos.runner.R
 import com.drrhaos.runner.data.Workout
 import com.drrhaos.runner.data.WorkoutDao
 import com.drrhaos.runner.data.WorkoutDatabase
-import com.drrhaos.runner.data.WorkoutType
 import com.drrhaos.runner.util.WorkoutDataCleaner
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -99,21 +96,6 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
 
     fun formatPace(paceMinutes: Float): String {
         return com.drrhaos.runner.util.FormatUtils.formatPace(paceMinutes)
-    }
-
-    fun getWorkoutTypeDisplayName(type: WorkoutType, context: Context): String {
-        return when (type) {
-            WorkoutType.EASY_RUN -> context.getString(R.string.workout_type_easy_run)
-            WorkoutType.TEMPO_RUN -> context.getString(R.string.workout_type_tempo_run)
-            WorkoutType.INTERVAL_TRAINING -> context.getString(R.string.workout_type_interval_training)
-            WorkoutType.LONG_RUN -> context.getString(R.string.workout_type_long_run)
-            WorkoutType.RECOVERY_RUN -> context.getString(R.string.workout_type_recovery_run)
-            WorkoutType.RACE -> context.getString(R.string.workout_type_competition)
-        }
-    }
-
-    fun getWorkoutTypes(): List<WorkoutType> {
-        return WorkoutType.values().toList()
     }
     
     /**
