@@ -94,7 +94,7 @@
         </LinearLayout>
 
     <!-- Объединенная панель с параметрами тренировки и кнопками -->
-    <com.example.runner.ui.tracking.TouchInterceptingLinearLayout
+    <com.drrhaos.runner.ui.tracking.TouchInterceptingLinearLayout
         android:id="@+id/layout_workout_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -403,7 +403,7 @@
                     android:layout_marginEnd="8dp"
                     android:visibility="gone"
                     android:contentDescription="@string/btn_pause_description"
-                    android:tint="?attr/colorOnSecondary" />
+                    app:tint="?attr/colorOnSecondary" />
 
                 <!-- Кнопка старт -->
                 <ImageButton
@@ -415,7 +415,7 @@
                     android:scaleType="centerInside"
                     android:padding="12dp"
                     android:contentDescription="@string/btn_start_description"
-                    android:tint="?attr/colorOnPrimary" />
+                    app:tint="?attr/colorOnPrimary" />
 
                 <!-- Кнопка стоп (изначально скрыта) -->
                 <ImageButton
@@ -459,7 +459,7 @@
                     android:alpha="0.72" />
             </LinearLayout>
         </LinearLayout>
-    </com.example.runner.ui.tracking.TouchInterceptingLinearLayout>
+    </com.drrhaos.runner.ui.tracking.TouchInterceptingLinearLayout>
     <!--  Серый фон окна с отсчетом  -->
     <FrameLayout
         android:id="@+id/stop_hold_background"

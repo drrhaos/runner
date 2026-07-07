@@ -1,0 +1,103 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Accept SDK licenses
+        run: yes | sdkmanager --licenses || true
+
+      - name: Install SDK components
+        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          VERSION="${VERSION#.}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Configure release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+            printf '%s\n' \
+              "storeFile=release.keystore" \
+              "storePassword=${KEYSTORE_PASSWORD}" \
+              "keyAlias=${KEY_ALIAS}" \
+              "keyPassword=${KEY_PASSWORD}" \
+              > keystore.properties
+            echo "Signing configured"
+          else
+            echo "No signing secrets — building unsigned release APK"
+          fi
+
+      - name: Build release APK
+        run: >
+          ./gradlew :app:assembleRelease
+          -PversionName=${{ steps.version.outputs.version }}
+          --stacktrace
+
+      - name: Prepare release APK
+        id: apk
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          RELEASE_DIR="app/build/outputs/apk/release"
+          DIST_DIR="dist"
+          mkdir -p "$DIST_DIR"
+
+          if [ -f "$RELEASE_DIR/app-release.apk" ]; then
+            SRC="$RELEASE_DIR/app-release.apk"
+            NAME="runner_v${VERSION}.apk"
+          elif [ -f "$RELEASE_DIR/app-release-unsigned.apk" ]; then
+            SRC="$RELEASE_DIR/app-release-unsigned.apk"
+            NAME="runner_v${VERSION}-unsigned.apk"
+          else
+            echo "Release APK not found" >&2
+            ls -la "$RELEASE_DIR" || true
+            exit 1
+          fi
+
+          DEST="$DIST_DIR/$NAME"
+          cp "$SRC" "$DEST"
+          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.version.outputs.tag }}
+          files: ${{ steps.apk.outputs.path }}
+          generate_release_notes: true
+          body: |
+            ## Install
+
+            Download the APK below and install it on your Android device (API 26+).
+
+            See the [README](https://github.com/${{ github.repository }}#readme) for build and setup instructions.

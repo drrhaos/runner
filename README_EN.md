@@ -41,7 +41,7 @@ Runner is a full-featured running app that allows you to:
 - Average speed (km/h)
 - Current and average pace (min/km)
 - Calories burned
-- Heart rate (bpm)
+- Heart rate (bpm) — UI placeholder; sensor integration is planned
 
 ### 🗺️ Map
 - **OpenStreetMap** for map display
@@ -291,15 +291,15 @@ Main libraries:
 
 ### Requirements
 - Android Studio Hedgehog or newer
-- JDK 11 or higher
+- JDK 17 or higher
 - Android SDK 26+
-- Gradle 8.0+
+- Gradle 9.3+
 
 ### Installation Steps
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/drrhaos/runner.git
 cd runner
 ```
 
@@ -351,7 +351,7 @@ cd runner
 
 ```
 app/src/main/
-├── java/com/example/runner/
+├── java/com/drrhaos/runner/
 │   ├── data/                    # Data models and Room DAO
 │   │   ├── Workout.kt           # Workout model
 │   │   ├── TrackPoint.kt        # Track point
@@ -406,7 +406,9 @@ Run tests:
 
 ## 📄 License
 
-[Specify project license]
+This project is licensed under the [MIT License](LICENSE).
+
+See also [Privacy Policy](PRIVACY.md) and [Contributing Guide](CONTRIBUTING.md).
 
 ## 👥 Authors
 
@@ -415,7 +417,9 @@ Run tests:
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please:
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+Quick start:
 1. Fork the project
 2. Create a branch for a new feature (`git checkout -b feature/AmazingFeature`)
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
@@ -443,7 +447,8 @@ Contributions are welcome! Please:
 
 ## 🐛 Known Issues
 
-- [List of known issues]
+- Heart rate is shown as a placeholder (`--`) — no BLE/Health Connect integration yet
+- Changing `applicationId` from `com.example.runner` to `com.drrhaos.runner` requires a fresh install for existing users
 
 ## 🔮 Future Plans
 

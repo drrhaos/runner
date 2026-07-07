@@ -1,0 +1,141 @@
+package com.drrhaos.runner.util
+
+import android.content.Context
+import com.drrhaos.runner.R
+import com.drrhaos.runner.data.TrackData
+import com.drrhaos.runner.data.TrackPoint
+import com.drrhaos.runner.data.Workout
+import com.drrhaos.runner.data.displayName
+import java.text.SimpleDateFormat
+import java.util.*
+
+/**
+ * Утилита для экспорта тренировок в GPX формат
+ */
+object GpxExporter {
+    
+    private const val GPX_VERSION = "1.1"
+    private const val GPX_NAMESPACE = "http://www.topografix.com/GPX/1/1"
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
+        timeZone = TimeZone.getTimeZone("UTC")
+    }
+    
+    /**
+     * Экспортирует тренировку в GPX формат
+     */
+    fun exportWorkoutToGpx(workout: Workout, trackData: TrackData?, context: Context): String {
+        val builder = StringBuilder()
+        
+        // GPX заголовок
+        builder.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        builder.append("<gpx version=\"$GPX_VERSION\" ")
+        builder.append("xmlns=\"$GPX_NAMESPACE\" ")
+        builder.append("xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\" ")
+        builder.append("xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" ")
+        builder.append("xsi:schemaLocation=\"http://www.topografix.com/GPX/1/1 ")
+        builder.append("http://www.topografix.com/GPX/1/1/gpx.xsd\">\n")
+        
+        // Метаданные
+        val workoutStartTime = trackData?.points?.firstOrNull()?.timestamp ?: workout.date.time
+        builder.append("  <metadata>\n")
+        builder.append("    <name>").append(escapeXml(workout.type.displayName(context))).append("</name>\n")
+        builder.append("    <time>").append(formatIso8601(Date(workoutStartTime))).append("</time>\n")
+        builder.append("  </metadata>\n")
+        
+        // Трек
+        builder.append("  <trk>\n")
+        builder.append("    <name>").append(escapeXml(workout.type.displayName(context))).append("</name>\n")
+        builder.append("    <type>Running</type>\n")
+        
+        // Описание
+        val description = buildDescription(workout, context)
+        if (description.isNotEmpty()) {
+            builder.append("    <desc>").append(escapeXml(description)).append("</desc>\n")
+        }
+        
+        // Сегмент трека
+        builder.append("    <trkseg>\n")
+        
+        // Точки трека
+        trackData?.points?.forEach { point ->
+            builder.append("      <trkpt lat=\"").append(point.latitude)
+                .append("\" lon=\"").append(point.longitude).append("\">\n")
+            
+            // Высота
+            point.altitude?.let { altitude ->
+                builder.append("        <ele>").append(altitude).append("</ele>\n")
+            }
+            
+            // Время
+            builder.append("        <time>").append(formatIso8601(Date(point.timestamp))).append("</time>\n")
+            
+            // Расширения (точность, скорость)
+            if (point.accuracy != null || point.speed != null) {
+                builder.append("        <extensions>\n")
+                builder.append("          <gpxtpx:TrackPointExtension>\n")
+                
+                point.accuracy?.let { accuracy ->
+                    builder.append("            <gpxtpx:hdop>").append(String.format("%.1f", accuracy)).append("</gpxtpx:hdop>\n")
+                }
+                
+                point.speed?.let { speed ->
+                    builder.append("            <gpxtpx:speed>").append(String.format("%.2f", speed)).append("</gpxtpx:speed>\n")
+                }
+                
+                builder.append("          </gpxtpx:TrackPointExtension>\n")
+                builder.append("        </extensions>\n")
+            }
+            
+            builder.append("      </trkpt>\n")
+        }
+        
+        builder.append("    </trkseg>\n")
+        builder.append("  </trk>\n")
+        builder.append("</gpx>\n")
+        
+        return builder.toString()
+    }
+    
+    private fun buildDescription(workout: Workout, context: Context): String {
+        val parts = mutableListOf<String>()
+        
+        parts.add(context.getString(R.string.gpx_note_distance, workout.distance))
+        parts.add(context.getString(R.string.gpx_note_time, FormatUtils.formatTime(workout.duration)))
+        parts.add(context.getString(R.string.gpx_note_pace, FormatUtils.formatPace(workout.avgPace, context)))
+        
+        workout.calories?.let { calories ->
+            parts.add(context.getString(R.string.gpx_note_calories, calories))
+        }
+        
+        workout.notes?.let { notes ->
+            if (notes.isNotEmpty()) {
+                parts.add(context.getString(R.string.gpx_note_notes, notes))
+            }
+        }
+        
+        return parts.joinToString("; ")
+    }
+    
+    private fun formatIso8601(date: Date): String {
+        return dateFormat.format(date)
+    }
+    
+    private fun escapeXml(text: String): String {
+        return text.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&apos;")
+    }
+    
+    /**
+     * Получает имя файла для экспорта GPX
+     */
+    fun getGpxFileName(workout: Workout, context: Context): String {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault())
+        val dateStr = dateFormat.format(workout.date)
+        val typeStr = workout.type.displayName(context).replace(" ", "_")
+        return "workout_${dateStr}_${typeStr}.gpx"
+    }
+}
+
