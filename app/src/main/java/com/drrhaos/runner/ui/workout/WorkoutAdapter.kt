@@ -8,7 +8,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.drrhaos.runner.R
 import com.drrhaos.runner.data.Workout
-import com.drrhaos.runner.data.WorkoutType
+import com.drrhaos.runner.data.displayName
 import com.drrhaos.runner.databinding.ItemWorkoutBinding
 import java.text.SimpleDateFormat
 import java.util.*
@@ -42,7 +42,7 @@ class WorkoutAdapter(
                 textViewWorkoutDate.text = dateFormat.format(workout.date)
 
                 // Тип тренировки
-                textViewWorkoutType.text = getWorkoutTypeDisplayName(workout.type)
+                textViewWorkoutType.text = workout.type.displayName(context)
 
                 // Дистанция
                 textViewDistance.text = String.format("%.1f %s", workout.distance, context.getString(R.string.unit_km))
@@ -72,17 +72,6 @@ class WorkoutAdapter(
                 root.setOnClickListener {
                     onItemClick(workout)
                 }
-            }
-        }
-
-        private fun getWorkoutTypeDisplayName(type: WorkoutType): String {
-            return when (type) {
-                WorkoutType.EASY_RUN -> context.getString(R.string.workout_type_easy_run)
-                WorkoutType.TEMPO_RUN -> context.getString(R.string.workout_type_tempo_run)
-                WorkoutType.INTERVAL_TRAINING -> context.getString(R.string.workout_type_interval_training)
-                WorkoutType.LONG_RUN -> context.getString(R.string.workout_type_long_run)
-                WorkoutType.RECOVERY_RUN -> context.getString(R.string.workout_type_recovery_run)
-                WorkoutType.RACE -> context.getString(R.string.workout_type_competition)
             }
         }
 

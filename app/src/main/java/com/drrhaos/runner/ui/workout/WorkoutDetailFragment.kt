@@ -13,6 +13,7 @@ import androidx.navigation.fragment.findNavController
 import com.drrhaos.runner.R
 import com.drrhaos.runner.data.WorkoutDatabase
 import com.drrhaos.runner.data.WorkoutType
+import com.drrhaos.runner.data.displayName
 import com.drrhaos.runner.databinding.FragmentWorkoutDetailBinding
 import com.drrhaos.runner.util.GpsFilter
 import com.drrhaos.runner.util.WorkoutDataCleaner
@@ -409,7 +410,7 @@ class WorkoutDetailFragment : Fragment() {
             textViewDetailTime.text = timeFormat.format(workout.date)
 
             // Тип тренировки
-            textViewDetailType.text = getWorkoutTypeDisplayName(workout.type)
+            textViewDetailType.text = workout.type.displayName(requireContext())
 
             // Дистанция - используем данные из workout (уже могут быть очищены)
             textViewDetailDistance.text = com.drrhaos.runner.util.FormatUtils.formatDistance(workout.distance, requireContext())
@@ -501,17 +502,6 @@ class WorkoutDetailFragment : Fragment() {
             android.util.Log.w("WorkoutDetail", "No track data available for workout ${workout.id}")
             // Показываем пользователю, что маршрут недоступен
             android.widget.Toast.makeText(context, getString(R.string.route_not_saved), android.widget.Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun getWorkoutTypeDisplayName(type: WorkoutType): String {
-        return when (type) {
-            WorkoutType.EASY_RUN -> getString(R.string.workout_type_easy_run)
-            WorkoutType.TEMPO_RUN -> getString(R.string.workout_type_tempo_run)
-            WorkoutType.INTERVAL_TRAINING -> getString(R.string.workout_type_interval_training)
-            WorkoutType.LONG_RUN -> getString(R.string.workout_type_long_run)
-            WorkoutType.RECOVERY_RUN -> getString(R.string.workout_type_recovery_run)
-            WorkoutType.RACE -> getString(R.string.workout_type_competition)
         }
     }
 

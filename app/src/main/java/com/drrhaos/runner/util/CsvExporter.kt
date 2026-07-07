@@ -4,6 +4,7 @@ import android.content.Context
 import com.drrhaos.runner.R
 import com.drrhaos.runner.data.Workout
 import com.drrhaos.runner.data.WorkoutType
+import com.drrhaos.runner.data.displayName
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -25,7 +26,7 @@ object CsvExporter {
         // Данные тренировок
         workouts.forEach { workout ->
             val date = dateFormat.format(workout.date)
-            val type = getWorkoutTypeName(workout.type, context)
+            val type = workout.type.displayName(context)
             val distance = String.format(Locale.US, "%.2f", workout.distance)
             val durationMinutes = workout.duration / 60000.0
             val duration = String.format(Locale.US, "%.2f", durationMinutes)
@@ -80,23 +81,12 @@ object CsvExporter {
             
             workoutsByType.forEach { (type, count) ->
                 val distance = distanceByType[type] ?: 0f
-                val typeName = getWorkoutTypeName(type, context)
+                val typeName = type.displayName(context)
                 builder.append("$typeName,$count,${String.format(Locale.US, "%.2f", distance)}\n")
             }
         }
         
         return builder.toString()
-    }
-    
-    private fun getWorkoutTypeName(type: WorkoutType, context: Context): String {
-        return when (type) {
-            WorkoutType.EASY_RUN -> context.getString(R.string.workout_type_easy_run)
-            WorkoutType.TEMPO_RUN -> context.getString(R.string.workout_type_tempo_run)
-            WorkoutType.INTERVAL_TRAINING -> context.getString(R.string.workout_type_interval_training)
-            WorkoutType.LONG_RUN -> context.getString(R.string.workout_type_long_run)
-            WorkoutType.RECOVERY_RUN -> context.getString(R.string.workout_type_recovery_run)
-            WorkoutType.RACE -> context.getString(R.string.workout_type_competition)
-        }
     }
     
     private fun escapeCsv(text: String): String {

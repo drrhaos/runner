@@ -1,6 +1,5 @@
 package com.drrhaos.runner.data
 
-import androidx.lifecycle.LiveData
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
@@ -11,9 +10,6 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM workouts WHERE id = :id")
     fun getWorkoutById(id: Long): Flow<Workout?>
-
-    @Query("SELECT * FROM workouts WHERE date BETWEEN :startDate AND :endDate ORDER BY date DESC")
-    fun getWorkoutsByDateRange(startDate: Long, endDate: Long): Flow<List<Workout>>
 
     @Insert
     suspend fun insertWorkout(workout: Workout): Long
