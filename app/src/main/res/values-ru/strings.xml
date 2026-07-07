@@ -130,6 +130,10 @@
     <string name="settings_dialog_reset_title">Сброс настроек</string>
     <string name="settings_dialog_reset_message">Вы уверены, что хотите сбросить все настройки к значениям по умолчанию?</string>
     <string name="settings_label_language">Язык</string>
+    <string name="settings_label_start_countdown">Обратный отсчёт перед стартом</string>
+    <string name="settings_dialog_start_countdown_title">Секунды обратного отсчёта перед стартом</string>
+    <string name="settings_start_countdown_changed">Секунды обратного отсчёта изменены</string>
+    <string name="workout_starting_in">Старт через %d…</string>
     <string name="settings_language_en">Английский</string>
     <string name="settings_language_ru">Русский</string>
     <string name="settings_dialog_language_title">Язык приложения</string>
