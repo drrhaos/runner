@@ -214,20 +214,13 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
             } else 0f
 
             // Средняя скорость (км/ч)
-            val avgSpeed = if (currentSession.currentTime > 0 && newDistance > 0) {
-                val activeTimeHours = currentSession.currentTime / (1000f * 3600f) // часы активного времени
-                if (activeTimeHours > 0) newDistance / activeTimeHours else 0f
-            } else 0f
+            val avgSpeed = com.drrhaos.runner.util.ChartCalculations.averageSpeedKmh(
+                newDistance,
+                currentSession.currentTime
+            )
 
-            // Текущий темп (минуты на километр)
-            val currentPace = if (currentSpeed > 0) {
-                60f / currentSpeed // минуты на километр
-            } else 0f
-
-            // Средний темп (минуты на километр)
-            val avgPace = if (avgSpeed > 0) {
-                60f / avgSpeed // минуты на километр
-            } else 0f
+            val currentPace = com.drrhaos.runner.util.ChartCalculations.paceFromSpeedKmh(currentSpeed)
+            val avgPace = com.drrhaos.runner.util.ChartCalculations.paceFromSpeedKmh(avgSpeed)
 
             // Вычисляем калории с учетом веса пользователя
             val userPrefs = com.drrhaos.runner.util.UserPreferences(context)
@@ -508,7 +501,7 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
             return null
         }
 
-        val totalDistanceMeters = calculateTotalDistanceMeters(sanitizedPoints)
+        val totalDistanceMeters = com.drrhaos.runner.util.ChartCalculations.totalDistanceMeters(sanitizedPoints)
         if (totalDistanceMeters <= 0f) {
             android.util.Log.w("WorkoutTracking", "Total distance after sanitization is zero")
             return null
@@ -516,13 +509,12 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
 
         val totalDistanceKm = totalDistanceMeters / 1000f
         val durationMs = session.currentTime
-        val avgSpeedMps = if (durationMs > 0) {
-            totalDistanceMeters / (durationMs / 1000f)
-        } else 0f
-        val avgPace = if (totalDistanceKm > 0f) {
-            (durationMs / 60000f) / totalDistanceKm
-        } else 0f
-        val maxSpeedMps = sanitizedPoints.maxOfOrNull { it.speed ?: 0f } ?: 0f
+        val avgSpeedMps = com.drrhaos.runner.util.ChartCalculations.averageSpeedMs(
+            totalDistanceMeters,
+            durationMs
+        )
+        val avgPace = com.drrhaos.runner.util.ChartCalculations.overallAveragePace(totalDistanceKm, durationMs)
+        val maxSpeedMps = com.drrhaos.runner.util.ChartCalculations.maxDerivedSpeedMs(sanitizedPoints)
 
         val userPrefs = com.drrhaos.runner.util.UserPreferences(context)
         val calories = com.drrhaos.runner.util.FormatUtils.calculateCalories(totalDistanceKm, userPrefs.userWeight)
@@ -613,22 +605,6 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
         }
 
         return result
-    }
-
-    private fun calculateTotalDistanceMeters(points: List<TrackPoint>): Float {
-        if (points.size < 2) return 0f
-        var distance = 0f
-        var previousLocation: Location? = null
-
-        for (point in points) {
-            val location = trackPointToLocation(point)
-            previousLocation?.let { prev ->
-                distance += location.distanceTo(prev)
-            }
-            previousLocation = location
-        }
-
-        return distance
     }
 
     private fun trackPointToLocation(point: TrackPoint): Location {

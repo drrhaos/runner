@@ -659,10 +659,7 @@ class WorkoutDetailFragment : Fragment() {
                     ?: return
                 val selectedPoint = points[seriesPoint.trackPointIndex]
 
-                val paceMinutes = seriesPoint.paceMinPerUnit.toInt()
-                val paceSeconds = ((seriesPoint.paceMinPerUnit - paceMinutes) * 60)
-                    .toInt()
-                    .coerceIn(0, 59)
+                val (paceMinutes, paceSeconds) = ChartCalculations.paceToMinutesSeconds(seriesPoint.paceMinPerUnit)
                 val paceText = if (isMetric) {
                     getString(R.string.chart_pace_value_km, paceMinutes, paceSeconds)
                 } else {
