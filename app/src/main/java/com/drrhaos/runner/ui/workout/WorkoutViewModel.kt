@@ -27,6 +27,12 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     private val _averageDuration = MutableStateFlow(0L)
     val averageDuration: StateFlow<Long> = _averageDuration.asStateFlow()
 
+    private val _totalDuration = MutableStateFlow(0L)
+    val totalDuration: StateFlow<Long> = _totalDuration.asStateFlow()
+
+    private val _averagePace = MutableStateFlow(0f)
+    val averagePace: StateFlow<Float> = _averagePace.asStateFlow()
+
     init {
         loadStatistics()
     }
@@ -75,9 +81,16 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     private fun loadStatistics() {
         viewModelScope.launch {
             try {
-                _totalDistance.value = workoutDao.getTotalDistance() ?: 0f
+                val totalDistance = workoutDao.getTotalDistance() ?: 0f
+                val totalDuration = workoutDao.getTotalDuration() ?: 0L
+                _totalDistance.value = totalDistance
                 _totalWorkouts.value = workoutDao.getTotalWorkouts()
                 _averageDuration.value = workoutDao.getAverageDuration() ?: 0L
+                _totalDuration.value = totalDuration
+                _averagePace.value = com.drrhaos.runner.util.ChartCalculations.overallAveragePace(
+                    totalDistance,
+                    totalDuration
+                )
             } catch (e: Exception) {
                 // Handle error
             }
@@ -85,9 +98,7 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     }
 
     fun calculatePace(distance: Float, durationMs: Long): Float {
-        if (distance <= 0 || durationMs <= 0) return 0f
-        val durationMinutes = durationMs / 60000f
-        return durationMinutes / distance
+        return com.drrhaos.runner.util.ChartCalculations.overallAveragePace(distance, durationMs)
     }
 
     fun formatDuration(durationMs: Long): String {
