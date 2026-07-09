@@ -253,16 +253,12 @@ class WorkoutTrackingFragment : Fragment() {
     ) { permissions ->
         when {
             permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {
-                initializeMap()
-                viewModel.initializeLocationClient(requireContext())
-                requestNotificationPermission()
+                onLocationPermissionReady()
                 requestBackgroundLocationPermission()
                 requestActivityRecognitionPermission()
             }
             permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
-                initializeMap()
-                viewModel.initializeLocationClient(requireContext())
-                requestNotificationPermission()
+                onLocationPermissionReady()
                 requestBackgroundLocationPermission()
                 requestActivityRecognitionPermission()
             }
@@ -271,8 +267,11 @@ class WorkoutTrackingFragment : Fragment() {
                 Toast.makeText(context, getString(R.string.permission_activity_granted), Toast.LENGTH_SHORT).show()
             }
             else -> {
-                Toast.makeText(context, getString(R.string.permission_location_needed), Toast.LENGTH_LONG).show()
-                findNavController().navigateUp()
+                Toast.makeText(
+                    context,
+                    getString(R.string.permission_location_denied_can_train),
+                    Toast.LENGTH_LONG
+                ).show()
             }
         }
     }
@@ -365,7 +364,7 @@ class WorkoutTrackingFragment : Fragment() {
                     viewModel.stopWorkout()
                     
                     // Если есть данные для сохранения, сохраняем и переходим к деталям
-                    if (session.distance > 0 && session.currentTime > 0) {
+                    if (session.currentTime > 0) {
                         navigateToWorkoutDetails()
                     } else {
                         // Если данных нет, просто возвращаемся назад
@@ -1144,9 +1143,13 @@ class WorkoutTrackingFragment : Fragment() {
                 requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED -> {
-                initializeMap()
-                viewModel.initializeLocationClient(requireContext())
-                requestNotificationPermission()
+                onLocationPermissionReady()
+            }
+            ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED -> {
+                onLocationPermissionReady()
             }
             else -> {
                 locationPermissionRequest.launch(
@@ -1157,6 +1160,12 @@ class WorkoutTrackingFragment : Fragment() {
                 )
             }
         }
+    }
+
+    private fun onLocationPermissionReady() {
+        initializeMap()
+        viewModel.initializeLocationClient(requireContext())
+        requestNotificationPermission()
     }
 
     private fun requestNotificationPermission() {
@@ -1233,7 +1242,7 @@ class WorkoutTrackingFragment : Fragment() {
     private fun saveWorkoutAndNavigateBack() {
         val session = viewModel.workoutSession.value
         
-        if (session.distance > 0 && session.currentTime > 0) {
+        if (session.currentTime > 0) {
             // Сохраняем тренировку в базу данных
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
@@ -1266,7 +1275,7 @@ class WorkoutTrackingFragment : Fragment() {
     private fun navigateToWorkoutDetails() {
         val session = viewModel.workoutSession.value
         
-        if (session.distance > 0 && session.currentTime > 0) {
+        if (session.currentTime > 0) {
             binding.textViewGpsAccuracy.visibility = View.GONE
             binding.buttonStop.isEnabled = false
             
