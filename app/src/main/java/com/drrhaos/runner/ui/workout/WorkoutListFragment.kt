@@ -136,20 +136,13 @@ class WorkoutListFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                viewModel.averageDuration.collect { duration ->
+                viewModel.averagePace.collect { avgPace ->
                     if (isAdded && !isDetached) {
-                        val avgPace = if (duration > 0 && viewModel.totalDistance.value > 0) {
-                            val durationMinutes = duration / 60000f
-                            val avgDistance = viewModel.totalDistance.value
-                            durationMinutes / avgDistance
-                        } else {
-                            0f
-                        }
                         binding.textViewAvgPace.text = viewModel.formatPace(avgPace)
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
-                android.util.Log.d("WorkoutList", "Average duration loading cancelled")
+                android.util.Log.d("WorkoutList", "Average pace loading cancelled")
             }
         }
     }

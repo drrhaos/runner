@@ -182,7 +182,13 @@
     <string name="delete_workout_title">Удалить тренировку</string>
     <string name="delete_workout_message">Вы уверены, что хотите удалить эту тренировку? Это действие нельзя отменить.</string>
     <string name="chart_pace_label">Темп (мин/км)</string>
+    <string name="chart_pace_label_miles">Темп (мин/милю)</string>
     <string name="chart_speed_label">Скорость (км/ч)</string>
+    <string name="chart_speed_label_miles">Скорость (миль/ч)</string>
+    <string name="chart_pace_value_km">%1$d:%2$02d мин/км</string>
+    <string name="chart_pace_value_miles">%1$d:%2$02d мин/милю</string>
+    <string name="chart_speed_value_kmh">%1$.1f км/ч</string>
+    <string name="chart_speed_value_mph">%1$.1f миль/ч</string>
     <string name="chart_time_format">%d мин</string>
     <string name="chart_elevation_title">Высота</string>
     <string name="chart_elevation_x_format">%.1f км</string>

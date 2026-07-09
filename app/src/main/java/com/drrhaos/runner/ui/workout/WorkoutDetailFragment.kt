@@ -15,6 +15,7 @@ import com.drrhaos.runner.data.WorkoutDatabase
 import com.drrhaos.runner.data.WorkoutType
 import com.drrhaos.runner.data.displayName
 import com.drrhaos.runner.databinding.FragmentWorkoutDetailBinding
+import com.drrhaos.runner.util.ChartCalculations
 import com.drrhaos.runner.util.GpsFilter
 import com.drrhaos.runner.util.WorkoutDataCleaner
 import com.google.gson.Gson
@@ -35,12 +36,8 @@ import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.components.YAxis
 import com.github.mikephil.charting.data.*
 import com.github.mikephil.charting.formatter.ValueFormatter
-import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
-import com.github.mikephil.charting.interfaces.datasets.IBarDataSet
 import com.github.mikephil.charting.highlight.Highlight
 import com.github.mikephil.charting.utils.MPPointF
-import android.location.Location
-import androidx.core.content.ContextCompat
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
@@ -559,8 +556,10 @@ class WorkoutDetailFragment : Fragment() {
     private fun updatePaceSpeedHeartChart(trackData: com.drrhaos.runner.data.TrackData) {
         val chart = binding.chartPaceSpeedHeart
         val points = trackData.points
+        val isMetric = userPreferences?.isMetricSystem() ?: true
 
-        if (points.size < 2) {
+        val series = ChartCalculations.buildPaceSpeedSeries(points, isMetric)
+        if (series.isEmpty()) {
             chart.visibility = View.GONE
             return
         }
@@ -573,48 +572,26 @@ class WorkoutDetailFragment : Fragment() {
         chart.setPinchZoom(true)
         chart.legend.isEnabled = true
 
-        // Настройка цветов для темной темы
         val isDarkTheme = isDarkTheme()
         val textColor = if (isDarkTheme) Color.WHITE else Color.BLACK
         val gridColor = if (isDarkTheme) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
 
-        val entriesPace = mutableListOf<Entry>()
-        val entriesSpeed = mutableListOf<Entry>()
+        val entriesPace = series.map { Entry(it.timeMinutes, it.paceMinPerUnit) }
+        val entriesSpeed = series.map { Entry(it.timeMinutes, it.speedDisplay) }
 
-        var cumulativeDistance = 0f
-        val startTime = points.firstOrNull()?.timestamp ?: 0L
-
-        for (i in 0 until points.size) {
-            val point = points[i]
-            
-            // Вычисляем накопленную дистанцию
-            if (i > 0) {
-                val prevPoint = points[i - 1]
-                val location1 = Location("").apply {
-                    latitude = prevPoint.latitude
-                    longitude = prevPoint.longitude
-                }
-                val location2 = Location("").apply {
-                    latitude = point.latitude
-                    longitude = point.longitude
-                }
-                cumulativeDistance += location1.distanceTo(location2) / 1000f // в км
-            }
-
-            // Темп (минуты на км) - вычисляем из скорости
-            val speedMs = point.speed ?: 0f
-            val speedKmh = speedMs * 3.6f
-            val pace = if (speedKmh > 0) 60f / speedKmh else 0f
-
-            // Время относительно начала (в минутах)
-            val timeMinutes = if (startTime > 0) (point.timestamp - startTime) / 60000f else 0f
-
-            entriesPace.add(Entry(timeMinutes, pace))
-            entriesSpeed.add(Entry(timeMinutes, speedKmh))
-            // Пульс пока не доступен в данных, оставляем пустым
+        val paceLabel = if (isMetric) {
+            getString(R.string.chart_pace_label)
+        } else {
+            getString(R.string.chart_pace_label_miles)
+        }
+        val speedLabel = if (isMetric) {
+            getString(R.string.chart_speed_label)
+        } else {
+            getString(R.string.chart_speed_label_miles)
         }
 
-        val dataSetPace = LineDataSet(entriesPace, getString(R.string.chart_pace_label)).apply {
+        // Темп — левая ось (мин/км или мин/милю), скорость — правая (км/ч или миль/ч)
+        val dataSetPace = LineDataSet(entriesPace, paceLabel).apply {
             color = Color.parseColor("#FF9800")
             lineWidth = 2f
             setCircleColor(Color.parseColor("#FF9800"))
@@ -623,19 +600,17 @@ class WorkoutDetailFragment : Fragment() {
             axisDependency = YAxis.AxisDependency.LEFT
         }
 
-        val dataSetSpeed = LineDataSet(entriesSpeed, getString(R.string.chart_speed_label)).apply {
+        val dataSetSpeed = LineDataSet(entriesSpeed, speedLabel).apply {
             color = Color.parseColor("#2196F3")
             lineWidth = 2f
             setCircleColor(Color.parseColor("#2196F3"))
             setDrawCircles(false)
             setDrawValues(false)
-            axisDependency = YAxis.AxisDependency.LEFT
+            axisDependency = YAxis.AxisDependency.RIGHT
         }
 
-        val lineData = LineData(dataSetPace, dataSetSpeed)
-        chart.data = lineData
+        chart.data = LineData(dataSetPace, dataSetSpeed)
 
-        // Настройка осей
         val xAxis = chart.xAxis
         xAxis.position = XAxis.XAxisPosition.BOTTOM
         xAxis.setDrawGridLines(true)
@@ -645,83 +620,83 @@ class WorkoutDetailFragment : Fragment() {
         xAxis.granularity = 1f
         xAxis.valueFormatter = object : ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
-                val minutes = value.toInt()
-                return getString(R.string.chart_time_format, minutes)
+                return getString(R.string.chart_time_format, value.toInt())
             }
         }
 
         val leftAxis = chart.axisLeft
         leftAxis.setDrawGridLines(true)
         leftAxis.gridColor = gridColor
-        leftAxis.textColor = textColor
+        leftAxis.textColor = Color.parseColor("#FF9800")
         leftAxis.axisLineColor = textColor
         leftAxis.axisMinimum = 0f
 
-        chart.axisRight.isEnabled = false
+        val rightAxis = chart.axisRight
+        rightAxis.isEnabled = true
+        rightAxis.setDrawGridLines(false)
+        rightAxis.textColor = Color.parseColor("#2196F3")
+        rightAxis.axisLineColor = textColor
+        rightAxis.axisMinimum = 0f
+
         chart.legend.textColor = textColor
-        
-        // Отключаем маркер, так как используем TextView
         chart.setDrawMarkers(false)
-        
-        // Настраиваем фон TextView в зависимости от темы
+
         binding.textViewChartPaceSpeedHeartValues.setBackgroundColor(
             if (isDarkTheme) Color.parseColor("#E0FFFFFF") else Color.parseColor("#E0000000")
         )
         binding.textViewChartPaceSpeedHeartValues.setTextColor(
             if (isDarkTheme) Color.BLACK else Color.WHITE
         )
-        
-        // Добавляем слушатель для отображения значений в TextView и точки на карте
+
         chart.setOnChartValueSelectedListener(object : com.github.mikephil.charting.listener.OnChartValueSelectedListener {
             override fun onValueSelected(e: Entry?, h: Highlight?) {
-                if (e != null) {
-                    val startTime = points.firstOrNull()?.timestamp ?: 0L
-                    val selectedTime = startTime + (e.x * 60000).toLong()
-                    val selectedPoint = points.minByOrNull { 
-                        kotlin.math.abs(it.timestamp - selectedTime) 
-                    }
-                    
-                    if (selectedPoint != null) {
-                        // Получаем скорость в м/с
-                        val speedMs = selectedPoint.speed ?: 0f
-                        // Вычисляем темп (минуты на км)
-                        val speedKmh = speedMs * 3.6f
-                        val pace = if (speedKmh > 0) 60f / speedKmh else 0f
-                        
-                        // Форматируем время
-                        val timeMinutes = e.x.toInt()
+                if (e == null) return
 
-                        // Форматируем темп в мин:сек
-                        val paceMinutes = pace.toInt()
-                        val paceSeconds = ((pace - paceMinutes) * 60).toInt().coerceIn(0, 59)
+                val pointIndex = ChartCalculations.findNearestPointIndexByTime(points, e.x)
+                if (pointIndex < 0) return
 
-                        // Обновляем TextView
-                        val valuesText = getString(R.string.chart_time_format, timeMinutes) + "\n" +
-                            "${getString(R.string.workout_details_speed)}: %.0f м/сек\n".format(speedMs) +
-                            "${getString(R.string.workout_details_pace)}: %d:%02d мин/км".format(paceMinutes, paceSeconds)
-                        binding.textViewChartPaceSpeedHeartValues.text = valuesText
-                        binding.textViewChartPaceSpeedHeartValues.visibility = View.VISIBLE
-                        
-                        // Показываем точку на карте
-                        showPositionOnMap(selectedPoint)
-                    }
+                val seriesPoint = series.minByOrNull { kotlin.math.abs(it.timeMinutes - e.x) }
+                    ?: return
+                val selectedPoint = points[seriesPoint.trackPointIndex]
+
+                val paceMinutes = seriesPoint.paceMinPerUnit.toInt()
+                val paceSeconds = ((seriesPoint.paceMinPerUnit - paceMinutes) * 60)
+                    .toInt()
+                    .coerceIn(0, 59)
+                val paceText = if (isMetric) {
+                    getString(R.string.chart_pace_value_km, paceMinutes, paceSeconds)
+                } else {
+                    getString(R.string.chart_pace_value_miles, paceMinutes, paceSeconds)
                 }
+                val speedText = if (isMetric) {
+                    getString(R.string.chart_speed_value_kmh, seriesPoint.speedDisplay)
+                } else {
+                    getString(R.string.chart_speed_value_mph, seriesPoint.speedDisplay)
+                }
+
+                binding.textViewChartPaceSpeedHeartValues.text =
+                    getString(R.string.chart_time_format, e.x.toInt()) + "\n" +
+                        "${getString(R.string.workout_details_speed)}: $speedText\n" +
+                        "${getString(R.string.workout_details_pace)}: $paceText"
+                binding.textViewChartPaceSpeedHeartValues.visibility = View.VISIBLE
+                showPositionOnMap(selectedPoint)
             }
-            
+
             override fun onNothingSelected() {
                 binding.textViewChartPaceSpeedHeartValues.visibility = View.GONE
                 hidePositionMarker()
             }
         })
-        
+
         chart.invalidate()
     }
 
     private fun updateElevationChart(trackData: com.drrhaos.runner.data.TrackData) {
         val chart = binding.chartElevation
         val points = trackData.points
+        val series = ChartCalculations.buildElevationSeries(points)
 
-        if (points.isEmpty() || points.all { it.altitude == null }) {
+        if (series.isEmpty()) {
             chart.visibility = View.GONE
             return
         }
@@ -733,34 +708,12 @@ class WorkoutDetailFragment : Fragment() {
         chart.setScaleEnabled(true)
         chart.setPinchZoom(true)
         chart.legend.isEnabled = false
-        
-        // Настройка цветов для темной темы
+
         val isDarkTheme = isDarkTheme()
         val textColor = if (isDarkTheme) Color.WHITE else Color.BLACK
         val gridColor = if (isDarkTheme) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
 
-        val entries = mutableListOf<Entry>()
-        var cumulativeDistance = 0f
-
-        for (i in 0 until points.size) {
-            val point = points[i]
-            
-            if (i > 0) {
-                val prevPoint = points[i - 1]
-                val location1 = Location("").apply {
-                    latitude = prevPoint.latitude
-                    longitude = prevPoint.longitude
-                }
-                val location2 = Location("").apply {
-                    latitude = point.latitude
-                    longitude = point.longitude
-                }
-                cumulativeDistance += location1.distanceTo(location2) / 1000f // в км
-            }
-
-            val altitude = point.altitude ?: 0.0
-            entries.add(Entry(cumulativeDistance, altitude.toFloat()))
-        }
+        val entries = series.map { Entry(it.distanceKm, it.altitudeMeters) }
 
         val dataSet = LineDataSet(entries, getString(R.string.chart_elevation_title)).apply {
             color = Color.parseColor("#4CAF50")
@@ -773,8 +726,7 @@ class WorkoutDetailFragment : Fragment() {
             fillAlpha = 50
         }
 
-        val lineData = LineData(dataSet)
-        chart.data = lineData
+        chart.data = LineData(dataSet)
 
         val xAxis = chart.xAxis
         xAxis.position = XAxis.XAxisPosition.BOTTOM
@@ -801,83 +753,46 @@ class WorkoutDetailFragment : Fragment() {
         }
 
         chart.axisRight.isEnabled = false
-        
-        // Отключаем маркер, так как используем TextView
         chart.setDrawMarkers(false)
-        
-        // Настраиваем фон TextView в зависимости от темы
+
         binding.textViewChartElevationValues.setBackgroundColor(
             if (isDarkTheme) Color.parseColor("#E0FFFFFF") else Color.parseColor("#E0000000")
         )
         binding.textViewChartElevationValues.setTextColor(
             if (isDarkTheme) Color.BLACK else Color.WHITE
         )
-        
-        // Добавляем слушатель для отображения значений в TextView и точки на карте
+
         chart.setOnChartValueSelectedListener(object : com.github.mikephil.charting.listener.OnChartValueSelectedListener {
             override fun onValueSelected(e: Entry?, h: Highlight?) {
-                if (e != null && currentTrackData != null) {
-                    val trackPoints = currentTrackData!!.points
-                    val selectedDistance = e.x // дистанция в км
-                    val selectedElevation = e.y // высота в метрах
-                    
-                    // Обновляем TextView
-                    val valuesText = getString(R.string.chart_elevation_x_format, selectedDistance) + "\n" + 
-                        getString(R.string.chart_elevation_y_format, selectedElevation.toInt())
-                    binding.textViewChartElevationValues.text = valuesText
-                    binding.textViewChartElevationValues.visibility = View.VISIBLE
-                    
-                    // Находим точку по накопленной дистанции
-                    var cumulativeDistance = 0f
-                    var selectedPoint: com.drrhaos.runner.data.TrackPoint? = null
-                    
-                    for (i in 0 until trackPoints.size) {
-                        val point = trackPoints[i]
-                        
-                        if (i > 0) {
-                            val prevPoint = trackPoints[i - 1]
-                            val location1 = Location("").apply {
-                                latitude = prevPoint.latitude
-                                longitude = prevPoint.longitude
-                            }
-                            val location2 = Location("").apply {
-                                latitude = point.latitude
-                                longitude = point.longitude
-                            }
-                            cumulativeDistance += location1.distanceTo(location2) / 1000f
-                        }
-                        
-                        if (cumulativeDistance >= selectedDistance) {
-                            selectedPoint = point
-                            break
-                        }
-                    }
-                    
-                    // Если не нашли, берем последнюю точку
-                    if (selectedPoint == null && trackPoints.isNotEmpty()) {
-                        selectedPoint = trackPoints.last()
-                    }
-                    
-                    selectedPoint?.let { point ->
-                        showPositionOnMap(point)
-                    }
+                if (e == null) return
+
+                binding.textViewChartElevationValues.text =
+                    getString(R.string.chart_elevation_x_format, e.x) + "\n" +
+                        getString(R.string.chart_elevation_y_format, e.y.toInt())
+                binding.textViewChartElevationValues.visibility = View.VISIBLE
+
+                val pointIndex = ChartCalculations.findPointIndexByDistance(points, e.x)
+                if (pointIndex >= 0) {
+                    showPositionOnMap(points[pointIndex])
                 }
             }
-            
+
             override fun onNothingSelected() {
                 binding.textViewChartElevationValues.visibility = View.GONE
                 hidePositionMarker()
             }
         })
-        
+
         chart.invalidate()
     }
 
     private fun updateSegmentsChart(trackData: com.drrhaos.runner.data.TrackData) {
         val chart = binding.chartSegments
         val points = trackData.points
+        val isMetric = userPreferences?.isMetricSystem() ?: true
+        val segments = ChartCalculations.buildSegments(points, isMetric)
 
-        if (points.size < 2) {
+        if (segments.isEmpty()) {
             chart.visibility = View.GONE
             return
         }
@@ -890,61 +805,21 @@ class WorkoutDetailFragment : Fragment() {
         chart.setPinchZoom(true)
         chart.legend.isEnabled = true
 
-        // Настройка цветов для темной темы
         val isDarkTheme = isDarkTheme()
         val textColor = if (isDarkTheme) Color.WHITE else Color.BLACK
         val gridColor = if (isDarkTheme) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
-
-        // Используем настройки приложения для определения единиц измерения
-        val isMetric = userPreferences?.isMetricSystem() ?: true
-        val segmentSize = if (isMetric) 1.0f else 1.60934f // 1 миля = 1.60934 км
         val unitLabel = if (isMetric) getString(R.string.unit_km) else getString(R.string.unit_mile)
-        val segments = mutableListOf<Pair<Float, Float>>() // (pace, speed)
-        var currentSegmentDistance = 0f
-        var segmentStartTime = points.firstOrNull()?.timestamp ?: 0L
-
-        for (i in 1 until points.size) {
-            val prevPoint = points[i - 1]
-            val point = points[i]
-
-            val location1 = Location("").apply {
-                latitude = prevPoint.latitude
-                longitude = prevPoint.longitude
-            }
-            val location2 = Location("").apply {
-                latitude = point.latitude
-                longitude = point.longitude
-            }
-            val segmentDistance = location1.distanceTo(location2) / 1000f // в км
-            currentSegmentDistance += segmentDistance
-
-            if (currentSegmentDistance >= segmentSize || i == points.size - 1) {
-                val segmentDuration = point.timestamp - segmentStartTime
-                val segmentDurationMinutes = segmentDuration / 60000f
-                val pace = if (currentSegmentDistance > 0) segmentDurationMinutes / currentSegmentDistance else 0f
-                var speed = if (segmentDurationMinutes > 0) currentSegmentDistance / (segmentDurationMinutes / 60f) else 0f
-                
-                // Конвертируем скорость в мили/ч, если используется имперская система
-                if (!isMetric) {
-                    speed = speed / 1.60934f // конвертация из км/ч в миль/ч
-                }
-
-                segments.add(Pair(pace, speed))
-                currentSegmentDistance = 0f
-                segmentStartTime = point.timestamp
-            }
-        }
-
-        if (segments.isEmpty()) {
-            chart.visibility = View.GONE
-            return
-        }
 
         val dataSet: BarDataSet = when (segmentsDisplayMode) {
             SegmentsDisplayMode.PACE -> {
-                val entriesPace = segments.mapIndexed { index, pair -> BarEntry(index.toFloat(), pair.first) }
-                val paceLabel = if (isMetric) getString(R.string.chart_pace_label)
-                    else "${getString(R.string.workout_details_pace)} (мин/$unitLabel)"
+                val entriesPace = segments.mapIndexed { index, segment ->
+                    BarEntry(index.toFloat(), segment.paceMinPerUnit)
+                }
+                val paceLabel = if (isMetric) {
+                    getString(R.string.chart_pace_label)
+                } else {
+                    getString(R.string.chart_pace_label_miles)
+                }
                 BarDataSet(entriesPace, paceLabel).apply {
                     color = Color.parseColor("#FF9800")
                     setDrawValues(true)
@@ -952,16 +827,20 @@ class WorkoutDetailFragment : Fragment() {
                     valueTextSize = 10f
                     valueFormatter = object : ValueFormatter() {
                         override fun getFormattedValue(value: Float): String {
-                            return String.format("%.2f", value)
+                            return ChartCalculations.formatPaceMmSs(value)
                         }
                     }
                 }
             }
             SegmentsDisplayMode.SPEED -> {
-                val entriesSpeed = segments.mapIndexed { index, pair -> BarEntry(index.toFloat(), pair.second) }
-                val speedUnit = if (isMetric) getString(R.string.unit_kmh) else getString(R.string.unit_mph)
-                val speedLabel = if (isMetric) getString(R.string.chart_speed_label)
-                    else "${getString(R.string.workout_details_speed)} ($speedUnit)"
+                val entriesSpeed = segments.mapIndexed { index, segment ->
+                    BarEntry(index.toFloat(), segment.speedDisplay)
+                }
+                val speedLabel = if (isMetric) {
+                    getString(R.string.chart_speed_label)
+                } else {
+                    getString(R.string.chart_speed_label_miles)
+                }
                 BarDataSet(entriesSpeed, speedLabel).apply {
                     color = Color.parseColor("#2196F3")
                     setDrawValues(true)
@@ -976,11 +855,9 @@ class WorkoutDetailFragment : Fragment() {
             }
         }
 
-        val barData = BarData(dataSet).apply {
-            // Увеличиваем ширину столбцов
+        chart.data = BarData(dataSet).apply {
             barWidth = 0.6f
         }
-        chart.data = barData
 
         val xAxis = chart.xAxis
         xAxis.position = XAxis.XAxisPosition.BOTTOM
@@ -1006,67 +883,31 @@ class WorkoutDetailFragment : Fragment() {
         chart.axisRight.isEnabled = false
         chart.legend.textColor = textColor
         chart.setFitBars(true)
-        
-        // Отключаем маркер, так как значения отображаются над столбцами
         chart.setDrawMarkers(false)
-        
-        // Добавляем слушатель для отображения точек на карте
+
         chart.setOnChartValueSelectedListener(object : com.github.mikephil.charting.listener.OnChartValueSelectedListener {
             override fun onValueSelected(e: Entry?, h: Highlight?) {
-                if (e != null && currentTrackData != null) {
-                    val trackPoints = currentTrackData!!.points
-                    val segmentIndex = e.x.toInt()
-                    
-                    // Вычисляем точки для каждого отрезка
-                    var currentSegmentDistance = 0f
-                    var segmentStartIndex = 0
-                    var segmentCount = 0
-                    
-                    for (i in 1 until trackPoints.size) {
-                        val prevPoint = trackPoints[i - 1]
-                        val point = trackPoints[i]
-                        
-                        val location1 = Location("").apply {
-                            latitude = prevPoint.latitude
-                            longitude = prevPoint.longitude
-                        }
-                        val location2 = Location("").apply {
-                            latitude = point.latitude
-                            longitude = point.longitude
-                        }
-                        val segmentDistance = location1.distanceTo(location2) / 1000f
-                        currentSegmentDistance += segmentDistance
-                        
-                        if (currentSegmentDistance >= segmentSize || i == trackPoints.size - 1) {
-                            if (segmentCount == segmentIndex) {
-                                // Находим начало и конец отрезка
-                                val startPoint = trackPoints[segmentStartIndex]
-                                val endPoint = point
-                                
-                                // Показываем обе точки на карте
-                                showPositionOnMap(startPoint)
-                                showPositionOnMapEnd(endPoint)
-                                
-                                // Центрируем карту на середине отрезка
-                                val midLat = (startPoint.latitude + endPoint.latitude) / 2.0
-                                val midLon = (startPoint.longitude + endPoint.longitude) / 2.0
-                                val midPoint = GeoPoint(midLat, midLon)
-                                mapView?.controller?.animateTo(midPoint)
-                                break
-                            }
-                            segmentCount++
-                            segmentStartIndex = i
-                            currentSegmentDistance = 0f
-                        }
-                    }
-                }
+                if (e == null) return
+                val segmentIndex = e.x.toInt()
+                if (segmentIndex !in segments.indices) return
+
+                val segment = segments[segmentIndex]
+                val startPoint = points[segment.startIndex]
+                val endPoint = points[segment.endIndex]
+
+                showPositionOnMap(startPoint)
+                showPositionOnMapEnd(endPoint)
+
+                val midLat = (startPoint.latitude + endPoint.latitude) / 2.0
+                val midLon = (startPoint.longitude + endPoint.longitude) / 2.0
+                mapView?.controller?.animateTo(GeoPoint(midLat, midLon))
             }
-            
+
             override fun onNothingSelected() {
                 hidePositionMarkers()
             }
         })
-        
+
         chart.invalidate()
     }
 

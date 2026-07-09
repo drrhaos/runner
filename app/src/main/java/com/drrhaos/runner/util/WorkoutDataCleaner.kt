@@ -103,10 +103,9 @@ object WorkoutDataCleaner {
         val endTime = sortedPoints.last().timestamp
         val totalDuration = endTime - startTime
         
-        // Вычисляем среднюю и максимальную скорость
-        val speeds = sortedPoints.mapNotNull { it.speed }.filter { it > 0 }
-        val avgSpeed = if (speeds.isNotEmpty()) speeds.average().toFloat() else 0f
-        val maxSpeed = if (speeds.isNotEmpty()) speeds.maxOrNull() ?: 0f else 0f
+        // Средняя скорость = дистанция / время (не среднее арифметическое GPS speed)
+        val avgSpeed = ChartCalculations.averageSpeedMs(totalDistance, totalDuration)
+        val maxSpeed = sortedPoints.mapNotNull { it.speed }.filter { it > 0 }.maxOrNull() ?: 0f
         
         Log.d("WorkoutDataCleaner", "Recalculated stats: distance=${totalDistance}m, duration=${totalDuration}ms, avgSpeed=${avgSpeed}m/s")
         
