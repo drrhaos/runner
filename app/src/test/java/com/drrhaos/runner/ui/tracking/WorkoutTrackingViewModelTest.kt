@@ -85,6 +85,40 @@ class WorkoutTrackingViewModelTest {
     }
 
     @Test
+    fun `viewModel should start workout without location permission`() {
+        ShadowApplication.getInstance().denyPermissions(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+
+        viewModel.startWorkout(WorkoutType.EASY_RUN)
+
+        assertEquals(WorkoutState.RUNNING, viewModel.workoutState.value)
+        assertEquals(GpsStatus.DENIED, viewModel.workoutSession.value.gpsStatus)
+        assertTrue(viewModel.workoutSession.value.isTracking)
+    }
+
+    @Test
+    fun `viewModel should save duration-only workout without gps track`() = runTest {
+        val field = WorkoutTrackingViewModel::class.java.getDeclaredField("_workoutSession")
+        field.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val flow = field.get(viewModel) as kotlinx.coroutines.flow.MutableStateFlow<WorkoutSession>
+        flow.value = WorkoutSession(
+            startTime = System.currentTimeMillis() - 120_000L,
+            currentTime = 120_000L
+        )
+
+        val workoutId = viewModel.saveWorkoutToDatabase(WorkoutType.EASY_RUN)
+        assertNotNull(workoutId)
+
+        val saved = workoutDao.getAllWorkouts().first().first()
+        assertEquals(120_000L, saved.duration)
+        assertEquals(0f, saved.distance)
+        assertNull(saved.trackData)
+    }
+
+    @Test
     fun `viewModel should handle workout state transitions`() = runTest {
         viewModel.startWorkout(WorkoutType.EASY_RUN)
         assertEquals(WorkoutState.RUNNING, viewModel.workoutState.value)

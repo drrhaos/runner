@@ -249,6 +249,7 @@
 
     <string name="permission_activity_granted">Разрешение на физическую активность предоставлено</string>
     <string name="permission_location_needed">Разрешение на местоположение необходимо для трекинга</string>
+    <string name="permission_location_denied_can_train">Нет доступа к GPS. Тренировку можно начать, маршрут записываться не будет.</string>
     <string name="permission_notification_needed">Разрешение на уведомления необходимо для фонового трекинга</string>
     <string name="battery_optimization_hint">Для стабильной работы приложения отключите оптимизацию батареи в настройках</string>
     <string name="workout_too_short">Тренировка слишком короткая для сохранения</string>
