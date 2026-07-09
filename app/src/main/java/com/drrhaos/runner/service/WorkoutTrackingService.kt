@@ -24,6 +24,7 @@ import com.drrhaos.runner.data.TrackPoint
 import com.drrhaos.runner.data.WorkoutType
 import com.drrhaos.runner.data.maxReasonableGpsSpeedMps
 import com.drrhaos.runner.ui.tracking.WorkoutSession
+import com.drrhaos.runner.util.ChartCalculations
 import com.drrhaos.runner.util.GpsFilter
 import com.drrhaos.runner.util.GpsConfig
 import com.drrhaos.runner.util.FormatUtils
@@ -420,15 +421,11 @@ class WorkoutTrackingService : Service() {
     }
 
     private fun computeAverageSpeedKmH(distanceKm: Float, activeTimeMs: Long): Float {
-        if (distanceKm <= 0f || activeTimeMs <= 0L) return 0f
-        val hours = activeTimeMs / (1000f * 3600f)
-        if (hours <= 0f) return 0f
-        return distanceKm / hours
+        return ChartCalculations.averageSpeedKmh(distanceKm, activeTimeMs)
     }
 
     private fun computePaceMinPerKm(speedKmH: Float): Float {
-        if (speedKmH <= 0f) return 0f
-        return 60f / speedKmH
+        return ChartCalculations.paceFromSpeedKmh(speedKmH)
     }
 
     fun startWorkout() {

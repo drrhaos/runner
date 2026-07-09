@@ -49,8 +49,63 @@ object ChartCalculations {
      * Темп в мин/км из скорости м/с. 0 если скорость невалидна.
      */
     fun paceMinPerKmFromSpeedMs(speedMs: Float): Float {
-        val speedKmh = speedMsToKmh(speedMs)
+        return paceFromSpeedKmh(speedMsToKmh(speedMs))
+    }
+
+    /**
+     * Темп в мин/км из скорости км/ч.
+     */
+    fun paceFromSpeedKmh(speedKmh: Float): Float {
         return if (speedKmh > 0f) 60f / speedKmh else 0f
+    }
+
+    /**
+     * Средняя скорость в км/ч.
+     */
+    fun averageSpeedKmh(distanceKm: Float, durationMs: Long): Float {
+        if (distanceKm <= 0f || durationMs <= 0L) return 0f
+        return distanceKm / (durationMs / MS_PER_HOUR)
+    }
+
+    /**
+     * Темп в мин/милю из дистанции (км) и времени.
+     */
+    fun paceMinPerMile(distanceKm: Float, durationMs: Long): Float {
+        return segmentPace(durationMs, distanceKm, metric = false)
+    }
+
+    /**
+     * Суммарная дистанция трека в метрах.
+     */
+    fun totalDistanceMeters(points: List<TrackPoint>): Float {
+        if (points.size < 2) return 0f
+        var total = 0f
+        for (i in 1 until points.size) {
+            total += distanceMeters(points[i - 1], points[i])
+        }
+        return total
+    }
+
+    /**
+     * Максимальная мгновенная скорость по сегментам трека (м/с), не сырой GPS speed.
+     */
+    fun maxDerivedSpeedMs(points: List<TrackPoint>): Float {
+        if (points.size < 2) return 0f
+        var maxSpeed = 0f
+        for (i in 1 until points.size) {
+            val speed = derivedSpeedMs(points[i - 1], points[i])
+            if (speed > maxSpeed) maxSpeed = speed
+        }
+        return maxSpeed
+    }
+
+    /**
+     * Компоненты темпа для отображения: целые минуты и секунды (0–59).
+     */
+    fun paceToMinutesSeconds(paceMinutes: Float): Pair<Int, Int> {
+        if (paceMinutes <= 0f) return 0 to 0
+        val totalSeconds = (paceMinutes * 60f).toInt().coerceAtLeast(0)
+        return totalSeconds / 60 to (totalSeconds % 60)
     }
 
     /**

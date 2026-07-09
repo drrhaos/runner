@@ -129,13 +129,10 @@ class ChartCalculationsTest {
     }
 
     @Test
-    fun `buildSegments does not understate pace due to overshoot past 1km`() {
-        // Regression: closing at ~1.07 km with full step time gave 5.67 instead of ~6.07
-        // Build points that overshoot 1 km on the closing step.
+    fun `buildSegments closes full km at exactly 1km with consistent pace formula`() {
         val points = mutableListOf<TrackPoint>()
         val baseLat = 55.75
         val baseLon = 37.60
-        // 0.0016 deg lon ≈ 100m; 11 steps ≈ 1.1 km in 6.07 minutes
         val totalMs = (6.07f * 60_000f).toLong()
         for (i in 0..11) {
             points.add(point(baseLat, baseLon + i * 0.0016, i * totalMs / 11))
@@ -147,18 +144,32 @@ class ChartCalculationsTest {
         val first = segments.first()
         assertEquals(1.0f, first.distanceKm, 0.001f)
 
-        // Pace for exact 1 km must be close to total time for that km, not diluted by overshoot
-        assertTrue(
-            "pace ${first.paceMinPerUnit} should be near 5.5–6.5 min/km, not understated like 5.0",
-            first.paceMinPerUnit in 5.0f..7.0f
-        )
+        val expectedPace = (first.durationMs / ChartCalculations.MS_PER_MINUTE) / first.distanceKm
+        assertEquals(expectedPace, first.paceMinPerUnit, 0.01f)
+    }
 
-        // Naive overshoot formula would use distance > 1 and lower the pace
-        val naivePace = (first.durationMs / 60_000f) / 1.07f
-        assertTrue(
-            "interpolated pace ${first.paceMinPerUnit} must be higher than naive overshoot $naivePace",
-            first.paceMinPerUnit > naivePace
-        )
+    @Test
+    fun `paceToMinutesSeconds avoids invalid seconds`() {
+        val (minutes, seconds) = ChartCalculations.paceToMinutesSeconds(5.999f)
+        assertEquals(5, minutes)
+        assertTrue(seconds in 0..59)
+    }
+
+    @Test
+    fun `maxDerivedSpeedMs uses distance over time not gps speed field`() {
+        val p1 = point(55.75, 37.60, 0L, speedMs = 0f)
+        val p2 = point(55.75, 37.6016, 10_000L, speedMs = 99f) // bogus GPS speed
+
+        val max = ChartCalculations.maxDerivedSpeedMs(listOf(p1, p2))
+        assertTrue(max > 0f)
+        assertTrue(max < 20f) // ~10 m/s derived, not 99 m/s GPS
+    }
+
+    @Test
+    fun `paceFromSpeedKmh and overallAveragePace are consistent`() {
+        val pace = ChartCalculations.overallAveragePace(10f, 60 * 60_000L)
+        val speed = ChartCalculations.averageSpeedKmh(10f, 60 * 60_000L)
+        assertEquals(pace, ChartCalculations.paceFromSpeedKmh(speed), 0.01f)
     }
 
     @Test
