@@ -55,7 +55,6 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
     
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            android.util.Log.d("WorkoutTrackingViewModel", "Service connected")
             val binder = service as WorkoutTrackingService.WorkoutTrackingBinder
             trackingService = binder.getService()
             isServiceBound = true
@@ -66,7 +65,6 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
             
             // Подписываемся на обновления сессии
             trackingService?.setSessionUpdateCallback { session ->
-                android.util.Log.d("WorkoutTrackingViewModel", "Session updated from service: isTracking=${session.isTracking}, isPaused=${session.isPaused}")
                 _workoutSession.value = session
                 updateWorkoutState()
             }
@@ -77,11 +75,9 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
                 updateWorkoutState()
             }
             
-            android.util.Log.d("WorkoutTrackingViewModel", "Service fully initialized and ready")
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
-            android.util.Log.d("WorkoutTrackingViewModel", "Service disconnected")
             trackingService = null
             isServiceBound = false
         }
@@ -95,13 +91,10 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
 
     fun initializeService() {
         if (isServiceBound) {
-            android.util.Log.d("WorkoutTrackingViewModel", "initializeService skipped: already bound")
             return
         }
-        android.util.Log.d("WorkoutTrackingViewModel", "initializeService called")
         val intent = Intent(application, WorkoutTrackingService::class.java)
-        val result = application.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-        android.util.Log.d("WorkoutTrackingViewModel", "Service bind result: $result")
+        application.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
     private fun setupLocationCallback() {
@@ -117,7 +110,6 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
     private fun startLocationUpdates(context: Context) {
         // Если сервис привязан, используем его обновления и не дублируем запросы
         if (isServiceBound) {
-            android.util.Log.d("WorkoutTrackingViewModel", "Skipping local location updates (service bound)")
             return
         }
         if (ContextCompat.checkSelfPermission(
@@ -221,8 +213,6 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
     }
 
     fun startWorkout(workoutType: WorkoutType = WorkoutType.EASY_RUN) {
-        android.util.Log.d("WorkoutTrackingViewModel", "startWorkout called, isServiceBound: $isServiceBound")
-        
         // Проверяем разрешения GPS перед запуском
         if (ContextCompat.checkSelfPermission(
                 application,
@@ -235,7 +225,6 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
         }
         
         if (isServiceBound && trackingService != null) {
-            android.util.Log.d("WorkoutTrackingViewModel", "Starting via service")
             val intent = Intent(application, WorkoutTrackingService::class.java).apply {
                 action = WorkoutTrackingService.ACTION_START_WORKOUT
                 putExtra(WorkoutTrackingService.EXTRA_WORKOUT_TYPE, workoutType)
@@ -254,7 +243,6 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
             )
             _workoutState.value = WorkoutState.RUNNING
             startTimer()
-            android.util.Log.d("WorkoutTrackingViewModel", "State set to TRACKING")
         }
     }
 
@@ -266,7 +254,6 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
                 startWorkout(workoutType)
             } else if (retryCount < maxRetries) {
                 retryCount++
-                android.util.Log.d("WorkoutTrackingViewModel", "Service not ready, retrying in 500ms (attempt $retryCount/$maxRetries)")
                 viewModelScope.launch {
                     kotlinx.coroutines.delay(500)
                     attemptStart()
@@ -281,17 +268,13 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
     }
 
     fun pauseWorkout() {
-        android.util.Log.d("WorkoutTrackingViewModel", "pauseWorkout called, isServiceBound: $isServiceBound")
-        
         if (isServiceBound && trackingService != null) {
-            android.util.Log.d("WorkoutTrackingViewModel", "Pausing via service")
             val intent = Intent(application, WorkoutTrackingService::class.java).apply {
                 action = WorkoutTrackingService.ACTION_PAUSE_WORKOUT
             }
             application.startService(intent)
         } else {
             // Fallback к локальному трекингу
-            android.util.Log.d("WorkoutTrackingViewModel", "Pausing locally")
             val currentTime = System.currentTimeMillis()
             isCurrentlyTracking = false
             _workoutSession.value = _workoutSession.value.copy(
@@ -300,22 +283,17 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
                 pauseTime = currentTime
             )
             _workoutState.value = WorkoutState.PAUSED
-            android.util.Log.d("WorkoutTrackingViewModel", "State set to PAUSED")
         }
     }
 
     fun resumeWorkout() {
-        android.util.Log.d("WorkoutTrackingViewModel", "resumeWorkout called, isServiceBound: $isServiceBound")
-        
         if (isServiceBound && trackingService != null) {
-            android.util.Log.d("WorkoutTrackingViewModel", "Resuming via service")
             val intent = Intent(application, WorkoutTrackingService::class.java).apply {
                 action = WorkoutTrackingService.ACTION_RESUME_WORKOUT
             }
             application.startService(intent)
         } else {
             // Fallback к локальному трекингу
-            android.util.Log.d("WorkoutTrackingViewModel", "Resuming locally")
             val currentTime = System.currentTimeMillis()
             val currentSession = _workoutSession.value
             val pauseDuration = currentTime - currentSession.pauseTime
@@ -327,15 +305,11 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
                 totalPauseDuration = currentSession.totalPauseDuration + pauseDuration
             )
             _workoutState.value = WorkoutState.RUNNING
-            android.util.Log.d("WorkoutTrackingViewModel", "State set to TRACKING")
         }
     }
 
     fun stopWorkout() {
-        android.util.Log.d("WorkoutTrackingViewModel", "stopWorkout called, isServiceBound: $isServiceBound")
-        
         if (isServiceBound && trackingService != null) {
-            android.util.Log.d("WorkoutTrackingViewModel", "Stopping via service")
             val intent = Intent(application, WorkoutTrackingService::class.java).apply {
                 action = WorkoutTrackingService.ACTION_STOP_WORKOUT
             }
@@ -346,7 +320,6 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
             trackingService = null
         } else {
             // Fallback к локальному трекингу
-            android.util.Log.d("WorkoutTrackingViewModel", "Stopping locally")
             isCurrentlyTracking = false
             _workoutSession.value = _workoutSession.value.copy(
                 isTracking = false,
@@ -398,24 +371,19 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
         }
         
         if (oldState != newState) {
-            android.util.Log.d("WorkoutTrackingViewModel", "State changed: $oldState -> $newState (isTracking: ${session.isTracking}, isPaused: ${session.isPaused})")
+            _workoutState.value = newState
         }
-        
-        _workoutState.value = newState
     }
 
     private fun startTimer() {
-        android.util.Log.d("WorkoutTrackingViewModel", "Starting timer (main thread)")
         stopLocalWorkoutTimer()
         workoutTimerJob = viewModelScope.launch {
             while (isActive) {
                 val session = _workoutSession.value
-                android.util.Log.d("WorkoutTrackingViewModel", "Timer tick: isTracking=${session.isTracking}, isPaused=${session.isPaused}, startTime=${session.startTime}")
                 if (session.isTracking && !session.isPaused) {
                     delay(1000)
                     val currentTime = System.currentTimeMillis()
                     val elapsedTime = currentTime - session.startTime - session.totalPauseDuration
-                    android.util.Log.d("WorkoutTrackingViewModel", "Updating time: elapsedTime=$elapsedTime")
                     _workoutSession.value = session.copy(currentTime = elapsedTime)
                 } else {
                     break
@@ -498,10 +466,6 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
 
         val trackDataJson = gson.toJson(trackData)
         
-        // Логируем информацию о сохраняемом треке
-        android.util.Log.d("WorkoutTracking", "Saving track with ${session.trackDataPoints.size} points")
-        android.util.Log.d("WorkoutTracking", "Track data JSON length: ${trackDataJson.length}")
-
         val workout = Workout(
             date = Date(session.startTime),
             distance = totalDistanceKm,
@@ -521,7 +485,6 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
             ) {
                 workoutDao.insertWorkout(workout)
             }
-            android.util.Log.d("WorkoutTracking", "Workout saved successfully with ID: $workoutId")
             workoutId
         } catch (e: Exception) {
             android.util.Log.e("WorkoutTracking", "Error saving workout after retries: ${e.message}", e)
