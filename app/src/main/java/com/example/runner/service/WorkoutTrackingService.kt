@@ -27,6 +27,7 @@ import com.example.runner.ui.tracking.WorkoutSession
 import com.example.runner.util.GpsFilter
 import com.example.runner.util.GpsConfig
 import com.example.runner.util.FormatUtils
+import com.example.runner.util.SpeedPaceCalculator
 import com.example.runner.util.UserPreferences
 import com.google.android.gms.location.*
 import org.osmdroid.util.GeoPoint
@@ -323,10 +324,15 @@ class WorkoutTrackingService : Service() {
 
             val currentTime = System.currentTimeMillis()
             val timeDiffMs = if (lastUpdateTime > 0) currentTime - lastUpdateTime else 0
-            val currentSpeed = computeCurrentSpeed(previousLocation, filteredLocation, timeDiffMs)
-            val avgSpeed = computeAverageSpeedKmH(newDistance, currentSession.currentTime)
-            val currentPace = computePaceMinPerKm(currentSpeed)
-            val avgPace = computePaceMinPerKm(avgSpeed)
+            val segmentDistanceKm = if (previousLocation != null) {
+                filteredLocation.distanceTo(previousLocation) / 1000.0
+            } else {
+                0.0
+            }
+            val currentSpeed = SpeedPaceCalculator.computeCurrentSpeed(segmentDistanceKm, timeDiffMs)
+            val avgSpeed = SpeedPaceCalculator.computeAverageSpeedKmH(newDistance.toDouble(), currentSession.currentTime)
+            val currentPace = SpeedPaceCalculator.computePaceRaw(currentSpeed)
+            val avgPace = SpeedPaceCalculator.computePaceRaw(avgSpeed)
             val userPrefs = UserPreferences(this)
             val calories = FormatUtils.calculateCalories(newDistance, userPrefs.userWeight)
 
@@ -404,31 +410,6 @@ class WorkoutTrackingService : Service() {
             raw.addAll(newR)
             if (raw.size >= before) break
         }
-    }
-
-    private fun computeCurrentSpeed(previous: Location?, current: Location, timeDiffMs: Long): Float {
-        if (previous == null || timeDiffMs <= 0) {
-            android.util.Log.d("WorkoutTrackingService", "Speed calculation skipped: timeDiffMs=$timeDiffMs, hasPrev=${previous != null}")
-            return 0f
-        }
-        val distanceKm = current.distanceTo(previous) / 1000f
-        val hours = timeDiffMs / (1000f * 3600f)
-        if (hours <= 0f) return 0f
-        val speed = distanceKm / hours
-        android.util.Log.d("WorkoutTrackingService", "Speed calculation: distance=${distanceKm}km, time=${hours}h, speed=${speed}km/h")
-        return speed
-    }
-
-    private fun computeAverageSpeedKmH(distanceKm: Float, activeTimeMs: Long): Float {
-        if (distanceKm <= 0f || activeTimeMs <= 0L) return 0f
-        val hours = activeTimeMs / (1000f * 3600f)
-        if (hours <= 0f) return 0f
-        return distanceKm / hours
-    }
-
-    private fun computePaceMinPerKm(speedKmH: Float): Float {
-        if (speedKmH <= 0f) return 0f
-        return 60f / speedKmH
     }
 
     fun startWorkout() {

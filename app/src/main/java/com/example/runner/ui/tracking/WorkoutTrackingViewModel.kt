@@ -26,6 +26,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import com.example.runner.util.GpsFilter
+import com.example.runner.util.SpeedPaceCalculator
 import java.util.Date
 
 data class WorkoutSession(
@@ -205,29 +206,24 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
             // Вычисляем скорость и темп только во время активного трекинга
             val currentTime = System.currentTimeMillis()
             val timeDiff = if (lastUpdateTime > 0) currentTime - lastUpdateTime else 0
-            
+
+            val segmentDistanceKm = if (lastLocation != null) {
+                location.distanceTo(lastLocation!!) / 1000.0
+            } else {
+                0.0
+            }
+
             // Текущая скорость (км/ч)
-            val currentSpeed = if (timeDiff > 0 && lastLocation != null) {
-                val distanceDiff = location.distanceTo(lastLocation!!) / 1000f // км
-                val timeDiffHours = timeDiff / (1000f * 3600f) // часы
-                if (timeDiffHours > 0) distanceDiff / timeDiffHours else 0f
-            } else 0f
+            val currentSpeed = SpeedPaceCalculator.computeCurrentSpeed(segmentDistanceKm, timeDiff)
 
             // Средняя скорость (км/ч)
-            val avgSpeed = if (currentSession.currentTime > 0 && newDistance > 0) {
-                val activeTimeHours = currentSession.currentTime / (1000f * 3600f) // часы активного времени
-                if (activeTimeHours > 0) newDistance / activeTimeHours else 0f
-            } else 0f
+            val avgSpeed = SpeedPaceCalculator.computeAverageSpeedKmH(newDistance.toDouble(), currentSession.currentTime)
 
             // Текущий темп (минуты на километр)
-            val currentPace = if (currentSpeed > 0) {
-                60f / currentSpeed // минуты на километр
-            } else 0f
+            val currentPace = SpeedPaceCalculator.computePaceRaw(currentSpeed)
 
             // Средний темп (минуты на километр)
-            val avgPace = if (avgSpeed > 0) {
-                60f / avgSpeed // минуты на километр
-            } else 0f
+            val avgPace = SpeedPaceCalculator.computePaceRaw(avgSpeed)
 
             // Вычисляем калории с учетом веса пользователя
             val userPrefs = com.example.runner.util.UserPreferences(context)
