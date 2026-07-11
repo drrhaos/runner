@@ -24,7 +24,7 @@ class Converters {
 
     @TypeConverter
     fun toWorkoutType(value: String): WorkoutType {
-        return WorkoutType.valueOfOrNull(value) ?: run {
+        return WorkoutType.values().find { it.name == value } ?: run {
             Log.w(TAG, "Unknown workout type '$value', defaulting to EASY_RUN")
             WorkoutType.EASY_RUN
         }

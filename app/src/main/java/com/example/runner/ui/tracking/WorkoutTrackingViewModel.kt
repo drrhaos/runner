@@ -2,6 +2,7 @@ package com.example.runner.ui.tracking
 
 import android.Manifest
 import android.app.Application
+import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import androidx.core.content.ContextCompat
@@ -9,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -126,7 +128,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         fusedLocationClient?.requestLocationUpdates(
             locationRequest,
             locationCallback!!,
-            context.mainLooper
+            android.os.Looper.getMainLooper()
         )
     }
 
@@ -515,7 +517,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
             if (filteredLocation != null) {
                 if (previousLocation != null) {
                     val segmentDistance = filteredLocation.distanceTo(previousLocation)
-                    if (segmentDistance < WorkoutTrackingService.MIN_POINT_DISTANCE_METERS) {
+                    if (segmentDistance < com.example.runner.service.GpsLocationProcessor.MIN_POINT_DISTANCE_METERS) {
                         continue
                     }
                 }
