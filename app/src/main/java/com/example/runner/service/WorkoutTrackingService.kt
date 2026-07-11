@@ -1,10 +1,6 @@
 package com.example.runner.service
 
 import android.Manifest
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -13,30 +9,35 @@ import android.location.Location
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
-import com.example.runner.MainActivity
-import com.example.runner.R
-import com.example.runner.data.TrackPoint
-import com.example.runner.data.WorkoutType
-import com.example.runner.data.maxReasonableGpsSpeedMps
-import com.example.runner.data.WorkoutSession
 import com.example.runner.data.GpsStatus
-import com.example.runner.util.GpsFilter
+import com.example.runner.data.WorkoutSession
+import com.example.runner.data.WorkoutType
 import com.example.runner.util.GpsConfig
-import com.example.runner.util.FormatUtils
-import com.example.runner.util.SpeedPaceCalculator
 import com.example.runner.util.UserPreferences
 import com.google.android.gms.location.*
-import org.osmdroid.util.GeoPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+/**
+ * Foreground service that coordinates workout tracking.
+ *
+ * Delegates to:
+ *  - [GpsLocationProcessor] for GPS filtering and point processing
+ *  - [WorkoutNotificationManager] for foreground notification lifecycle
+ *  - [WorkoutSessionManager] for session state, metrics, and timer
+ *
+ * The service itself handles:
+ *  - Android Service lifecycle (onCreate, onDestroy, onBind)
+ *  - Binding with LocationManager / FusedLocationProvider
+ *  - Coroutine scope and periodic job management
+ *  - Adaptive GPS interval updates
+ */
 class WorkoutTrackingService : Service() {
-    
+
     companion object {
         const val CHANNEL_ID = "WorkoutTrackingChannel"
         const val NOTIFICATION_ID = 1
@@ -45,57 +46,58 @@ class WorkoutTrackingService : Service() {
         const val ACTION_RESUME_WORKOUT = "RESUME_WORKOUT"
         const val ACTION_STOP_WORKOUT = "STOP_WORKOUT"
         const val EXTRA_WORKOUT_TYPE = "WORKOUT_TYPE"
-        const val MIN_POINT_DISTANCE_METERS = 2f
         const val NO_LOCATION_UPDATE_TIMEOUT_MS = 5000L
         const val PERIODIC_LOCATION_REQUEST_INTERVAL_MS = 2000L
         const val WORKOUT_TIMER_INTERVAL_MS = 1000L
-        /** Throttling interval for foreground notification updates to save battery */
-        const val NOTIFICATION_UPDATE_INTERVAL_MS = 5000L
-        /** Лимит точек карты / отфильтрованного трека в RAM при длительных тренировках */
-        const val MAX_TRACK_POINTS_DISPLAY = 8000
-        /** Лимит сырых точек (все приходящие от Fused) */
-        const val MAX_RAW_TRACK_POINTS = 15000
     }
 
-    private val binder = WorkoutTrackingBinder()
+    // Extracted component instances
+    private val gpsProcessor = GpsLocationProcessor()
+    private lateinit var notificationManager: WorkoutNotificationManager
+    private val sessionManager = WorkoutSessionManager()
+
+    // Location provider bindings
     private var fusedLocationClient: FusedLocationProviderClient? = null
     private var locationCallback: LocationCallback? = null
     private var currentLocationRequest: LocationRequest? = null
 
-    // Данные тренировки
-    private var currentSession = WorkoutSession()
+    // Tracking state
     private var isCurrentlyTracking = false
     private var lastLocation: Location? = null
-    private var lastUpdateTime: Long = 0
     private var selectedWorkoutType: WorkoutType = WorkoutType.EASY_RUN
 
-    // Callback для уведомления UI об изменениях
-    private var sessionUpdateCallback: ((WorkoutSession) -> Unit)? = null
-    
-    // Coroutine job for periodic location request
+    // Coroutine management
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
     private var periodicLocationJob: Job? = null
     private var lastLocationTime: Long = 0
-    /** Последний применённый интервал Fused Location (мс) — не пересоздаём request без смены «корзины». */
     private var lastAppliedAdaptiveIntervalMs: Long = -1L
-
-    // Coroutine job for workout timer (replaces Handler.postDelayed)
     private var workoutTimerJob: Job? = null
 
-    /** Tracks when the foreground notification was last updated for throttling */
-    private var lastNotificationUpdateTime: Long = 0
-    
+    // User preferences for calorie calculation
+    private lateinit var userPreferences: UserPreferences
+
     inner class WorkoutTrackingBinder : Binder() {
         fun getService(): WorkoutTrackingService = this@WorkoutTrackingService
     }
+    private val binder = WorkoutTrackingBinder()
+
+    // ------------------------------------------------------------------
+    // Service lifecycle
+    // ------------------------------------------------------------------
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
+        notificationManager = WorkoutNotificationManager(this)
+        notificationManager.createNotificationChannel()
+        userPreferences = UserPreferences(this)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         setupLocationCallback()
+        sessionManager.onSessionChanged = { session ->
+            // Forward session changes to the external callback (ViewModel)
+            sessionUpdateCallback?.invoke(session)
+        }
     }
-    
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START_WORKOUT -> {
@@ -124,68 +126,9 @@ class WorkoutTrackingService : Service() {
         serviceScope.cancel()
     }
 
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.notification_channel_name),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = getString(R.string.notification_channel_description)
-                setShowBadge(false)
-            }
-            
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
-    }
-
-    private fun createNotification(): Notification {
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(MainActivity.EXTRA_OPEN_TRACKING, true)
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val timeText = FormatUtils.formatTime(currentSession.currentTime)
-        val distanceText = String.format("%.2f %s", currentSession.distance, getString(R.string.unit_km))
-
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(R.string.app_name))
-            .setContentText(getString(R.string.notification_workout_format, timeText, distanceText))
-            .setSmallIcon(R.drawable.ic_menu_run)
-            .setContentIntent(pendingIntent)
-            .setOngoing(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT) // Повышаем приоритет
-            .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setAutoCancel(false) // Не закрываем при нажатии
-            .build()
-    }
-
-    /**
-     * Updates the foreground notification with optional throttling to save battery.
-     *
-     * @param force If true, updates immediately regardless of throttling.
-     *              Use for state changes (start, pause, resume, stop).
-     */
-    private fun updateNotification(force: Boolean = false) {
-        if (!force) {
-            val now = System.currentTimeMillis()
-            if (now - lastNotificationUpdateTime < NOTIFICATION_UPDATE_INTERVAL_MS) {
-                return
-            }
-            lastNotificationUpdateTime = now
-        } else {
-            lastNotificationUpdateTime = System.currentTimeMillis()
-        }
-        val notification = createNotification()
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        notificationManager.notify(NOTIFICATION_ID, notification)
-    }
+    // ------------------------------------------------------------------
+    // Location callback & processing
+    // ------------------------------------------------------------------
 
     private fun setupLocationCallback() {
         locationCallback = object : LocationCallback() {
@@ -198,311 +141,157 @@ class WorkoutTrackingService : Service() {
     }
 
     private fun updateLocation(location: Location) {
-        // Dispatch to main thread if called from background (serviceScope is Dispatchers.Main)
+        // Dispatch to main thread if called from background
         if (Thread.currentThread().name != "main") {
             serviceScope.launch { updateLocation(location) }
             return
         }
-        
-        val newTrackPoints = currentSession.trackPoints.toMutableList()
-        val newTrackDataPoints = currentSession.trackDataPoints.toMutableList()
-        val newRawTrackDataPoints = currentSession.rawTrackDataPoints.toMutableList()
-        
-        if (isCurrentlyTracking && !currentSession.isPaused) {
-            val previousLocation = lastLocation
-            val rawTrackPoint = TrackPoint(
-                latitude = location.latitude,
-                longitude = location.longitude,
-                timestamp = if (location.time > 0) location.time else System.currentTimeMillis(),
-                accuracy = location.accuracy,
-                speed = location.speed,
-                altitude = location.altitude
-            )
-            newRawTrackDataPoints.add(rawTrackPoint)
 
-            val filteredLocation = GpsFilter.filterGpsOutlier(
+        if (isCurrentlyTracking && !sessionManager.getSession().isPaused) {
+            val result = gpsProcessor.processLocation(
                 location,
-                previousLocation,
-                selectedWorkoutType.maxReasonableGpsSpeedMps()
+                lastLocation,
+                selectedWorkoutType,
+                sessionManager.getSession().trackPoints.toMutableList(),
+                sessionManager.getSession().trackDataPoints.toMutableList(),
+                sessionManager.getSession().rawTrackDataPoints.toMutableList()
             )
-            if (filteredLocation == null) {
-                android.util.Log.w("WorkoutTrackingService", "GPS point filtered as outlier/invalid: lat=${location.latitude}, lon=${location.longitude}, acc=${location.accuracy}m")
-                decimateRawPointsIfNeeded(newRawTrackDataPoints)
-                currentSession = currentSession.copy(
-                    currentLocation = location,
-                    rawTrackDataPoints = newRawTrackDataPoints
-                )
-                sessionUpdateCallback?.invoke(currentSession)
-                updateNotification()
-                return
-            }
 
-            // Минимальная дистанция между точками (2 метра)
-            if (previousLocation != null) {
-                val distanceToLastMeters = filteredLocation.distanceTo(previousLocation)
-                if (distanceToLastMeters < MIN_POINT_DISTANCE_METERS) {
-                    decimateRawPointsIfNeeded(newRawTrackDataPoints)
-                    currentSession = currentSession.copy(
-                        currentLocation = filteredLocation,
-                        rawTrackDataPoints = newRawTrackDataPoints
+            when (result) {
+                is GpsLocationProcessor.ProcessResult.Accepted -> {
+                    val segmentDistanceMeters = result.segmentDistanceMeters
+                    sessionManager.updateMetricsFromLocation(
+                        segmentDistanceMeters = segmentDistanceMeters,
+                        trackPoints = result.trackPoints,
+                        trackDataPoints = result.trackDataPoints,
+                        rawTrackDataPoints = result.rawTrackDataPoints,
+                        userWeightKg = userPreferences.userWeight
                     )
-                    sessionUpdateCallback?.invoke(currentSession)
-                    updateNotification()
-                    return
+
+                    // Update adaptive GPS interval every 10 points
+                    if (result.trackPoints.size % 10 == 0) {
+                        updateLocationRequestInterval(sessionManager.getSession().currentSpeed)
+                    }
+
+                    lastLocation = result.filteredLocation
+                    lastLocationTime = System.currentTimeMillis()
+                }
+
+                is GpsLocationProcessor.ProcessResult.Rejected -> {
+                    sessionManager.updateLocationOnly(
+                        currentLocation = location,
+                        rawTrackDataPoints = result.rawTrackDataPoints
+                    )
                 }
             }
-
-            val validGeoPoint = GpsFilter.createValidGeoPoint(filteredLocation)
-            if (validGeoPoint != null) {
-                newTrackPoints.add(validGeoPoint)
-            }
-
-            val trackPoint = TrackPoint(
-                latitude = filteredLocation.latitude,
-                longitude = filteredLocation.longitude,
-                timestamp = filteredLocation.time,
-                accuracy = filteredLocation.accuracy,
-                speed = filteredLocation.speed,
-                altitude = filteredLocation.altitude
-            )
-            newTrackDataPoints.add(trackPoint)
-
-            if (newTrackPoints.size == newTrackDataPoints.size) {
-                decimateSyncedTrackPoints(newTrackPoints, newTrackDataPoints)
-            }
-            decimateRawPointsIfNeeded(newRawTrackDataPoints)
-
-            var newDistance = currentSession.distance
-            if (previousLocation != null) {
-                val segmentDistanceMeters = filteredLocation.distanceTo(previousLocation)
-                newDistance += segmentDistanceMeters / 1000f
-            }
-
-            val currentTime = System.currentTimeMillis()
-            val timeDiffMs = if (lastUpdateTime > 0) currentTime - lastUpdateTime else 0
-            val segmentDistanceKm = if (previousLocation != null) {
-                filteredLocation.distanceTo(previousLocation) / 1000.0
-            } else {
-                0.0
-            }
-            val currentSpeed = SpeedPaceCalculator.computeCurrentSpeed(segmentDistanceKm, timeDiffMs)
-            val avgSpeed = SpeedPaceCalculator.computeAverageSpeedKmH(newDistance.toDouble(), currentSession.currentTime)
-            val currentPace = SpeedPaceCalculator.computePaceRaw(currentSpeed)
-            val avgPace = SpeedPaceCalculator.computePaceRaw(avgSpeed)
-            val userPrefs = UserPreferences(this)
-            val calories = FormatUtils.calculateCalories(newDistance, userPrefs.userWeight)
-
-            currentSession = currentSession.copy(
-                currentLocation = filteredLocation,
-                trackPoints = newTrackPoints,
-                trackDataPoints = newTrackDataPoints,
-                rawTrackDataPoints = newRawTrackDataPoints,
-                distance = newDistance,
-                currentSpeed = currentSpeed,
-                avgSpeed = avgSpeed,
-                currentPace = currentPace,
-                avgPace = avgPace,
-                calories = calories,
-                gpsStatus = GpsStatus.FOUND
-            )
-
-            // Оптимизируем интервал GPS запросов в зависимости от скорости (каждые 10 обновлений)
-            if (newTrackPoints.size % 10 == 0) {
-                updateLocationRequestInterval(currentSpeed)
-            }
-
-            // Обновляем маркеры времени и последнюю локацию после вычислений
-            lastLocation = filteredLocation
-            lastUpdateTime = currentTime
-            lastLocationTime = currentTime
         } else {
-            currentSession = currentSession.copy(
-                currentLocation = location,
-                rawTrackDataPoints = if (isCurrentlyTracking) {
-                    newRawTrackDataPoints.also {
-                        val rawTrackPoint = TrackPoint(
-                            latitude = location.latitude,
-                            longitude = location.longitude,
-                            timestamp = if (location.time > 0) location.time else System.currentTimeMillis(),
-                            accuracy = location.accuracy,
-                            speed = location.speed,
-                            altitude = location.altitude
-                        )
-                        it.add(rawTrackPoint)
-                        decimateRawPointsIfNeeded(it)
-                    }
-                } else currentSession.rawTrackDataPoints,
-                gpsStatus = GpsStatus.FOUND
+            val (rawPoints, currentLoc) = gpsProcessor.processLocationWhenNotTracking(
+                location,
+                sessionManager.getSession().rawTrackDataPoints,
+                isCurrentlyTracking
+            )
+            sessionManager.updateLocationWhenNotActive(
+                currentLocation = currentLoc ?: location,
+                rawTrackDataPoints = rawPoints
             )
         }
 
-        sessionUpdateCallback?.invoke(currentSession)
-        updateNotification()
+        notificationManager.updateNotification(sessionManager.getSession())
     }
 
-    private fun decimateSyncedTrackPoints(
-        trackPoints: MutableList<GeoPoint>,
-        trackDataPoints: MutableList<TrackPoint>
-    ) {
-        while (trackPoints.size > MAX_TRACK_POINTS_DISPLAY) {
-            val before = trackPoints.size
-            val newTp = trackPoints.filterIndexed { i, _ -> i % 2 == 0 || i == trackPoints.lastIndex }.toMutableList()
-            val newTd = trackDataPoints.filterIndexed { i, _ -> i % 2 == 0 || i == trackDataPoints.lastIndex }.toMutableList()
-            trackPoints.clear()
-            trackPoints.addAll(newTp)
-            trackDataPoints.clear()
-            trackDataPoints.addAll(newTd)
-            if (trackPoints.size >= before) break
-        }
-    }
-
-    private fun decimateRawPointsIfNeeded(raw: MutableList<TrackPoint>) {
-        while (raw.size > MAX_RAW_TRACK_POINTS) {
-            val before = raw.size
-            val newR = raw.filterIndexed { i, _ -> i % 2 == 0 || i == raw.lastIndex }.toMutableList()
-            raw.clear()
-            raw.addAll(newR)
-            if (raw.size >= before) break
-        }
-    }
+    // ------------------------------------------------------------------
+    // Workout lifecycle
+    // ------------------------------------------------------------------
 
     fun startWorkout() {
-        if (currentSession.isTracking && currentSession.isPaused) {
+        if (sessionManager.getSession().isTracking && sessionManager.getSession().isPaused) {
             android.util.Log.w("WorkoutTrackingService", "startWorkout ignored: workout is paused, use resume")
             return
         }
 
-        if (isCurrentlyTracking && currentSession.isTracking && !currentSession.isPaused) {
+        if (isCurrentlyTracking && sessionManager.getSession().isTracking && !sessionManager.getSession().isPaused) {
             android.util.Log.w("WorkoutTrackingService", "startWorkout ignored: workout already running")
             return
         }
-        
-        // Проверяем разрешения GPS
+
+        // Check GPS permissions
         if (ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             android.util.Log.e("WorkoutTrackingService", "GPS permission not granted, cannot start workout")
-            currentSession = currentSession.copy(gpsStatus = GpsStatus.DENIED)
-            sessionUpdateCallback?.invoke(currentSession)
+            sessionManager.updateGpsStatus(GpsStatus.DENIED)
             return
         }
 
         lastLocation = null
-        lastUpdateTime = 0L
-        lastLocationTime = 0L
         lastAppliedAdaptiveIntervalMs = -1L
-        
-        val currentTime = System.currentTimeMillis()
-        isCurrentlyTracking = true
-        currentSession = WorkoutSession(
-            isTracking = true,
-            isPaused = false,
-            startTime = currentTime,
-            pauseTime = 0L,
-            totalPauseDuration = 0L,
-            currentTime = 0L,
-            distance = 0f,
-            avgPace = 0f,
-            currentPace = 0f,
-            avgSpeed = 0f,
-            currentSpeed = 0f,
-            heartRate = 0,
-            calories = 0,
-            gpsStatus = GpsStatus.SEARCHING,
-            trackPoints = emptyList(),
-            trackDataPoints = emptyList(),
-            rawTrackDataPoints = emptyList(),
-            currentLocation = null
-        )
-        
+
+        sessionManager.startNewSession()
         startLocationUpdates()
         startPeriodicLocationRequest()
         startWorkoutTimer()
-        startForeground(NOTIFICATION_ID, createNotification())
-        sessionUpdateCallback?.invoke(currentSession)
+        startForeground(NOTIFICATION_ID, notificationManager.buildNotification(sessionManager.getSession()))
+        notificationManager.updateNotification(sessionManager.getSession(), force = true)
     }
 
     fun pauseWorkout() {
         isCurrentlyTracking = false
-        val currentTime = System.currentTimeMillis()
-        currentSession = currentSession.copy(
-            isPaused = true,
-            pauseTime = currentTime
-            // isTracking остается true, так как тренировка не остановлена, а только на паузе
-        )
+        sessionManager.pause()
         stopPeriodicLocationRequest()
         stopWorkoutTimer()
-        sessionUpdateCallback?.invoke(currentSession)
-        updateNotification(force = true)
+        notificationManager.updateNotification(sessionManager.getSession(), force = true)
     }
 
     fun resumeWorkout() {
-        val currentTime = System.currentTimeMillis()
-        val pauseDuration = currentTime - currentSession.pauseTime
         isCurrentlyTracking = true
-        currentSession = currentSession.copy(
-            isPaused = false,
-            pauseTime = 0,
-            totalPauseDuration = currentSession.totalPauseDuration + pauseDuration
-        )
+        sessionManager.resume()
         startPeriodicLocationRequest()
         startWorkoutTimer()
-        sessionUpdateCallback?.invoke(currentSession)
-        updateNotification(force = true)
+        notificationManager.updateNotification(sessionManager.getSession(), force = true)
     }
 
     fun stopWorkout() {
         isCurrentlyTracking = false
         lastAppliedAdaptiveIntervalMs = -1L
-        currentSession = currentSession.copy(
-            isTracking = false,
-            isPaused = false
-        )
+        sessionManager.stop()
         stopLocationUpdates()
         stopPeriodicLocationRequest()
         stopWorkoutTimer()
-        sessionUpdateCallback?.invoke(currentSession)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 
+    // ------------------------------------------------------------------
+    // Location updates
+    // ------------------------------------------------------------------
+
     private fun startLocationUpdates() {
-        // Используем оптимизированные настройки GPS
-        val locationRequest = com.example.runner.util.GpsConfig.createWorkoutLocationRequest()
+        val locationRequest = GpsConfig.createWorkoutLocationRequest()
         currentLocationRequest = locationRequest
 
         try {
-            // Запрашиваем обновления с высоким приоритетом
             fusedLocationClient?.requestLocationUpdates(
                 locationRequest,
                 locationCallback!!,
                 mainLooper
             )
             lastAppliedAdaptiveIntervalMs = GpsConfig.HIGH_ACCURACY_INTERVAL
-            
-            // Дополнительно запрашиваем последнее известное местоположение
+
+            // Fetch last known location
             fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
                 location?.let {
                     updateLocation(it)
                 }
             }
-            
+
         } catch (e: SecurityException) {
-            // Обработка ошибки разрешений
             android.util.Log.e("WorkoutTrackingService", "Location permission denied", e)
-            currentSession = currentSession.copy(
-                gpsStatus = GpsStatus.DENIED
-            )
-            sessionUpdateCallback?.invoke(currentSession)
+            sessionManager.updateGpsStatus(GpsStatus.DENIED)
         } catch (e: Exception) {
-            // Обработка других ошибок GPS
             android.util.Log.e("WorkoutTrackingService", "GPS error: ${e.message}", e)
-            currentSession = currentSession.copy(
-                gpsStatus = GpsStatus.LOST
-            )
-            sessionUpdateCallback?.invoke(currentSession)
+            sessionManager.updateGpsStatus(GpsStatus.LOST)
         }
     }
 
@@ -512,18 +301,19 @@ class WorkoutTrackingService : Service() {
         }
     }
 
+    // ------------------------------------------------------------------
+    // Periodic location request (timeout guard)
+    // ------------------------------------------------------------------
+
     private fun startPeriodicLocationRequest() {
-        // Останавливаем предыдущую задачу если она есть
         periodicLocationJob?.cancel()
-        
+
         periodicLocationJob = serviceScope.launch {
-            while (isActive && isCurrentlyTracking && !currentSession.isPaused) {
+            while (isActive && isCurrentlyTracking && !sessionManager.getSession().isPaused) {
                 delay(PERIODIC_LOCATION_REQUEST_INTERVAL_MS)
                 if (!isActive) break
-                // Проверяем, не прошло ли слишком много времени с последнего обновления
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastLocationTime > NO_LOCATION_UPDATE_TIMEOUT_MS) {
-                    // Принудительно запрашиваем местоположение
                     fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
                         location?.let {
                             updateLocation(it)
@@ -534,66 +324,62 @@ class WorkoutTrackingService : Service() {
             }
         }
     }
-    
-    /**
-     * Обновляет интервал GPS запросов в зависимости от текущей скорости
-     * для оптимизации потребления батареи
-     */
+
+    private fun stopPeriodicLocationRequest() {
+        periodicLocationJob?.cancel()
+        periodicLocationJob = null
+    }
+
+    // ------------------------------------------------------------------
+    // Adaptive GPS interval
+    // ------------------------------------------------------------------
+
     private fun updateLocationRequestInterval(currentSpeed: Float) {
-        if (!isCurrentlyTracking || currentSession.isPaused) {
+        if (!isCurrentlyTracking || sessionManager.getSession().isPaused) {
             return
         }
-        
+
         val adaptiveInterval = GpsConfig.getAdaptiveInterval(currentSpeed)
         if (adaptiveInterval == lastAppliedAdaptiveIntervalMs) {
             return
         }
 
         try {
-            // Останавливаем текущие обновления
             locationCallback?.let { callback ->
                 fusedLocationClient?.removeLocationUpdates(callback)
             }
-            
-            // Создаем новый LocationRequest с адаптивным интервалом
+
             val newLocationRequest = GpsConfig.createAdaptiveLocationRequest(adaptiveInterval)
             currentLocationRequest = newLocationRequest
-            
-            // Перезапускаем обновления с новым интервалом
+
             fusedLocationClient?.requestLocationUpdates(
                 newLocationRequest,
                 locationCallback!!,
                 mainLooper
             )
-            
+
             lastAppliedAdaptiveIntervalMs = adaptiveInterval
-            
+
         } catch (e: SecurityException) {
             android.util.Log.e("WorkoutTrackingService", "SecurityException updating location request: ${e.message}", e)
         } catch (e: Exception) {
             android.util.Log.e("WorkoutTrackingService", "Error updating location request: ${e.message}", e)
         }
-        
-        // Обновляем периодический таймер
+
         updatePeriodicTimerInterval(currentSpeed)
     }
-    
-    /**
-     * Обновляет интервал периодического таймера в зависимости от скорости
-     */
+
     private fun updatePeriodicTimerInterval(currentSpeed: Float) {
-        // Если скорость низкая, увеличиваем интервал периодических запросов
         val periodicInterval = if (currentSpeed < 1f) {
-            PERIODIC_LOCATION_REQUEST_INTERVAL_MS * 2 // Удваиваем интервал при остановке
+            PERIODIC_LOCATION_REQUEST_INTERVAL_MS * 2
         } else {
             PERIODIC_LOCATION_REQUEST_INTERVAL_MS
         }
-        
-        // Перезапускаем задачу с новым интервалом только если она активна
-        if (periodicLocationJob != null && isCurrentlyTracking && !currentSession.isPaused) {
+
+        if (periodicLocationJob != null && isCurrentlyTracking && !sessionManager.getSession().isPaused) {
             stopPeriodicLocationRequest()
             periodicLocationJob = serviceScope.launch {
-                while (isActive && isCurrentlyTracking && !currentSession.isPaused) {
+                while (isActive && isCurrentlyTracking && !sessionManager.getSession().isPaused) {
                     delay(periodicInterval)
                     if (!isActive) break
                     val currentTime = System.currentTimeMillis()
@@ -610,36 +396,37 @@ class WorkoutTrackingService : Service() {
         }
     }
 
-    private fun stopPeriodicLocationRequest() {
-        periodicLocationJob?.cancel()
-        periodicLocationJob = null
-    }
-    
+    // ------------------------------------------------------------------
+    // Workout timer
+    // ------------------------------------------------------------------
+
     private fun startWorkoutTimer() {
         stopWorkoutTimer()
         workoutTimerJob = serviceScope.launch {
-            while (isActive && isCurrentlyTracking && !currentSession.isPaused) {
+            while (isActive && isCurrentlyTracking && !sessionManager.getSession().isPaused) {
                 delay(WORKOUT_TIMER_INTERVAL_MS)
-                val currentTime = System.currentTimeMillis()
-                val elapsedTime = currentTime - currentSession.startTime - currentSession.totalPauseDuration
-                currentSession = currentSession.copy(currentTime = elapsedTime)
-                sessionUpdateCallback?.invoke(currentSession)
-                updateNotification()
+                sessionManager.tickElapsedTime()
+                notificationManager.updateNotification(sessionManager.getSession())
             }
         }
     }
-    
+
     private fun stopWorkoutTimer() {
         workoutTimerJob?.cancel()
         workoutTimerJob = null
     }
 
-    // Методы для взаимодействия с UI
+    // ------------------------------------------------------------------
+    // Public API for UI (Binder compatibility)
+    // ------------------------------------------------------------------
+
+    private var sessionUpdateCallback: ((WorkoutSession) -> Unit)? = null
+
     fun setSessionUpdateCallback(callback: (WorkoutSession) -> Unit) {
         sessionUpdateCallback = callback
     }
 
-    fun getCurrentSession(): WorkoutSession = currentSession
+    fun getCurrentSession(): WorkoutSession = sessionManager.getSession()
 
-    fun isTracking(): Boolean = currentSession.isTracking
+    fun isTracking(): Boolean = sessionManager.isTracking()
 }
