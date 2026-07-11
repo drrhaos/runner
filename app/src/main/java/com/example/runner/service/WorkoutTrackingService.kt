@@ -12,9 +12,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Binder
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.runner.MainActivity
@@ -78,9 +76,8 @@ class WorkoutTrackingService : Service() {
     /** Последний применённый интервал Fused Location (мс) — не пересоздаём request без смены «корзины». */
     private var lastAppliedAdaptiveIntervalMs: Long = -1L
 
-    // Обновление времени тренировки только на главном потоке (избегаем гонок с LocationCallback)
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private var workoutTimeRunnable: Runnable? = null
+    // Coroutine job for workout timer (replaces Handler.postDelayed)
+    private var workoutTimerJob: Job? = null
     
     inner class WorkoutTrackingBinder : Binder() {
         fun getService(): WorkoutTrackingService = this@WorkoutTrackingService
@@ -180,8 +177,9 @@ class WorkoutTrackingService : Service() {
     }
 
     private fun updateLocation(location: Location) {
-        if (Looper.myLooper() != Looper.getMainLooper()) {
-            mainHandler.post { updateLocation(location) }
+        // Dispatch to main thread if called from background (serviceScope is Dispatchers.Main)
+        if (Thread.currentThread().name != "main") {
+            serviceScope.launch { updateLocation(location) }
             return
         }
         android.util.Log.d("WorkoutTrackingService", "updateLocation called: lat=${location.latitude}, lon=${location.longitude}, accuracy=${location.accuracy}m, speed=${location.speed}m/s")
@@ -620,29 +618,23 @@ class WorkoutTrackingService : Service() {
     private fun startWorkoutTimer() {
         android.util.Log.d("WorkoutTrackingService", "Starting workout timer")
         stopWorkoutTimer()
-        val r = object : Runnable {
-            override fun run() {
-                if (!isCurrentlyTracking || currentSession.isPaused) {
-                    workoutTimeRunnable = null
-                    return
-                }
+        workoutTimerJob = serviceScope.launch {
+            while (isActive && isCurrentlyTracking && !currentSession.isPaused) {
+                delay(WORKOUT_TIMER_INTERVAL_MS)
                 val currentTime = System.currentTimeMillis()
                 val elapsedTime = currentTime - currentSession.startTime - currentSession.totalPauseDuration
                 currentSession = currentSession.copy(currentTime = elapsedTime)
                 sessionUpdateCallback?.invoke(currentSession)
                 android.util.Log.d("WorkoutTrackingService", "Updated workout time: $elapsedTime")
                 updateNotification()
-                mainHandler.postDelayed(this, WORKOUT_TIMER_INTERVAL_MS)
             }
         }
-        workoutTimeRunnable = r
-        mainHandler.post(r)
     }
     
     private fun stopWorkoutTimer() {
         android.util.Log.d("WorkoutTrackingService", "Stopping workout timer")
-        workoutTimeRunnable?.let { mainHandler.removeCallbacks(it) }
-        workoutTimeRunnable = null
+        workoutTimerJob?.cancel()
+        workoutTimerJob = null
     }
 
     // Методы для взаимодействия с UI
