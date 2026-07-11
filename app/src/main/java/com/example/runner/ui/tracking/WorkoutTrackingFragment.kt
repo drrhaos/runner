@@ -24,6 +24,9 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import com.example.runner.data.WorkoutDatabase
 import com.example.runner.data.WorkoutType
+import com.example.runner.data.WorkoutSession
+import com.example.runner.data.GpsStatus
+import com.example.runner.data.WorkoutState
 import com.example.runner.util.GpsFilter
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController

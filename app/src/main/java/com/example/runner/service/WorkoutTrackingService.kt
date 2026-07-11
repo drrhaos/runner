@@ -20,7 +20,8 @@ import com.example.runner.R
 import com.example.runner.data.TrackPoint
 import com.example.runner.data.WorkoutType
 import com.example.runner.data.maxReasonableGpsSpeedMps
-import com.example.runner.ui.tracking.WorkoutSession
+import com.example.runner.data.WorkoutSession
+import com.example.runner.data.GpsStatus
 import com.example.runner.util.GpsFilter
 import com.example.runner.util.GpsConfig
 import com.example.runner.util.FormatUtils
@@ -289,7 +290,7 @@ class WorkoutTrackingService : Service() {
                 currentPace = currentPace,
                 avgPace = avgPace,
                 calories = calories,
-                gpsStatus = com.example.runner.ui.tracking.GpsStatus.FOUND
+                gpsStatus = GpsStatus.FOUND
             )
 
             // Оптимизируем интервал GPS запросов в зависимости от скорости (каждые 10 обновлений)
@@ -320,7 +321,7 @@ class WorkoutTrackingService : Service() {
                         decimateRawPointsIfNeeded(it)
                     }
                 } else currentSession.rawTrackDataPoints,
-                gpsStatus = com.example.runner.ui.tracking.GpsStatus.FOUND
+                gpsStatus = GpsStatus.FOUND
             )
         }
 
@@ -374,7 +375,7 @@ class WorkoutTrackingService : Service() {
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             android.util.Log.e("WorkoutTrackingService", "GPS permission not granted, cannot start workout")
-            currentSession = currentSession.copy(gpsStatus = com.example.runner.ui.tracking.GpsStatus.DENIED)
+            currentSession = currentSession.copy(gpsStatus = GpsStatus.DENIED)
             sessionUpdateCallback?.invoke(currentSession)
             return
         }
@@ -401,7 +402,7 @@ class WorkoutTrackingService : Service() {
             currentSpeed = 0f,
             heartRate = 0,
             calories = 0,
-            gpsStatus = com.example.runner.ui.tracking.GpsStatus.SEARCHING,
+            gpsStatus = GpsStatus.SEARCHING,
             trackPoints = emptyList(),
             trackDataPoints = emptyList(),
             rawTrackDataPoints = emptyList(),
@@ -490,14 +491,14 @@ class WorkoutTrackingService : Service() {
             // Обработка ошибки разрешений
             android.util.Log.e("WorkoutTrackingService", "Location permission denied", e)
             currentSession = currentSession.copy(
-                gpsStatus = com.example.runner.ui.tracking.GpsStatus.DENIED
+                gpsStatus = GpsStatus.DENIED
             )
             sessionUpdateCallback?.invoke(currentSession)
         } catch (e: Exception) {
             // Обработка других ошибок GPS
             android.util.Log.e("WorkoutTrackingService", "GPS error: ${e.message}", e)
             currentSession = currentSession.copy(
-                gpsStatus = com.example.runner.ui.tracking.GpsStatus.LOST
+                gpsStatus = GpsStatus.LOST
             )
             sessionUpdateCallback?.invoke(currentSession)
         }

@@ -2,7 +2,7 @@ package com.example.runner.util
 
 import android.content.Context
 import android.location.LocationManager
-import com.example.runner.ui.tracking.GpsStatus
+import com.example.runner.data.GpsStatus
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.Assert.*

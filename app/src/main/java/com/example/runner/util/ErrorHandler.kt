@@ -8,7 +8,7 @@ import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import com.example.runner.R
-import com.example.runner.ui.tracking.GpsStatus
+import com.example.runner.data.GpsStatus
 
 /**
  * Утилитный класс для обработки ошибок и fallback механизмов
