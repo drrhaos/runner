@@ -238,7 +238,6 @@
     <string name="start_workout">Начать тренировку</string>
     <string name="avg_pace_label">Средний темп</string>
 
-    <string name="permission_activity_granted">Разрешение на физическую активность предоставлено</string>
     <string name="permission_location_needed">Разрешение на местоположение необходимо для трекинга</string>
     <string name="permission_notification_needed">Разрешение на уведомления необходимо для фонового трекинга</string>
     <string name="battery_optimization_hint">Для стабильной работы приложения отключите оптимизацию батареи в настройках</string>

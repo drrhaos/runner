@@ -255,19 +255,11 @@ class WorkoutTrackingFragment : Fragment() {
                 initializeMap()
                 viewModel.initializeLocationClient(requireContext())
                 requestNotificationPermission()
-                requestBackgroundLocationPermission()
-                requestActivityRecognitionPermission()
             }
             permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
                 initializeMap()
                 viewModel.initializeLocationClient(requireContext())
                 requestNotificationPermission()
-                requestBackgroundLocationPermission()
-                requestActivityRecognitionPermission()
-            }
-            permissions.getOrDefault(Manifest.permission.ACTIVITY_RECOGNITION, false) -> {
-                // Разрешение на распознавание физической активности предоставлено
-                Toast.makeText(context, getString(R.string.permission_activity_granted), Toast.LENGTH_SHORT).show()
             }
             else -> {
                 Toast.makeText(context, getString(R.string.permission_location_needed), Toast.LENGTH_LONG).show()
@@ -1190,23 +1182,6 @@ class WorkoutTrackingFragment : Fragment() {
         }
     }
 
-    private fun requestBackgroundLocationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            when {
-                ContextCompat.checkSelfPermission(
-                    requireContext(),
-                    Manifest.permission.ACCESS_BACKGROUND_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED -> {
-                    // Разрешение на фоновое местоположение уже предоставлено
-                }
-                else -> {
-                    // Запрашиваем разрешение на фоновое местоположение
-                    locationPermissionRequest.launch(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION))
-                }
-            }
-        }
-    }
-
     private fun requestBatteryOptimizationExemption() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val powerManager = requireContext().getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
@@ -1223,23 +1198,6 @@ class WorkoutTrackingFragment : Fragment() {
                         getString(R.string.battery_optimization_hint),
                         Toast.LENGTH_LONG
                     ).show()
-                }
-            }
-        }
-    }
-
-    private fun requestActivityRecognitionPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            when {
-                ContextCompat.checkSelfPermission(
-                    requireContext(),
-                    Manifest.permission.ACTIVITY_RECOGNITION
-                ) == PackageManager.PERMISSION_GRANTED -> {
-                    // Разрешение на распознавание активности уже предоставлено
-                }
-                else -> {
-                    // Запрашиваем разрешение на распознавание физической активности
-                    locationPermissionRequest.launch(arrayOf(Manifest.permission.ACTIVITY_RECOGNITION))
                 }
             }
         }
