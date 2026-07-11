@@ -6,8 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.runner.R
 import com.example.runner.data.Workout
-import com.example.runner.data.WorkoutDao
-import com.example.runner.data.WorkoutDatabase
+import com.example.runner.data.WorkoutRepository
 import com.example.runner.data.WorkoutType
 import com.example.runner.util.WorkoutDataCleaner
 import kotlinx.coroutines.flow.Flow
@@ -17,9 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.Date
 
-class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
+class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() {
 
-    val allWorkouts: Flow<List<Workout>> = workoutDao.getAllWorkouts()
+    val allWorkouts: Flow<List<Workout>> = repository.getAllWorkouts()
 
     private val _totalDistance = MutableStateFlow(0f)
     val totalDistance: StateFlow<Float> = _totalDistance.asStateFlow()
@@ -41,7 +40,7 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     fun insertWorkout(workout: Workout) {
         viewModelScope.launch {
             try {
-                workoutDao.insertWorkout(workout)
+                repository.insertWorkout(workout)
                 loadStatistics()
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutViewModel", "Error inserting workout: ${e.message}", e)
@@ -52,7 +51,7 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     fun updateWorkout(workout: Workout) {
         viewModelScope.launch {
             try {
-                workoutDao.updateWorkout(workout)
+                repository.updateWorkout(workout)
                 loadStatistics()
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutViewModel", "Error updating workout: ${e.message}", e)
@@ -63,7 +62,7 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     fun deleteWorkout(workout: Workout) {
         viewModelScope.launch {
             try {
-                workoutDao.deleteWorkout(workout)
+                repository.deleteWorkout(workout)
                 loadStatistics()
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutViewModel", "Error deleting workout: ${e.message}", e)
@@ -72,15 +71,15 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     }
 
     fun getWorkoutById(id: Long): Flow<Workout?> {
-        return workoutDao.getWorkoutById(id)
+        return repository.getWorkoutById(id)
     }
 
     private fun loadStatistics() {
         viewModelScope.launch {
             try {
-                _totalDistance.value = workoutDao.getTotalDistance() ?: 0f
-                _totalWorkouts.value = workoutDao.getTotalWorkouts()
-                _averageDuration.value = workoutDao.getAverageDuration() ?: 0L
+                _totalDistance.value = repository.getTotalDistance() ?: 0f
+                _totalWorkouts.value = repository.getTotalWorkouts()
+                _averageDuration.value = repository.getAverageDuration() ?: 0L
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutViewModel", "Error loading statistics: ${e.message}", e)
             }
@@ -153,7 +152,7 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
             )
             
             // Сохраняем очищенные данные в базу
-            workoutDao.updateWorkout(cleanedWorkout)
+            repository.updateWorkout(cleanedWorkout)
             
             android.util.Log.d("WorkoutViewModel", "Workout data cleaned and saved successfully")
             cleanedWorkout
@@ -164,11 +163,11 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     }
 }
 
-class WorkoutViewModelFactory(private val workoutDao: WorkoutDao) : ViewModelProvider.Factory {
+class WorkoutViewModelFactory(private val repository: WorkoutRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(WorkoutViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return WorkoutViewModel(workoutDao) as T
+            return WorkoutViewModel(repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -15,7 +15,7 @@ import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import com.example.runner.data.Workout
 import com.example.runner.data.WorkoutType
-import com.example.runner.data.WorkoutDao
+import com.example.runner.data.WorkoutRepository
 import com.example.runner.data.TrackPoint
 import com.example.runner.data.TrackData
 import com.example.runner.data.WorkoutSession
@@ -32,7 +32,7 @@ import com.example.runner.util.GpsFilter
 import com.example.runner.util.SpeedPaceCalculator
 import java.util.Date
 
-class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val application: Application) : ViewModel() {
+class WorkoutTrackingViewModel(private val repository: WorkoutRepository, private val application: Application) : ViewModel() {
 
     private val _workoutSession = MutableStateFlow(WorkoutSession())
     val workoutSession: StateFlow<WorkoutSession> = _workoutSession.asStateFlow()
@@ -483,7 +483,7 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
                 maxRetries = 3,
                 initialDelay = 1000L
             ) {
-                workoutDao.insertWorkout(workout)
+                repository.insertWorkout(workout)
             }
             workoutId
         } catch (e: Exception) {
@@ -581,13 +581,13 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val a
 }
 
 class WorkoutTrackingViewModelFactory(
-    private val workoutDao: WorkoutDao,
+    private val repository: WorkoutRepository,
     private val application: Application
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(WorkoutTrackingViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return WorkoutTrackingViewModel(workoutDao, application) as T
+            return WorkoutTrackingViewModel(repository, application) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
