@@ -88,7 +88,7 @@ class WorkoutTrackingFragment : Fragment() {
     private var tts: TextToSpeech? = null
     private val viewModel: WorkoutTrackingViewModel by viewModels {
         val database = WorkoutDatabase.getDatabase(requireContext())
-        WorkoutTrackingViewModelFactory(database.workoutDao(), requireContext())
+        WorkoutTrackingViewModelFactory(database.workoutDao(), requireApplication())
     }
 
     private val settingsViewModel: SettingsViewModel by viewModels {

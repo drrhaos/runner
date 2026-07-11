@@ -1,7 +1,7 @@
 package com.example.runner.ui.tracking
 
 import android.Manifest
-import android.content.Context
+import android.app.Application
 import android.content.pm.PackageManager
 import android.location.Location
 import androidx.core.content.ContextCompat
@@ -67,7 +67,7 @@ enum class WorkoutState {
     STOPPED         // 4. остановлена
 }
 
-class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val context: Context) : ViewModel() {
+class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val application: Application) : ViewModel() {
 
     private val _workoutSession = MutableStateFlow(WorkoutSession())
     val workoutSession: StateFlow<WorkoutSession> = _workoutSession.asStateFlow()
@@ -134,8 +134,8 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
             return
         }
         android.util.Log.d("WorkoutTrackingViewModel", "initializeService called")
-        val intent = Intent(context, WorkoutTrackingService::class.java)
-        val result = context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+        val intent = Intent(application, WorkoutTrackingService::class.java)
+        val result = application.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
         android.util.Log.d("WorkoutTrackingViewModel", "Service bind result: $result")
     }
 
@@ -225,7 +225,7 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
             val avgPace = SpeedPaceCalculator.computePaceRaw(avgSpeed)
 
             // Вычисляем калории с учетом веса пользователя
-            val userPrefs = com.example.runner.util.UserPreferences(context)
+            val userPrefs = com.example.runner.util.UserPreferences(application)
             val calories = com.example.runner.util.FormatUtils.calculateCalories(newDistance, userPrefs.userWeight)
 
             _workoutSession.value = currentSession.copy(
@@ -260,7 +260,7 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
         
         // Проверяем разрешения GPS перед запуском
         if (ContextCompat.checkSelfPermission(
-                context,
+                application,
                 Manifest.permission.ACCESS_FINE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -271,11 +271,11 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
         
         if (isServiceBound && trackingService != null) {
             android.util.Log.d("WorkoutTrackingViewModel", "Starting via service")
-            val intent = Intent(context, WorkoutTrackingService::class.java).apply {
+            val intent = Intent(application, WorkoutTrackingService::class.java).apply {
                 action = WorkoutTrackingService.ACTION_START_WORKOUT
                 putExtra(WorkoutTrackingService.EXTRA_WORKOUT_TYPE, workoutType)
             }
-            context.startForegroundService(intent)
+            application.startForegroundService(intent)
         } else {
             // Fallback к локальному трекингу если сервис недоступен
             android.util.Log.w("WorkoutTrackingViewModel", "Service not bound, starting locally. isServiceBound: $isServiceBound, trackingService: ${trackingService != null}")
@@ -320,10 +320,10 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
         
         if (isServiceBound && trackingService != null) {
             android.util.Log.d("WorkoutTrackingViewModel", "Pausing via service")
-            val intent = Intent(context, WorkoutTrackingService::class.java).apply {
+            val intent = Intent(application, WorkoutTrackingService::class.java).apply {
                 action = WorkoutTrackingService.ACTION_PAUSE_WORKOUT
             }
-            context.startService(intent)
+            application.startService(intent)
         } else {
             // Fallback к локальному трекингу
             android.util.Log.d("WorkoutTrackingViewModel", "Pausing locally")
@@ -344,10 +344,10 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
         
         if (isServiceBound && trackingService != null) {
             android.util.Log.d("WorkoutTrackingViewModel", "Resuming via service")
-            val intent = Intent(context, WorkoutTrackingService::class.java).apply {
+            val intent = Intent(application, WorkoutTrackingService::class.java).apply {
                 action = WorkoutTrackingService.ACTION_RESUME_WORKOUT
             }
-            context.startService(intent)
+            application.startService(intent)
         } else {
             // Fallback к локальному трекингу
             android.util.Log.d("WorkoutTrackingViewModel", "Resuming locally")
@@ -371,12 +371,12 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
         
         if (isServiceBound && trackingService != null) {
             android.util.Log.d("WorkoutTrackingViewModel", "Stopping via service")
-            val intent = Intent(context, WorkoutTrackingService::class.java).apply {
+            val intent = Intent(application, WorkoutTrackingService::class.java).apply {
                 action = WorkoutTrackingService.ACTION_STOP_WORKOUT
             }
-            context.startService(intent)
+            application.startService(intent)
             // Отключаемся от сервиса после остановки тренировки
-            context.unbindService(serviceConnection)
+            application.unbindService(serviceConnection)
             isServiceBound = false
             trackingService = null
         } else {
@@ -401,17 +401,17 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
 
         if (isServiceBound) {
             try {
-                context.unbindService(serviceConnection)
+                application.unbindService(serviceConnection)
             } catch (_: Exception) { }
             isServiceBound = false
             trackingService = null
         }
 
         try {
-            val stopIntent = Intent(context, WorkoutTrackingService::class.java).apply {
+            val stopIntent = Intent(application, WorkoutTrackingService::class.java).apply {
                 action = WorkoutTrackingService.ACTION_STOP_WORKOUT
             }
-            context.startService(stopIntent)
+            application.startService(stopIntent)
         } catch (_: Exception) { }
 
         _workoutSession.value = WorkoutSession()
@@ -517,7 +517,7 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
         } else 0f
         val maxSpeedMps = sanitizedPoints.maxOfOrNull { it.speed ?: 0f } ?: 0f
 
-        val userPrefs = com.example.runner.util.UserPreferences(context)
+        val userPrefs = com.example.runner.util.UserPreferences(application)
         val calories = com.example.runner.util.FormatUtils.calculateCalories(totalDistanceKm, userPrefs.userWeight)
 
         // Создаем JSON с данными траектории
@@ -560,7 +560,7 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
             workoutId
         } catch (e: Exception) {
             android.util.Log.e("WorkoutTracking", "Error saving workout after retries: ${e.message}", e)
-            com.example.runner.util.ErrorHandler.handleSaveError(context, e, false)
+            com.example.runner.util.ErrorHandler.handleSaveError(application, e, false)
             null
         }
     }
@@ -641,7 +641,7 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
         
         // Отключаемся от сервиса
         if (isServiceBound) {
-            context.unbindService(serviceConnection)
+            application.unbindService(serviceConnection)
             isServiceBound = false
         }
     }
@@ -654,12 +654,12 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
 
 class WorkoutTrackingViewModelFactory(
     private val workoutDao: WorkoutDao,
-    private val context: Context
+    private val application: Application
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(WorkoutTrackingViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return WorkoutTrackingViewModel(workoutDao, context) as T
+            return WorkoutTrackingViewModel(workoutDao, application) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
