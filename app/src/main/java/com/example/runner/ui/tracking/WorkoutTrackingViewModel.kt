@@ -9,6 +9,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.osmdroid.util.GeoPoint
 import com.example.runner.data.Workout
@@ -22,9 +24,7 @@ import com.example.runner.service.WorkoutTrackingService
 import android.content.Intent
 import android.content.ComponentName
 import android.content.ServiceConnection
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import com.example.runner.util.GpsFilter
 import com.example.runner.util.SpeedPaceCalculator
 import java.util.Date
@@ -81,8 +81,7 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
     private var lastUpdateTime: Long = 0
     private var isCurrentlyTracking: Boolean = false // отслеживаем только активное состояние
 
-    private val mainHandler = Handler(Looper.getMainLooper())
-    private var workoutTimeTickRunnable: Runnable? = null
+    private var workoutTimerJob: Job? = null
     private val gson = Gson()
     
     // Работа с сервисом
@@ -443,28 +442,26 @@ class WorkoutTrackingViewModel(private val workoutDao: WorkoutDao, private val c
     private fun startTimer() {
         android.util.Log.d("WorkoutTrackingViewModel", "Starting timer (main thread)")
         stopLocalWorkoutTimer()
-        val r = object : Runnable {
-            override fun run() {
+        workoutTimerJob = viewModelScope.launch {
+            while (isActive) {
                 val session = _workoutSession.value
                 android.util.Log.d("WorkoutTrackingViewModel", "Timer tick: isTracking=${session.isTracking}, isPaused=${session.isPaused}, startTime=${session.startTime}")
                 if (session.isTracking && !session.isPaused) {
+                    delay(1000)
                     val currentTime = System.currentTimeMillis()
                     val elapsedTime = currentTime - session.startTime - session.totalPauseDuration
                     android.util.Log.d("WorkoutTrackingViewModel", "Updating time: elapsedTime=$elapsedTime")
                     _workoutSession.value = session.copy(currentTime = elapsedTime)
-                    mainHandler.postDelayed(this, 1000)
                 } else {
-                    workoutTimeTickRunnable = null
+                    break
                 }
             }
         }
-        workoutTimeTickRunnable = r
-        mainHandler.post(r)
     }
 
     private fun stopLocalWorkoutTimer() {
-        workoutTimeTickRunnable?.let { mainHandler.removeCallbacks(it) }
-        workoutTimeTickRunnable = null
+        workoutTimerJob?.cancel()
+        workoutTimerJob = null
     }
 
     private fun stopLocationUpdates() {
