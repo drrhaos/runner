@@ -19,7 +19,9 @@ import com.google.android.gms.location.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -158,6 +160,7 @@ class WorkoutTrackingService : Service() {
             )
 
             when (result) {
+                null -> { /* point filtered out entirely */ }
                 is GpsLocationProcessor.ProcessResult.Accepted -> {
                     val segmentDistanceMeters = result.segmentDistanceMeters
                     sessionManager.updateMetricsFromLocation(

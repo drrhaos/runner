@@ -55,7 +55,7 @@ class WorkoutTrackingFragment : Fragment() {
     private val viewModel: WorkoutTrackingViewModel by viewModels {
         val database = WorkoutDatabase.getDatabase(requireContext())
         val repository = com.example.runner.data.WorkoutRepository(database.workoutDao())
-        WorkoutTrackingViewModelFactory(repository, requireApplication())
+        WorkoutTrackingViewModelFactory(repository, requireContext().applicationContext as android.app.Application)
     }
 
     private val settingsViewModel: SettingsViewModel by viewModels {

@@ -41,16 +41,16 @@ class VoiceFeedbackManager(
                         }
                         TextToSpeech.LANG_MISSING_DATA -> {
                             Log.d(TAG, "TTS onInit: missing language data")
-                            destroyTTS()
+                            destroy()
                         }
                         TextToSpeech.LANG_NOT_SUPPORTED -> {
                             Log.d(TAG, "TTS onInit: language unsupported")
-                            destroyTTS()
+                            destroy()
                         }
                     }
                 } else {
                     Log.d(TAG, "TTS onInit: failure")
-                    destroyTTS()
+                    destroy()
                 }
             }
         })
