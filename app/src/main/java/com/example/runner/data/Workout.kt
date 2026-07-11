@@ -27,6 +27,11 @@ enum class WorkoutType {
     RACE
 }
 
+/** Safely convert a string to WorkoutType, returning null if the string doesn't match any enum value. */
+fun WorkoutType.valueOfOrNull(name: String): WorkoutType? {
+    return WorkoutType.values().find { it.name == name }
+}
+
 /** Макс. разумная скорость между точками (м/с) для фильтра выбросов GPS — зависит от типа тренировки */
 fun WorkoutType.maxReasonableGpsSpeedMps(): Float = when (this) {
     WorkoutType.RACE,
