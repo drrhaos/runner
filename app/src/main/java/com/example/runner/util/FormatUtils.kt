@@ -2,7 +2,9 @@ package com.example.runner.util
 
 import android.content.Context
 import com.example.runner.R
-import java.text.SimpleDateFormat
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 const val KPH_TO_MPH_COEF: Double = 0.621371
@@ -11,9 +13,9 @@ const val KPH_TO_MPH_COEF: Double = 0.621371
  * Утилиты для форматирования данных
  */
 object FormatUtils {
-    private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-    private val dateTimeFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+    private val dateFormat = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+    private val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
+    private val dateTimeFormat = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
 
     /**
      * Форматирует время в миллисекундах в строку HH:MM:SS или MM:SS
@@ -141,21 +143,24 @@ object FormatUtils {
      * Форматирует дату
      */
     fun formatDate(date: Date): String {
-        return dateFormat.format(date)
+        val localDate = LocalDateTime.ofInstant(date.toInstant(), java.time.ZoneId.systemDefault())
+        return dateFormat.format(localDate)
     }
     
     /**
      * Форматирует время
      */
     fun formatTime(date: Date): String {
-        return timeFormat.format(date)
+        val localDateTime = LocalDateTime.ofInstant(date.toInstant(), java.time.ZoneId.systemDefault())
+        return timeFormat.format(localDateTime)
     }
     
     /**
      * Форматирует дату и время
      */
     fun formatDateTime(date: Date): String {
-        return dateTimeFormat.format(date)
+        val localDateTime = LocalDateTime.ofInstant(date.toInstant(), java.time.ZoneId.systemDefault())
+        return dateTimeFormat.format(localDateTime)
     }
     
     /**

@@ -4,7 +4,8 @@ import android.content.Context
 import com.example.runner.R
 import com.example.runner.data.Workout
 import com.example.runner.data.WorkoutType
-import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 /**
@@ -12,7 +13,7 @@ import java.util.*
  */
 object CsvExporter {
     
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+    private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
     
     /**
      * Экспортирует список тренировок в CSV формат
@@ -24,7 +25,8 @@ object CsvExporter {
         
         // Данные тренировок
         workouts.forEach { workout ->
-            val date = dateFormat.format(workout.date)
+            val date = LocalDateTime.ofInstant(workout.date.toInstant(), java.time.ZoneId.systemDefault())
+                .format(dateFormat)
             val type = getWorkoutTypeName(workout.type, context)
             val distance = String.format(Locale.US, "%.2f", workout.distance)
             val durationMinutes = workout.duration / 60000.0
@@ -112,8 +114,8 @@ object CsvExporter {
      * Получает имя файла для экспорта CSV статистики
      */
     fun getStatisticsCsvFileName(): String {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val dateStr = dateFormat.format(Date())
+        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val dateStr = LocalDateTime.now().format(dateFormatter)
         return "statistics_$dateStr.csv"
     }
     
@@ -121,8 +123,8 @@ object CsvExporter {
      * Получает имя файла для экспорта CSV тренировок
      */
     fun getWorkoutsCsvFileName(): String {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val dateStr = dateFormat.format(Date())
+        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+        val dateStr = LocalDateTime.now().format(dateFormatter)
         return "workouts_$dateStr.csv"
     }
 }
