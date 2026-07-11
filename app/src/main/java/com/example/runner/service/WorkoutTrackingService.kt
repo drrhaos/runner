@@ -161,7 +161,7 @@ class WorkoutTrackingService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val timeText = formatTime(currentSession.currentTime)
+        val timeText = FormatUtils.formatTime(currentSession.currentTime)
         val distanceText = String.format("%.2f %s", currentSession.distance, getString(R.string.unit_km))
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
@@ -175,14 +175,6 @@ class WorkoutTrackingService : Service() {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(false) // Не закрываем при нажатии
             .build()
-    }
-
-    private fun formatTime(milliseconds: Long): String {
-        val totalSeconds = milliseconds / 1000
-        val hours = totalSeconds / 3600
-        val minutes = (totalSeconds % 3600) / 60
-        val seconds = totalSeconds % 60
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds)
     }
 
     private fun updateNotification() {
