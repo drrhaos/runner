@@ -30,7 +30,11 @@ import com.example.runner.util.SpeedPaceCalculator
 import com.example.runner.util.UserPreferences
 import com.google.android.gms.location.*
 import org.osmdroid.util.GeoPoint
-import java.util.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class WorkoutTrackingService : Service() {
     
@@ -67,8 +71,9 @@ class WorkoutTrackingService : Service() {
     // Callback для уведомления UI об изменениях
     private var sessionUpdateCallback: ((WorkoutSession) -> Unit)? = null
     
-    // Таймер для периодического запроса местоположения
-    private var locationTimer: Timer? = null
+    // Coroutine job for periodic location request
+    private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
+    private var periodicLocationJob: Job? = null
     private var lastLocationTime: Long = 0
     /** Последний применённый интервал Fused Location (мс) — не пересоздаём request без смены «корзины». */
     private var lastAppliedAdaptiveIntervalMs: Long = -1L
@@ -113,6 +118,7 @@ class WorkoutTrackingService : Service() {
         stopWorkoutTimer()
         stopLocationUpdates()
         stopPeriodicLocationRequest()
+        serviceScope.cancel()
     }
 
     private fun createNotificationChannel() {
@@ -506,12 +512,13 @@ class WorkoutTrackingService : Service() {
     }
 
     private fun startPeriodicLocationRequest() {
-        // Останавливаем предыдущий таймер если он есть
-        locationTimer?.cancel()
+        // Останавливаем предыдущую задачу если она есть
+        periodicLocationJob?.cancel()
         
-        locationTimer = Timer()
-        locationTimer?.scheduleAtFixedRate(object : TimerTask() {
-            override fun run() {
+        periodicLocationJob = serviceScope.launch {
+            while (isActive && isCurrentlyTracking && !currentSession.isPaused) {
+                delay(PERIODIC_LOCATION_REQUEST_INTERVAL_MS)
+                if (!isActive) break
                 // Проверяем, не прошло ли слишком много времени с последнего обновления
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastLocationTime > NO_LOCATION_UPDATE_TIMEOUT_MS) {
@@ -524,7 +531,7 @@ class WorkoutTrackingService : Service() {
                     }
                 }
             }
-        }, PERIODIC_LOCATION_REQUEST_INTERVAL_MS, PERIODIC_LOCATION_REQUEST_INTERVAL_MS)
+        }
     }
     
     /**
@@ -584,12 +591,13 @@ class WorkoutTrackingService : Service() {
             PERIODIC_LOCATION_REQUEST_INTERVAL_MS
         }
         
-        // Перезапускаем таймер с новым интервалом только если он активен
-        if (locationTimer != null && isCurrentlyTracking && !currentSession.isPaused) {
+        // Перезапускаем задачу с новым интервалом только если она активна
+        if (periodicLocationJob != null && isCurrentlyTracking && !currentSession.isPaused) {
             stopPeriodicLocationRequest()
-            locationTimer = Timer()
-            locationTimer?.scheduleAtFixedRate(object : TimerTask() {
-                override fun run() {
+            periodicLocationJob = serviceScope.launch {
+                while (isActive && isCurrentlyTracking && !currentSession.isPaused) {
+                    delay(periodicInterval)
+                    if (!isActive) break
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastLocationTime > NO_LOCATION_UPDATE_TIMEOUT_MS) {
                         fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
@@ -600,13 +608,13 @@ class WorkoutTrackingService : Service() {
                         }
                     }
                 }
-            }, periodicInterval, periodicInterval)
+            }
         }
     }
 
     private fun stopPeriodicLocationRequest() {
-        locationTimer?.cancel()
-        locationTimer = null
+        periodicLocationJob?.cancel()
+        periodicLocationJob = null
     }
     
     private fun startWorkoutTimer() {
