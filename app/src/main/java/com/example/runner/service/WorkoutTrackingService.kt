@@ -15,7 +15,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.example.runner.MainActivity
@@ -51,14 +50,11 @@ class WorkoutTrackingService : Service() {
         const val MAX_TRACK_POINTS_DISPLAY = 8000
         /** Лимит сырых точек (все приходящие от Fused) */
         const val MAX_RAW_TRACK_POINTS = 15000
-        // Интервал продления wake lock (обновляем каждые 9 минут, чтобы не допустить истечения)
-        const val WAKE_LOCK_RENEWAL_INTERVAL_MS = 9 * 60 * 1000L
     }
 
     private val binder = WorkoutTrackingBinder()
     private var fusedLocationClient: FusedLocationProviderClient? = null
     private var locationCallback: LocationCallback? = null
-    private var wakeLock: PowerManager.WakeLock? = null
     private var currentLocationRequest: LocationRequest? = null
 
     // Данные тренировки
@@ -81,9 +77,6 @@ class WorkoutTrackingService : Service() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var workoutTimeRunnable: Runnable? = null
     
-    // Таймер для продления wake lock во время длительных тренировок
-    private var wakeLockRenewalTimer: Timer? = null
-
     inner class WorkoutTrackingBinder : Binder() {
         fun getService(): WorkoutTrackingService = this@WorkoutTrackingService
     }
@@ -93,19 +86,8 @@ class WorkoutTrackingService : Service() {
         createNotificationChannel()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         setupLocationCallback()
-        // Не приобретаем wake lock сразу - только при старте тренировки
-        initializeWakeLock()
     }
     
-    private fun initializeWakeLock() {
-        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(
-            PowerManager.PARTIAL_WAKE_LOCK,
-            "RunnerApp::WorkoutTrackingWakeLock"
-        )
-        wakeLock?.setReferenceCounted(false) // Не использовать reference counting
-    }
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START_WORKOUT -> {
@@ -131,8 +113,6 @@ class WorkoutTrackingService : Service() {
         stopWorkoutTimer()
         stopLocationUpdates()
         stopPeriodicLocationRequest()
-        stopWakeLockRenewal()
-        releaseWakeLock()
     }
 
     private fun createNotificationChannel() {
@@ -181,40 +161,6 @@ class WorkoutTrackingService : Service() {
         val notification = createNotification()
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, notification)
-    }
-
-    private fun acquireWakeLock() {
-        wakeLock?.let {
-            if (!it.isHeld) {
-                it.acquire()
-                android.util.Log.d("WorkoutTrackingService", "Wake lock acquired")
-            } else {
-                android.util.Log.d("WorkoutTrackingService", "Wake lock already held, skipping extra acquire")
-            }
-        }
-    }
-
-    private fun renewWakeLockIfHeld() {
-        wakeLock?.let {
-            if (!it.isHeld) return@let
-            try {
-                it.acquire(WAKE_LOCK_RENEWAL_INTERVAL_MS)
-                android.util.Log.d("WorkoutTrackingService", "Wake lock renewed (timed)")
-            } catch (e: Exception) {
-                android.util.Log.w("WorkoutTrackingService", "Could not renew wake lock: ${e.message}")
-            }
-        }
-    }
-
-    private fun releaseWakeLock() {
-        wakeLock?.let {
-            if (it.isHeld) {
-                it.release()
-                android.util.Log.d("WorkoutTrackingService", "Wake lock released")
-            }
-        }
-        // Останавливаем таймер продления wake lock
-        stopWakeLockRenewal()
     }
 
     private fun setupLocationCallback() {
@@ -434,9 +380,6 @@ class WorkoutTrackingService : Service() {
         lastLocationTime = 0L
         lastAppliedAdaptiveIntervalMs = -1L
         
-        acquireWakeLock()
-        startWakeLockRenewal()
-        
         val currentTime = System.currentTimeMillis()
         isCurrentlyTracking = true
         android.util.Log.d("WorkoutTrackingService", "Setting isCurrentlyTracking = true")
@@ -480,9 +423,6 @@ class WorkoutTrackingService : Service() {
             // isTracking остается true, так как тренировка не остановлена, а только на паузе
         )
         android.util.Log.d("WorkoutTrackingService", "Session updated: isTracking=${currentSession.isTracking}, isPaused=${currentSession.isPaused}")
-        // Останавливаем продление wake lock и освобождаем его во время паузы для экономии батареи
-        stopWakeLockRenewal()
-        releaseWakeLock()
         stopPeriodicLocationRequest()
         stopWorkoutTimer()
         sessionUpdateCallback?.invoke(currentSession)
@@ -500,9 +440,6 @@ class WorkoutTrackingService : Service() {
             totalPauseDuration = currentSession.totalPauseDuration + pauseDuration
         )
         android.util.Log.d("WorkoutTrackingService", "Session updated: isTracking=${currentSession.isTracking}, isPaused=${currentSession.isPaused}")
-        // Приобретаем wake lock при возобновлении
-        acquireWakeLock()
-        startWakeLockRenewal()
         startPeriodicLocationRequest()
         startWorkoutTimer()
         sessionUpdateCallback?.invoke(currentSession)
@@ -519,8 +456,6 @@ class WorkoutTrackingService : Service() {
         stopLocationUpdates()
         stopPeriodicLocationRequest()
         stopWorkoutTimer()
-        stopWakeLockRenewal()
-        releaseWakeLock()
         sessionUpdateCallback?.invoke(currentSession)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -672,37 +607,6 @@ class WorkoutTrackingService : Service() {
     private fun stopPeriodicLocationRequest() {
         locationTimer?.cancel()
         locationTimer = null
-    }
-    
-    /**
-     * Запускает периодическое продление wake lock для длительных тренировок
-     * Это предотвращает истечение wake lock во время активного трекинга
-     */
-    private fun startWakeLockRenewal() {
-        // Останавливаем предыдущий таймер если он есть
-        wakeLockRenewalTimer?.cancel()
-        
-        wakeLockRenewalTimer = Timer()
-        wakeLockRenewalTimer?.scheduleAtFixedRate(object : TimerTask() {
-            override fun run() {
-                // Продлеваем wake lock только во время активного трекинга
-                if (isCurrentlyTracking && !currentSession.isPaused) {
-                    renewWakeLockIfHeld()
-                    android.util.Log.d("WorkoutTrackingService", "Wake lock automatically renewed")
-                } else {
-                    // Если тренировка на паузе или остановлена, останавливаем обновления
-                    stopWakeLockRenewal()
-                }
-            }
-        }, WAKE_LOCK_RENEWAL_INTERVAL_MS, WAKE_LOCK_RENEWAL_INTERVAL_MS)
-    }
-    
-    /**
-     * Останавливает периодическое продление wake lock
-     */
-    private fun stopWakeLockRenewal() {
-        wakeLockRenewalTimer?.cancel()
-        wakeLockRenewalTimer = null
     }
     
     private fun startWorkoutTimer() {
