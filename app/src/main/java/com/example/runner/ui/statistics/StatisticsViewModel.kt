@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.runner.data.Workout
-import com.example.runner.data.WorkoutDao
+import com.example.runner.data.WorkoutRepository
 import com.example.runner.data.WorkoutType
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -45,7 +45,7 @@ data class MonthlyData(
     val duration: Long
 )
 
-class StatisticsViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
+class StatisticsViewModel(private val repository: WorkoutRepository) : ViewModel() {
 
     private val _statisticsData = MutableStateFlow(StatisticsData())
     val statisticsData: StateFlow<StatisticsData> = _statisticsData.asStateFlow()
@@ -61,9 +61,9 @@ class StatisticsViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
         viewModelScope.launch {
             try {
                 _isLoading.value = true
-                
+
                 // Загружаем все тренировки
-                val allWorkouts = workoutDao.getAllWorkouts().first()
+                val allWorkouts = repository.getAllWorkouts().first()
                 
                 if (allWorkouts.isEmpty()) {
                     _statisticsData.value = StatisticsData()
@@ -207,11 +207,11 @@ class StatisticsViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
     }
 }
 
-class StatisticsViewModelFactory(private val workoutDao: WorkoutDao) : ViewModelProvider.Factory {
+class StatisticsViewModelFactory(private val repository: WorkoutRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(StatisticsViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return StatisticsViewModel(workoutDao) as T
+            return StatisticsViewModel(repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

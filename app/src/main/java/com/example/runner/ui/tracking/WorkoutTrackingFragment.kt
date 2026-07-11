@@ -91,7 +91,8 @@ class WorkoutTrackingFragment : Fragment() {
     private var tts: TextToSpeech? = null
     private val viewModel: WorkoutTrackingViewModel by viewModels {
         val database = WorkoutDatabase.getDatabase(requireContext())
-        WorkoutTrackingViewModelFactory(database.workoutDao(), requireApplication())
+        val repository = com.example.runner.data.WorkoutRepository(database.workoutDao())
+        WorkoutTrackingViewModelFactory(repository, requireApplication())
     }
 
     private val settingsViewModel: SettingsViewModel by viewModels {
