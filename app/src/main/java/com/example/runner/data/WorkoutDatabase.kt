@@ -11,7 +11,7 @@ import android.content.Context
 @Database(
     entities = [Workout::class],
     version = 2,
-    exportSchema = false
+    exportSchema = true
 )
 @TypeConverters(Converters::class)
 abstract class WorkoutDatabase : RoomDatabase() {
