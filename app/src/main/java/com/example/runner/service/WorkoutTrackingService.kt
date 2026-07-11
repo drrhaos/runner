@@ -203,15 +203,12 @@ class WorkoutTrackingService : Service() {
             serviceScope.launch { updateLocation(location) }
             return
         }
-        android.util.Log.d("WorkoutTrackingService", "updateLocation called: lat=${location.latitude}, lon=${location.longitude}, accuracy=${location.accuracy}m, speed=${location.speed}m/s")
         
         val newTrackPoints = currentSession.trackPoints.toMutableList()
         val newTrackDataPoints = currentSession.trackDataPoints.toMutableList()
         val newRawTrackDataPoints = currentSession.rawTrackDataPoints.toMutableList()
         
         if (isCurrentlyTracking && !currentSession.isPaused) {
-            android.util.Log.d("WorkoutTrackingService", "Currently tracking, processing location")
-            
             val previousLocation = lastLocation
             val rawTrackPoint = TrackPoint(
                 latitude = location.latitude,
@@ -244,7 +241,6 @@ class WorkoutTrackingService : Service() {
             if (previousLocation != null) {
                 val distanceToLastMeters = filteredLocation.distanceTo(previousLocation)
                 if (distanceToLastMeters < MIN_POINT_DISTANCE_METERS) {
-                    android.util.Log.d("WorkoutTrackingService", "Point too close to previous: ${distanceToLastMeters}m — skipped")
                     decimateRawPointsIfNeeded(newRawTrackDataPoints)
                     currentSession = currentSession.copy(
                         currentLocation = filteredLocation,
@@ -280,9 +276,6 @@ class WorkoutTrackingService : Service() {
             if (previousLocation != null) {
                 val segmentDistanceMeters = filteredLocation.distanceTo(previousLocation)
                 newDistance += segmentDistanceMeters / 1000f
-                android.util.Log.d("WorkoutTrackingService", "Distance segment: ${segmentDistanceMeters}m, total: ${newDistance}km")
-            } else {
-                android.util.Log.d("WorkoutTrackingService", "First GPS point, no distance calculated")
             }
 
             val currentTime = System.currentTimeMillis()
@@ -322,9 +315,7 @@ class WorkoutTrackingService : Service() {
             lastLocation = filteredLocation
             lastUpdateTime = currentTime
             lastLocationTime = currentTime
-            android.util.Log.d("WorkoutTrackingService", "Timing updated: lastUpdateTime=$lastUpdateTime, currentTime=$currentTime")
         } else {
-            android.util.Log.d("WorkoutTrackingService", "Not tracking or paused: isCurrentlyTracking=$isCurrentlyTracking, isPaused=${currentSession.isPaused}")
             currentSession = currentSession.copy(
                 currentLocation = location,
                 rawTrackDataPoints = if (isCurrentlyTracking) {
@@ -376,8 +367,6 @@ class WorkoutTrackingService : Service() {
     }
 
     fun startWorkout() {
-        android.util.Log.d("WorkoutTrackingService", "startWorkout called")
-
         if (currentSession.isTracking && currentSession.isPaused) {
             android.util.Log.w("WorkoutTrackingService", "startWorkout ignored: workout is paused, use resume")
             return
@@ -407,7 +396,6 @@ class WorkoutTrackingService : Service() {
         
         val currentTime = System.currentTimeMillis()
         isCurrentlyTracking = true
-        android.util.Log.d("WorkoutTrackingService", "Setting isCurrentlyTracking = true")
         currentSession = WorkoutSession(
             isTracking = true,
             isPaused = false,
@@ -434,12 +422,9 @@ class WorkoutTrackingService : Service() {
         startWorkoutTimer()
         startForeground(NOTIFICATION_ID, createNotification())
         sessionUpdateCallback?.invoke(currentSession)
-        
-        android.util.Log.d("WorkoutTrackingService", "Workout started successfully")
     }
 
     fun pauseWorkout() {
-        android.util.Log.d("WorkoutTrackingService", "pauseWorkout called")
         isCurrentlyTracking = false
         val currentTime = System.currentTimeMillis()
         currentSession = currentSession.copy(
@@ -447,7 +432,6 @@ class WorkoutTrackingService : Service() {
             pauseTime = currentTime
             // isTracking остается true, так как тренировка не остановлена, а только на паузе
         )
-        android.util.Log.d("WorkoutTrackingService", "Session updated: isTracking=${currentSession.isTracking}, isPaused=${currentSession.isPaused}")
         stopPeriodicLocationRequest()
         stopWorkoutTimer()
         sessionUpdateCallback?.invoke(currentSession)
@@ -455,7 +439,6 @@ class WorkoutTrackingService : Service() {
     }
 
     fun resumeWorkout() {
-        android.util.Log.d("WorkoutTrackingService", "resumeWorkout called")
         val currentTime = System.currentTimeMillis()
         val pauseDuration = currentTime - currentSession.pauseTime
         isCurrentlyTracking = true
@@ -464,7 +447,6 @@ class WorkoutTrackingService : Service() {
             pauseTime = 0,
             totalPauseDuration = currentSession.totalPauseDuration + pauseDuration
         )
-        android.util.Log.d("WorkoutTrackingService", "Session updated: isTracking=${currentSession.isTracking}, isPaused=${currentSession.isPaused}")
         startPeriodicLocationRequest()
         startWorkoutTimer()
         sessionUpdateCallback?.invoke(currentSession)
@@ -567,8 +549,6 @@ class WorkoutTrackingService : Service() {
             return
         }
 
-        android.util.Log.d("WorkoutTrackingService", "Updating location request interval to $adaptiveInterval ms (speed: $currentSpeed km/h)")
-        
         try {
             // Останавливаем текущие обновления
             locationCallback?.let { callback ->
@@ -586,7 +566,6 @@ class WorkoutTrackingService : Service() {
                 mainLooper
             )
             
-            android.util.Log.d("WorkoutTrackingService", "Location request updated successfully")
             lastAppliedAdaptiveIntervalMs = adaptiveInterval
             
         } catch (e: SecurityException) {
@@ -637,7 +616,6 @@ class WorkoutTrackingService : Service() {
     }
     
     private fun startWorkoutTimer() {
-        android.util.Log.d("WorkoutTrackingService", "Starting workout timer")
         stopWorkoutTimer()
         workoutTimerJob = serviceScope.launch {
             while (isActive && isCurrentlyTracking && !currentSession.isPaused) {
@@ -646,14 +624,12 @@ class WorkoutTrackingService : Service() {
                 val elapsedTime = currentTime - currentSession.startTime - currentSession.totalPauseDuration
                 currentSession = currentSession.copy(currentTime = elapsedTime)
                 sessionUpdateCallback?.invoke(currentSession)
-                android.util.Log.d("WorkoutTrackingService", "Updated workout time: $elapsedTime")
                 updateNotification()
             }
         }
     }
     
     private fun stopWorkoutTimer() {
-        android.util.Log.d("WorkoutTrackingService", "Stopping workout timer")
         workoutTimerJob?.cancel()
         workoutTimerJob = null
     }
