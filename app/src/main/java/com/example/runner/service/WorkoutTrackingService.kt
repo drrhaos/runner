@@ -49,6 +49,8 @@ class WorkoutTrackingService : Service() {
         const val NO_LOCATION_UPDATE_TIMEOUT_MS = 5000L
         const val PERIODIC_LOCATION_REQUEST_INTERVAL_MS = 2000L
         const val WORKOUT_TIMER_INTERVAL_MS = 1000L
+        /** Throttling interval for foreground notification updates to save battery */
+        const val NOTIFICATION_UPDATE_INTERVAL_MS = 5000L
         /** Лимит точек карты / отфильтрованного трека в RAM при длительных тренировках */
         const val MAX_TRACK_POINTS_DISPLAY = 8000
         /** Лимит сырых точек (все приходящие от Fused) */
@@ -79,6 +81,9 @@ class WorkoutTrackingService : Service() {
 
     // Coroutine job for workout timer (replaces Handler.postDelayed)
     private var workoutTimerJob: Job? = null
+
+    /** Tracks when the foreground notification was last updated for throttling */
+    private var lastNotificationUpdateTime: Long = 0
     
     inner class WorkoutTrackingBinder : Binder() {
         fun getService(): WorkoutTrackingService = this@WorkoutTrackingService
@@ -161,7 +166,22 @@ class WorkoutTrackingService : Service() {
             .build()
     }
 
-    private fun updateNotification() {
+    /**
+     * Updates the foreground notification with optional throttling to save battery.
+     *
+     * @param force If true, updates immediately regardless of throttling.
+     *              Use for state changes (start, pause, resume, stop).
+     */
+    private fun updateNotification(force: Boolean = false) {
+        if (!force) {
+            val now = System.currentTimeMillis()
+            if (now - lastNotificationUpdateTime < NOTIFICATION_UPDATE_INTERVAL_MS) {
+                return
+            }
+            lastNotificationUpdateTime = now
+        } else {
+            lastNotificationUpdateTime = System.currentTimeMillis()
+        }
         val notification = createNotification()
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(NOTIFICATION_ID, notification)
@@ -431,7 +451,7 @@ class WorkoutTrackingService : Service() {
         stopPeriodicLocationRequest()
         stopWorkoutTimer()
         sessionUpdateCallback?.invoke(currentSession)
-        updateNotification()
+        updateNotification(force = true)
     }
 
     fun resumeWorkout() {
@@ -448,7 +468,7 @@ class WorkoutTrackingService : Service() {
         startPeriodicLocationRequest()
         startWorkoutTimer()
         sessionUpdateCallback?.invoke(currentSession)
-        updateNotification()
+        updateNotification(force = true)
     }
 
     fun stopWorkout() {
