@@ -44,7 +44,7 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
                 workoutDao.insertWorkout(workout)
                 loadStatistics()
             } catch (e: Exception) {
-                // Handle error
+                android.util.Log.e("WorkoutViewModel", "Error inserting workout: ${e.message}", e)
             }
         }
     }
@@ -55,7 +55,7 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
                 workoutDao.updateWorkout(workout)
                 loadStatistics()
             } catch (e: Exception) {
-                // Handle error
+                android.util.Log.e("WorkoutViewModel", "Error updating workout: ${e.message}", e)
             }
         }
     }
@@ -66,7 +66,7 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
                 workoutDao.deleteWorkout(workout)
                 loadStatistics()
             } catch (e: Exception) {
-                // Handle error
+                android.util.Log.e("WorkoutViewModel", "Error deleting workout: ${e.message}", e)
             }
         }
     }
@@ -82,7 +82,7 @@ class WorkoutViewModel(private val workoutDao: WorkoutDao) : ViewModel() {
                 _totalWorkouts.value = workoutDao.getTotalWorkouts()
                 _averageDuration.value = workoutDao.getAverageDuration() ?: 0L
             } catch (e: Exception) {
-                // Handle error
+                android.util.Log.e("WorkoutViewModel", "Error loading statistics: ${e.message}", e)
             }
         }
     }
