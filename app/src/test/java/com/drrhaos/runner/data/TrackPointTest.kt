@@ -9,7 +9,7 @@ import org.junit.Assert.*
 class TrackPointTest {
 
     @Test
-    fun `TrackPoint should be created with all parameters`() {
+    fun trackPoint_should_be_created_with_all_parameters() {
         // Given
         val latitude = 55.7558
         val longitude = 37.6176
@@ -38,7 +38,7 @@ class TrackPointTest {
     }
 
     @Test
-    fun `TrackPoint should be created with null optional parameters`() {
+    fun trackPoint_should_be_created_with_null_optional_parameters() {
         // Given
         val latitude = 55.7558
         val longitude = 37.6176
@@ -64,7 +64,7 @@ class TrackPointTest {
     }
 
     @Test
-    fun `TrackPoint should be created with some null parameters`() {
+    fun trackPoint_should_be_created_with_some_null_parameters() {
         // Given
         val latitude = 55.7558
         val longitude = 37.6176
@@ -91,7 +91,7 @@ class TrackPointTest {
     }
 
     @Test
-    fun `TrackPoint should handle extreme values`() {
+    fun trackPoint_should_handle_extreme_values() {
         // Given
         val latitude = 90.0
         val longitude = 180.0
@@ -120,7 +120,7 @@ class TrackPointTest {
     }
 
     @Test
-    fun `TrackPoint should handle negative values`() {
+    fun trackPoint_should_handle_negative_values() {
         // Given
         val latitude = -90.0
         val longitude = -180.0
@@ -149,7 +149,7 @@ class TrackPointTest {
     }
 
     @Test
-    fun `TrackPoint should be created with zero values`() {
+    fun trackPoint_should_be_created_with_zero_values() {
         // Given
         val latitude = 0.0
         val longitude = 0.0
@@ -178,7 +178,7 @@ class TrackPointTest {
     }
 
     @Test
-    fun `TrackPoint should handle decimal values`() {
+    fun trackPoint_should_handle_decimal_values() {
         // Given
         val latitude = 55.7558
         val longitude = 37.6176

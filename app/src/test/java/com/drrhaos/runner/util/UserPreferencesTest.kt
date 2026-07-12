@@ -28,7 +28,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `userWeight should have default value`() {
+    fun userweight_should_have_default_value() {
         // When
         val weight = userPreferences.userWeight
 
@@ -37,7 +37,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `userWeight should save and load correctly`() {
+    fun userweight_should_save_and_load_correctly() {
         // Given
         val testWeight = 75.5f
 
@@ -50,7 +50,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `userHeight should have default value`() {
+    fun userheight_should_have_default_value() {
         // When
         val height = userPreferences.userHeight
 
@@ -59,7 +59,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `userHeight should save and load correctly`() {
+    fun userheight_should_save_and_load_correctly() {
         // Given
         val testHeight = 180.5f
 
@@ -72,7 +72,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `userGender should have default value`() {
+    fun usergender_should_have_default_value() {
         // When
         val gender = userPreferences.userGender
 
@@ -81,7 +81,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `userGender should save and load correctly`() {
+    fun usergender_should_save_and_load_correctly() {
         // Given
         val testGender = "female"
 
@@ -94,7 +94,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `userBirthDate should have default value`() {
+    fun userbirthdate_should_have_default_value() {
         // When
         val birthDate = userPreferences.userBirthDate
 
@@ -103,7 +103,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `userBirthDate should save and load correctly`() {
+    fun userbirthdate_should_save_and_load_correctly() {
         // Given
         val testBirthDate = System.currentTimeMillis() - (25 * 365 * 24 * 60 * 60 * 1000L) // 25 лет назад
 
@@ -116,7 +116,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `userAge should return 0 when birth date is not set`() {
+    fun userage_should_return_0_when_birth_date_is_not_set() {
         // Given
         userPreferences.userBirthDate = 0L
 
@@ -128,7 +128,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `userAge should calculate age correctly`() {
+    fun userage_should_calculate_age_correctly() {
         // Given - 25 лет назад
         val birthDate = System.currentTimeMillis() - (25L * 365 * 24 * 60 * 60 * 1000)
         userPreferences.userBirthDate = birthDate
@@ -141,7 +141,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `unitSystem should have default value`() {
+    fun unitsystem_should_have_default_value() {
         // When
         val unitSystem = userPreferences.unitSystem
 
@@ -150,7 +150,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `unitSystem should save and load correctly`() {
+    fun unitsystem_should_save_and_load_correctly() {
         // Given
         val testUnitSystem = "imperial"
 
@@ -163,7 +163,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `isMetricSystem should return true for metric`() {
+    fun ismetricsystem_should_return_true_for_metric() {
         // Given
         userPreferences.unitSystem = "metric"
 
@@ -175,7 +175,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `isMetricSystem should return false for imperial`() {
+    fun ismetricsystem_should_return_false_for_imperial() {
         // Given
         userPreferences.unitSystem = "imperial"
 
@@ -187,7 +187,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `autoPause should have default value`() {
+    fun autopause_should_have_default_value() {
         // When
         val autoPause = userPreferences.autoPause
 
@@ -196,7 +196,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `autoPause should save and load correctly`() {
+    fun autopause_should_save_and_load_correctly() {
         // Given
         val testAutoPause = false
 
@@ -209,7 +209,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `voiceFeedback should have default value`() {
+    fun voicefeedback_should_have_default_value() {
         // When
         val voiceFeedback = userPreferences.voiceFeedback
 
@@ -218,7 +218,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `voiceFeedback should save and load correctly`() {
+    fun voicefeedback_should_save_and_load_correctly() {
         // Given
         val testVoiceFeedback = true
 
@@ -231,7 +231,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `gpsAccuracy should have default value`() {
+    fun gpsaccuracy_should_have_default_value() {
         // When
         val gpsAccuracy = userPreferences.gpsAccuracy
 
@@ -240,7 +240,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `gpsAccuracy should save and load correctly`() {
+    fun gpsaccuracy_should_save_and_load_correctly() {
         // Given
         val testGpsAccuracy = "medium"
 
@@ -253,7 +253,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `getGpsAccuracyLevel should return current gps accuracy`() {
+    fun getgpsaccuracylevel_should_return_current_gps_accuracy() {
         // Given
         val testGpsAccuracy = "low"
         userPreferences.gpsAccuracy = testGpsAccuracy
@@ -266,7 +266,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `isFirstLaunch should have default value`() {
+    fun isfirstlaunch_should_have_default_value() {
         // When
         val isFirstLaunch = userPreferences.isFirstLaunch
 
@@ -275,7 +275,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `isFirstLaunch should save and load correctly`() {
+    fun isfirstlaunch_should_save_and_load_correctly() {
         // Given
         val testIsFirstLaunch = false
 
@@ -288,7 +288,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `resetToDefaults should clear all preferences`() {
+    fun resettodefaults_should_clear_all_preferences() {
         // Given - устанавливаем все значения
         userPreferences.userWeight = 80f
         userPreferences.userHeight = 190f
@@ -314,7 +314,7 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun `multiple preferences should persist independently`() {
+    fun multiple_preferences_should_persist_independently() {
         // Given
         val weight = 65f
         val height = 170f
