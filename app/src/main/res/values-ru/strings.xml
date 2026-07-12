@@ -243,6 +243,7 @@
     <string name="avg_pace_label">Средний темп</string>
 
     <string name="permission_location_needed">Разрешение на местоположение необходимо для трекинга</string>
+    <string name="permission_location_denied_can_train">Разрешение на местоположение отклонено. Вы все равно можете тренироваться без GPS-трекинга.</string>
     <string name="permission_notification_needed">Разрешение на уведомления необходимо для фонового трекинга</string>
     <string name="battery_optimization_hint">Для стабильной работы приложения отключите оптимизацию батареи в настройках</string>
     <string name="workout_too_short">Тренировка слишком короткая для сохранения</string>

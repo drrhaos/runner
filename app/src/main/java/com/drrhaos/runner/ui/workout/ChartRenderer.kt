@@ -1,11 +1,11 @@
 package com.drrhaos.runner.ui.workout
 
 import android.graphics.Color
-import android.location.Location
 import android.content.res.Configuration
 import com.drrhaos.runner.R
 import com.drrhaos.runner.data.TrackData
 import com.drrhaos.runner.data.TrackPoint
+import com.drrhaos.runner.util.SpeedPaceCalculator
 import com.github.mikephil.charting.charts.BarChart
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.XAxis
@@ -73,37 +73,11 @@ class ChartRenderer(
         val textColor = if (isDark) Color.WHITE else Color.BLACK
         val gridColor = if (isDark) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
 
-        val entriesPace = mutableListOf<Entry>()
-        val entriesSpeed = mutableListOf<Entry>()
+        val isMetric = userPreferences?.isMetricSystem() ?: true
+        val paceSpeedSeries = SpeedPaceCalculator.buildPaceSpeedSeries(points, isMetric)
 
-        var cumulativeDistance = 0f
-        val startTime = points.firstOrNull()?.timestamp ?: 0L
-
-        for (i in 0 until points.size) {
-            val point = points[i]
-
-            if (i > 0) {
-                val prevPoint = points[i - 1]
-                val location1 = Location("").apply {
-                    latitude = prevPoint.latitude
-                    longitude = prevPoint.longitude
-                }
-                val location2 = Location("").apply {
-                    latitude = point.latitude
-                    longitude = point.longitude
-                }
-                cumulativeDistance += location1.distanceTo(location2) / 1000f
-            }
-
-            val speedMs = point.speed ?: 0f
-            val speedKmh = speedMs * 3.6f
-            val pace = if (speedKmh > 0) 60f / speedKmh else 0f
-
-            val timeMinutes = if (startTime > 0) (point.timestamp - startTime) / 60000f else 0f
-
-            entriesPace.add(Entry(timeMinutes, pace))
-            entriesSpeed.add(Entry(timeMinutes, speedKmh))
-        }
+        val entriesPace = paceSpeedSeries.map { Entry(it.timeMinutes, it.paceMinPerUnit) }
+        val entriesSpeed = paceSpeedSeries.map { Entry(it.timeMinutes, it.speedDisplay) }
 
         val dataSetPace = LineDataSet(entriesPace, context.getString(R.string.chart_pace_label)).apply {
             color = Color.parseColor("#FF9800")
@@ -144,27 +118,27 @@ class ChartRenderer(
             if (isDark) Color.BLACK else Color.WHITE
         )
 
+        // Cache for touch handler
+        val cachedSeries = paceSpeedSeries
+
         chart.setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
             override fun onValueSelected(e: Entry?, h: Highlight?) {
                 if (e != null) {
-                    val startTime = points.firstOrNull()?.timestamp ?: 0L
-                    val selectedTime = startTime + (e.x * 60000).toLong()
-                    val selectedPoint = points.minByOrNull {
-                        kotlin.math.abs(it.timestamp - selectedTime)
-                    }
+                    val pointIndex = SpeedPaceCalculator.findNearestPointIndexByTime(points, e.x.toFloat())
+                    if (pointIndex >= 0 && pointIndex < points.size) {
+                        val selectedPoint = points[pointIndex]
 
-                    if (selectedPoint != null) {
-                        val speedMs = selectedPoint.speed ?: 0f
-                        val speedKmh = speedMs * 3.6f
-                        val pace = if (speedKmh > 0) 60f / speedKmh else 0f
+                        // Find nearest series entry for display values
+                        val nearestEntry = cachedSeries.minByOrNull { kotlin.math.abs(it.timeMinutes - e.x.toFloat()) }
 
                         val timeMinutes = e.x.toInt()
-                        val paceMinutes = pace.toInt()
-                        val paceSeconds = ((pace - paceMinutes) * 60).toInt().coerceIn(0, 59)
+                        val paceStr = nearestEntry?.let { SpeedPaceCalculator.formatPaceMmSs(it.paceMinPerUnit) } ?: "--:--"
+                        val speedDisplay = nearestEntry?.speedDisplay ?: 0f
+                        val speedUnit = if (isMetric) context.getString(R.string.unit_kmh) else context.getString(R.string.unit_mph)
 
                         val valuesText = context.getString(R.string.chart_time_format, timeMinutes) + "\n" +
-                            "${context.getString(R.string.workout_details_speed)}: %.0f м/сек\n".format(speedMs) +
-                            "${context.getString(R.string.workout_details_pace)}: %d:%02d мин/км".format(paceMinutes, paceSeconds)
+                            "${context.getString(R.string.workout_details_speed)}: %.1f $speedUnit\n".format(speedDisplay) +
+                            "${context.getString(R.string.workout_details_pace)}: $paceStr"
                         textViewPaceSpeedValues.text = valuesText
                         textViewPaceSpeedValues.visibility = android.view.View.VISIBLE
 
@@ -203,28 +177,13 @@ class ChartRenderer(
         val textColor = if (isDark) Color.WHITE else Color.BLACK
         val gridColor = if (isDark) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
 
-        val entries = mutableListOf<Entry>()
-        var cumulativeDistance = 0f
-
-        for (i in 0 until points.size) {
-            val point = points[i]
-
-            if (i > 0) {
-                val prevPoint = points[i - 1]
-                val location1 = Location("").apply {
-                    latitude = prevPoint.latitude
-                    longitude = prevPoint.longitude
-                }
-                val location2 = Location("").apply {
-                    latitude = point.latitude
-                    longitude = point.longitude
-                }
-                cumulativeDistance += location1.distanceTo(location2) / 1000f
-            }
-
-            val altitude = point.altitude ?: 0.0
-            entries.add(Entry(cumulativeDistance, altitude.toFloat()))
+        val elevationSeries = SpeedPaceCalculator.buildElevationSeries(points)
+        if (elevationSeries.isEmpty()) {
+            chart.visibility = android.view.View.GONE
+            return
         }
+
+        val entries = elevationSeries.map { Entry(it.distanceKm, it.altitudeMeters) }
 
         val dataSet = LineDataSet(entries, context.getString(R.string.chart_elevation_title)).apply {
             color = Color.parseColor("#4CAF50")
@@ -284,37 +243,9 @@ class ChartRenderer(
                     textViewElevationValues.text = valuesText
                     textViewElevationValues.visibility = android.view.View.VISIBLE
 
-                    var cumulativeDistance = 0f
-                    var selectedPoint: TrackPoint? = null
-
-                    for (i in 0 until points.size) {
-                        val point = points[i]
-
-                        if (i > 0) {
-                            val prevPoint = points[i - 1]
-                            val location1 = Location("").apply {
-                                latitude = prevPoint.latitude
-                                longitude = prevPoint.longitude
-                            }
-                            val location2 = Location("").apply {
-                                latitude = point.latitude
-                                longitude = point.longitude
-                            }
-                            cumulativeDistance += location1.distanceTo(location2) / 1000f
-                        }
-
-                        if (cumulativeDistance >= selectedDistance) {
-                            selectedPoint = point
-                            break
-                        }
-                    }
-
-                    if (selectedPoint == null && points.isNotEmpty()) {
-                        selectedPoint = points.last()
-                    }
-
-                    selectedPoint?.let { point ->
-                        onPositionSelected(point)
+                    val pointIndex = SpeedPaceCalculator.findPointIndexByDistance(points, selectedDistance)
+                    if (pointIndex >= 0 && pointIndex < points.size) {
+                        onPositionSelected(points[pointIndex])
                     }
                 }
             }
@@ -350,43 +281,9 @@ class ChartRenderer(
         val gridColor = if (isDark) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
 
         val isMetric = userPreferences?.isMetricSystem() ?: true
-        val segmentSize = if (isMetric) 1.0f else 1.60934f
         val unitLabel = if (isMetric) context.getString(R.string.unit_km) else context.getString(R.string.unit_mile)
-        val segments = mutableListOf<Pair<Float, Float>>()
-        var currentSegmentDistance = 0f
-        var segmentStartTime = points.firstOrNull()?.timestamp ?: 0L
 
-        for (i in 1 until points.size) {
-            val prevPoint = points[i - 1]
-            val point = points[i]
-
-            val location1 = Location("").apply {
-                latitude = prevPoint.latitude
-                longitude = prevPoint.longitude
-            }
-            val location2 = Location("").apply {
-                latitude = point.latitude
-                longitude = point.longitude
-            }
-            val segmentDistance = location1.distanceTo(location2) / 1000f
-            currentSegmentDistance += segmentDistance
-
-            if (currentSegmentDistance >= segmentSize || i == points.size - 1) {
-                val segmentDuration = point.timestamp - segmentStartTime
-                val segmentDurationMinutes = segmentDuration / 60000f
-                val pace = if (currentSegmentDistance > 0) segmentDurationMinutes / currentSegmentDistance else 0f
-                var speed = if (segmentDurationMinutes > 0) currentSegmentDistance / (segmentDurationMinutes / 60f) else 0f
-
-                if (!isMetric) {
-                    speed = speed / 1.60934f
-                }
-
-                segments.add(Pair(pace, speed))
-                currentSegmentDistance = 0f
-                segmentStartTime = point.timestamp
-            }
-        }
-
+        val segments = SpeedPaceCalculator.buildSegments(points, isMetric)
         if (segments.isEmpty()) {
             chart.visibility = android.view.View.GONE
             return
@@ -394,7 +291,7 @@ class ChartRenderer(
 
         val dataSet: BarDataSet = when (segmentsDisplayMode) {
             SegmentsDisplayMode.PACE -> {
-                val entriesPace = segments.mapIndexed { index, pair -> BarEntry(index.toFloat(), pair.first) }
+                val entriesPace = segments.mapIndexed { index, seg -> BarEntry(index.toFloat(), seg.paceMinPerUnit) }
                 val paceLabel = if (isMetric) context.getString(R.string.chart_pace_label)
                 else "${context.getString(R.string.workout_details_pace)} (мин/$unitLabel)"
                 BarDataSet(entriesPace, paceLabel).apply {
@@ -404,13 +301,13 @@ class ChartRenderer(
                     valueTextSize = 10f
                     valueFormatter = object : ValueFormatter() {
                         override fun getFormattedValue(value: Float): String {
-                            return String.format("%.2f", value)
+                            return SpeedPaceCalculator.formatPaceMmSs(value)
                         }
                     }
                 }
             }
             SegmentsDisplayMode.SPEED -> {
-                val entriesSpeed = segments.mapIndexed { index, pair -> BarEntry(index.toFloat(), pair.second) }
+                val entriesSpeed = segments.mapIndexed { index, seg -> BarEntry(index.toFloat(), seg.speedDisplay) }
                 val speedUnit = if (isMetric) context.getString(R.string.unit_kmh) else context.getString(R.string.unit_mph)
                 val speedLabel = if (isMetric) context.getString(R.string.chart_speed_label)
                 else "${context.getString(R.string.workout_details_speed)} ($speedUnit)"
@@ -458,53 +355,18 @@ class ChartRenderer(
         chart.setFitBars(true)
         chart.setDrawMarkers(false)
 
+        // Cache segments list for touch handler
+        val cachedSegments = segments
+
         chart.setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
             override fun onValueSelected(e: Entry?, h: Highlight?) {
                 if (e != null) {
                     val segmentIndex = e.x.toInt()
-
-                    var currentSegmentDistance = 0f
-                    var segmentStartIndex = 0
-                    var segmentCount = 0
-                    var segmentStartPoint: TrackPoint? = null
-                    var segmentEndPoint: TrackPoint? = null
-
-                    for (i in 1 until points.size) {
-                        val prevPoint = points[i - 1]
-                        val point = points[i]
-
-                        if (segmentCount == segmentIndex && segmentStartPoint == null) {
-                            segmentStartPoint = points[segmentStartIndex]
-                        }
-
-                        val location1 = Location("").apply {
-                            latitude = prevPoint.latitude
-                            longitude = prevPoint.longitude
-                        }
-                        val location2 = Location("").apply {
-                            latitude = point.latitude
-                            longitude = point.longitude
-                        }
-                        val segmentDistance = location1.distanceTo(location2) / 1000f
-                        currentSegmentDistance += segmentDistance
-
-                        if (currentSegmentDistance >= segmentSize || i == points.size - 1) {
-                            if (segmentCount == segmentIndex) {
-                                segmentStartPoint = points[segmentStartIndex]
-                                segmentEndPoint = point
-
-                                segmentStartPoint?.let { start ->
-                                    segmentEndPoint?.let { end ->
-                                        onSegmentSelected(start, end)
-                                    }
-                                }
-
-                                break
-                            }
-                            segmentCount++
-                            segmentStartIndex = i
-                            currentSegmentDistance = 0f
-                        }
+                    if (segmentIndex >= 0 && segmentIndex < cachedSegments.size) {
+                        val seg = cachedSegments[segmentIndex]
+                        val startPoint = points[seg.startIndex]
+                        val endPoint = points[seg.endIndex]
+                        onSegmentSelected(startPoint, endPoint)
                     }
                 }
             }

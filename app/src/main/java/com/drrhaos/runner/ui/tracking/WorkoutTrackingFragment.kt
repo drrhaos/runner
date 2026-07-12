@@ -108,20 +108,20 @@ class WorkoutTrackingFragment : Fragment() {
 
     // -- Permission handlers --
 
+    private fun onLocationPermissionReady() {
+        mapManager?.initializeCenter()
+        viewModel.initializeLocationClient(requireContext())
+        requestNotificationPermission()
+    }
+
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
+        val fineGranted = permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false)
+        val coarseGranted = permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
+
         when {
-            permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {
-                mapManager?.initializeCenter()
-                viewModel.initializeLocationClient(requireContext())
-                requestNotificationPermission()
-            }
-            permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
-                mapManager?.initializeCenter()
-                viewModel.initializeLocationClient(requireContext())
-                requestNotificationPermission()
-            }
+            fineGranted || coarseGranted -> onLocationPermissionReady()
             else -> {
                 Toast.makeText(context, getString(R.string.permission_location_needed), Toast.LENGTH_LONG).show()
                 findNavController().navigateUp()
@@ -246,7 +246,7 @@ class WorkoutTrackingFragment : Fragment() {
                     viewModel.stopWorkout()
 
                     // Если есть данные для сохранения, сохраняем и переходим к деталям
-                    if (session.distance > 0 && session.currentTime > 0) {
+                    if (session.currentTime > 0) {
                         navigateToWorkoutDetails()
                     } else {
                         // Если данных нет, просто возвращаемся назад
@@ -549,7 +549,7 @@ class WorkoutTrackingFragment : Fragment() {
     private fun navigateToWorkoutDetails() {
         val session = viewModel.workoutSession.value
 
-        if (session.distance > 0 && session.currentTime > 0) {
+        if (session.currentTime > 0) {
             binding.textViewGpsAccuracy.visibility = View.GONE
             binding.buttonStop.isEnabled = false
 
@@ -591,15 +591,17 @@ class WorkoutTrackingFragment : Fragment() {
     // -- Permissions & system requests --
 
     private fun requestLocationPermission() {
+        val fineGranted = ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = ContextCompat.checkSelfPermission(
+            requireContext(),
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
         when {
-            ContextCompat.checkSelfPermission(
-                requireContext(),
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED -> {
-                mapManager?.initializeCenter()
-                viewModel.initializeLocationClient(requireContext())
-                requestNotificationPermission()
-            }
+            fineGranted || coarseGranted -> onLocationPermissionReady()
             else -> {
                 locationPermissionRequest.launch(
                     arrayOf(

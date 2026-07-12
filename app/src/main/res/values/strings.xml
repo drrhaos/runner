@@ -257,6 +257,7 @@
     <string name="avg_pace_label">Average pace</string>
 
     <string name="permission_location_needed">Location permission is required for tracking</string>
+    <string name="permission_location_denied_can_train">Location permission denied. You can still train without GPS tracking.</string>
     <string name="permission_notification_needed">Notification permission is required for background tracking</string>
     <string name="battery_optimization_hint">For stable operation, disable battery optimization in settings</string>
     <string name="workout_too_short">Workout too short to save</string>

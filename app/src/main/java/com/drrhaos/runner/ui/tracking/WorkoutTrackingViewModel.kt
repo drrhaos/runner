@@ -137,12 +137,12 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         val newTrackPoints = currentSession.trackPoints.toMutableList()
         val newTrackDataPoints = currentSession.trackDataPoints.toMutableList()
         val newRawTrackDataPoints = currentSession.rawTrackDataPoints.toMutableList()
-        
+
         // Записываем данные только во время активного трекинга (не во время паузы)
         if (isCurrentlyTracking && !currentSession.isPaused) {
             // Добавляем новую точку к треку для отображения на карте только во время активного трекинга
             newTrackPoints.add(GeoPoint(location.latitude, location.longitude))
-            
+
             val trackPoint = TrackPoint(
                 latitude = location.latitude,
                 longitude = location.longitude,
@@ -154,28 +154,22 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
             newTrackDataPoints.add(trackPoint)
             newRawTrackDataPoints.add(trackPoint)
 
-            // Вычисляем дистанцию только во время активного трекинга
-            var newDistance = currentSession.distance
-            lastLocation?.let { lastLoc ->
-                val segmentDistance = location.distanceTo(lastLoc)
-                newDistance += segmentDistance / 1000f // конвертируем в километры
-            }
+            // Delegate distance calculation to SpeedPaceCalculator (point-to-point Haversine)
+            val totalDistanceMeters = SpeedPaceCalculator.totalDistanceMeters(newTrackDataPoints)
+            val newDistance = totalDistanceMeters / 1000f
 
-            // Вычисляем скорость и темп только во время активного трекинга
-            val currentTime = System.currentTimeMillis()
-            val timeDiff = if (lastUpdateTime > 0) currentTime - lastUpdateTime else 0
-
-            val segmentDistanceKm = if (lastLocation != null) {
-                location.distanceTo(lastLocation!!) / 1000.0
+            // Derived speed between consecutive points instead of noisy GPS-reported speed
+            val currentSpeed = if (newTrackDataPoints.size >= 2) {
+                val prevPoint = newTrackDataPoints[newTrackDataPoints.size - 2]
+                val derivedSpeedMs = SpeedPaceCalculator.derivedSpeedMs(prevPoint, trackPoint)
+                SpeedPaceCalculator.speedMsToKmh(derivedSpeedMs)
             } else {
-                0.0
+                0f
             }
 
-            // Текущая скорость (км/ч)
-            val currentSpeed = SpeedPaceCalculator.computeCurrentSpeed(segmentDistanceKm, timeDiff)
-
-            // Средняя скорость (км/ч)
-            val avgSpeed = SpeedPaceCalculator.computeAverageSpeedKmH(newDistance.toDouble(), currentSession.currentTime)
+            // Average speed from centralized calculator
+            val avgSpeedMs = SpeedPaceCalculator.averageSpeedMs(totalDistanceMeters, currentSession.currentTime)
+            val avgSpeed = SpeedPaceCalculator.speedMsToKmh(avgSpeedMs)
 
             // Текущий темп (минуты на километр)
             val currentPace = SpeedPaceCalculator.computePaceRaw(currentSpeed)
@@ -202,7 +196,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
             )
 
             lastLocation = location
-            lastUpdateTime = currentTime
+            lastUpdateTime = System.currentTimeMillis()
         } else {
             // Во время паузы обновляем только статус GPS и текущее местоположение
             // НЕ добавляем точки к треку для отображения на карте
@@ -436,7 +430,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
             return null
         }
 
-        val totalDistanceMeters = calculateTotalDistanceMeters(sanitizedPoints)
+        val totalDistanceMeters = SpeedPaceCalculator.totalDistanceMeters(sanitizedPoints)
         if (totalDistanceMeters <= 0f) {
             android.util.Log.w("WorkoutTracking", "Total distance after sanitization is zero")
             return null
@@ -444,13 +438,11 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
         val totalDistanceKm = totalDistanceMeters / 1000f
         val durationMs = session.currentTime
-        val avgSpeedMps = if (durationMs > 0) {
-            totalDistanceMeters / (durationMs / 1000f)
-        } else 0f
+        val avgSpeedMps = SpeedPaceCalculator.averageSpeedMs(totalDistanceMeters, durationMs)
         val avgPace = if (totalDistanceKm > 0f) {
             (durationMs / 60000f) / totalDistanceKm
         } else 0f
-        val maxSpeedMps = sanitizedPoints.maxOfOrNull { it.speed ?: 0f } ?: 0f
+        val maxSpeedMps = SpeedPaceCalculator.maxDerivedSpeedMs(sanitizedPoints)
 
         val userPrefs = com.drrhaos.runner.util.UserPreferences(application)
         val calories = com.drrhaos.runner.util.FormatUtils.calculateCalories(totalDistanceKm, userPrefs.userWeight)
@@ -538,21 +530,6 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         return result
     }
 
-    private fun calculateTotalDistanceMeters(points: List<TrackPoint>): Float {
-        if (points.size < 2) return 0f
-        var distance = 0f
-        var previousLocation: Location? = null
-
-        for (point in points) {
-            val location = trackPointToLocation(point)
-            previousLocation?.let { prev ->
-                distance += location.distanceTo(prev)
-            }
-            previousLocation = location
-        }
-
-        return distance
-    }
 
     private fun trackPointToLocation(point: TrackPoint): Location {
         return Location("track").apply {
