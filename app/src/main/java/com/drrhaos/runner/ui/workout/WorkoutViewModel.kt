@@ -8,6 +8,7 @@ import com.drrhaos.runner.R
 import com.drrhaos.runner.data.Workout
 import com.drrhaos.runner.data.WorkoutRepository
 import com.drrhaos.runner.data.WorkoutType
+import com.drrhaos.runner.util.SpeedPaceCalculator
 import com.drrhaos.runner.util.WorkoutDataCleaner
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,8 +29,15 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     private val _averageDuration = MutableStateFlow(0L)
     val averageDuration: StateFlow<Long> = _averageDuration.asStateFlow()
 
+    private val _totalDuration = MutableStateFlow(0L)
+    val totalDuration: StateFlow<Long> = _totalDuration.asStateFlow()
+
+    private val _averagePace = MutableStateFlow(0f)
+    val averagePace: StateFlow<Float> = _averagePace.asStateFlow()
+
     init {
         loadStatistics()
+        collectAllWorkouts()
     }
 
     fun refreshStatistics() {
@@ -71,6 +79,25 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
 
     fun getWorkoutById(id: Long): Flow<Workout?> {
         return repository.getWorkoutById(id)
+    }
+
+    private fun collectAllWorkouts() {
+        viewModelScope.launch {
+            try {
+                repository.getAllWorkouts().collect { workouts ->
+                    val totalDistanceKm = workouts.sumOf { it.distance ?: 0f }
+                    val totalDurationMs = workouts.sumOf { it.duration ?: 0L }
+                    _totalDuration.value = totalDurationMs
+                    val averagePace = SpeedPaceCalculator.overallAveragePace(
+                        totalDistanceMeters = totalDistanceKm * 1000.0,
+                        totalDurationSeconds = totalDurationMs / 1000.0
+                    )
+                    _averagePace.value = averagePace
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("WorkoutViewModel", "Error collecting workouts: ${e.message}", e)
+            }
+        }
     }
 
     private fun loadStatistics() {

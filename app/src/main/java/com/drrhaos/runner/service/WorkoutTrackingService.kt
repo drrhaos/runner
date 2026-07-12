@@ -216,15 +216,20 @@ class WorkoutTrackingService : Service() {
             return
         }
 
-        // Check GPS permissions
-        if (ContextCompat.checkSelfPermission(
+        // Check GPS permissions - accept either FINE or COARSE location
+        val hasFineLocation = ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            android.util.Log.e("WorkoutTrackingService", "GPS permission not granted, cannot start workout")
+            ) == PackageManager.PERMISSION_GRANTED
+        val hasCoarseLocation = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+
+        if (!hasFineLocation && !hasCoarseLocation) {
+            android.util.Log.w("WorkoutTrackingService", "No location permission granted, starting workout without GPS")
             sessionManager.updateGpsStatus(GpsStatus.DENIED)
-            return
+            // Do NOT block workout start - user can train indoors or manually enter data
         }
 
         lastLocation = null
@@ -323,6 +328,61 @@ class WorkoutTrackingService : Service() {
                         }
                     }
                 }
+                // Periodically resolve GPS status during active workout
+                resolveGpsStatusDuringWorkout()
+            }
+        }
+    }
+
+    /**
+     * Dynamically resolves GPS status during an active workout.
+     *
+     * Checks current location permission and GPS availability, updating the session's
+     * gpsStatus so the UI can reflect mid-workout changes such as:
+     *  - GPS becoming available after being unavailable
+     *  - GPS becoming unavailable (e.g., entering a tunnel or building)
+     *  - Location permissions being revoked while workout is running
+     */
+    private fun resolveGpsStatusDuringWorkout() {
+        val hasFineLocation = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        val hasCoarseLocation = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+
+        if (!hasFineLocation && !hasCoarseLocation) {
+            // Permissions revoked during workout
+            sessionManager.updateGpsStatus(GpsStatus.DENIED)
+            return
+        }
+
+        val currentStatus = sessionManager.getSession().gpsStatus
+
+        // If we haven't received any location yet, keep searching status
+        if (lastLocationTime == 0L) {
+            if (currentStatus != GpsStatus.SEARCHING) {
+                sessionManager.updateGpsStatus(GpsStatus.SEARCHING)
+            }
+            return
+        }
+
+        val elapsedSinceLastLocation = System.currentTimeMillis() - lastLocationTime
+
+        when {
+            elapsedSinceLastLocation > NO_LOCATION_UPDATE_TIMEOUT_MS * 3 -> {
+                // No location for an extended period - GPS likely lost
+                if (currentStatus != GpsStatus.LOST) {
+                    android.util.Log.w("WorkoutTrackingService", "GPS signal lost during workout (${elapsedSinceLastLocation}ms since last fix)")
+                    sessionManager.updateGpsStatus(GpsStatus.LOST)
+                }
+            }
+            currentStatus == GpsStatus.LOST -> {
+                // We have a recent location and were in LOST state - GPS recovered
+                android.util.Log.i("WorkoutTrackingService", "GPS signal recovered during workout")
+                sessionManager.updateGpsStatus(GpsStatus.FOUND)
             }
         }
     }

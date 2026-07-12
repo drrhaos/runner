@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.drrhaos.runner.data.Workout
 import com.drrhaos.runner.data.WorkoutRepository
 import com.drrhaos.runner.data.WorkoutType
+import com.drrhaos.runner.util.SpeedPaceCalculator
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.*
@@ -78,10 +79,10 @@ class StatisticsViewModel(private val repository: WorkoutRepository) : ViewModel
                 
                 val averageDistance = if (totalWorkouts > 0) totalDistance / totalWorkouts else 0f
                 val averageDuration = if (totalWorkouts > 0) totalDuration / totalWorkouts else 0L
-                val averagePace = if (totalDistance > 0 && totalDuration > 0) {
-                    val totalMinutes = totalDuration / 60000f
-                    totalMinutes / totalDistance
-                } else 0f
+                val averagePace = SpeedPaceCalculator.overallAveragePace(
+                    totalDistanceMeters = totalDistance * 1000.0,
+                    totalDurationSeconds = totalDuration / 1000.0
+                )
 
                 // Находим лучшие результаты
                 val bestPace = allWorkouts.minOfOrNull { it.avgPace } ?: 0f

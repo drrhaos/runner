@@ -85,10 +85,7 @@ object FormatUtils {
     fun formatPace(paceMinutesPerKm: Float, context: Context? = null): String {
         if (paceMinutesPerKm <= 0) return context?.getString(R.string.statistics_pace_placeholder) ?: "--:-- /км"
         
-        val minutes = paceMinutesPerKm.toInt()
-        val seconds = ((paceMinutesPerKm - minutes) * 60).toInt()
-        
-        val paceStr = String.format("%d:%02d", minutes, seconds)
+        val paceStr = SpeedPaceCalculator.formatPaceMmSs(paceMinutesPerKm)
         return if (context != null) {
             context.getString(R.string.statistics_pace_placeholder).replace("--:--", paceStr)
         } else {
@@ -99,8 +96,7 @@ object FormatUtils {
     fun formatPaceForTTS(paceMinutesPerKm: Float, context: Context): String {
         if (paceMinutesPerKm <= 0) return "--:-- /км"
 
-        val minutes = paceMinutesPerKm.toInt()
-        val seconds = ((paceMinutesPerKm - minutes) * 60).toInt()
+        val (minutes, seconds) = SpeedPaceCalculator.paceToMinutesSeconds(paceMinutesPerKm)
 
         return String.format("%s %s %s",
             context.resources.getQuantityString(R.plurals.minutes, minutes, minutes),
@@ -177,24 +173,18 @@ object FormatUtils {
      * Вычисляет среднюю скорость в км/ч
      */
     fun calculateAverageSpeed(distanceKm: Float, durationMs: Long): Float {
-        if (durationMs <= 0) return 0f
-        val durationHours = durationMs / (1000f * 3600f)
-        return if (durationHours > 0) distanceKm / durationHours else 0f
+        return SpeedPaceCalculator.averageSpeedKmh(distanceKm, durationMs)
     }
     
     /**
      * Вычисляет темп в минутах на километр
      */
     fun calculatePaceKph(distanceKm: Float, durationMs: Long): Float {
-        if (distanceKm <= 0 || durationMs <= 0) return 0f
-        val durationMinutes = durationMs / 60000f
-        return durationMinutes / distanceKm
+        return SpeedPaceCalculator.segmentPaceMetric(durationMs, distanceKm, metric = true)
     }
 
     fun calculatePaceMph(distanceKm: Float, durationMs: Long): Float {
-        if (distanceKm <= 0 || durationMs <= 0) return 0f
-        val durationMinutes = durationMs / 60000f
-        return (durationMinutes / (distanceKm*KPH_TO_MPH_COEF)).toFloat()
+        return SpeedPaceCalculator.segmentPaceMetric(durationMs, distanceKm, metric = false)
     }
     
     /**
