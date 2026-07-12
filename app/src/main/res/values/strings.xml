@@ -300,6 +300,14 @@
     <string name="gpx_note_calories">Calories: %d kcal</string>
     <string name="gpx_note_notes">Notes: %s</string>
 
+    <string name="gps_denied_message">GPS is not available. Turn on GPS in settings.</string>
+    <string name="gps_lost_message">GPS signal lost. Check your connection.</string>
+    <string name="gps_searching_message">Searching for GPS signal…</string>
+    <string name="gps_weak_message">GPS signal is weak. Accuracy may be low.</string>
+    <string name="gps_medium_message">GPS signal is medium.</string>
+    <string name="gps_strong_message">GPS signal is strong.</string>
+
+
     <plurals name="hours">
         <item quantity="one">%d hour</item>
         <item quantity="other">%d hours</item>

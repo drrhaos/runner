@@ -280,6 +280,13 @@
     <string name="csv_longest_time">Самая длинная тренировка (минуты)</string>
     <string name="csv_breakdown_header">\nРаспределение по типам тренировок\nТип тренировки,Количество,Дистанция (км)\n</string>
 
+    <string name="gps_denied_message">GPS недоступен. Включите GPS в настройках.</string>
+    <string name="gps_lost_message">Потерян сигнал GPS. Проверьте соединение.</string>
+    <string name="gps_searching_message">Поиск GPS сигнала…</string>
+    <string name="gps_weak_message">GPS сигнал слабый. Точность может быть низкой.</string>
+    <string name="gps_medium_message">GPS сигнал средний.</string>
+    <string name="gps_strong_message">GPS сигнал сильный.</string>
+
     <string name="gpx_note_distance">Дистанция: %.2f км</string>
     <string name="gpx_note_time">Время: %s</string>
     <string name="gpx_note_pace">Темп: %s</string>

@@ -5,6 +5,7 @@ import android.content.Context
 import com.drrhaos.runner.R
 import com.drrhaos.runner.data.Workout
 import com.drrhaos.runner.data.WorkoutType
+import com.drrhaos.runner.data.displayName
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -28,7 +29,7 @@ object CsvExporter {
         workouts.forEach { workout ->
             val date = LocalDateTime.ofInstant(workout.date.toInstant(), java.time.ZoneId.systemDefault())
                 .format(dateFormat)
-            val type = getWorkoutTypeName(workout.type, context)
+            val type = workout.type.displayName(context)
             val distance = String.format(Locale.US, "%.2f", workout.distance)
             val durationMinutes = workout.duration / 60000.0
             val duration = String.format(Locale.US, "%.2f", durationMinutes)
