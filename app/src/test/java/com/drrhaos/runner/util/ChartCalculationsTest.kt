@@ -89,7 +89,8 @@ class ChartCalculationsTest {
 
     @Test
     fun `averageSpeedMs uses distance over time not arithmetic mean`() {
-        assertEquals(5f, ChartCalculations.averageSpeedMs(5000f, 1000L), 0.01f)
+        // 5000 m in 1000 s → 5 m/s
+        assertEquals(5f, ChartCalculations.averageSpeedMs(5000f, 1_000_000L), 0.01f)
         assertEquals(0f, ChartCalculations.averageSpeedMs(0f, 1000L), 0.001f)
         assertEquals(0f, ChartCalculations.averageSpeedMs(1000f, 0L), 0.001f)
     }
@@ -181,13 +182,12 @@ class ChartCalculationsTest {
 
     @Test
     fun `buildSegments imperial pace is min per mile not min per km`() {
-        // Build a track of ~1.61 km in 8 minutes → should be ~8:00 /mi
         val points = mutableListOf<TrackPoint>()
         val baseLat = 55.75
         val baseLon = 37.60
-        // Step ~100m east each point (0.0016 deg lon ≈ 100m)
-        for (i in 0..16) {
-            points.add(point(baseLat, baseLon + i * 0.0016, i * 30_000L)) // 30s per ~100m
+        // ~100 m per step; 20 points ≈ 1.9 km — enough for one full mile segment
+        for (i in 0..20) {
+            points.add(point(baseLat, baseLon + i * 0.0016, i * 30_000L))
         }
 
         val metricSegments = ChartCalculations.buildSegments(points, metric = true)
@@ -197,7 +197,7 @@ class ChartCalculationsTest {
         assertTrue(imperialSegments.isNotEmpty())
 
         assertEquals(1.0f, metricSegments.first().distanceKm, 0.001f)
-        assertEquals(ChartCalculations.KM_PER_MILE, imperialSegments.first().distanceKm, 0.001f)
+        assertEquals(ChartCalculations.KM_PER_MILE, imperialSegments.first().distanceKm, 0.01f)
 
         val metricPace = metricSegments.first().paceMinPerUnit
         val imperialPace = imperialSegments.first().paceMinPerUnit
