@@ -9,7 +9,7 @@ import org.junit.Assert.*
 class TrackDataTest {
 
     @Test
-    fun `TrackData should be created with all parameters`() {
+    fun trackData_should_be_created_with_all_parameters() {
         // Given
         val points = listOf(
             TrackPoint(55.7558, 37.6176, 1000L, 10f, 5f, 150.0),
@@ -44,7 +44,7 @@ class TrackDataTest {
     }
 
     @Test
-    fun `TrackData should be created with empty points`() {
+    fun trackData_should_be_created_with_empty_points() {
         // Given
         val points = emptyList<TrackPoint>()
         val totalDistance = 0f
@@ -76,7 +76,7 @@ class TrackDataTest {
     }
 
     @Test
-    fun `TrackData should handle single point`() {
+    fun trackData_should_handle_single_point() {
         // Given
         val points = listOf(
             TrackPoint(55.7558, 37.6176, 1000L, 10f, 5f, 150.0)
@@ -110,7 +110,7 @@ class TrackDataTest {
     }
 
     @Test
-    fun `TrackData should handle multiple points`() {
+    fun trackData_should_handle_multiple_points() {
         // Given
         val points = listOf(
             TrackPoint(55.7558, 37.6176, 1000L, 10f, 5f, 150.0),
@@ -146,7 +146,7 @@ class TrackDataTest {
     }
 
     @Test
-    fun `TrackData should handle zero values`() {
+    fun trackData_should_handle_zero_values() {
         // Given
         val points = emptyList<TrackPoint>()
         val totalDistance = 0f
@@ -178,7 +178,7 @@ class TrackDataTest {
     }
 
     @Test
-    fun `TrackData should handle large values`() {
+    fun trackData_should_handle_large_values() {
         // Given
         val points = listOf(
             TrackPoint(55.7558, 37.6176, 1000L, 10f, 5f, 150.0)

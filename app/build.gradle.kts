@@ -128,6 +128,7 @@ dependencies {
     // Maps and location
     implementation("org.osmdroid:osmdroid-android:6.1.18")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
+    androidTestImplementation("androidx.fragment:fragment-testing:1.6.2")
 
     // Location services
     implementation("com.google.android.gms:play-services-location:21.0.1")
