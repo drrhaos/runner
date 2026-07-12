@@ -85,7 +85,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         viewModelScope.launch {
             try {
                 repository.getAllWorkouts().collect { workouts ->
-                    val totalDistanceKm = workouts.sumOf { it.distance ?: 0f }
+                    val totalDistanceKm = workouts.sumOf { it.distance?.toDouble() ?: 0.0 }
                     val totalDurationMs = workouts.sumOf { it.duration ?: 0L }
                     _totalDuration.value = totalDurationMs
                     val averagePace = SpeedPaceCalculator.overallAveragePace(

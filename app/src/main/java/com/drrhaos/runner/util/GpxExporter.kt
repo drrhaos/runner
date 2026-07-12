@@ -5,6 +5,7 @@ import com.drrhaos.runner.R
 import com.drrhaos.runner.data.TrackData
 import com.drrhaos.runner.data.Workout
 import com.drrhaos.runner.data.WorkoutType
+import com.drrhaos.runner.data.displayName
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -116,18 +117,7 @@ object GpxExporter {
         
         return parts.joinToString("; ")
     }
-    
-    private fun getWorkoutTypeName(type: WorkoutType, context: Context): String {
-        return when (type) {
-            WorkoutType.EASY_RUN -> context.getString(R.string.workout_type_easy_run)
-            WorkoutType.TEMPO_RUN -> context.getString(R.string.workout_type_tempo_run)
-            WorkoutType.INTERVAL_TRAINING -> context.getString(R.string.workout_type_interval_training)
-            WorkoutType.LONG_RUN -> context.getString(R.string.workout_type_long_run)
-            WorkoutType.RECOVERY_RUN -> context.getString(R.string.workout_type_recovery_run)
-            WorkoutType.RACE -> context.getString(R.string.workout_type_competition)
-        }
-    }
-    
+
     private fun formatIso8601(date: Date): String {
         return dateFormat.format(Instant.ofEpochMilli(date.time))
     }
@@ -147,7 +137,7 @@ object GpxExporter {
         val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm")
         val dateStr = LocalDateTime.ofInstant(workout.date.toInstant(), ZoneId.systemDefault())
             .format(dateFormatter)
-        val typeStr = getWorkoutTypeName(workout.type, context).replace(" ", "_")
+        val typeStr = workout.type.displayName(context).replace(" ", "_")
         return "workout_${dateStr}_${typeStr}.gpx"
     }
 }
