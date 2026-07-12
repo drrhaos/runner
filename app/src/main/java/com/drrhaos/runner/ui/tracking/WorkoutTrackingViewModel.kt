@@ -76,7 +76,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
                 _workoutSession.value = svc.getCurrentSession()
                 updateWorkoutState()
             }
-            
+
         }
 
         override fun onServiceDisconnected(name: ComponentName?) {
@@ -467,7 +467,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         )
 
         val trackDataJson = gson.toJson(trackData)
-        
+
         val workout = Workout(
             date = Date(session.startTime),
             distance = totalDistanceKm,

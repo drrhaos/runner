@@ -99,17 +99,6 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         return com.drrhaos.runner.util.FormatUtils.formatPace(paceMinutes)
     }
 
-    fun getWorkoutTypeDisplayName(type: WorkoutType, context: Context): String {
-        return when (type) {
-            WorkoutType.EASY_RUN -> context.getString(R.string.workout_type_easy_run)
-            WorkoutType.TEMPO_RUN -> context.getString(R.string.workout_type_tempo_run)
-            WorkoutType.INTERVAL_TRAINING -> context.getString(R.string.workout_type_interval_training)
-            WorkoutType.LONG_RUN -> context.getString(R.string.workout_type_long_run)
-            WorkoutType.RECOVERY_RUN -> context.getString(R.string.workout_type_recovery_run)
-            WorkoutType.RACE -> context.getString(R.string.workout_type_competition)
-        }
-    }
-
     fun getWorkoutTypes(): List<WorkoutType> {
         return WorkoutType.values().toList()
     }

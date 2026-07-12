@@ -3,8 +3,9 @@ package com.drrhaos.runner.ui.tracking
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
+import android.graphics.Color
+import android.os.Build
 import android.os.PowerManager
 import android.os.SystemClock
 import android.provider.Settings
@@ -13,9 +14,10 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.OnBackPressedCallback
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -29,6 +31,7 @@ import com.drrhaos.runner.data.GpsStatus
 import com.drrhaos.runner.data.WorkoutDatabase
 import com.drrhaos.runner.data.WorkoutState
 import com.drrhaos.runner.data.WorkoutType
+import com.drrhaos.runner.data.displayName
 import com.drrhaos.runner.data.WorkoutSession
 import com.drrhaos.runner.ui.settings.SettingsViewModel
 import com.drrhaos.runner.ui.settings.SettingsViewModelFactory
@@ -153,6 +156,7 @@ class WorkoutTrackingFragment : Fragment() {
         initializeManagers()
         setupWorkoutTypeSpinner()
         setupClickListeners()
+//        setupSwipeGesture()
         observeViewModel()
         requestLocationPermission()
         setupBackButtonHandler()
@@ -230,17 +234,26 @@ class WorkoutTrackingFragment : Fragment() {
                 val currentState = viewModel.workoutState.value
                 val session = viewModel.workoutSession.value
 
+                // Если тренировка активна (запущена или на паузе), останавливаем её
                 if (currentState == WorkoutState.RUNNING || currentState == WorkoutState.PAUSED) {
                     if (isStoppingWorkout) return
                     isStoppingWorkout = true
+
+                    // Отменяем удержание кнопки остановки, если оно активно
                     cancelStopHold()
+
+                    // Останавливаем тренировку
                     viewModel.stopWorkout()
+
+                    // Если есть данные для сохранения, сохраняем и переходим к деталям
                     if (session.distance > 0 && session.currentTime > 0) {
                         navigateToWorkoutDetails()
                     } else {
+                        // Если данных нет, просто возвращаемся назад
                         findNavController().navigateUp()
                     }
                 } else {
+                    // Если тренировка не активна, просто возвращаемся назад
                     findNavController().navigateUp()
                 }
             }
@@ -249,24 +262,9 @@ class WorkoutTrackingFragment : Fragment() {
     }
 
     private fun setupWorkoutTypeSpinner() {
-        val workoutTypes = listOf(
-            WorkoutType.EASY_RUN,
-            WorkoutType.TEMPO_RUN,
-            WorkoutType.INTERVAL_TRAINING,
-            WorkoutType.LONG_RUN,
-            WorkoutType.RECOVERY_RUN,
-            WorkoutType.RACE
-        )
-        val typeNames = workoutTypes.map { type ->
-            when (type) {
-                WorkoutType.EASY_RUN -> getString(R.string.workout_type_easy_run)
-                WorkoutType.TEMPO_RUN -> getString(R.string.workout_type_tempo_run)
-                WorkoutType.INTERVAL_TRAINING -> getString(R.string.workout_type_interval_training)
-                WorkoutType.LONG_RUN -> getString(R.string.workout_type_long_run)
-                WorkoutType.RECOVERY_RUN -> getString(R.string.workout_type_recovery_run)
-                WorkoutType.RACE -> getString(R.string.workout_type_competition)
-            }
-        }
+
+        val workoutTypes = WorkoutType.entries
+        val typeNames = workoutTypes.map { it.displayName(requireContext()) }
         val adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, typeNames)
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spinnerWorkoutType.adapter = adapter
@@ -377,10 +375,13 @@ class WorkoutTrackingFragment : Fragment() {
         binding.textViewStopHoldHint.text = getString(R.string.stop_hold_hint, STOP_HOLD_SECONDS)
         binding.textViewStopHoldCountdown.text = STOP_HOLD_SECONDS.toString()
         binding.buttonStop.isPressed = false
+        // Не сбрасываем isStoppingWorkout здесь, так как тренировка может быть остановлена
     }
 
     private fun completeStopHold() {
-        if (isStoppingWorkout) return
+        if (isStoppingWorkout) {
+            return // Уже идет процесс остановки
+        }
         isStoppingWorkout = true
         stopHoldStartTime = 0L
         binding.layoutStopHold.visibility = View.GONE
@@ -632,6 +633,7 @@ class WorkoutTrackingFragment : Fragment() {
                     }
                     startActivity(intent)
                 } catch (e: Exception) {
+                    // Если не удается открыть настройки, показываем уведомление
                     Toast.makeText(
                         requireContext(),
                         getString(R.string.battery_optimization_hint),
@@ -681,7 +683,7 @@ class WorkoutTrackingFragment : Fragment() {
         try {
             viewModel.cleanup()
         } catch (e: Exception) {
-            // ViewModel may not be initialized
+            // ViewModel может быть не инициализирован
         }
 
         voiceFeedbackManager?.destroy()

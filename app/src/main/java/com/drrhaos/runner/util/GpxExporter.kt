@@ -39,13 +39,13 @@ object GpxExporter {
         // Метаданные
         val workoutStartTime = trackData?.points?.firstOrNull()?.timestamp ?: workout.date.time
         builder.append("  <metadata>\n")
-        builder.append("    <name>").append(escapeXml(getWorkoutTypeName(workout.type, context))).append("</name>\n")
+        builder.append("    <name>").append(escapeXml(workout.type.displayName(context))).append("</name>\n")
         builder.append("    <time>").append(formatIso8601(Date(workoutStartTime))).append("</time>\n")
         builder.append("  </metadata>\n")
         
         // Трек
         builder.append("  <trk>\n")
-        builder.append("    <name>").append(escapeXml(getWorkoutTypeName(workout.type, context))).append("</name>\n")
+        builder.append("    <name>").append(escapeXml(workout.type.displayName(context))).append("</name>\n")
         builder.append("    <type>Running</type>\n")
         
         // Описание

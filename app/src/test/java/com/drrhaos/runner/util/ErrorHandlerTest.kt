@@ -1,13 +1,16 @@
 package com.drrhaos.runner.util
 
 import android.content.Context
+import android.location.LocationManager
 import com.drrhaos.runner.data.GpsStatus
 import kotlinx.coroutines.test.runTest
+import org.junit.Before
 import org.junit.Test
 import org.junit.Assert.*
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 
 /**
@@ -18,6 +21,12 @@ import org.robolectric.annotation.Config
 class ErrorHandlerTest {
 
     private val context: Context = RuntimeEnvironment.getApplication()
+
+    @Before
+    fun enableGpsProvider() {
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        Shadows.shadowOf(locationManager).setProviderEnabled(LocationManager.GPS_PROVIDER, true)
+    }
 
     @Test
     fun `isGpsAvailable should check GPS provider status`() {
