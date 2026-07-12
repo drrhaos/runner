@@ -130,6 +130,10 @@
     <string name="settings_dialog_reset_title">Сброс настроек</string>
     <string name="settings_dialog_reset_message">Вы уверены, что хотите сбросить все настройки к значениям по умолчанию?</string>
     <string name="settings_label_language">Язык</string>
+    <string name="settings_label_start_countdown">Обратный отсчёт перед стартом</string>
+    <string name="settings_dialog_start_countdown_title">Секунды обратного отсчёта перед стартом</string>
+    <string name="settings_start_countdown_changed">Секунды обратного отсчёта изменены</string>
+    <string name="workout_starting_in">Старт через %d…</string>
     <string name="settings_language_en">Английский</string>
     <string name="settings_language_ru">Русский</string>
     <string name="settings_dialog_language_title">Язык приложения</string>
@@ -244,19 +248,13 @@
     <string name="battery_optimization_hint">Для стабильной работы приложения отключите оптимизацию батареи в настройках</string>
     <string name="workout_too_short">Тренировка слишком короткая для сохранения</string>
     <string name="no_data_to_save">Нет данных для сохранения</string>
-    <string name="workout_saved_format">Тренировка сохранена: %.2f км за %s</string>
+    <string name="workout_saved_format">Тренировка сохранена: %1$.2f км за %2$s</string>
     <string name="workout_save_error">Ошибка при сохранении тренировки</string>
     <string name="workout_save_error_format">Ошибка при сохранении тренировки: %1$s</string>
     <string name="distance_must_be_positive">Дистанция должна быть больше 0</string>
     <string name="time_must_be_positive">Время должно быть больше 0</string>
     <string name="check_input_data">Проверьте правильность введенных данных</string>
 
-    <string name="gps_denied_message">GPS недоступен. Включите GPS в настройках.</string>
-    <string name="gps_lost_message">Потерян сигнал GPS. Проверьте соединение.</string>
-    <string name="gps_searching_message">Поиск GPS сигнала…</string>
-    <string name="gps_weak_message">GPS сигнал слабый. Точность может быть низкой.</string>
-    <string name="gps_medium_message">GPS сигнал средний.</string>
-    <string name="gps_strong_message">GPS сигнал сильный.</string>
     <string name="error_database_save">Ошибка базы данных. Попробуйте еще раз.</string>
     <string name="error_io_save">Ошибка записи данных. Проверьте место на диске.</string>
     <string name="error_save_format">Ошибка сохранения: %1$s</string>
