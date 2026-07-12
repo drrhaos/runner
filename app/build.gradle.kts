@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.runner"
+    namespace = "com.drrhaos.runner"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.runner"
+        applicationId = "com.com.drrhaos.runner"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
