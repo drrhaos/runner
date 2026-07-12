@@ -1,13 +1,14 @@
 import java.io.FileInputStream
 import java.util.Properties
 import org.gradle.api.tasks.testing.Test
+import org.gradle.kotlin.dsl.version
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import org.gradle.testing.jacoco.tasks.JacocoReport
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id("kotlin-kapt")
+    id("org.jetbrains.kotlin.kapt")
     id("jacoco")
 }
 

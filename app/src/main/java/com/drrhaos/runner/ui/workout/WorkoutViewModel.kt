@@ -100,7 +100,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     }
 
     fun getWorkoutTypes(): List<WorkoutType> {
-        return WorkoutType.values().toList()
+        return WorkoutType.entries
     }
     
     /**
