@@ -64,6 +64,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-        const val EXTRA_OPEN_TRACKING = "com.com.drrhaos.runner.EXTRA_OPEN_TRACKING"
+        const val EXTRA_OPEN_TRACKING = "com.drrhaos.runner.EXTRA_OPEN_TRACKING"
     }
 }

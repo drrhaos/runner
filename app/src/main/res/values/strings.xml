@@ -215,6 +215,7 @@
     <string name="statistics_btn_export_csv">CSV export</string>
     <string name="statistics_general">General statistics</string>
     <string name="statistics_total_workouts_label">Total workouts:</string>
+    <string name="statistics_count_zero" translatable="false">0</string>
     <string name="statistics_total_distance_label">Total distance:</string>
     <string name="statistics_total_time_label">Total time:</string>
     <string name="statistics_total_calories_label">Total calories:</string>
@@ -260,19 +261,13 @@
     <string name="battery_optimization_hint">For stable operation, disable battery optimization in settings</string>
     <string name="workout_too_short">Workout too short to save</string>
     <string name="no_data_to_save">No data to save</string>
-    <string name="workout_saved_format">Workout saved: %.2f km in %s</string>
+    <string name="workout_saved_format">Workout saved: %1$.2f km in %2$s</string>
     <string name="workout_save_error">Error saving workout</string>
     <string name="workout_save_error_format">Error saving workout: %1$s</string>
     <string name="distance_must_be_positive">Distance must be greater than 0</string>
     <string name="time_must_be_positive">Time must be greater than 0</string>
     <string name="check_input_data">Check the entered data</string>
 
-    <string name="gps_denied_message">GPS is not available. Turn on GPS in settings.</string>
-    <string name="gps_lost_message">GPS signal lost. Check your connection.</string>
-    <string name="gps_searching_message">Searching for GPS signal…</string>
-    <string name="gps_weak_message">GPS signal is weak. Accuracy may be low.</string>
-    <string name="gps_medium_message">GPS signal is medium.</string>
-    <string name="gps_strong_message">GPS signal is strong.</string>
     <string name="error_database_save">Database error. Please try again.</string>
     <string name="error_io_save">Data write error. Check disk space.</string>
     <string name="error_save_format">Save error: %1$s</string>

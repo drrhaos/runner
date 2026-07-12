@@ -1,6 +1,7 @@
 package com.drrhaos.runner.util
 
 import android.content.Context
+
 import com.drrhaos.runner.R
 import com.drrhaos.runner.data.Workout
 import com.drrhaos.runner.data.WorkoutType
@@ -82,25 +83,14 @@ object CsvExporter {
             
             workoutsByType.forEach { (type, count) ->
                 val distance = distanceByType[type] ?: 0f
-                val typeName = getWorkoutTypeName(type, context)
+                val typeName = type.displayName(context)
                 builder.append("$typeName,$count,${String.format(Locale.US, "%.2f", distance)}\n")
             }
         }
         
         return builder.toString()
     }
-    
-    private fun getWorkoutTypeName(type: WorkoutType, context: Context): String {
-        return when (type) {
-            WorkoutType.EASY_RUN -> context.getString(R.string.workout_type_easy_run)
-            WorkoutType.TEMPO_RUN -> context.getString(R.string.workout_type_tempo_run)
-            WorkoutType.INTERVAL_TRAINING -> context.getString(R.string.workout_type_interval_training)
-            WorkoutType.LONG_RUN -> context.getString(R.string.workout_type_long_run)
-            WorkoutType.RECOVERY_RUN -> context.getString(R.string.workout_type_recovery_run)
-            WorkoutType.RACE -> context.getString(R.string.workout_type_competition)
-        }
-    }
-    
+
     private fun escapeCsv(text: String): String {
         // Если текст содержит запятую, кавычки или перенос строки, заключаем в кавычки
         return if (text.contains(',') || text.contains('"') || text.contains('\n')) {
