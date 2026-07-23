@@ -1,6 +1,7 @@
 package com.drrhaos.runner.service
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -296,10 +297,8 @@ class WorkoutTrackingService : Service() {
             lastAppliedAdaptiveIntervalMs = GpsConfig.HIGH_ACCURACY_INTERVAL
 
             // Fetch last known location
-            fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
-                location?.let {
-                    updateLocation(it)
-                }
+            requestLastKnownLocation { location ->
+                updateLocation(location)
             }
 
         } catch (e: SecurityException) {
@@ -317,6 +316,34 @@ class WorkoutTrackingService : Service() {
         }
     }
 
+    /**
+     * Fetches last known location only when FINE or COARSE permission is granted.
+     * Satisfies MissingPermission lint and handles runtime revocation.
+     */
+    @SuppressLint("MissingPermission")
+    private fun requestLastKnownLocation(onLocation: (Location) -> Unit) {
+        val fineGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val coarseGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!fineGranted && !coarseGranted) {
+            sessionManager.updateGpsStatus(GpsStatus.DENIED)
+            return
+        }
+        try {
+            fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
+                location?.let(onLocation)
+            }
+        } catch (e: SecurityException) {
+            android.util.Log.w("WorkoutTrackingService", "lastLocation denied", e)
+            sessionManager.updateGpsStatus(GpsStatus.DENIED)
+        }
+    }
+
     // ------------------------------------------------------------------
     // Periodic location request (timeout guard)
     // ------------------------------------------------------------------
@@ -330,28 +357,9 @@ class WorkoutTrackingService : Service() {
                 if (!isActive) break
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastLocationTime > NO_LOCATION_UPDATE_TIMEOUT_MS) {
-                    val fineGranted = ContextCompat.checkSelfPermission(
-                        this@WorkoutTrackingService,
-                        Manifest.permission.ACCESS_FINE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED
-                    val coarseGranted = ContextCompat.checkSelfPermission(
-                        this@WorkoutTrackingService,
-                        Manifest.permission.ACCESS_COARSE_LOCATION
-                    ) == PackageManager.PERMISSION_GRANTED
-                    if (!fineGranted && !coarseGranted) {
-                        sessionManager.updateGpsStatus(GpsStatus.DENIED)
-                        continue
-                    }
-                    try {
-                        fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
-                            location?.let {
-                                updateLocation(it)
-                                lastLocationTime = currentTime
-                            }
-                        }
-                    } catch (e: SecurityException) {
-                        android.util.Log.w("WorkoutTrackingService", "lastLocation denied", e)
-                        sessionManager.updateGpsStatus(GpsStatus.DENIED)
+                    requestLastKnownLocation { location ->
+                        updateLocation(location)
+                        lastLocationTime = currentTime
                     }
                 }
                 // Periodically resolve GPS status during active workout
@@ -472,11 +480,9 @@ class WorkoutTrackingService : Service() {
                     if (!isActive) break
                     val currentTime = System.currentTimeMillis()
                     if (currentTime - lastLocationTime > NO_LOCATION_UPDATE_TIMEOUT_MS) {
-                        fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
-                            location?.let {
-                                updateLocation(it)
-                                lastLocationTime = currentTime
-                            }
+                        requestLastKnownLocation { location ->
+                            updateLocation(location)
+                            lastLocationTime = currentTime
                         }
                     }
                 }
