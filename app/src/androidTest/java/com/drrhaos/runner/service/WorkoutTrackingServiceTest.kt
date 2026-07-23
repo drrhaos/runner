@@ -7,8 +7,8 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.rule.ServiceTestRule
 import com.drrhaos.runner.data.WorkoutType
-import com.drrhaos.runner.ui.tracking.GpsStatus
-import com.drrhaos.runner.ui.tracking.WorkoutSession
+import com.drrhaos.runner.data.GpsStatus
+import com.drrhaos.runner.data.WorkoutSession
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -61,7 +61,7 @@ class WorkoutTrackingServiceTest {
     }
 
     @Test
-    fun `service should start and bind correctly`() {
+    fun service_should_start_and_bind_correctly() {
         // Given
         val intent = Intent(context, WorkoutTrackingService::class.java)
 
@@ -78,7 +78,7 @@ class WorkoutTrackingServiceTest {
     }
 
     @Test
-    fun `service should start workout with correct type`() {
+    fun service_should_start_workout_with_correct_type() {
         // Given
         val intent = Intent(context, WorkoutTrackingService::class.java)
         val binder = serviceRule.bindService(intent)
@@ -100,7 +100,7 @@ class WorkoutTrackingServiceTest {
     }
 
     @Test
-    fun `service should pause workout`() {
+    fun service_should_pause_workout() {
         // Given
         val intent = Intent(context, WorkoutTrackingService::class.java)
         val binder = serviceRule.bindService(intent)
@@ -133,7 +133,7 @@ class WorkoutTrackingServiceTest {
     }
 
     @Test
-    fun `service should resume workout after pause`() {
+    fun service_should_resume_workout_after_pause() {
         // Given
         val intent = Intent(context, WorkoutTrackingService::class.java)
         val binder = serviceRule.bindService(intent)
@@ -172,7 +172,7 @@ class WorkoutTrackingServiceTest {
     }
 
     @Test
-    fun `service should stop workout`() {
+    fun service_should_stop_workout() {
         // Given
         val intent = Intent(context, WorkoutTrackingService::class.java)
         val binder = serviceRule.bindService(intent)
@@ -205,7 +205,7 @@ class WorkoutTrackingServiceTest {
     }
 
     @Test
-    fun `service should provide current session`() {
+    fun service_should_provide_current_session() {
         // Given
         val intent = Intent(context, WorkoutTrackingService::class.java)
         val binder = serviceRule.bindService(intent)
@@ -223,7 +223,7 @@ class WorkoutTrackingServiceTest {
     }
 
     @Test
-    fun `service should update session via callback`() {
+    fun service_should_update_session_via_callback() {
         // Given
         val intent = Intent(context, WorkoutTrackingService::class.java)
         val binder = serviceRule.bindService(intent)
@@ -257,7 +257,7 @@ class WorkoutTrackingServiceTest {
     }
 
     @Test
-    fun `service should handle multiple session updates`() {
+    fun service_should_handle_multiple_session_updates() {
         // Given
         val intent = Intent(context, WorkoutTrackingService::class.java)
         val binder = serviceRule.bindService(intent)
@@ -305,7 +305,7 @@ class WorkoutTrackingServiceTest {
     }
 
     @Test
-    fun `service isTracking should return correct state`() {
+    fun service_isTracking_should_return_correct_state() {
         // Given
         val intent = Intent(context, WorkoutTrackingService::class.java)
         val binder = serviceRule.bindService(intent)
@@ -332,7 +332,7 @@ class WorkoutTrackingServiceTest {
     }
 
     @Test
-    fun `service should handle different workout types`() {
+    fun service_should_handle_different_workout_types() {
         // Given
         val workoutTypes = listOf(
             WorkoutType.EASY_RUN,
@@ -369,4 +369,3 @@ class WorkoutTrackingServiceTest {
         assertTrue("All workout types should be handled", true)
     }
 }
-

@@ -2,7 +2,6 @@ package com.drrhaos.runner.ui.workout
 
 import androidx.fragment.app.testing.launchFragmentInContainer
 import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -17,7 +16,7 @@ import org.junit.runner.RunWith
 class WorkoutListFragmentTest {
 
     @Test
-    fun `workout list fragment should display correctly`() {
+    fun workout_list_fragment_should_display_correctly() {
         // Given
         val scenario = launchFragmentInContainer<WorkoutListFragment>()
 
@@ -39,7 +38,7 @@ class WorkoutListFragmentTest {
     }
 
     @Test
-    fun `add workout fab should be clickable`() {
+    fun add_workout_fab_should_be_clickable() {
         // Given
         val scenario = launchFragmentInContainer<WorkoutListFragment>()
 
@@ -50,7 +49,7 @@ class WorkoutListFragmentTest {
     }
 
     @Test
-    fun `recycler view should be displayed`() {
+    fun recycler_view_should_be_displayed() {
         // Given
         val scenario = launchFragmentInContainer<WorkoutListFragment>()
 
@@ -60,7 +59,7 @@ class WorkoutListFragmentTest {
     }
 
     @Test
-    fun `statistics should be displayed`() {
+    fun statistics_should_be_displayed() {
         // Given
         val scenario = launchFragmentInContainer<WorkoutListFragment>()
 
@@ -76,7 +75,7 @@ class WorkoutListFragmentTest {
     }
 
     @Test
-    fun `empty state should be displayed when no workouts`() {
+    fun empty_state_should_be_displayed_when_no_workouts() {
         // Given
         val scenario = launchFragmentInContainer<WorkoutListFragment>()
 

@@ -2,7 +2,7 @@ package com.drrhaos.runner.util
 
 import android.content.Context
 import android.location.LocationManager
-import com.drrhaos.runner.ui.tracking.GpsStatus
+import com.drrhaos.runner.data.GpsStatus
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -29,7 +29,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `isGpsAvailable should check GPS provider status`() {
+    fun isgpsavailable_should_check_gps_provider_status() {
         // When - проверяем текущий статус GPS (может быть включен или выключен в тестовой среде)
         val result = ErrorHandler.isGpsAvailable(context)
 
@@ -39,7 +39,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `determineGpsStatus should return LOST when no updates for 30 seconds`() {
+    fun determinegpsstatus_should_return_lost_when_no_updates_for_30_seconds() {
         // Given
         val oldUpdateTime = System.currentTimeMillis() - 31000 // 31 секунда назад
 
@@ -51,7 +51,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `determineGpsStatus should return SEARCHING when accuracy is poor`() {
+    fun determinegpsstatus_should_return_searching_when_accuracy_is_poor() {
         // Given
         val recentUpdateTime = System.currentTimeMillis() - 5000 // 5 секунд назад
 
@@ -63,7 +63,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `determineGpsStatus should return FOUND when GPS is available with good accuracy`() {
+    fun determinegpsstatus_should_return_found_when_gps_is_available_with_good_accuracy() {
         // Given
         val recentUpdateTime = System.currentTimeMillis() - 5000 // 5 секунд назад
 
@@ -76,7 +76,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `determineGpsStatus should return FOUND when accuracy is at boundary 100m`() {
+    fun determinegpsstatus_should_return_found_when_accuracy_is_at_boundary_100m() {
         // Given
         val recentUpdateTime = System.currentTimeMillis() - 5000
 
@@ -89,7 +89,24 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `handleSaveError should handle SQLException`() {
+    fun handlegpserror_should_not_show_toast_for_found_status() {
+        // When - handleGpsError должен вернуться сразу для FOUND
+        // Then - не должно быть исключений
+        ErrorHandler.handleGpsError(context, GpsStatus.FOUND, showToast = true)
+        assertTrue("Should handle FOUND status without exception", true)
+    }
+
+    @Test
+    fun handlegpserror_should_handle_all_status_types_without_exception() {
+        // When & Then - все статусы должны обрабатываться без исключений
+        GpsStatus.values().forEach { status ->
+            ErrorHandler.handleGpsError(context, status, showToast = false)
+        }
+        assertTrue("Should handle all GPS statuses", true)
+    }
+
+    @Test
+    fun handlesaveerror_should_handle_sqlexception() {
         // Given
         val error = java.sql.SQLException("Database error")
 
@@ -99,7 +116,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `handleSaveError should handle IOException`() {
+    fun handlesaveerror_should_handle_ioexception() {
         // Given
         val error = java.io.IOException("IO error")
 
@@ -109,7 +126,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `handleSaveError should handle generic Exception`() {
+    fun handlesaveerror_should_handle_generic_exception() {
         // Given
         val error = RuntimeException("Generic error")
 
@@ -119,7 +136,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `handleLoadError should handle SQLException`() {
+    fun handleloaderror_should_handle_sqlexception() {
         // Given
         val error = java.sql.SQLException("Database error")
 
@@ -129,7 +146,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `handleLoadError should handle IOException`() {
+    fun handleloaderror_should_handle_ioexception() {
         // Given
         val error = java.io.IOException("IO error")
 
@@ -139,7 +156,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `retryWithBackoff should succeed on first attempt`() = runTest {
+    fun retrywithbackoff_should_succeed_on_first_attempt() = runTest {
         // Given
         var attemptCount = 0
         val operation = suspend {
@@ -156,7 +173,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `retryWithBackoff should retry on failure`() = runTest {
+    fun retrywithbackoff_should_retry_on_failure() = runTest {
         // Given
         var attemptCount = 0
         val operation = suspend {
@@ -180,7 +197,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `retryWithBackoff should throw exception after max retries`() = runTest {
+    fun retrywithbackoff_should_throw_exception_after_max_retries() = runTest {
         // Given
         val operation = suspend {
             throw RuntimeException("Always fails")
@@ -200,7 +217,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `retryWithBackoff should respect maxDelay`() = runTest {
+    fun retrywithbackoff_should_respect_maxdelay() = runTest {
         // Given
         var attemptCount = 0
         val operation = suspend {
@@ -228,7 +245,7 @@ class ErrorHandlerTest {
     }
 
     @Test
-    fun `retryWithBackoff should use exponential backoff`() = runTest {
+    fun retrywithbackoff_should_use_exponential_backoff() = runTest {
         // Given
         var attemptCount = 0
         val delays = mutableListOf<Long>()

@@ -246,8 +246,8 @@
     <string name="workout_fragment_label">Тренировка</string>
     <string name="workout_details_label">Детали тренировки</string>
     <string name="start_workout">Начать тренировку</string>
+    <string name="avg_pace_label">Средний темп</string>
 
-    <string name="permission_activity_granted">Разрешение на физическую активность предоставлено</string>
     <string name="permission_location_needed">Разрешение на местоположение необходимо для трекинга</string>
     <string name="permission_location_denied_can_train">Нет доступа к GPS. Тренировку можно начать, маршрут записываться не будет.</string>
     <string name="permission_notification_needed">Разрешение на уведомления необходимо для фонового трекинга</string>
@@ -285,6 +285,13 @@
     <string name="csv_max_distance">Максимальная дистанция (км)</string>
     <string name="csv_longest_time">Самая длинная тренировка (минуты)</string>
     <string name="csv_breakdown_header">\nРаспределение по типам тренировок\nТип тренировки,Количество,Дистанция (км)\n</string>
+
+    <string name="gps_denied_message">GPS недоступен. Включите GPS в настройках.</string>
+    <string name="gps_lost_message">Потерян сигнал GPS. Проверьте соединение.</string>
+    <string name="gps_searching_message">Поиск GPS сигнала…</string>
+    <string name="gps_weak_message">GPS сигнал слабый. Точность может быть низкой.</string>
+    <string name="gps_medium_message">GPS сигнал средний.</string>
+    <string name="gps_strong_message">GPS сигнал сильный.</string>
 
     <string name="gpx_note_distance">Дистанция: %.2f км</string>
     <string name="gpx_note_time">Время: %s</string>

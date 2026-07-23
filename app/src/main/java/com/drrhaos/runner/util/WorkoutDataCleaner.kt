@@ -85,16 +85,17 @@ object WorkoutDataCleaner {
         // Сортируем точки по времени
         val sortedPoints = cleanedPoints.sortedBy { it.timestamp }
         
-        // Вычисляем общее расстояние
-        val totalDistance = ChartCalculations.totalDistanceMeters(sortedPoints)
+        // Вычисляем общее расстояние через SpeedPaceCalculator
+        val totalDistance = SpeedPaceCalculator.totalDistanceMeters(sortedPoints)
         
         // Вычисляем общую продолжительность
         val startTime = sortedPoints.first().timestamp
         val endTime = sortedPoints.last().timestamp
         val totalDuration = endTime - startTime
         
-        val avgSpeed = ChartCalculations.averageSpeedMs(totalDistance, totalDuration)
-        val maxSpeed = ChartCalculations.maxDerivedSpeedMs(sortedPoints)
+        // Вычисляем среднюю и максимальную скорость из derived calculations (не сырой GPS speed)
+        val avgSpeed = SpeedPaceCalculator.averageSpeedMs(totalDistance, totalDuration)
+        val maxSpeed = SpeedPaceCalculator.maxDerivedSpeedMs(sortedPoints)
         
         Log.d("WorkoutDataCleaner", "Recalculated stats: distance=${totalDistance}m, duration=${totalDuration}ms, avgSpeed=${avgSpeed}m/s")
         

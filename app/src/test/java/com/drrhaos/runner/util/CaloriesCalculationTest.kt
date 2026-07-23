@@ -9,7 +9,7 @@ import org.junit.Assert.*
 class CaloriesCalculationTest {
 
     @Test
-    fun `calculateCalories should use weight in calculation`() {
+    fun calculatecalories_should_use_weight_in_calculation() {
         // Given
         val distance = 5.0f // 5 км
         val weight1 = 60f // 60 кг
@@ -32,7 +32,7 @@ class CaloriesCalculationTest {
     }
 
     @Test
-    fun `calculateCalories should use default weight when not provided`() {
+    fun calculatecalories_should_use_default_weight_when_not_provided() {
         // Given
         val distance = 5.0f // 5 км
         val defaultWeight = 70f // вес по умолчанию
@@ -45,7 +45,7 @@ class CaloriesCalculationTest {
     }
 
     @Test
-    fun `calculateCalories should handle zero distance`() {
+    fun calculatecalories_should_handle_zero_distance() {
         // Given
         val distance = 0f
         val weight = 70f
@@ -58,7 +58,7 @@ class CaloriesCalculationTest {
     }
 
     @Test
-    fun `calculateCalories should handle zero weight`() {
+    fun calculatecalories_should_handle_zero_weight() {
         // Given
         val distance = 5.0f
         val weight = 0f
@@ -71,7 +71,7 @@ class CaloriesCalculationTest {
     }
 
     @Test
-    fun `calculateCalories should handle small values`() {
+    fun calculatecalories_should_handle_small_values() {
         // Given
         val distance = 0.1f // 100 метров
         val weight = 50f
@@ -84,7 +84,7 @@ class CaloriesCalculationTest {
     }
 
     @Test
-    fun `calculateCalories should handle large values`() {
+    fun calculatecalories_should_handle_large_values() {
         // Given
         val distance = 42.195f // марафон
         val weight = 70f
@@ -97,7 +97,7 @@ class CaloriesCalculationTest {
     }
 
     @Test
-    fun `calculateCalories should be proportional to distance`() {
+    fun calculatecalories_should_be_proportional_to_distance() {
         // Given
         val weight = 70f
         val distance1 = 5.0f
@@ -113,7 +113,7 @@ class CaloriesCalculationTest {
     }
 
     @Test
-    fun `calculateCalories should be proportional to weight`() {
+    fun calculatecalories_should_be_proportional_to_weight() {
         // Given
         val distance = 5.0f
         val weight1 = 50f
@@ -129,7 +129,7 @@ class CaloriesCalculationTest {
     }
 
     @Test
-    fun `calculateCalories should handle decimal values`() {
+    fun calculatecalories_should_handle_decimal_values() {
         // Given
         val distance = 3.5f
         val weight = 65.5f
@@ -142,7 +142,7 @@ class CaloriesCalculationTest {
     }
 
     @Test
-    fun `calculateCalories should return integer`() {
+    fun calculatecalories_should_return_integer() {
         // Given
         val distance = 1.5f
         val weight = 60.7f
@@ -156,7 +156,7 @@ class CaloriesCalculationTest {
     }
 
     @Test
-    fun `calculateCalories formula should be distance times weight`() {
+    fun calculatecalories_formula_should_be_distance_times_weight() {
         // Given
         val testCases = listOf(
             Triple(1.0f, 50f, 50),
