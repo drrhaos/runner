@@ -114,22 +114,23 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         if (isServiceBound) {
             return
         }
-        if (ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
+        if (!hasLocationPermission()) {
             _workoutSession.value = _workoutSession.value.copy(gpsStatus = GpsStatus.DENIED)
             return
         }
 
         val locationRequest = com.drrhaos.runner.util.GpsConfig.createWorkoutLocationRequest()
 
-        fusedLocationClient?.requestLocationUpdates(
-            locationRequest,
-            locationCallback!!,
-            android.os.Looper.getMainLooper()
-        )
+        try {
+            fusedLocationClient?.requestLocationUpdates(
+                locationRequest,
+                locationCallback!!,
+                android.os.Looper.getMainLooper()
+            )
+        } catch (e: SecurityException) {
+            android.util.Log.w("WorkoutTrackingViewModel", "Location permission denied at runtime", e)
+            _workoutSession.value = _workoutSession.value.copy(gpsStatus = GpsStatus.DENIED)
+        }
     }
 
     private fun updateLocation(location: Location) {
@@ -208,18 +209,24 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         }
     }
 
-    fun startWorkout(workoutType: WorkoutType = WorkoutType.EASY_RUN) {
-        // Проверяем разрешения GPS перед запуском
-        if (ContextCompat.checkSelfPermission(
+    fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            application,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
                 application,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            android.util.Log.e("WorkoutTrackingViewModel", "GPS permission not granted, cannot start workout")
-            _workoutSession.value = _workoutSession.value.copy(gpsStatus = GpsStatus.DENIED)
-            return
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    fun startWorkout(workoutType: WorkoutType = WorkoutType.EASY_RUN) {
+        android.util.Log.d("WorkoutTrackingViewModel", "startWorkout called, isServiceBound: $isServiceBound")
+        val gpsStatus = when {
+            !hasLocationPermission() -> GpsStatus.DENIED
+            else -> GpsStatus.SEARCHING
         }
-        
+
         if (isServiceBound && trackingService != null) {
             val intent = Intent(application, WorkoutTrackingService::class.java).apply {
                 action = WorkoutTrackingService.ACTION_START_WORKOUT
@@ -227,18 +234,25 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
             }
             application.startForegroundService(intent)
         } else {
-            // Fallback к локальному трекингу если сервис недоступен
-            android.util.Log.w("WorkoutTrackingViewModel", "Service not bound, starting locally. isServiceBound: $isServiceBound, trackingService: ${trackingService != null}")
+            android.util.Log.w(
+                "WorkoutTrackingViewModel",
+                "Service not bound, starting locally. isServiceBound: $isServiceBound, trackingService: ${trackingService != null}"
+            )
             val currentTime = System.currentTimeMillis()
             isCurrentlyTracking = true
             _workoutSession.value = _workoutSession.value.copy(
                 isTracking = true,
+                isPaused = false,
                 startTime = currentTime,
                 pauseTime = 0,
-                totalPauseDuration = 0
+                totalPauseDuration = 0,
+                gpsStatus = gpsStatus
             )
             _workoutState.value = WorkoutState.RUNNING
             startTimer()
+            if (hasLocationPermission()) {
+                startLocationUpdates(application)
+            }
         }
     }
 
@@ -413,9 +427,8 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
     suspend fun saveWorkoutToDatabase(workoutType: WorkoutType = WorkoutType.EASY_RUN): Long? {
         val session = _workoutSession.value
-        
-        // Валидация данных перед сохранением
-        if (session.distance <= 0 || session.currentTime <= 0) {
+
+        if (session.currentTime <= 0) {
             return null
         }
 
@@ -425,40 +438,55 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
             session.trackDataPoints
         }
         val sanitizedPoints = sanitizeTrackPoints(sourcePoints)
-        if (sanitizedPoints.size < 2) {
-            android.util.Log.w("WorkoutTracking", "Not enough sanitized GPS points to save workout")
+        val hasTrack = sanitizedPoints.size >= 2
+
+        val totalDistanceMeters = when {
+            hasTrack -> SpeedPaceCalculator.totalDistanceMeters(sanitizedPoints)
+            session.distance > 0f -> session.distance * 1000f
+            else -> 0f
+        }
+        if (totalDistanceMeters <= 0f && session.currentTime <= 0) {
+            android.util.Log.w("WorkoutTracking", "No distance and no duration to save")
             return null
         }
-
-        val totalDistanceMeters = SpeedPaceCalculator.totalDistanceMeters(sanitizedPoints)
-        if (totalDistanceMeters <= 0f) {
-            android.util.Log.w("WorkoutTracking", "Total distance after sanitization is zero")
-            return null
-        }
-
         val totalDistanceKm = totalDistanceMeters / 1000f
         val durationMs = session.currentTime
-        val avgSpeedMps = SpeedPaceCalculator.averageSpeedMs(totalDistanceMeters, durationMs)
+        val avgSpeedMps = if (totalDistanceMeters > 0f) {
+            SpeedPaceCalculator.averageSpeedMs(totalDistanceMeters, durationMs)
+        } else {
+            0f
+        }
         val avgPace = if (totalDistanceKm > 0f) {
-            (durationMs / 60000f) / totalDistanceKm
-        } else 0f
-        val maxSpeedMps = SpeedPaceCalculator.maxDerivedSpeedMs(sanitizedPoints)
+            SpeedPaceCalculator.overallAveragePace(
+                totalDistanceMeters = totalDistanceKm * 1000.0,
+                totalDurationSeconds = durationMs / 1000.0
+            )
+        } else {
+            0f
+        }
+        val maxSpeedMps = if (hasTrack) {
+            SpeedPaceCalculator.maxDerivedSpeedMs(sanitizedPoints)
+        } else {
+            0f
+        }
 
         val userPrefs = com.drrhaos.runner.util.UserPreferences(application)
         val calories = com.drrhaos.runner.util.FormatUtils.calculateCalories(totalDistanceKm, userPrefs.userWeight)
 
-        // Создаем JSON с данными траектории
-        val trackData = TrackData(
-            points = sanitizedPoints,
-            totalDistance = totalDistanceMeters,
-            totalDuration = durationMs,
-            avgSpeed = avgSpeedMps,
-            maxSpeed = maxSpeedMps,
-            startTime = session.startTime,
-            endTime = System.currentTimeMillis()
-        )
-
-        val trackDataJson = gson.toJson(trackData)
+        val trackDataJson = if (hasTrack && totalDistanceMeters > 0f) {
+            val trackData = TrackData(
+                points = sanitizedPoints,
+                totalDistance = totalDistanceMeters,
+                totalDuration = durationMs,
+                avgSpeed = avgSpeedMps,
+                maxSpeed = maxSpeedMps,
+                startTime = session.startTime,
+                endTime = System.currentTimeMillis()
+            )
+            gson.toJson(trackData)
+        } else {
+            null
+        }
 
         val workout = Workout(
             date = Date(session.startTime),
@@ -466,7 +494,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
             duration = durationMs,
             avgPace = avgPace,
             calories = calories,
-            notes = null, // Можно добавить возможность ввода заметок
+            notes = null,
             type = workoutType,
             trackData = trackDataJson
         )
@@ -529,7 +557,6 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
         return result
     }
-
 
     private fun trackPointToLocation(point: TrackPoint): Location {
         return Location("track").apply {

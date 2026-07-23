@@ -75,11 +75,26 @@ class ChartRenderer(
 
         val isMetric = userPreferences?.isMetricSystem() ?: true
         val paceSpeedSeries = SpeedPaceCalculator.buildPaceSpeedSeries(points, isMetric)
+        if (paceSpeedSeries.isEmpty()) {
+            chart.visibility = android.view.View.GONE
+            return
+        }
 
         val entriesPace = paceSpeedSeries.map { Entry(it.timeMinutes, it.paceMinPerUnit) }
         val entriesSpeed = paceSpeedSeries.map { Entry(it.timeMinutes, it.speedDisplay) }
 
-        val dataSetPace = LineDataSet(entriesPace, context.getString(R.string.chart_pace_label)).apply {
+        val paceLabel = if (isMetric) {
+            context.getString(R.string.chart_pace_label)
+        } else {
+            context.getString(R.string.chart_pace_label_miles)
+        }
+        val speedLabel = if (isMetric) {
+            context.getString(R.string.chart_speed_label)
+        } else {
+            context.getString(R.string.chart_speed_label_miles)
+        }
+
+        val dataSetPace = LineDataSet(entriesPace, paceLabel).apply {
             color = Color.parseColor("#FF9800")
             lineWidth = 2f
             setCircleColor(Color.parseColor("#FF9800"))
@@ -88,13 +103,13 @@ class ChartRenderer(
             axisDependency = YAxis.AxisDependency.LEFT
         }
 
-        val dataSetSpeed = LineDataSet(entriesSpeed, context.getString(R.string.chart_speed_label)).apply {
+        val dataSetSpeed = LineDataSet(entriesSpeed, speedLabel).apply {
             color = Color.parseColor("#2196F3")
             lineWidth = 2f
             setCircleColor(Color.parseColor("#2196F3"))
             setDrawCircles(false)
             setDrawValues(false)
-            axisDependency = YAxis.AxisDependency.LEFT
+            axisDependency = YAxis.AxisDependency.RIGHT
         }
 
         val lineData = LineData(dataSetPace, dataSetSpeed)
@@ -106,8 +121,14 @@ class ChartRenderer(
         }
 
         configureLeftAxis(chart, textColor, gridColor)
+        chart.axisLeft.textColor = Color.parseColor("#FF9800")
 
-        chart.axisRight.isEnabled = false
+        val rightAxis = chart.axisRight
+        rightAxis.isEnabled = true
+        rightAxis.setDrawGridLines(false)
+        rightAxis.textColor = Color.parseColor("#2196F3")
+        rightAxis.axisLineColor = textColor
+
         chart.legend.textColor = textColor
         chart.setDrawMarkers(false)
 
@@ -132,12 +153,23 @@ class ChartRenderer(
                         val nearestEntry = cachedSeries.minByOrNull { kotlin.math.abs(it.timeMinutes - e.x.toFloat()) }
 
                         val timeMinutes = e.x.toInt()
-                        val paceStr = nearestEntry?.let { SpeedPaceCalculator.formatPaceMmSs(it.paceMinPerUnit) } ?: "--:--"
+                        val (paceMinutes, paceSeconds) = nearestEntry?.let {
+                            SpeedPaceCalculator.paceToMinutesSeconds(it.paceMinPerUnit)
+                        } ?: (0 to 0)
+                        val paceStr = if (isMetric) {
+                            context.getString(R.string.chart_pace_value_km, paceMinutes, paceSeconds)
+                        } else {
+                            context.getString(R.string.chart_pace_value_miles, paceMinutes, paceSeconds)
+                        }
                         val speedDisplay = nearestEntry?.speedDisplay ?: 0f
-                        val speedUnit = if (isMetric) context.getString(R.string.unit_kmh) else context.getString(R.string.unit_mph)
+                        val speedStr = if (isMetric) {
+                            context.getString(R.string.chart_speed_value_kmh, speedDisplay)
+                        } else {
+                            context.getString(R.string.chart_speed_value_mph, speedDisplay)
+                        }
 
                         val valuesText = context.getString(R.string.chart_time_format, timeMinutes) + "\n" +
-                            "${context.getString(R.string.workout_details_speed)}: %.1f $speedUnit\n".format(speedDisplay) +
+                            "${context.getString(R.string.workout_details_speed)}: $speedStr\n" +
                             "${context.getString(R.string.workout_details_pace)}: $paceStr"
                         textViewPaceSpeedValues.text = valuesText
                         textViewPaceSpeedValues.visibility = android.view.View.VISIBLE

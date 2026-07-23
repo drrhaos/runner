@@ -216,28 +216,23 @@ class WorkoutTrackingService : Service() {
             return
         }
 
-        // Check GPS permissions - accept either FINE or COARSE location
-        val hasFineLocation = ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        val hasCoarseLocation = ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-
-        if (!hasFineLocation && !hasCoarseLocation) {
+        val hasPermission = hasLocationPermission()
+        if (!hasPermission) {
             android.util.Log.w("WorkoutTrackingService", "No location permission granted, starting workout without GPS")
-            sessionManager.updateGpsStatus(GpsStatus.DENIED)
-            // Do NOT block workout start - user can train indoors or manually enter data
         }
 
         lastLocation = null
         lastAppliedAdaptiveIntervalMs = -1L
+        isCurrentlyTracking = true
 
         sessionManager.startNewSession()
-        startLocationUpdates()
-        startPeriodicLocationRequest()
+        if (!hasPermission) {
+            sessionManager.updateGpsStatus(GpsStatus.DENIED)
+        }
+        if (hasPermission) {
+            startLocationUpdates()
+            startPeriodicLocationRequest()
+        }
         startWorkoutTimer()
         startForeground(NOTIFICATION_ID, notificationManager.buildNotification(sessionManager.getSession()))
         notificationManager.updateNotification(sessionManager.getSession(), force = true)
@@ -254,7 +249,10 @@ class WorkoutTrackingService : Service() {
     fun resumeWorkout() {
         isCurrentlyTracking = true
         sessionManager.resume()
-        startPeriodicLocationRequest()
+        if (hasLocationPermission()) {
+            startLocationUpdates()
+            startPeriodicLocationRequest()
+        }
         startWorkoutTimer()
         notificationManager.updateNotification(sessionManager.getSession(), force = true)
     }
@@ -273,6 +271,17 @@ class WorkoutTrackingService : Service() {
     // ------------------------------------------------------------------
     // Location updates
     // ------------------------------------------------------------------
+
+    private fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+    }
 
     private fun startLocationUpdates() {
         val locationRequest = GpsConfig.createWorkoutLocationRequest()
