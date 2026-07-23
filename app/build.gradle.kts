@@ -1,13 +1,14 @@
 import java.io.FileInputStream
 import java.util.Properties
 import org.gradle.api.tasks.testing.Test
+import org.gradle.kotlin.dsl.version
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import org.gradle.testing.jacoco.tasks.JacocoReport
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id("kotlin-kapt")
+    id("org.jetbrains.kotlin.kapt")
     id("jacoco")
 }
 
@@ -108,16 +109,17 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 
     // Room database
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
-    androidTestImplementation("androidx.room:room-testing:2.6.1")
+    implementation("androidx.room:room-runtime:2.7.0")
+    implementation("androidx.room:room-ktx:2.7.0")
+    kapt("androidx.room:room-compiler:2.7.0")
+    androidTestImplementation("androidx.room:room-testing:2.7.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
@@ -125,6 +127,7 @@ dependencies {
     // Maps and location
     implementation("org.osmdroid:osmdroid-android:6.1.18")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
+    androidTestImplementation("androidx.fragment:fragment-testing:1.6.2")
 
     // Location services
     implementation("com.google.android.gms:play-services-location:21.0.1")

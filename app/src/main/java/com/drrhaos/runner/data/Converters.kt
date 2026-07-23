@@ -1,7 +1,10 @@
 package com.drrhaos.runner.data
 
 import androidx.room.TypeConverter
+import android.util.Log
 import java.util.Date
+
+private const val TAG = "Converters"
 
 class Converters {
     @TypeConverter
@@ -21,6 +24,9 @@ class Converters {
 
     @TypeConverter
     fun toWorkoutType(value: String): WorkoutType {
-        return WorkoutType.valueOf(value)
+        return WorkoutType.values().find { it.name == value } ?: run {
+            Log.w(TAG, "Unknown workout type '$value', defaulting to EASY_RUN")
+            WorkoutType.EASY_RUN
+        }
     }
 }

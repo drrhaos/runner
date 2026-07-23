@@ -3,10 +3,13 @@ package com.drrhaos.runner.util
 import android.content.Context
 import com.drrhaos.runner.R
 import com.drrhaos.runner.data.TrackData
-import com.drrhaos.runner.data.TrackPoint
 import com.drrhaos.runner.data.Workout
+import com.drrhaos.runner.data.WorkoutType
 import com.drrhaos.runner.data.displayName
-import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 /**
@@ -16,9 +19,8 @@ object GpxExporter {
     
     private const val GPX_VERSION = "1.1"
     private const val GPX_NAMESPACE = "http://www.topografix.com/GPX/1/1"
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US).apply {
-        timeZone = TimeZone.getTimeZone("UTC")
-    }
+    private val dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
+        .withZone(ZoneId.of("UTC"))
     
     /**
      * Экспортирует тренировку в GPX формат
@@ -115,9 +117,9 @@ object GpxExporter {
         
         return parts.joinToString("; ")
     }
-    
+
     private fun formatIso8601(date: Date): String {
-        return dateFormat.format(date)
+        return dateFormat.format(Instant.ofEpochMilli(date.time))
     }
     
     private fun escapeXml(text: String): String {
@@ -132,8 +134,9 @@ object GpxExporter {
      * Получает имя файла для экспорта GPX
      */
     fun getGpxFileName(workout: Workout, context: Context): String {
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm", Locale.getDefault())
-        val dateStr = dateFormat.format(workout.date)
+        val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm")
+        val dateStr = LocalDateTime.ofInstant(workout.date.toInstant(), ZoneId.systemDefault())
+            .format(dateFormatter)
         val typeStr = workout.type.displayName(context).replace(" ", "_")
         return "workout_${dateStr}_${typeStr}.gpx"
     }

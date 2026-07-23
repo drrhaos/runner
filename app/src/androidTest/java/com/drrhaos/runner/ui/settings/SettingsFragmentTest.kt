@@ -2,12 +2,11 @@ package com.drrhaos.runner.ui.settings
 
 import androidx.fragment.app.testing.launchFragmentInContainer
 import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import com.drrhaos.runner.R
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -18,7 +17,7 @@ import org.junit.runner.RunWith
 class SettingsFragmentTest {
 
     @Test
-    fun `settings fragment should display correctly`() {
+    fun settings_fragment_should_display_correctly() {
         // Given
         val scenario = launchFragmentInContainer<SettingsFragment>()
 
@@ -52,7 +51,7 @@ class SettingsFragmentTest {
     }
 
     @Test
-    fun `weight row should be clickable`() {
+    fun weight_row_should_be_clickable() {
         // Given
         val scenario = launchFragmentInContainer<SettingsFragment>()
 
@@ -63,7 +62,7 @@ class SettingsFragmentTest {
     }
 
     @Test
-    fun `height row should be clickable`() {
+    fun height_row_should_be_clickable() {
         // Given
         val scenario = launchFragmentInContainer<SettingsFragment>()
 
@@ -74,7 +73,7 @@ class SettingsFragmentTest {
     }
 
     @Test
-    fun `birth date row should be clickable`() {
+    fun birth_date_row_should_be_clickable() {
         // Given
         val scenario = launchFragmentInContainer<SettingsFragment>()
 
@@ -85,7 +84,7 @@ class SettingsFragmentTest {
     }
 
     @Test
-    fun `gender row should be clickable`() {
+    fun gender_row_should_be_clickable() {
         // Given
         val scenario = launchFragmentInContainer<SettingsFragment>()
 
@@ -96,7 +95,7 @@ class SettingsFragmentTest {
     }
 
     @Test
-    fun `unit system row should be clickable`() {
+    fun unit_system_row_should_be_clickable() {
         // Given
         val scenario = launchFragmentInContainer<SettingsFragment>()
 
@@ -107,7 +106,7 @@ class SettingsFragmentTest {
     }
 
     @Test
-    fun `gps accuracy row should be clickable`() {
+    fun gps_accuracy_row_should_be_clickable() {
         // Given
         val scenario = launchFragmentInContainer<SettingsFragment>()
 
@@ -118,7 +117,7 @@ class SettingsFragmentTest {
     }
 
     @Test
-    fun `reset settings button should be clickable`() {
+    fun reset_settings_button_should_be_clickable() {
         // Given
         val scenario = launchFragmentInContainer<SettingsFragment>()
 
@@ -129,7 +128,7 @@ class SettingsFragmentTest {
     }
 
     @Test
-    fun `auto pause switch should be clickable`() {
+    fun auto_pause_switch_should_be_clickable() {
         // Given
         val scenario = launchFragmentInContainer<SettingsFragment>()
 
@@ -140,7 +139,7 @@ class SettingsFragmentTest {
     }
 
     @Test
-    fun `voice feedback switch should be clickable`() {
+    fun voice_feedback_switch_should_be_clickable() {
         // Given
         val scenario = launchFragmentInContainer<SettingsFragment>()
 

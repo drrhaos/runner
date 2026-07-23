@@ -10,7 +10,7 @@ import org.junit.Assert.*
 class GpsConfigTest {
 
     @Test
-    fun `constants should have correct values`() {
+    fun constants_should_have_correct_values() {
         // Then
         assertEquals(5f, GpsConfig.MIN_DISTANCE, 0.01f)
         assertEquals(1000L, GpsConfig.MIN_UPDATE_INTERVAL)
@@ -20,7 +20,7 @@ class GpsConfigTest {
     }
 
     @Test
-    fun `createWorkoutLocationRequest should not be null`() {
+    fun createworkoutlocationrequest_should_not_be_null() {
         // When
         val request = GpsConfig.createWorkoutLocationRequest()
 
@@ -29,7 +29,7 @@ class GpsConfigTest {
     }
 
     @Test
-    fun `createWorkoutLocationRequest should be LocationRequest instance`() {
+    fun createworkoutlocationrequest_should_be_locationrequest_instance() {
         // When
         val request = GpsConfig.createWorkoutLocationRequest()
 
@@ -38,7 +38,7 @@ class GpsConfigTest {
     }
 
     @Test
-    fun `createWorkoutLocationRequest should be consistent`() {
+    fun createworkoutlocationrequest_should_be_consistent() {
         // When
         val request1 = GpsConfig.createWorkoutLocationRequest()
         val request2 = GpsConfig.createWorkoutLocationRequest()
@@ -50,7 +50,7 @@ class GpsConfigTest {
     }
 
     @Test
-    fun `createWorkoutLocationRequest should not throw exception`() {
+    fun createworkoutlocationrequest_should_not_throw_exception() {
         // When & Then
         try {
             GpsConfig.createWorkoutLocationRequest()
@@ -61,7 +61,7 @@ class GpsConfigTest {
     }
 
     @Test
-    fun `constants should be accessible`() {
+    fun constants_should_be_accessible() {
         // Then
         assertTrue(GpsConfig.MIN_DISTANCE > 0)
         assertTrue(GpsConfig.MIN_UPDATE_INTERVAL > 0)
@@ -71,7 +71,7 @@ class GpsConfigTest {
     }
 
     @Test
-    fun `constants should have reasonable values`() {
+    fun constants_should_have_reasonable_values() {
         // Then
         assertTrue("MIN_DISTANCE should be reasonable", GpsConfig.MIN_DISTANCE >= 1f)
         assertTrue("MIN_UPDATE_INTERVAL should be reasonable", GpsConfig.MIN_UPDATE_INTERVAL >= 100L)
@@ -81,7 +81,7 @@ class GpsConfigTest {
     }
 
     @Test
-    fun `intervals should be in ascending order`() {
+    fun intervals_should_be_in_ascending_order() {
         // Then
         assertTrue("HIGH_ACCURACY_INTERVAL should be <= MEDIUM_ACCURACY_INTERVAL", 
             GpsConfig.HIGH_ACCURACY_INTERVAL <= GpsConfig.MEDIUM_ACCURACY_INTERVAL)
@@ -90,21 +90,21 @@ class GpsConfigTest {
     }
 
     @Test
-    fun `MIN_UPDATE_INTERVAL should be reasonable for GPS`() {
+    fun min_update_interval_should_be_reasonable_for_gps() {
         // Then
         assertTrue("MIN_UPDATE_INTERVAL should be at least 1 second", GpsConfig.MIN_UPDATE_INTERVAL >= 1000L)
         assertTrue("MIN_UPDATE_INTERVAL should not be too high", GpsConfig.MIN_UPDATE_INTERVAL <= 10000L)
     }
 
     @Test
-    fun `MIN_DISTANCE should be reasonable for GPS`() {
+    fun min_distance_should_be_reasonable_for_gps() {
         // Then
         assertTrue("MIN_DISTANCE should be at least 1 meter", GpsConfig.MIN_DISTANCE >= 1f)
         assertTrue("MIN_DISTANCE should not be too high", GpsConfig.MIN_DISTANCE <= 50f)
     }
 
     @Test
-    fun `createWorkoutLocationRequest should create multiple instances`() {
+    fun createworkoutlocationrequest_should_create_multiple_instances() {
         // When
         val requests = (1..5).map { GpsConfig.createWorkoutLocationRequest() }
 
@@ -114,7 +114,7 @@ class GpsConfigTest {
     }
 
     @Test
-    fun `constants should be final`() {
+    fun constants_should_be_final() {
         // Then - These should compile without issues, indicating they're accessible
         val minDistance = GpsConfig.MIN_DISTANCE
         val minUpdateInterval = GpsConfig.MIN_UPDATE_INTERVAL

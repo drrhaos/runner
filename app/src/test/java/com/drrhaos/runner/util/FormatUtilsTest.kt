@@ -9,7 +9,7 @@ import org.junit.Assert.*
 class FormatUtilsTest {
 
     @Test
-    fun `formatTime should format milliseconds correctly`() {
+    fun format_time_should_format_milliseconds_correctly() {
         // Given
         val time1 = 61000L // 1 minute 1 second
         val time2 = 3661000L // 1 hour 1 minute 1 second
@@ -30,7 +30,7 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `formatSpeed should format speed correctly`() {
+    fun format_speed_should_format_speed_correctly() {
         // Given
         val speed1 = 5.0f // 5 m/s
         val speed2 = 0.0f // 0 m/s
@@ -45,7 +45,7 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `formatPace should format pace correctly`() {
+    fun format_pace_should_format_pace_correctly() {
         // Given
         val pace1 = 5.0f // 5 minutes per km
         val pace2 = 0.0f // 0 minutes per km
@@ -60,7 +60,7 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `formatDistance should format distance correctly`() {
+    fun format_distance_should_format_distance_correctly() {
         // Given
         val distance1 = 5.5f // 5.5 km
         val distance2 = 0.0f // 0 km
@@ -78,7 +78,7 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `formatCalories should format calories correctly`() {
+    fun format_calories_should_format_calories_correctly() {
         // Given
         val calories1 = 300 // 300 calories
         val calories2 = 0 // 0 calories
@@ -96,7 +96,7 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `calculateAverageSpeed should calculate correctly`() {
+    fun calculateaveragespeed_should_calculate_correctly() {
         // Given
         val distance1 = 10.0f // 10 km
         val time1 = 3600000L // 1 hour in milliseconds
@@ -117,7 +117,7 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `calculateAverageSpeed should handle zero time`() {
+    fun calculateaveragespeed_should_handle_zero_time() {
         // Given
         val distance = 10.0f
         val time = 0L
@@ -130,7 +130,7 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `calculateAverageSpeed should handle negative distance`() {
+    fun calculateaveragespeed_should_handle_negative_distance() {
         // Given
         val distance = -5.0f
         val time = 3600000L
@@ -144,7 +144,7 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `formatTime should handle large values`() {
+    fun format_time_should_handle_large_values() {
         // Given
         val time = 3661000L // 1 hour 1 minute 1 second
 
@@ -156,7 +156,7 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `formatTime should handle very large values`() {
+    fun format_time_should_handle_very_large_values() {
         // Given
         val time = 36610000L // 10 hours 10 minutes 10 seconds
 
@@ -168,7 +168,7 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `formatSpeed should handle very high speeds`() {
+    fun format_speed_should_handle_very_high_speeds() {
         // Given
         val speed = 100.0f // 100 m/s
 
@@ -180,7 +180,7 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `formatPace should handle very slow paces`() {
+    fun format_pace_should_handle_very_slow_paces() {
         // Given
         val pace = 60.0f // 60 minutes per km
 
@@ -192,7 +192,7 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `formatDistance should handle very small distances`() {
+    fun format_distance_should_handle_very_small_distances() {
         // Given
         val distance = 0.001f // 0.001 km
 
@@ -204,7 +204,19 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `calculatePaceKph delegates to ChartCalculations`() {
+    fun format_calories_should_handle_decimal_values() {
+        // Given
+        val calories = 123 // 123 calories
+
+        // When
+        val result = FormatUtils.formatCalories(calories)
+
+        // Then
+        assertEquals("123 ккал", result)
+    }
+
+    @Test
+    fun `calculatePaceKph delegates to SpeedPaceCalculator`() {
         assertEquals(
             5f,
             FormatUtils.calculatePaceKph(10f, 50 * 60_000L),
@@ -215,7 +227,7 @@ class FormatUtilsTest {
     @Test
     fun `calculatePaceMph returns min per mile`() {
         val paceMph = FormatUtils.calculatePaceMph(
-            ChartCalculations.KM_PER_MILE,
+            SpeedPaceCalculator.KM_PER_MILE,
             5 * 60_000L
         )
         assertEquals(5f, paceMph, 0.01f)

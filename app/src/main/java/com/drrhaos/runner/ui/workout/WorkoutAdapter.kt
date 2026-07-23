@@ -10,7 +10,7 @@ import com.drrhaos.runner.R
 import com.drrhaos.runner.data.Workout
 import com.drrhaos.runner.data.displayName
 import com.drrhaos.runner.databinding.ItemWorkoutBinding
-import com.drrhaos.runner.util.ChartCalculations
+import com.drrhaos.runner.util.SpeedPaceCalculator
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -89,7 +89,7 @@ class WorkoutAdapter(
         }
 
         private fun formatPace(paceMinutes: Float): String {
-            return ChartCalculations.formatPaceMmSs(paceMinutes)
+            return SpeedPaceCalculator.formatPaceMmSs(paceMinutes)
         }
     }
 

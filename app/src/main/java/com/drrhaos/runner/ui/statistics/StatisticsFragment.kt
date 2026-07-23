@@ -27,7 +27,8 @@ class StatisticsFragment : Fragment() {
 
     private val viewModel: StatisticsViewModel by viewModels {
         val database = WorkoutDatabase.getDatabase(requireContext())
-        StatisticsViewModelFactory(database.workoutDao())
+        val repository = com.drrhaos.runner.data.WorkoutRepository(database.workoutDao())
+        StatisticsViewModelFactory(repository)
     }
 
     override fun onCreateView(

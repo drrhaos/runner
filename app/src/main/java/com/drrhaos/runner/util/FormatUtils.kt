@@ -2,7 +2,8 @@ package com.drrhaos.runner.util
 
 import android.content.Context
 import com.drrhaos.runner.R
-import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
 
 const val KPH_TO_MPH_COEF: Double = 0.621371
@@ -11,9 +12,9 @@ const val KPH_TO_MPH_COEF: Double = 0.621371
  * Утилиты для форматирования данных
  */
 object FormatUtils {
-    private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-    private val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-    private val dateTimeFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+    private val dateFormat = DateTimeFormatter.ofPattern("dd.MM.yyyy")
+    private val timeFormat = DateTimeFormatter.ofPattern("HH:mm")
+    private val dateTimeFormat = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
 
     /**
      * Форматирует время в миллисекундах в строку HH:MM:SS или MM:SS
@@ -83,9 +84,8 @@ object FormatUtils {
      */
     fun formatPace(paceMinutesPerKm: Float, context: Context? = null): String {
         if (paceMinutesPerKm <= 0) return context?.getString(R.string.statistics_pace_placeholder) ?: "--:-- /км"
-
-        val (minutes, seconds) = ChartCalculations.paceToMinutesSeconds(paceMinutesPerKm)
-        val paceStr = String.format("%d:%02d", minutes, seconds)
+        
+        val paceStr = SpeedPaceCalculator.formatPaceMmSs(paceMinutesPerKm)
         return if (context != null) {
             context.getString(R.string.statistics_pace_placeholder).replace("--:--", paceStr)
         } else {
@@ -96,7 +96,7 @@ object FormatUtils {
     fun formatPaceForTTS(paceMinutesPerKm: Float, context: Context): String {
         if (paceMinutesPerKm <= 0) return "--:-- /км"
 
-        val (minutes, seconds) = ChartCalculations.paceToMinutesSeconds(paceMinutesPerKm)
+        val (minutes, seconds) = SpeedPaceCalculator.paceToMinutesSeconds(paceMinutesPerKm)
 
         return String.format("%s %s %s",
             context.resources.getQuantityString(R.plurals.minutes, minutes, minutes),
@@ -138,21 +138,24 @@ object FormatUtils {
      * Форматирует дату
      */
     fun formatDate(date: Date): String {
-        return dateFormat.format(date)
+        val localDate = LocalDateTime.ofInstant(date.toInstant(), java.time.ZoneId.systemDefault())
+        return dateFormat.format(localDate)
     }
     
     /**
      * Форматирует время
      */
     fun formatTime(date: Date): String {
-        return timeFormat.format(date)
+        val localDateTime = LocalDateTime.ofInstant(date.toInstant(), java.time.ZoneId.systemDefault())
+        return timeFormat.format(localDateTime)
     }
     
     /**
      * Форматирует дату и время
      */
     fun formatDateTime(date: Date): String {
-        return dateTimeFormat.format(date)
+        val localDateTime = LocalDateTime.ofInstant(date.toInstant(), java.time.ZoneId.systemDefault())
+        return dateTimeFormat.format(localDateTime)
     }
     
     /**
@@ -170,18 +173,18 @@ object FormatUtils {
      * Вычисляет среднюю скорость в км/ч
      */
     fun calculateAverageSpeed(distanceKm: Float, durationMs: Long): Float {
-        return ChartCalculations.averageSpeedKmh(distanceKm, durationMs)
+        return SpeedPaceCalculator.averageSpeedKmh(distanceKm, durationMs)
     }
-
+    
     /**
      * Вычисляет темп в минутах на километр
      */
     fun calculatePaceKph(distanceKm: Float, durationMs: Long): Float {
-        return ChartCalculations.overallAveragePace(distanceKm, durationMs)
+        return SpeedPaceCalculator.segmentPaceMetric(durationMs, distanceKm, metric = true)
     }
 
     fun calculatePaceMph(distanceKm: Float, durationMs: Long): Float {
-        return ChartCalculations.paceMinPerMile(distanceKm, durationMs)
+        return SpeedPaceCalculator.segmentPaceMetric(durationMs, distanceKm, metric = false)
     }
     
     /**

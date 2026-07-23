@@ -260,8 +260,8 @@
     <string name="workout_fragment_label">Workout</string>
     <string name="workout_details_label">Workout details</string>
     <string name="start_workout">Start workout</string>
+    <string name="avg_pace_label">Average pace</string>
 
-    <string name="permission_activity_granted">Activity recognition permission granted</string>
     <string name="permission_location_needed">Location permission is required for tracking</string>
     <string name="permission_location_denied_can_train">No GPS access. You can still start a workout; the route will not be recorded.</string>
     <string name="permission_notification_needed">Notification permission is required for background tracking</string>
@@ -305,6 +305,14 @@
     <string name="gpx_note_pace">Pace: %s</string>
     <string name="gpx_note_calories">Calories: %d kcal</string>
     <string name="gpx_note_notes">Notes: %s</string>
+
+    <string name="gps_denied_message">GPS is not available. Turn on GPS in settings.</string>
+    <string name="gps_lost_message">GPS signal lost. Check your connection.</string>
+    <string name="gps_searching_message">Searching for GPS signal…</string>
+    <string name="gps_weak_message">GPS signal is weak. Accuracy may be low.</string>
+    <string name="gps_medium_message">GPS signal is medium.</string>
+    <string name="gps_strong_message">GPS signal is strong.</string>
+
 
     <plurals name="hours">
         <item quantity="one">%d hour</item>

@@ -26,7 +26,8 @@ class AddWorkoutFragment : Fragment() {
 
     private val viewModel: WorkoutViewModel by viewModels {
         val database = WorkoutDatabase.getDatabase(requireContext())
-        WorkoutViewModelFactory(database.workoutDao())
+        val repository = com.drrhaos.runner.data.WorkoutRepository(database.workoutDao())
+        WorkoutViewModelFactory(repository)
     }
 
     private var selectedDate: Date = Date()

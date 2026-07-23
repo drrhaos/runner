@@ -1,6 +1,7 @@
 package com.drrhaos.runner.ui.tracking
 
 import android.Manifest
+import android.app.Application
 import android.content.Context
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.test.core.app.ApplicationProvider
@@ -35,6 +36,7 @@ class WorkoutTrackingViewModelTest {
 
     @Before
     fun setUp() {
+
         context = ApplicationProvider.getApplicationContext()
         ShadowApplication.getInstance().grantPermissions(
             Manifest.permission.ACCESS_FINE_LOCATION,
@@ -42,7 +44,7 @@ class WorkoutTrackingViewModelTest {
         )
         database = WorkoutDatabase.getInMemoryDatabase(context)
         workoutDao = database.workoutDao()
-        viewModel = WorkoutTrackingViewModel(workoutDao, context)
+        viewModel = WorkoutTrackingViewModel(WorkoutRepository(workoutDao), context as Application)
     }
 
     @After
@@ -51,7 +53,7 @@ class WorkoutTrackingViewModelTest {
     }
 
     @Test
-    fun `viewModel should initialize with default state`() {
+    fun viewmodel_should_initialize_with_default_state() {
         val session = viewModel.workoutSession.value
 
         assertFalse(session.isTracking)
@@ -61,25 +63,25 @@ class WorkoutTrackingViewModelTest {
     }
 
     @Test
-    fun `viewModel should initialize location client`() {
+    fun viewmodel_should_initialize_location_client() {
         viewModel.initializeLocationClient(context)
         assertTrue(true)
     }
 
     @Test
-    fun `viewModel should initialize service connection`() {
+    fun viewmodel_should_initialize_service_connection() {
         viewModel.initializeService()
         assertTrue(true)
     }
 
     @Test
-    fun `viewModel should format duration correctly`() {
+    fun viewmodel_should_format_duration_correctly() {
         val formatted = FormatUtils.formatTime(3_661_000L)
         assertTrue(formatted.isNotEmpty())
     }
 
     @Test
-    fun `viewModel should format pace correctly`() {
+    fun viewmodel_should_format_pace_correctly() {
         val formatted = viewModel.formatPace(5.5f)
         assertTrue(formatted.isNotEmpty())
     }
@@ -134,7 +136,7 @@ class WorkoutTrackingViewModelTest {
     }
 
     @Test
-    fun `viewModel should handle workout with track data`() = runTest {
+    fun viewmodel_should_handle_workout_with_track_data() = runTest {
         val trackData = TrackData(
             points = listOf(
                 TrackPoint(55.7558, 37.6173, System.currentTimeMillis(), 10f, 3f, 150.0),
