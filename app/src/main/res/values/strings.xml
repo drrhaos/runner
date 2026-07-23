@@ -194,7 +194,13 @@
     <string name="delete_workout_title">Delete workout</string>
     <string name="delete_workout_message">Are you sure you want to delete this workout? This action cannot be undone.</string>
     <string name="chart_pace_label">Pace (min/km)</string>
+    <string name="chart_pace_label_miles">Pace (min/mi)</string>
     <string name="chart_speed_label">Speed (km/h)</string>
+    <string name="chart_speed_label_miles">Speed (mi/h)</string>
+    <string name="chart_pace_value_km">%1$d:%2$02d min/km</string>
+    <string name="chart_pace_value_miles">%1$d:%2$02d min/mi</string>
+    <string name="chart_speed_value_kmh">%1$.1f km/h</string>
+    <string name="chart_speed_value_mph">%1$.1f mi/h</string>
     <string name="chart_time_format">%d min</string>
     <string name="chart_elevation_title">Elevation</string>
     <string name="chart_elevation_x_format">%.1f km</string>
@@ -257,7 +263,7 @@
     <string name="avg_pace_label">Average pace</string>
 
     <string name="permission_location_needed">Location permission is required for tracking</string>
-    <string name="permission_location_denied_can_train">Location permission denied. You can still train without GPS tracking.</string>
+    <string name="permission_location_denied_can_train">No GPS access. You can still start a workout; the route will not be recorded.</string>
     <string name="permission_notification_needed">Notification permission is required for background tracking</string>
     <string name="battery_optimization_hint">For stable operation, disable battery optimization in settings</string>
     <string name="workout_too_short">Workout too short to save</string>

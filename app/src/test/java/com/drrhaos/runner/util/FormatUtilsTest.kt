@@ -214,4 +214,22 @@ class FormatUtilsTest {
         // Then
         assertEquals("123 ккал", result)
     }
+
+    @Test
+    fun `calculatePaceKph delegates to SpeedPaceCalculator`() {
+        assertEquals(
+            5f,
+            FormatUtils.calculatePaceKph(10f, 50 * 60_000L),
+            0.01f
+        )
+    }
+
+    @Test
+    fun `calculatePaceMph returns min per mile`() {
+        val paceMph = FormatUtils.calculatePaceMph(
+            SpeedPaceCalculator.KM_PER_MILE,
+            5 * 60_000L
+        )
+        assertEquals(5f, paceMph, 0.01f)
+    }
 }

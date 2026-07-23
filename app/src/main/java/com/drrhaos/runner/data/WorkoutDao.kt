@@ -31,4 +31,7 @@ interface WorkoutDao {
 
     @Query("SELECT AVG(duration) FROM workouts")
     suspend fun getAverageDuration(): Long?
+
+    @Query("SELECT SUM(duration) FROM workouts")
+    suspend fun getTotalDuration(): Long?
 }
