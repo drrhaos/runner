@@ -24,6 +24,7 @@ import com.drrhaos.runner.data.TrackPoint
 import com.drrhaos.runner.data.WorkoutType
 import com.drrhaos.runner.data.maxReasonableGpsSpeedMps
 import com.drrhaos.runner.ui.tracking.WorkoutSession
+import com.drrhaos.runner.util.ChartCalculations
 import com.drrhaos.runner.util.GpsFilter
 import com.drrhaos.runner.util.GpsConfig
 import com.drrhaos.runner.util.FormatUtils
@@ -420,15 +421,11 @@ class WorkoutTrackingService : Service() {
     }
 
     private fun computeAverageSpeedKmH(distanceKm: Float, activeTimeMs: Long): Float {
-        if (distanceKm <= 0f || activeTimeMs <= 0L) return 0f
-        val hours = activeTimeMs / (1000f * 3600f)
-        if (hours <= 0f) return 0f
-        return distanceKm / hours
+        return ChartCalculations.averageSpeedKmh(distanceKm, activeTimeMs)
     }
 
     private fun computePaceMinPerKm(speedKmH: Float): Float {
-        if (speedKmH <= 0f) return 0f
-        return 60f / speedKmH
+        return ChartCalculations.paceFromSpeedKmh(speedKmH)
     }
 
     fun startWorkout() {
@@ -443,17 +440,12 @@ class WorkoutTrackingService : Service() {
             android.util.Log.w("WorkoutTrackingService", "startWorkout ignored: workout already running")
             return
         }
-        
-        // Проверяем разрешения GPS
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            android.util.Log.e("WorkoutTrackingService", "GPS permission not granted, cannot start workout")
-            currentSession = currentSession.copy(gpsStatus = com.drrhaos.runner.ui.tracking.GpsStatus.DENIED)
-            sessionUpdateCallback?.invoke(currentSession)
-            return
+
+        val initialGpsStatus = if (hasLocationPermission()) {
+            com.drrhaos.runner.ui.tracking.GpsStatus.SEARCHING
+        } else {
+            android.util.Log.w("WorkoutTrackingService", "Location permission not granted, starting workout without GPS")
+            com.drrhaos.runner.ui.tracking.GpsStatus.DENIED
         }
 
         lastLocation = null
@@ -481,15 +473,17 @@ class WorkoutTrackingService : Service() {
             currentSpeed = 0f,
             heartRate = 0,
             calories = 0,
-            gpsStatus = com.drrhaos.runner.ui.tracking.GpsStatus.SEARCHING,
+            gpsStatus = initialGpsStatus,
             trackPoints = emptyList(),
             trackDataPoints = emptyList(),
             rawTrackDataPoints = emptyList(),
             currentLocation = null
         )
         
-        startLocationUpdates()
-        startPeriodicLocationRequest()
+        if (hasLocationPermission()) {
+            startLocationUpdates()
+            startPeriodicLocationRequest()
+        }
         startWorkoutTimer()
         startForeground(NOTIFICATION_ID, createNotification())
         sessionUpdateCallback?.invoke(currentSession)
@@ -530,7 +524,10 @@ class WorkoutTrackingService : Service() {
         // Приобретаем wake lock при возобновлении
         acquireWakeLock()
         startWakeLockRenewal()
-        startPeriodicLocationRequest()
+        if (hasLocationPermission()) {
+            startLocationUpdates()
+            startPeriodicLocationRequest()
+        }
         startWorkoutTimer()
         sessionUpdateCallback?.invoke(currentSession)
         updateNotification()
@@ -557,7 +554,11 @@ class WorkoutTrackingService : Service() {
         return ContextCompat.checkSelfPermission(
             this,
             Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
+        ) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun startLocationUpdates() {
@@ -784,9 +785,13 @@ class WorkoutTrackingService : Service() {
                     workoutTimeRunnable = null
                     return
                 }
-                val currentTime = System.currentTimeMillis()
-                val elapsedTime = currentTime - currentSession.startTime - currentSession.totalPauseDuration
-                currentSession = currentSession.copy(currentTime = elapsedTime)
+                val now = System.currentTimeMillis()
+                val elapsedTime = now - currentSession.startTime - currentSession.totalPauseDuration
+                val gpsStatus = resolveGpsStatusDuringWorkout(now)
+                currentSession = currentSession.copy(
+                    currentTime = elapsedTime,
+                    gpsStatus = gpsStatus
+                )
                 sessionUpdateCallback?.invoke(currentSession)
                 android.util.Log.d("WorkoutTrackingService", "Updated workout time: $elapsedTime")
                 updateNotification()
@@ -795,6 +800,23 @@ class WorkoutTrackingService : Service() {
         }
         workoutTimeRunnable = r
         mainHandler.post(r)
+    }
+
+    private fun resolveGpsStatusDuringWorkout(now: Long): com.drrhaos.runner.ui.tracking.GpsStatus {
+        if (!hasLocationPermission()) {
+            return com.drrhaos.runner.ui.tracking.GpsStatus.DENIED
+        }
+        if (lastLocationTime <= 0L) {
+            return com.drrhaos.runner.ui.tracking.GpsStatus.SEARCHING
+        }
+        val staleMs = now - lastLocationTime
+        return when {
+            staleMs > NO_LOCATION_UPDATE_TIMEOUT_MS * 6 ->
+                com.drrhaos.runner.ui.tracking.GpsStatus.LOST
+            staleMs > NO_LOCATION_UPDATE_TIMEOUT_MS ->
+                com.drrhaos.runner.ui.tracking.GpsStatus.WEAK
+            else -> com.drrhaos.runner.ui.tracking.GpsStatus.FOUND
+        }
     }
     
     private fun stopWorkoutTimer() {

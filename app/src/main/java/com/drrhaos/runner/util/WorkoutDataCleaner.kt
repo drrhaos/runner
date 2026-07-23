@@ -86,27 +86,15 @@ object WorkoutDataCleaner {
         val sortedPoints = cleanedPoints.sortedBy { it.timestamp }
         
         // Вычисляем общее расстояние
-        var totalDistance = 0f
-        for (i in 1 until sortedPoints.size) {
-            val prevPoint = sortedPoints[i - 1]
-            val currentPoint = sortedPoints[i]
-            
-            val location1 = createLocationFromTrackPoint(prevPoint)
-            val location2 = createLocationFromTrackPoint(currentPoint)
-            
-            val segmentDistance = location1.distanceTo(location2)
-            totalDistance += segmentDistance
-        }
+        val totalDistance = ChartCalculations.totalDistanceMeters(sortedPoints)
         
         // Вычисляем общую продолжительность
         val startTime = sortedPoints.first().timestamp
         val endTime = sortedPoints.last().timestamp
         val totalDuration = endTime - startTime
         
-        // Вычисляем среднюю и максимальную скорость
-        val speeds = sortedPoints.mapNotNull { it.speed }.filter { it > 0 }
-        val avgSpeed = if (speeds.isNotEmpty()) speeds.average().toFloat() else 0f
-        val maxSpeed = if (speeds.isNotEmpty()) speeds.maxOrNull() ?: 0f else 0f
+        val avgSpeed = ChartCalculations.averageSpeedMs(totalDistance, totalDuration)
+        val maxSpeed = ChartCalculations.maxDerivedSpeedMs(sortedPoints)
         
         Log.d("WorkoutDataCleaner", "Recalculated stats: distance=${totalDistance}m, duration=${totalDuration}ms, avgSpeed=${avgSpeed}m/s")
         

@@ -10,6 +10,7 @@ import com.drrhaos.runner.R
 import com.drrhaos.runner.data.Workout
 import com.drrhaos.runner.data.displayName
 import com.drrhaos.runner.databinding.ItemWorkoutBinding
+import com.drrhaos.runner.util.ChartCalculations
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -88,9 +89,7 @@ class WorkoutAdapter(
         }
 
         private fun formatPace(paceMinutes: Float): String {
-            val minutes = paceMinutes.toInt()
-            val seconds = ((paceMinutes - minutes) * 60).toInt()
-            return String.format("%d:%02d", minutes, seconds)
+            return ChartCalculations.formatPaceMmSs(paceMinutes)
         }
     }
 
