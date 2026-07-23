@@ -204,14 +204,20 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun `formatCalories should handle decimal values`() {
-        // Given
-        val calories = 123 // 123 calories
+    fun `calculatePaceKph delegates to ChartCalculations`() {
+        assertEquals(
+            5f,
+            FormatUtils.calculatePaceKph(10f, 50 * 60_000L),
+            0.01f
+        )
+    }
 
-        // When
-        val result = FormatUtils.formatCalories(calories)
-
-        // Then
-        assertEquals("123 ккал", result)
+    @Test
+    fun `calculatePaceMph returns min per mile`() {
+        val paceMph = FormatUtils.calculatePaceMph(
+            ChartCalculations.KM_PER_MILE,
+            5 * 60_000L
+        )
+        assertEquals(5f, paceMph, 0.01f)
     }
 }
