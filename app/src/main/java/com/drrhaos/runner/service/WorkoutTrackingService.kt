@@ -330,11 +330,28 @@ class WorkoutTrackingService : Service() {
                 if (!isActive) break
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastLocationTime > NO_LOCATION_UPDATE_TIMEOUT_MS) {
-                    fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
-                        location?.let {
-                            updateLocation(it)
-                            lastLocationTime = currentTime
+                    val fineGranted = ContextCompat.checkSelfPermission(
+                        this@WorkoutTrackingService,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                    val coarseGranted = ContextCompat.checkSelfPermission(
+                        this@WorkoutTrackingService,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (!fineGranted && !coarseGranted) {
+                        sessionManager.updateGpsStatus(GpsStatus.DENIED)
+                        continue
+                    }
+                    try {
+                        fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
+                            location?.let {
+                                updateLocation(it)
+                                lastLocationTime = currentTime
+                            }
                         }
+                    } catch (e: SecurityException) {
+                        android.util.Log.w("WorkoutTrackingService", "lastLocation denied", e)
+                        sessionManager.updateGpsStatus(GpsStatus.DENIED)
                     }
                 }
                 // Periodically resolve GPS status during active workout
