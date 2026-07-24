@@ -54,6 +54,13 @@
     <string name="gps_accuracy_value">Accuracy: %1$d m</string>
     <string name="gps_accuracy_lost">Lost signal</string>
     <string name="gps_accuracy_denied">No access to GPS</string>
+    <string name="gps_lost_banner">GPS lost — time continues, distance pauses until signal returns</string>
+    <string name="save_distance_dialog_title">Enter distance</string>
+    <string name="save_distance_dialog_message">No GPS distance recorded. Enter distance in km, or save time only.</string>
+    <string name="save_distance_hint">Distance (km)</string>
+    <string name="save_without_distance">Save without distance</string>
+    <string name="voice_gps_lost">GPS signal lost</string>
+    <string name="voice_gps_recovered">GPS signal recovered</string>
     <string name="kilometers_per_hour_float">%.1f km/h</string>
     <string name="kilometers_per_hour_float_tts">%.1f kilometers per hour</string>
     <string name="miles_per_hour_float">%.1f mi/h</string>
@@ -85,6 +92,20 @@
     <string name="add_workout_hint_distance">Insert distance</string>
     <string name="add_workout_hint_calories">Insert calories amount</string>
     <string name="add_workout_hint_notes">Few words about workout</string>
+    <string name="edit_workout_title">Edit workout</string>
+    <string name="edit_workout_label_route">Route</string>
+    <string name="edit_workout_route_none">No route attached</string>
+    <string name="edit_workout_route_attached">Route attached (%1$d points)</string>
+    <string name="edit_workout_select_route">Select route</string>
+    <string name="edit_workout_clear_route">Clear</string>
+    <string name="edit_workout_pick_route_title">Select a route</string>
+    <string name="edit_workout_no_routes">No saved routes yet. Complete a GPS workout or mark one as favorite.</string>
+    <string name="edit_workout_route_selected">Route selected</string>
+    <string name="edit_workout_route_cleared">Route cleared</string>
+    <string name="edit_workout_route_preview_cd">Route preview</string>
+    <string name="edit_workout_route_meta">%1$.1f km · %2$s</string>
+    <string name="edit_workout_route_points">%1$d points</string>
+    <string name="workout_updated">Workout updated</string>
 
     <string name="settings_title">Settings</string>
     <string name="settings_profile_title">User profile</string>
@@ -169,8 +190,11 @@
     <string name="workout_details_calories">Calories</string>
     <string name="workout_details_btn_share">Share</string>
     <string name="workout_details_btn_export_gpx">GPX export</string>
-    <string name="workout_details_btn_edit">Edit</string>
     <string name="workout_details_btn_delete">Delete</string>
+    <string name="workout_favorite_add">Add to favorites</string>
+    <string name="workout_favorite_remove">Remove from favorites</string>
+    <string name="workout_favorite_added">Added to favorites</string>
+    <string name="workout_favorite_removed">Removed from favorites</string>
     <string name="workout_details_pace_speed_pulse_title">Pace / Speed / Pulse</string>
     <string name="workout_details_height_title">Height</string>
     <string name="workout_details_pace_speed_title">Pace / Speed by segment</string>
@@ -183,10 +207,6 @@
     <string name="gpx_file_ready">GPX file ready to export</string>
     <string name="file_save_error">File save error: %1$s</string>
     <string name="share_workout_title">Share workout</string>
-    <string name="track_no_data_fix">No track data to fix</string>
-    <string name="workout_data_fixed">Workout data fixed</string>
-    <string name="workout_data_fix_failed">Could not fix data</string>
-    <string name="workout_data_fix_error">Error fixing data: %1$s</string>
     <string name="workout_invalid_id">Error: invalid workout ID</string>
     <string name="route_empty">Route is empty</string>
     <string name="route_load_error">Error loading route</string>
@@ -254,6 +274,10 @@
     <string name="workout_list_message_start_workout">Start training to create a record.</string>
     <string name="workout_list_empty_start">Start workout</string>
     <string name="workout_list_content_description_empty">No workouts yet</string>
+    <string name="workout_list_filter_all">All</string>
+    <string name="workout_list_filter_favorites">Favorites</string>
+    <string name="workout_list_message_no_favorites">No favorite routes yet</string>
+    <string name="workout_list_message_add_favorites">Mark a workout with a star to save it here.</string>
 
     <string name="gps_label">GPS</string>
     <string name="gps_status_a11y">GPS signal: %1$s</string>
@@ -307,7 +331,7 @@
     <string name="gpx_note_notes">Notes: %s</string>
 
     <string name="gps_denied_message">GPS is not available. Turn on GPS in settings.</string>
-    <string name="gps_lost_message">GPS signal lost. Check your connection.</string>
+    <string name="gps_lost_message">GPS signal lost. Time continues; distance will resume when signal returns.</string>
     <string name="gps_searching_message">Searching for GPS signal…</string>
     <string name="gps_weak_message">GPS signal is weak. Accuracy may be low.</string>
     <string name="gps_medium_message">GPS signal is medium.</string>

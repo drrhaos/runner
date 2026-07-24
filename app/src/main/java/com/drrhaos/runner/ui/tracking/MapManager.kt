@@ -2,6 +2,7 @@ package com.drrhaos.runner.ui.tracking
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.DashPathEffect
 import android.graphics.drawable.Drawable
 import android.location.Location
 import android.util.Log
@@ -19,6 +20,7 @@ import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
 import org.osmdroid.events.ZoomEvent
 import com.drrhaos.runner.R
+import com.drrhaos.runner.data.TrackPoint
 import com.drrhaos.runner.data.WorkoutSession
 import com.drrhaos.runner.util.GpsFilter
 
@@ -46,6 +48,9 @@ class MapManager(
         private const val DEFAULT_ZOOM_LEVEL = 16.0
         private const val TRACK_LINE_WIDTH = 8f
         private const val TRACK_LINE_COLOR = Color.RED
+        private const val GAP_DASH_ON = 24f
+        private const val GAP_DASH_OFF = 16f
+        private const val GAP_LINE_ALPHA = 160
         private const val DIRECTION_WINDOW_SIZE = 10
     }
 
@@ -56,6 +61,7 @@ class MapManager(
 
     private var locationOverlay: MyLocationNewOverlay? = null
     private var trackPolyline: Polyline? = null
+    private val gapTrackPolylines = mutableListOf<Polyline>()
 
     // User interaction tracking
     private var isUserInteractingWithMap = false
@@ -107,6 +113,7 @@ class MapManager(
 
     fun onDetach() {
         cancelAutoCenter()
+        clearGapPolylines()
         mapView.onDetach()
         locationOverlay = null
         trackPolyline = null
@@ -284,22 +291,105 @@ class MapManager(
     }
 
     fun updateTrack(trackPoints: List<GeoPoint>, currentLocation: Location?) {
-        if (trackPoints.isNotEmpty()) {
-            val pointsWithCurrent = trackPoints.toMutableList()
-            currentLocation?.let {
-                pointsWithCurrent.add(GeoPoint(it.latitude, it.longitude))
-            }
-            @Suppress("DEPRECATION")
-            val currentPoints = trackPolyline?.points ?: emptyList()
-            if (pointsWithCurrent.size != currentPoints.size) {
-                trackPolyline?.setPoints(pointsWithCurrent)
-                mapView.invalidate()
-                Log.d(TAG, "Track updated: ${pointsWithCurrent.size} points")
-            }
-        } else {
+        updateTrackFromDataPoints(
+            trackPoints.map {
+                TrackPoint(
+                    latitude = it.latitude,
+                    longitude = it.longitude,
+                    timestamp = 0L,
+                    accuracy = null,
+                    speed = null,
+                    altitude = null
+                )
+            },
+            currentLocation
+        )
+    }
+
+    /**
+     * Draws continuous track segments as solid lines and GPS outages as dashed connectors.
+     */
+    fun updateTrackFromDataPoints(trackDataPoints: List<TrackPoint>, currentLocation: Location?) {
+        clearGapPolylines()
+
+        if (trackDataPoints.isEmpty() && currentLocation == null) {
             trackPolyline?.setPoints(mutableListOf())
             mapView.invalidate()
+            return
         }
+
+        val segments = splitTrackIntoSegments(trackDataPoints)
+        if (segments.isEmpty()) {
+            trackPolyline?.setPoints(mutableListOf())
+            currentLocation?.let { loc ->
+                trackPolyline?.setPoints(mutableListOf(GeoPoint(loc.latitude, loc.longitude)))
+            }
+            mapView.invalidate()
+            return
+        }
+
+        val first = segments.first().toMutableList()
+        if (segments.size == 1 && currentLocation != null) {
+            first.add(GeoPoint(currentLocation.latitude, currentLocation.longitude))
+        }
+        trackPolyline?.setPoints(first)
+
+        for (i in 1 until segments.size) {
+            val segment = segments[i].toMutableList()
+            if (i == segments.lastIndex && currentLocation != null) {
+                segment.add(GeoPoint(currentLocation.latitude, currentLocation.longitude))
+            }
+            val poly = Polyline().apply {
+                outlinePaint.color = TRACK_LINE_COLOR
+                outlinePaint.strokeWidth = TRACK_LINE_WIDTH
+                setPoints(segment)
+            }
+            gapTrackPolylines.add(poly)
+            mapView.overlays.add(poly)
+        }
+
+        // Dashed line across GPS gaps (last point of segment N → first of N+1)
+        for (i in 0 until segments.lastIndex) {
+            val from = segments[i].lastOrNull() ?: continue
+            val to = segments[i + 1].firstOrNull() ?: continue
+            val dashed = createDashedGapPolyline(from, to)
+            gapTrackPolylines.add(dashed)
+            mapView.overlays.add(dashed)
+        }
+
+        mapView.invalidate()
+    }
+
+    private fun createDashedGapPolyline(from: GeoPoint, to: GeoPoint): Polyline {
+        return Polyline().apply {
+            outlinePaint.color = TRACK_LINE_COLOR
+            outlinePaint.strokeWidth = TRACK_LINE_WIDTH
+            outlinePaint.alpha = GAP_LINE_ALPHA
+            outlinePaint.pathEffect = DashPathEffect(floatArrayOf(GAP_DASH_ON, GAP_DASH_OFF), 0f)
+            setPoints(mutableListOf(from, to))
+        }
+    }
+
+    private fun splitTrackIntoSegments(points: List<TrackPoint>): List<List<GeoPoint>> {
+        if (points.isEmpty()) return emptyList()
+        val segments = mutableListOf<MutableList<GeoPoint>>()
+        var current = mutableListOf<GeoPoint>()
+        for (point in points) {
+            if (point.afterGap && current.isNotEmpty()) {
+                segments.add(current)
+                current = mutableListOf()
+            }
+            current.add(GeoPoint(point.latitude, point.longitude))
+        }
+        if (current.isNotEmpty()) {
+            segments.add(current)
+        }
+        return segments
+    }
+
+    private fun clearGapPolylines() {
+        gapTrackPolylines.forEach { mapView.overlays.remove(it) }
+        gapTrackPolylines.clear()
     }
 
     fun updateMapOrientation(session: WorkoutSession) {

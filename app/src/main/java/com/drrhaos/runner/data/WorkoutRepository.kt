@@ -16,6 +16,8 @@ class WorkoutRepository(private val workoutDao: WorkoutDao) {
      */
     fun getAllWorkouts(): Flow<List<Workout>> = workoutDao.getAllWorkouts()
 
+    fun getFavoriteWorkouts(): Flow<List<Workout>> = workoutDao.getFavoriteWorkouts()
+
     /**
      * Get a single workout by ID as a Flow.
      */
@@ -39,6 +41,10 @@ class WorkoutRepository(private val workoutDao: WorkoutDao) {
      */
     suspend fun updateWorkout(workout: Workout) = withContext(Dispatchers.IO) {
         workoutDao.updateWorkout(workout)
+    }
+
+    suspend fun setFavorite(id: Long, isFavorite: Boolean) = withContext(Dispatchers.IO) {
+        workoutDao.setFavorite(id, isFavorite)
     }
 
     /**

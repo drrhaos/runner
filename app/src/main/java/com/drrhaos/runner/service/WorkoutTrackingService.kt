@@ -14,6 +14,7 @@ import com.drrhaos.runner.data.GpsStatus
 import com.drrhaos.runner.data.WorkoutSession
 import com.drrhaos.runner.data.WorkoutType
 import com.drrhaos.runner.util.GpsConfig
+import com.drrhaos.runner.util.GpsFilter
 import com.drrhaos.runner.util.UserPreferences
 import com.google.android.gms.location.*
 import kotlinx.coroutines.CoroutineScope
@@ -150,13 +151,19 @@ class WorkoutTrackingService : Service() {
         }
 
         if (isCurrentlyTracking && !sessionManager.getSession().isPaused) {
+            val session = sessionManager.getSession()
+            val resumeAfterGap = session.gpsStatus == GpsStatus.LOST ||
+                (lastLocationTime > 0L &&
+                    System.currentTimeMillis() - lastLocationTime >= GpsFilter.GAP_RESUME_THRESHOLD_MS)
+
             val result = gpsProcessor.processLocation(
                 location,
                 lastLocation,
                 selectedWorkoutType,
-                sessionManager.getSession().trackPoints.toMutableList(),
-                sessionManager.getSession().trackDataPoints.toMutableList(),
-                sessionManager.getSession().rawTrackDataPoints.toMutableList()
+                session.trackPoints.toMutableList(),
+                session.trackDataPoints.toMutableList(),
+                session.rawTrackDataPoints.toMutableList(),
+                resumeAfterGap = resumeAfterGap
             )
 
             when (result) {
@@ -225,11 +232,11 @@ class WorkoutTrackingService : Service() {
         lastLocation = null
         lastAppliedAdaptiveIntervalMs = -1L
         isCurrentlyTracking = true
+        lastLocationTime = 0L
 
-        sessionManager.startNewSession()
-        if (!hasPermission) {
-            sessionManager.updateGpsStatus(GpsStatus.DENIED)
-        }
+        val initialGpsStatus = if (hasPermission) GpsStatus.SEARCHING else GpsStatus.DENIED
+        sessionManager.startNewSession(initialGpsStatus = initialGpsStatus)
+
         if (hasPermission) {
             startLocationUpdates()
             startPeriodicLocationRequest()

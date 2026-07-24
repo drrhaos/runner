@@ -132,6 +132,17 @@
                     android:layout_marginTop="2dp" />
                 </LinearLayout>
 
+                <ImageButton
+                    android:id="@+id/button_favorite"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/workout_favorite_add"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_star_border"
+                    tools:src="@drawable/ic_star" />
+
                 <TextView
                     android:id="@+id/textView_detail_type"
                     android:layout_width="wrap_content"
@@ -316,22 +327,20 @@
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:layout_marginEnd="8dp"
                         android:padding="2dp"
                         android:text="@string/workout_details_btn_export_gpx"
                         android:drawableStart="@android:drawable/ic_menu_upload"
                         style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/button_fix"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:padding="2dp"
-                        android:text="@string/workout_details_btn_edit"
-                        android:drawableStart="@android:drawable/ic_menu_edit"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
                 </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_edit"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/edit"
+                    android:drawableStart="@android:drawable/ic_menu_edit"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_delete"

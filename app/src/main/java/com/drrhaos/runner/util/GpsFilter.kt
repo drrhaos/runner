@@ -8,21 +8,39 @@ import org.osmdroid.util.GeoPoint
  * Утилита для фильтрации GPS выбросов и неправильных координат
  */
 object GpsFilter {
-    
+
+    /** After this silence between fixes, the next valid point is treated as gap resume (no phantom distance). */
+    const val GAP_RESUME_THRESHOLD_MS = 15_000L
+
     // Максимальное расстояние между точками (в метрах) для фильтрации выбросов
     private const val MAX_DISTANCE_BETWEEN_POINTS = 500.0 // 500 метров
-    
+
     // Максимальная точность GPS (в метрах) - точки с худшей точностью игнорируются
     private const val MAX_ACCEPTABLE_ACCURACY = 100.0 // 100 метров
-    
+
     // Минимальная точность GPS (в метрах) - точки с лучшей точностью всегда принимаются
     private const val MIN_ACCEPTABLE_ACCURACY = 20.0 // 20 метров
-    
+
     // По умолчанию: ~50 км/ч; для других типов тренировки передаётся свой порог
     private const val DEFAULT_MAX_REASONABLE_SPEED_MPS = 14.0 // 14 м/с ≈ 50 км/ч
-    
+
     // Максимальное изменение высоты между точками (в метрах) для фильтрации выбросов
     private const val MAX_ALTITUDE_CHANGE = 50.0 // 50 метров
+
+    /**
+     * True when the new fix should re-anchor the track after a GPS outage
+     * (long time gap and/or explicit [forceGapResume] from LOST status).
+     */
+    fun isGapResume(
+        previousLocation: Location?,
+        newLocation: Location,
+        forceGapResume: Boolean = false
+    ): Boolean {
+        if (forceGapResume && previousLocation != null) return true
+        if (previousLocation == null) return false
+        val timeDiff = newLocation.time - previousLocation.time
+        return timeDiff >= GAP_RESUME_THRESHOLD_MS
+    }
     
     /**
      * Проверяет, является ли GPS координата валидной
@@ -69,12 +87,18 @@ object GpsFilter {
     }
     
     /**
-     * Фильтрует GPS выбросы, сравнивая с предыдущей точкой
+     * Фильтрует GPS выбросы, сравнивая с предыдущей точкой.
+     *
+     * When [forceGapResume] is true or the time since [previousLocation] exceeds
+     * [GAP_RESUME_THRESHOLD_MS], speed/distance outlier checks against the previous
+     * point are skipped so the first fix after a tunnel/indoor gap is accepted as
+     * a new anchor (caller must not add segment distance across the gap).
      */
     fun filterGpsOutlier(
         newLocation: Location,
         previousLocation: Location?,
-        maxReasonableSpeedMps: Float = DEFAULT_MAX_REASONABLE_SPEED_MPS.toFloat()
+        maxReasonableSpeedMps: Float = DEFAULT_MAX_REASONABLE_SPEED_MPS.toFloat(),
+        forceGapResume: Boolean = false
     ): Location? {
         // Если это первая точка, проверяем только базовую валидность
         if (previousLocation == null) {
@@ -86,19 +110,27 @@ object GpsFilter {
                 null
             }
         }
-        
+
         // Проверяем базовую валидность новой точки
         if (!isValidGpsLocation(newLocation)) {
             Log.w("GpsFilter", "GPS point failed basic validation")
             return null
         }
-        
+
         // Проверяем, не является ли это "прыжком" назад по времени
         if (newLocation.time < previousLocation.time) {
             Log.w("GpsFilter", "GPS point with earlier timestamp rejected")
             return null
         }
-        
+
+        if (isGapResume(previousLocation, newLocation, forceGapResume)) {
+            Log.d(
+                "GpsFilter",
+                "Gap resume accepted: dt=${newLocation.time - previousLocation.time}ms, force=$forceGapResume"
+            )
+            return newLocation
+        }
+
         // Вычисляем расстояние между точками
         val distance = newLocation.distanceTo(previousLocation)
         

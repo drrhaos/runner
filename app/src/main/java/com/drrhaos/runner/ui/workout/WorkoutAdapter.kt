@@ -16,7 +16,8 @@ import java.util.*
 
 class WorkoutAdapter(
     private val context: Context,
-    private val onItemClick: (Workout) -> Unit
+    private val onItemClick: (Workout) -> Unit,
+    private val onFavoriteClick: (Workout) -> Unit
 ) : ListAdapter<Workout, WorkoutAdapter.WorkoutViewHolder>(WorkoutDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WorkoutViewHolder {
@@ -38,30 +39,31 @@ class WorkoutAdapter(
 
         fun bind(workout: Workout) {
             binding.apply {
-                // Дата
                 val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
                 textViewWorkoutDate.text = dateFormat.format(workout.date)
 
-                // Тип тренировки
                 textViewWorkoutType.text = workout.type.displayName(context)
 
-                // Дистанция
-                textViewDistance.text = String.format("%.1f %s", workout.distance, context.getString(R.string.unit_km))
+                textViewDistance.text = String.format(
+                    "%.1f %s",
+                    workout.distance,
+                    context.getString(R.string.unit_km)
+                )
 
-                // Время
                 textViewDuration.text = formatDuration(workout.duration)
 
-                // Темп
                 textViewPace.text = formatPace(workout.avgPace)
 
-                // Калории и заметки (если есть)
+                updateFavoriteButton(workout)
+
                 if (workout.calories != null || !workout.notes.isNullOrEmpty()) {
                     layoutCalories.visibility = android.view.View.VISIBLE
-                    
+
                     if (workout.calories != null) {
-                        textViewCalories.text = "${workout.calories} ${context.getString(R.string.workout_details_calories)}"
+                        textViewCalories.text =
+                            "${workout.calories} ${context.getString(R.string.workout_details_calories)}"
                     }
-                    
+
                     if (!workout.notes.isNullOrEmpty()) {
                         textViewNotesPreview.text = workout.notes
                     }
@@ -69,10 +71,24 @@ class WorkoutAdapter(
                     layoutCalories.visibility = android.view.View.GONE
                 }
 
-                // Обработчик клика
                 root.setOnClickListener {
                     onItemClick(workout)
                 }
+                buttonFavorite.setOnClickListener {
+                    onFavoriteClick(workout)
+                }
+            }
+        }
+
+        private fun updateFavoriteButton(workout: Workout) {
+            if (workout.isFavorite) {
+                binding.buttonFavorite.setImageResource(R.drawable.ic_star)
+                binding.buttonFavorite.contentDescription =
+                    context.getString(R.string.workout_favorite_remove)
+            } else {
+                binding.buttonFavorite.setImageResource(R.drawable.ic_star_border)
+                binding.buttonFavorite.contentDescription =
+                    context.getString(R.string.workout_favorite_add)
             }
         }
 
