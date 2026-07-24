@@ -54,6 +54,13 @@
     <string name="gps_accuracy_value">Accuracy: %1$d m</string>
     <string name="gps_accuracy_lost">Lost signal</string>
     <string name="gps_accuracy_denied">No access to GPS</string>
+    <string name="gps_lost_banner">GPS lost — time continues, distance pauses until signal returns</string>
+    <string name="save_distance_dialog_title">Enter distance</string>
+    <string name="save_distance_dialog_message">No GPS distance recorded. Enter distance in km, or save time only.</string>
+    <string name="save_distance_hint">Distance (km)</string>
+    <string name="save_without_distance">Save without distance</string>
+    <string name="voice_gps_lost">GPS signal lost</string>
+    <string name="voice_gps_recovered">GPS signal recovered</string>
     <string name="kilometers_per_hour_float">%.1f km/h</string>
     <string name="kilometers_per_hour_float_tts">%.1f kilometers per hour</string>
     <string name="miles_per_hour_float">%.1f mi/h</string>
@@ -307,7 +314,7 @@
     <string name="gpx_note_notes">Notes: %s</string>
 
     <string name="gps_denied_message">GPS is not available. Turn on GPS in settings.</string>
-    <string name="gps_lost_message">GPS signal lost. Check your connection.</string>
+    <string name="gps_lost_message">GPS signal lost. Time continues; distance will resume when signal returns.</string>
     <string name="gps_searching_message">Searching for GPS signal…</string>
     <string name="gps_weak_message">GPS signal is weak. Accuracy may be low.</string>
     <string name="gps_medium_message">GPS signal is medium.</string>

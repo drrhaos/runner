@@ -1,6 +1,7 @@
 package com.drrhaos.runner.ui.workout
 
 import android.graphics.Color
+import android.graphics.DashPathEffect
 import com.drrhaos.runner.data.TrackData
 import com.drrhaos.runner.data.TrackPoint
 import org.osmdroid.config.Configuration
@@ -21,7 +22,16 @@ class DetailMapManager(
     private val context: android.content.Context
 ) {
 
+    companion object {
+        private const val TRACK_LINE_WIDTH = 10f
+        private const val TRACK_LINE_COLOR = Color.RED
+        private const val GAP_DASH_ON = 24f
+        private const val GAP_DASH_OFF = 16f
+        private const val GAP_LINE_ALPHA = 160
+    }
+
     private var trackPolyline: Polyline? = null
+    private val gapPolylines = mutableListOf<Polyline>()
     private var positionMarker: Marker? = null
     private var positionMarkerEnd: Marker? = null
 
@@ -36,8 +46,8 @@ class DetailMapManager(
         mapView.isFocusable = true
 
         trackPolyline = Polyline().apply {
-            outlinePaint.color = Color.RED
-            outlinePaint.strokeWidth = 10f
+            outlinePaint.color = TRACK_LINE_COLOR
+            outlinePaint.strokeWidth = TRACK_LINE_WIDTH
         }
         mapView.overlays.add(trackPolyline)
 
@@ -63,14 +73,55 @@ class DetailMapManager(
     fun displayTrack(trackData: TrackData) {
         if (trackData.points.isEmpty()) return
 
-        val geoPoints = trackData.points.map { trackPoint ->
-            GeoPoint(trackPoint.latitude, trackPoint.longitude)
+        // Remove previous route overlays except markers
+        trackPolyline?.let { mapView.overlays.remove(it) }
+        gapPolylines.forEach { mapView.overlays.remove(it) }
+        gapPolylines.clear()
+
+        val segments = mutableListOf<MutableList<GeoPoint>>()
+        var current = mutableListOf<GeoPoint>()
+        for (point in trackData.points) {
+            if (point.afterGap && current.isNotEmpty()) {
+                segments.add(current)
+                current = mutableListOf()
+            }
+            current.add(GeoPoint(point.latitude, point.longitude))
+        }
+        if (current.isNotEmpty()) segments.add(current)
+
+        val allGeoPoints = mutableListOf<GeoPoint>()
+        segments.forEachIndexed { index, segment ->
+            allGeoPoints.addAll(segment)
+            val poly = Polyline().apply {
+                outlinePaint.color = TRACK_LINE_COLOR
+                outlinePaint.strokeWidth = TRACK_LINE_WIDTH
+                setPoints(segment)
+            }
+            if (index == 0) {
+                trackPolyline = poly
+            } else {
+                gapPolylines.add(poly)
+            }
+            mapView.overlays.add(poly)
         }
 
-        trackPolyline?.setPoints(geoPoints.toMutableList())
+        // Dashed connectors across GPS gaps
+        for (i in 0 until segments.lastIndex) {
+            val from = segments[i].lastOrNull() ?: continue
+            val to = segments[i + 1].firstOrNull() ?: continue
+            val dashed = Polyline().apply {
+                outlinePaint.color = TRACK_LINE_COLOR
+                outlinePaint.strokeWidth = TRACK_LINE_WIDTH
+                outlinePaint.alpha = GAP_LINE_ALPHA
+                outlinePaint.pathEffect = DashPathEffect(floatArrayOf(GAP_DASH_ON, GAP_DASH_OFF), 0f)
+                setPoints(mutableListOf(from, to))
+            }
+            gapPolylines.add(dashed)
+            mapView.overlays.add(dashed)
+        }
 
-        if (geoPoints.isNotEmpty()) {
-            val bounds = BoundingBox.fromGeoPoints(geoPoints)
+        if (allGeoPoints.isNotEmpty()) {
+            val bounds = BoundingBox.fromGeoPoints(allGeoPoints)
             val latSpan = bounds.latNorth - bounds.latSouth
             val lonSpan = bounds.lonEast - bounds.lonWest
             val latPadding = latSpan * 0.1
@@ -85,7 +136,7 @@ class DetailMapManager(
         }
 
         mapView.invalidate()
-        android.util.Log.d("WorkoutDetail", "Successfully loaded track with ${geoPoints.size} points")
+        android.util.Log.d("WorkoutDetail", "Successfully loaded track with ${allGeoPoints.size} points in ${segments.size} segments")
     }
 
     fun showPositionOnMap(trackPoint: TrackPoint) {

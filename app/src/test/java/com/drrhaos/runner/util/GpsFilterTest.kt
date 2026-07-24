@@ -316,15 +316,45 @@ class GpsFilterTest {
     }
 
     @Test
-    fun isvalidgpslocation_should_accept_location_with_boundary_speed() {
-        // Given - скорость ровно 14 м/с (граница MAX_REASONABLE_SPEED)
-        val location = createLocation(55.7558, 37.6173, accuracy = 10f, speed = 14f)
+    fun filtergpsoutlier_should_accept_far_point_after_gap_threshold() {
+        // Given — ~700м за 20 с (раньше отвергалось как выброс)
+        val previousLocation = createLocation(55.7558, 37.6173, accuracy = 10f, speed = 3f, time = 1_000_000L)
+        val newLocation = createLocation(55.7640, 37.6200, accuracy = 10f, speed = 3f,
+            time = previousLocation.time + GpsFilter.GAP_RESUME_THRESHOLD_MS)
 
         // When
-        val result = GpsFilter.isValidGpsLocation(location)
+        val result = GpsFilter.filterGpsOutlier(newLocation, previousLocation)
 
         // Then
-        assertTrue("Location with boundary speed (14 m/s) should be accepted", result)
+        assertNotNull("Point after GPS gap should be accepted as resume anchor", result)
+        assertTrue(GpsFilter.isGapResume(previousLocation, newLocation))
+    }
+
+    @Test
+    fun filtergpsoutlier_should_accept_far_point_when_force_gap_resume() {
+        val previousLocation = createLocation(55.7558, 37.6173, accuracy = 10f, speed = 3f, time = 1_000_000L)
+        val newLocation = createLocation(55.7640, 37.6200, accuracy = 10f, speed = 3f,
+            time = previousLocation.time + 2_000L)
+
+        val result = GpsFilter.filterGpsOutlier(
+            newLocation,
+            previousLocation,
+            forceGapResume = true
+        )
+
+        assertNotNull("Forced gap resume should accept otherwise-outlier point", result)
+        assertTrue(GpsFilter.isGapResume(previousLocation, newLocation, forceGapResume = true))
+    }
+
+    @Test
+    fun filtergpsoutlier_should_still_reject_invalid_point_on_gap_resume() {
+        val previousLocation = createLocation(55.7558, 37.6173, accuracy = 10f, speed = 3f, time = 1_000_000L)
+        val newLocation = createLocation(55.7640, 37.6200, accuracy = 150f, speed = 3f,
+            time = previousLocation.time + GpsFilter.GAP_RESUME_THRESHOLD_MS)
+
+        val result = GpsFilter.filterGpsOutlier(newLocation, previousLocation, forceGapResume = true)
+
+        assertNull("Invalid accuracy should still be rejected on gap resume", result)
     }
 }
 

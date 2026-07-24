@@ -1,6 +1,7 @@
 package com.drrhaos.runner.service
 
 import android.location.Location
+import com.drrhaos.runner.data.LocationSource
 import com.drrhaos.runner.data.TrackPoint
 import com.drrhaos.runner.data.WorkoutType
 import com.drrhaos.runner.data.maxReasonableGpsSpeedMps
@@ -12,6 +13,7 @@ import org.osmdroid.util.GeoPoint
  *
  * Responsibilities:
  *  - Filter GPS outliers via [GpsFilter]
+ *  - Resume track after GPS gaps without phantom distance
  *  - Enforce minimum distance between points
  *  - Build [TrackPoint] and [GeoPoint] instances from validated locations
  *  - Decimate track collections when they exceed memory limits
@@ -27,15 +29,8 @@ class GpsLocationProcessor {
     /**
      * Process a single raw [Location] for an active workout.
      *
-     * @param location The new GPS fix from FusedLocationProvider.
-     * @param previousLocation The last accepted location (null for first point).
-     * @param workoutType Determines the maximum reasonable speed for outlier filtering.
-     * @param existingTrackPoints Current display track points collection.
-     * @param existingTrackDataPoints Current data track points collection.
-     * @param existingRawTrackDataPoints Current raw track points collection.
-     *
-     * @return A [ProcessResult] containing the updated collections and computed segment info,
-     *   or null if the point was filtered out entirely.
+     * @param resumeAfterGap When true (e.g. session was [com.drrhaos.runner.data.GpsStatus.LOST]),
+     *   the first valid fix re-anchors the track with zero segment distance.
      */
     fun processLocation(
         location: Location,
@@ -43,7 +38,8 @@ class GpsLocationProcessor {
         workoutType: WorkoutType,
         existingTrackPoints: MutableList<GeoPoint>,
         existingTrackDataPoints: MutableList<TrackPoint>,
-        existingRawTrackDataPoints: MutableList<TrackPoint>
+        existingRawTrackDataPoints: MutableList<TrackPoint>,
+        resumeAfterGap: Boolean = false
     ): ProcessResult? {
         val newTrackPoints = existingTrackPoints.toMutableList()
         val newTrackDataPoints = existingTrackDataPoints.toMutableList()
@@ -56,15 +52,20 @@ class GpsLocationProcessor {
             timestamp = if (location.time > 0) location.time else System.currentTimeMillis(),
             accuracy = location.accuracy,
             speed = location.speed,
-            altitude = location.altitude
+            altitude = location.altitude,
+            afterGap = false,
+            source = LocationSource.GPS.name
         )
         newRawTrackDataPoints.add(rawTrackPoint)
 
-        // Filter GPS outlier
+        val gapResume = GpsFilter.isGapResume(previousLocation, location, resumeAfterGap)
+
+        // Filter GPS outlier (gap-aware)
         val filteredLocation = GpsFilter.filterGpsOutlier(
             location,
             previousLocation,
-            workoutType.maxReasonableGpsSpeedMps()
+            workoutType.maxReasonableGpsSpeedMps(),
+            forceGapResume = gapResume
         )
         if (filteredLocation == null) {
             android.util.Log.w(
@@ -79,8 +80,8 @@ class GpsLocationProcessor {
             )
         }
 
-        // Minimum distance check
-        if (previousLocation != null) {
+        // Minimum distance check — skipped on gap resume (new anchor)
+        if (!gapResume && previousLocation != null) {
             val distanceToLastMeters = filteredLocation.distanceTo(previousLocation)
             if (distanceToLastMeters < MIN_POINT_DISTANCE_METERS) {
                 decimateRawPointsIfNeeded(newRawTrackDataPoints)
@@ -91,6 +92,8 @@ class GpsLocationProcessor {
                 )
             }
         }
+
+        val afterGap = gapResume && previousLocation != null
 
         // Create GeoPoint for map display
         val validGeoPoint = GpsFilter.createValidGeoPoint(filteredLocation)
@@ -105,7 +108,9 @@ class GpsLocationProcessor {
             timestamp = filteredLocation.time,
             accuracy = filteredLocation.accuracy,
             speed = filteredLocation.speed,
-            altitude = filteredLocation.altitude
+            altitude = filteredLocation.altitude,
+            afterGap = afterGap,
+            source = LocationSource.GPS.name
         )
         newTrackDataPoints.add(trackPoint)
 
@@ -115,8 +120,8 @@ class GpsLocationProcessor {
         }
         decimateRawPointsIfNeeded(newRawTrackDataPoints)
 
-        // Compute segment distance
-        val segmentDistanceMeters = if (previousLocation != null) {
+        // No phantom distance across a GPS gap
+        val segmentDistanceMeters = if (previousLocation != null && !afterGap) {
             filteredLocation.distanceTo(previousLocation)
         } else {
             0f
@@ -125,6 +130,7 @@ class GpsLocationProcessor {
         return ProcessResult.Accepted(
             filteredLocation = filteredLocation,
             segmentDistanceMeters = segmentDistanceMeters,
+            afterGap = afterGap,
             trackPoints = newTrackPoints,
             trackDataPoints = newTrackDataPoints,
             rawTrackDataPoints = newRawTrackDataPoints
@@ -150,7 +156,9 @@ class GpsLocationProcessor {
             timestamp = if (location.time > 0) location.time else System.currentTimeMillis(),
             accuracy = location.accuracy,
             speed = location.speed,
-            altitude = location.altitude
+            altitude = location.altitude,
+            afterGap = false,
+            source = LocationSource.GPS.name
         )
         newRaw.add(rawTrackPoint)
         decimateRawPointsIfNeeded(newRaw)
@@ -199,6 +207,7 @@ class GpsLocationProcessor {
         data class Accepted(
             val filteredLocation: Location,
             val segmentDistanceMeters: Float,
+            val afterGap: Boolean = false,
             override val trackPoints: MutableList<GeoPoint>,
             override val trackDataPoints: MutableList<TrackPoint>,
             override val rawTrackDataPoints: MutableList<TrackPoint>
