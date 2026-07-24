@@ -194,7 +194,15 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             
             // Очищаем данные
             val cleanedTrackData = WorkoutDataCleaner.cleanTrackData(trackData)
-            
+            if (
+                cleanedTrackData.points.size == trackData.points.size &&
+                cleanedTrackData.totalDistance == trackData.totalDistance &&
+                cleanedTrackData.totalDuration == trackData.totalDuration
+            ) {
+                android.util.Log.d("WorkoutViewModel", "Cleaning produced no meaningful changes")
+                return workout
+            }
+
             // Создаем обновленную тренировку с очищенными данными
             val cleanedWorkout = workout.copy(
                 distance = cleanedTrackData.totalDistance / 1000f, // Конвертируем в км

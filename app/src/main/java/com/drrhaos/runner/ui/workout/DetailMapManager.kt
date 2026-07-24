@@ -28,19 +28,25 @@ class DetailMapManager(
         private const val GAP_DASH_ON = 24f
         private const val GAP_DASH_OFF = 16f
         private const val GAP_LINE_ALPHA = 160
+        private const val OSM_USER_AGENT = "Runner/1.0 (com.drrhaos.runner; open-source fitness tracker)"
     }
 
     private var trackPolyline: Polyline? = null
     private val gapPolylines = mutableListOf<Polyline>()
     private var positionMarker: Marker? = null
     private var positionMarkerEnd: Marker? = null
+    private var hasFittedBounds = false
 
     fun initialize() {
-        Configuration.getInstance().load(context, context.getSharedPreferences("osmdroid", 0))
+        Configuration.getInstance().apply {
+            load(context, context.getSharedPreferences("osmdroid", 0))
+            userAgentValue = OSM_USER_AGENT
+        }
 
         mapView.setTileSource(TileSourceFactory.MAPNIK)
         mapView.setMultiTouchControls(true)
         mapView.controller.setZoom(15.0)
+        mapView.setUseDataConnection(true)
 
         mapView.isClickable = true
         mapView.isFocusable = true
@@ -73,21 +79,10 @@ class DetailMapManager(
     fun displayTrack(trackData: TrackData) {
         if (trackData.points.isEmpty()) return
 
-        // Remove previous route overlays except markers
-        trackPolyline?.let { mapView.overlays.remove(it) }
-        gapPolylines.forEach { mapView.overlays.remove(it) }
-        gapPolylines.clear()
+        clearTrackOverlays()
 
-        val segments = mutableListOf<MutableList<GeoPoint>>()
-        var current = mutableListOf<GeoPoint>()
-        for (point in trackData.points) {
-            if (point.afterGap && current.isNotEmpty()) {
-                segments.add(current)
-                current = mutableListOf()
-            }
-            current.add(GeoPoint(point.latitude, point.longitude))
-        }
-        if (current.isNotEmpty()) segments.add(current)
+        val segments = splitTrackIntoSegments(trackData.points)
+        if (segments.isEmpty()) return
 
         val allGeoPoints = mutableListOf<GeoPoint>()
         segments.forEachIndexed { index, segment ->
@@ -102,10 +97,11 @@ class DetailMapManager(
             } else {
                 gapPolylines.add(poly)
             }
-            mapView.overlays.add(poly)
+            // Insert below markers so selection markers stay visible
+            val insertAt = mapView.overlays.indexOf(positionMarker).coerceAtLeast(0)
+            mapView.overlays.add(insertAt, poly)
         }
 
-        // Dashed connectors across GPS gaps
         for (i in 0 until segments.lastIndex) {
             val from = segments[i].lastOrNull() ?: continue
             val to = segments[i + 1].firstOrNull() ?: continue
@@ -117,26 +113,70 @@ class DetailMapManager(
                 setPoints(mutableListOf(from, to))
             }
             gapPolylines.add(dashed)
-            mapView.overlays.add(dashed)
+            val insertAt = mapView.overlays.indexOf(positionMarker).coerceAtLeast(0)
+            mapView.overlays.add(insertAt, dashed)
         }
 
-        if (allGeoPoints.isNotEmpty()) {
-            val bounds = BoundingBox.fromGeoPoints(allGeoPoints)
-            val latSpan = bounds.latNorth - bounds.latSouth
-            val lonSpan = bounds.lonEast - bounds.lonWest
-            val latPadding = latSpan * 0.1
-            val lonPadding = lonSpan * 0.1
-            val expandedBounds = BoundingBox(
-                bounds.latNorth + latPadding,
-                bounds.lonEast + lonPadding,
-                bounds.latSouth - latPadding,
-                bounds.lonWest - lonPadding
-            )
-            mapView.zoomToBoundingBox(expandedBounds, true, 100)
-        }
-
+        fitBoundsOnce(allGeoPoints)
         mapView.invalidate()
-        android.util.Log.d("WorkoutDetail", "Successfully loaded track with ${allGeoPoints.size} points in ${segments.size} segments")
+        android.util.Log.d(
+            "WorkoutDetail",
+            "Successfully loaded track with ${allGeoPoints.size} points in ${segments.size} segments"
+        )
+    }
+
+    private fun clearTrackOverlays() {
+        trackPolyline?.let { mapView.overlays.remove(it) }
+        trackPolyline = null
+        gapPolylines.forEach { mapView.overlays.remove(it) }
+        gapPolylines.clear()
+    }
+
+    private fun splitTrackIntoSegments(points: List<TrackPoint>): List<MutableList<GeoPoint>> {
+        val segments = mutableListOf<MutableList<GeoPoint>>()
+        var current = mutableListOf<GeoPoint>()
+        for (point in points) {
+            if (point.afterGap && current.isNotEmpty()) {
+                segments.add(current)
+                current = mutableListOf()
+            }
+            current.add(GeoPoint(point.latitude, point.longitude))
+        }
+        if (current.isNotEmpty()) segments.add(current)
+        return segments
+    }
+
+    private fun fitBoundsOnce(allGeoPoints: List<GeoPoint>) {
+        if (allGeoPoints.isEmpty() || hasFittedBounds) return
+
+        lateinit var applyFit: Runnable
+        applyFit = Runnable {
+            if (hasFittedBounds) return@Runnable
+            if (mapView.width <= 0 || mapView.height <= 0) {
+                mapView.post(applyFit)
+                return@Runnable
+            }
+
+            val bounds = BoundingBox.fromGeoPoints(allGeoPoints)
+            val latSpan = (bounds.latNorth - bounds.latSouth).coerceAtLeast(0.001)
+            val lonSpan = (bounds.lonEast - bounds.lonWest).coerceAtLeast(0.001)
+            val expandedBounds = BoundingBox(
+                bounds.latNorth + latSpan * 0.1,
+                bounds.lonEast + lonSpan * 0.1,
+                bounds.latSouth - latSpan * 0.1,
+                bounds.lonWest - lonSpan * 0.1
+            )
+            // Non-animated fit avoids flicker when map size/layout settles
+            mapView.zoomToBoundingBox(expandedBounds, false, 100)
+            hasFittedBounds = true
+            mapView.invalidate()
+        }
+
+        if (mapView.width > 0 && mapView.height > 0) {
+            applyFit.run()
+        } else {
+            mapView.post(applyFit)
+        }
     }
 
     fun showPositionOnMap(trackPoint: TrackPoint) {
