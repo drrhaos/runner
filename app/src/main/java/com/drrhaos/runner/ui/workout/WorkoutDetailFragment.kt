@@ -34,6 +34,7 @@ class WorkoutDetailFragment : Fragment() {
 
     private var currentWorkout: com.drrhaos.runner.data.Workout? = null
     private var currentTrackData: TrackData? = null
+    private var boundTrackDataJson: String? = null
     private var userPreferences: com.drrhaos.runner.util.UserPreferences? = null
 
     // Extracted manager components
@@ -161,27 +162,30 @@ class WorkoutDetailFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 viewModel.getWorkoutById(workoutId).collect { workout ->
-                    if (isAdded && !isDetached) {
-                        workout?.let {
-                            android.util.Log.d("WorkoutDetail", "Workout loaded: ${it.type}, distance: ${it.distance}, has track data: ${it.trackData != null}")
+                    if (!isAdded || isDetached) return@collect
 
-                            viewModel.cleanWorkoutData(it)?.let { cleanedWorkout ->
-                                android.util.Log.d("WorkoutDetail", "Using cleaned workout data")
-                                currentWorkout = cleanedWorkout
-                                statsDisplay?.displayWorkout(cleanedWorkout)
-                                updateFavoriteButton(cleanedWorkout.isFavorite)
-                                displayTrackOnMap(cleanedWorkout)
-                            } ?: run {
-                                android.util.Log.d("WorkoutDetail", "Using original workout data")
-                                currentWorkout = it
-                                statsDisplay?.displayWorkout(it)
-                                updateFavoriteButton(it.isFavorite)
-                                displayTrackOnMap(it)
-                            }
-                        } ?: run {
-                            android.util.Log.e("WorkoutDetail", "Workout not found with ID: $workoutId")
-                            ErrorHandler.handleLoadError(requireContext(), Exception("Workout not found"))
-                        }
+                    if (workout == null) {
+                        android.util.Log.e("WorkoutDetail", "Workout not found with ID: $workoutId")
+                        ErrorHandler.handleLoadError(requireContext(), Exception("Workout not found"))
+                        return@collect
+                    }
+
+                    android.util.Log.d(
+                        "WorkoutDetail",
+                        "Workout loaded: ${workout.type}, distance: ${workout.distance}, has track data: ${workout.trackData != null}"
+                    )
+
+                    currentWorkout = workout
+                    updateFavoriteButton(workout.isFavorite)
+                    statsDisplay?.displayWorkout(workout)
+
+                    // Avoid clean→DB update→Flow→redraw loop (map flicker / missing track).
+                    // Track is cleaned locally for display only when track JSON changes.
+                    if (workout.trackData != boundTrackDataJson) {
+                        boundTrackDataJson = workout.trackData
+                        displayTrackOnMap(workout)
+                    } else if (workout.trackData == null) {
+                        binding.progressBarMapLoading.visibility = View.GONE
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {

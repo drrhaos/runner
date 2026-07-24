@@ -147,9 +147,9 @@ object WorkoutDataCleaner {
             
             if (!GpsFilter.isValidGpsLocation(location)) {
                 outlierCount++
-            } else if (previousLocation != null) {
+            } else if (previousLocation != null && !trackPoint.afterGap) {
                 val distance = location.distanceTo(previousLocation)
-                if (distance > 500) { // Более 500м между точками
+                if (distance > 500) { // Более 500м между точками без разрыва GPS
                     outlierCount++
                 }
             }
