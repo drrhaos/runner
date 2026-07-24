@@ -334,6 +334,15 @@
                 </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_edit"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/edit"
+                    android:drawableStart="@android:drawable/ic_menu_edit"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_delete"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

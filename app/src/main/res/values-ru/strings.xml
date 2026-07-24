@@ -82,6 +82,20 @@
     <string name="add_workout_hint_distance">Введите дистанцию</string>
     <string name="add_workout_hint_calories">Введите количество калорий</string>
     <string name="add_workout_hint_notes">Пару слов о тренировке</string>
+    <string name="edit_workout_title">Редактировать тренировку</string>
+    <string name="edit_workout_label_route">Маршрут</string>
+    <string name="edit_workout_route_none">Маршрут не привязан</string>
+    <string name="edit_workout_route_attached">Маршрут привязан (%1$d точек)</string>
+    <string name="edit_workout_select_route">Выбрать маршрут</string>
+    <string name="edit_workout_clear_route">Очистить</string>
+    <string name="edit_workout_pick_route_title">Выберите маршрут</string>
+    <string name="edit_workout_no_routes">Пока нет сохранённых маршрутов. Запишите тренировку с GPS или добавьте в избранное.</string>
+    <string name="edit_workout_route_selected">Маршрут выбран</string>
+    <string name="edit_workout_route_cleared">Маршрут очищен</string>
+    <string name="edit_workout_route_preview_cd">Превью маршрута</string>
+    <string name="edit_workout_route_meta">%1$.1f км · %2$s</string>
+    <string name="edit_workout_route_points">%1$d точек</string>
+    <string name="workout_updated">Тренировка обновлена</string>
 
     <string name="settings_title">Настройки</string>
     <string name="settings_profile_title">Профиль пользователя</string>
