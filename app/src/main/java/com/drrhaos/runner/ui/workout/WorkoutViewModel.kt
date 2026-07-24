@@ -1,10 +1,8 @@
 package com.drrhaos.runner.ui.workout
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.drrhaos.runner.R
 import com.drrhaos.runner.data.Workout
 import com.drrhaos.runner.data.WorkoutRepository
 import com.drrhaos.runner.data.WorkoutType
@@ -12,13 +10,38 @@ import com.drrhaos.runner.util.SpeedPaceCalculator
 import com.drrhaos.runner.util.WorkoutDataCleaner
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+enum class WorkoutListFilter {
+    ALL,
+    FAVORITES
+}
 
 class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() {
 
     val allWorkouts: Flow<List<Workout>> = repository.getAllWorkouts()
+
+    private val _listFilter = MutableStateFlow(WorkoutListFilter.ALL)
+    val listFilter: StateFlow<WorkoutListFilter> = _listFilter.asStateFlow()
+
+    val displayedWorkouts: StateFlow<List<Workout>> = combine(
+        allWorkouts,
+        _listFilter
+    ) { workouts, filter ->
+        when (filter) {
+            WorkoutListFilter.ALL -> workouts
+            WorkoutListFilter.FAVORITES -> workouts.filter { it.isFavorite }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = emptyList()
+    )
 
     private val _totalDistance = MutableStateFlow(0f)
     val totalDistance: StateFlow<Float> = _totalDistance.asStateFlow()
@@ -73,6 +96,20 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
                 loadStatistics()
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutViewModel", "Error deleting workout: ${e.message}", e)
+            }
+        }
+    }
+
+    fun setListFilter(filter: WorkoutListFilter) {
+        _listFilter.value = filter
+    }
+
+    fun toggleFavorite(workout: Workout) {
+        viewModelScope.launch {
+            try {
+                repository.setFavorite(workout.id, !workout.isFavorite)
+            } catch (e: Exception) {
+                android.util.Log.e("WorkoutViewModel", "Error toggling favorite: ${e.message}", e)
             }
         }
     }

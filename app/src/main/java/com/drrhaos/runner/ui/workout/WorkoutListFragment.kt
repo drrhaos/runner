@@ -9,6 +9,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.drrhaos.runner.R
 import com.drrhaos.runner.data.WorkoutDatabase
 import com.drrhaos.runner.databinding.FragmentWorkoutListBinding
 import kotlinx.coroutines.launch
@@ -40,6 +41,7 @@ class WorkoutListFragment : Fragment() {
 
         setupRecyclerView()
         setupClickListeners()
+        setupFilterChips()
         setupSwipeRefresh()
         observeViewModel()
     }
@@ -57,13 +59,18 @@ class WorkoutListFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        workoutAdapter = WorkoutAdapter(requireContext()) { workout ->
-            // Переход к детальному просмотру тренировки
-            val bundle = Bundle().apply {
-                putLong("workoutId", workout.id)
+        workoutAdapter = WorkoutAdapter(
+            context = requireContext(),
+            onItemClick = { workout ->
+                val bundle = Bundle().apply {
+                    putLong("workoutId", workout.id)
+                }
+                findNavController().navigate(R.id.nav_workout_detail, bundle)
+            },
+            onFavoriteClick = { workout ->
+                viewModel.toggleFavorite(workout)
             }
-            findNavController().navigate(com.drrhaos.runner.R.id.nav_workout_detail, bundle)
-        }
+        )
 
         binding.recyclerViewWorkouts.apply {
             adapter = workoutAdapter
@@ -71,46 +78,46 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
+    private fun setupFilterChips() {
+        binding.chipGroupWorkoutFilter.setOnCheckedStateChangeListener { _, checkedIds ->
+            val filter = when {
+                checkedIds.contains(R.id.chip_filter_favorites) -> WorkoutListFilter.FAVORITES
+                else -> WorkoutListFilter.ALL
+            }
+            viewModel.setListFilter(filter)
+        }
+    }
+
     private fun setupClickListeners() {
-        // FAB кнопка добавления тренировки
         binding.fabAddWorkout.setOnClickListener {
-            findNavController().navigate(com.drrhaos.runner.R.id.nav_add_workout)
+            findNavController().navigate(R.id.nav_add_workout)
         }
         binding.buttonEmptyStartWorkout.setOnClickListener {
-            findNavController().navigate(com.drrhaos.runner.R.id.nav_tracking)
+            findNavController().navigate(R.id.nav_tracking)
         }
     }
 
     private fun observeViewModel() {
-        // Наблюдаем за списком тренировок
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                viewModel.allWorkouts.collect { workouts ->
-                    if (isAdded && !isDetached) { // Проверяем, что Fragment еще активен
+                viewModel.displayedWorkouts.collect { workouts ->
+                    if (isAdded && !isDetached) {
                         workoutAdapter.submitList(workouts)
-                        
-                        // Показываем/скрываем пустое состояние
-                        if (workouts.isEmpty()) {
-                            binding.layoutEmptyState.visibility = View.VISIBLE
-                            binding.recyclerViewWorkouts.visibility = View.GONE
-                        } else {
-                            binding.layoutEmptyState.visibility = View.GONE
-                            binding.recyclerViewWorkouts.visibility = View.VISIBLE
-                            
-                            // Фоновая очистка данных тренировок
+                        updateEmptyState(workouts.isEmpty())
+                        if (workouts.isNotEmpty() &&
+                            viewModel.listFilter.value == WorkoutListFilter.ALL
+                        ) {
                             cleanWorkoutsInBackground(workouts)
                         }
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 android.util.Log.d("WorkoutList", "Loading cancelled: ${e.message}")
-                // Не показываем ошибку для отмененных корутин
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutList", "Error loading workouts: ${e.message}", e)
             }
         }
 
-        // Наблюдаем за статистикой
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 viewModel.totalWorkouts.collect { total ->
@@ -147,10 +154,27 @@ class WorkoutListFragment : Fragment() {
             }
         }
     }
-    
-    /**
-     * Фоновая очистка данных тренировок
-     */
+
+    private fun updateEmptyState(isEmpty: Boolean) {
+        if (isEmpty) {
+            binding.layoutEmptyState.visibility = View.VISIBLE
+            binding.recyclerViewWorkouts.visibility = View.GONE
+            val favoritesOnly = viewModel.listFilter.value == WorkoutListFilter.FAVORITES
+            if (favoritesOnly) {
+                binding.textViewEmptyTitle.setText(R.string.workout_list_message_no_favorites)
+                binding.textViewEmptySubtitle.setText(R.string.workout_list_message_add_favorites)
+                binding.buttonEmptyStartWorkout.visibility = View.GONE
+            } else {
+                binding.textViewEmptyTitle.setText(R.string.workout_list_message_no_workouts)
+                binding.textViewEmptySubtitle.setText(R.string.workout_list_message_start_workout)
+                binding.buttonEmptyStartWorkout.visibility = View.VISIBLE
+            }
+        } else {
+            binding.layoutEmptyState.visibility = View.GONE
+            binding.recyclerViewWorkouts.visibility = View.VISIBLE
+        }
+    }
+
     private fun cleanWorkoutsInBackground(workouts: List<com.drrhaos.runner.data.Workout>) {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
@@ -167,7 +191,11 @@ class WorkoutListFragment : Fragment() {
                     android.util.Log.d("WorkoutList", "Cleaned $cleanedCount workouts in background")
                 }
             } catch (e: Exception) {
-                android.util.Log.e("WorkoutList", "Error cleaning workouts in background: ${e.message}", e)
+                android.util.Log.e(
+                    "WorkoutList",
+                    "Error cleaning workouts in background: ${e.message}",
+                    e
+                )
             }
         }
     }

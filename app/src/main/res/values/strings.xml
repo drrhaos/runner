@@ -177,6 +177,10 @@
     <string name="workout_details_btn_share">Share</string>
     <string name="workout_details_btn_export_gpx">GPX export</string>
     <string name="workout_details_btn_delete">Delete</string>
+    <string name="workout_favorite_add">Add to favorites</string>
+    <string name="workout_favorite_remove">Remove from favorites</string>
+    <string name="workout_favorite_added">Added to favorites</string>
+    <string name="workout_favorite_removed">Removed from favorites</string>
     <string name="workout_details_pace_speed_pulse_title">Pace / Speed / Pulse</string>
     <string name="workout_details_height_title">Height</string>
     <string name="workout_details_pace_speed_title">Pace / Speed by segment</string>
@@ -256,6 +260,10 @@
     <string name="workout_list_message_start_workout">Start training to create a record.</string>
     <string name="workout_list_empty_start">Start workout</string>
     <string name="workout_list_content_description_empty">No workouts yet</string>
+    <string name="workout_list_filter_all">All</string>
+    <string name="workout_list_filter_favorites">Favorites</string>
+    <string name="workout_list_message_no_favorites">No favorite routes yet</string>
+    <string name="workout_list_message_add_favorites">Mark a workout with a star to save it here.</string>
 
     <string name="gps_label">GPS</string>
     <string name="gps_status_a11y">GPS signal: %1$s</string>

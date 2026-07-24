@@ -17,7 +17,8 @@ data class Workout(
     val calories: Int?,
     val notes: String?,
     val type: WorkoutType,
-    val trackData: String? // JSON с траекторией и временными метками
+    val trackData: String? = null, // JSON с траекторией и временными метками
+    val isFavorite: Boolean = false
 )
 
 enum class WorkoutType {

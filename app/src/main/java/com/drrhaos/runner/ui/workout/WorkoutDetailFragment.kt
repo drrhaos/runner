@@ -100,6 +100,21 @@ class WorkoutDetailFragment : Fragment() {
             showDeleteConfirmationDialog()
         }
 
+        binding.buttonFavorite.setOnClickListener {
+            currentWorkout?.let { workout ->
+                val willBeFavorite = !workout.isFavorite
+                viewModel.toggleFavorite(workout)
+                currentWorkout = workout.copy(isFavorite = willBeFavorite)
+                updateFavoriteButton(willBeFavorite)
+                val message = if (willBeFavorite) {
+                    R.string.workout_favorite_added
+                } else {
+                    R.string.workout_favorite_removed
+                }
+                Toast.makeText(requireContext(), getString(message), Toast.LENGTH_SHORT).show()
+            }
+        }
+
         binding.buttonBasicInfo.isChecked = true
 
         binding.toggleGroupAnalysis.addOnButtonCheckedListener { _, checkedId, isChecked ->
@@ -154,11 +169,13 @@ class WorkoutDetailFragment : Fragment() {
                                 android.util.Log.d("WorkoutDetail", "Using cleaned workout data")
                                 currentWorkout = cleanedWorkout
                                 statsDisplay?.displayWorkout(cleanedWorkout)
+                                updateFavoriteButton(cleanedWorkout.isFavorite)
                                 displayTrackOnMap(cleanedWorkout)
                             } ?: run {
                                 android.util.Log.d("WorkoutDetail", "Using original workout data")
                                 currentWorkout = it
                                 statsDisplay?.displayWorkout(it)
+                                updateFavoriteButton(it.isFavorite)
                                 displayTrackOnMap(it)
                             }
                         } ?: run {
@@ -242,6 +259,16 @@ class WorkoutDetailFragment : Fragment() {
         statsDisplay = null
         mapManager = null
         _binding = null
+    }
+
+    private fun updateFavoriteButton(isFavorite: Boolean) {
+        if (isFavorite) {
+            binding.buttonFavorite.setImageResource(R.drawable.ic_star)
+            binding.buttonFavorite.contentDescription = getString(R.string.workout_favorite_remove)
+        } else {
+            binding.buttonFavorite.setImageResource(R.drawable.ic_star_border)
+            binding.buttonFavorite.contentDescription = getString(R.string.workout_favorite_add)
+        }
     }
 
     private fun showDeleteConfirmationDialog() {
