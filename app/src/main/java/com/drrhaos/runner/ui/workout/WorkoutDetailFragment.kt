@@ -34,6 +34,7 @@ class WorkoutDetailFragment : Fragment() {
 
     private var currentWorkout: com.drrhaos.runner.data.Workout? = null
     private var currentTrackData: TrackData? = null
+    private var boundTrackDataJson: String? = null
     private var userPreferences: com.drrhaos.runner.util.UserPreferences? = null
 
     // Extracted manager components
@@ -100,11 +101,25 @@ class WorkoutDetailFragment : Fragment() {
             showDeleteConfirmationDialog()
         }
 
-        binding.buttonFix.setOnClickListener {
+        binding.buttonEdit.setOnClickListener {
+            val bundle = Bundle().apply {
+                putLong("workoutId", workoutId)
+            }
+            findNavController().navigate(R.id.nav_add_workout, bundle)
+        }
+
+        binding.buttonFavorite.setOnClickListener {
             currentWorkout?.let { workout ->
-                fixWorkoutData(workout)
-            } ?: run {
-                Toast.makeText(requireContext(), getString(R.string.workout_not_loaded), Toast.LENGTH_SHORT).show()
+                val willBeFavorite = !workout.isFavorite
+                viewModel.toggleFavorite(workout)
+                currentWorkout = workout.copy(isFavorite = willBeFavorite)
+                updateFavoriteButton(willBeFavorite)
+                val message = if (willBeFavorite) {
+                    R.string.workout_favorite_added
+                } else {
+                    R.string.workout_favorite_removed
+                }
+                Toast.makeText(requireContext(), getString(message), Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -139,43 +154,6 @@ class WorkoutDetailFragment : Fragment() {
         }
     }
 
-    private fun fixWorkoutData(workout: com.drrhaos.runner.data.Workout) {
-        if (workout.trackData == null) {
-            Toast.makeText(requireContext(), getString(R.string.track_no_data_fix), Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        binding.progressBarMapLoading.visibility = View.VISIBLE
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                val cleanedWorkout = viewModel.cleanWorkoutData(workout, forceClean = true)
-
-                if (cleanedWorkout != null) {
-                    currentWorkout = cleanedWorkout
-                    statsDisplay?.displayWorkout(cleanedWorkout)
-                    displayTrackOnMap(cleanedWorkout)
-
-                    cleanedWorkout.trackData?.let { trackDataJson ->
-                        val gson = Gson()
-                        val cleanedTrackData = gson.fromJson(trackDataJson, TrackData::class.java)
-                        currentTrackData = cleanedTrackData
-                        chartRenderer?.updateAllCharts(cleanedTrackData)
-                    }
-
-                    Toast.makeText(requireContext(), getString(R.string.workout_data_fixed), Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(requireContext(), getString(R.string.workout_data_fix_failed), Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("WorkoutDetail", "Error fixing workout data: ${e.message}", e)
-                Toast.makeText(requireContext(), getString(R.string.workout_data_fix_error, e.message), Toast.LENGTH_LONG).show()
-            } finally {
-                binding.progressBarMapLoading.visibility = View.GONE
-            }
-        }
-    }
-
     private fun loadWorkout() {
         android.util.Log.d("WorkoutDetail", "Loading workout with ID: $workoutId")
 
@@ -191,25 +169,30 @@ class WorkoutDetailFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 viewModel.getWorkoutById(workoutId).collect { workout ->
-                    if (isAdded && !isDetached) {
-                        workout?.let {
-                            android.util.Log.d("WorkoutDetail", "Workout loaded: ${it.type}, distance: ${it.distance}, has track data: ${it.trackData != null}")
+                    if (!isAdded || isDetached) return@collect
 
-                            viewModel.cleanWorkoutData(it)?.let { cleanedWorkout ->
-                                android.util.Log.d("WorkoutDetail", "Using cleaned workout data")
-                                currentWorkout = cleanedWorkout
-                                statsDisplay?.displayWorkout(cleanedWorkout)
-                                displayTrackOnMap(cleanedWorkout)
-                            } ?: run {
-                                android.util.Log.d("WorkoutDetail", "Using original workout data")
-                                currentWorkout = it
-                                statsDisplay?.displayWorkout(it)
-                                displayTrackOnMap(it)
-                            }
-                        } ?: run {
-                            android.util.Log.e("WorkoutDetail", "Workout not found with ID: $workoutId")
-                            ErrorHandler.handleLoadError(requireContext(), Exception("Workout not found"))
-                        }
+                    if (workout == null) {
+                        android.util.Log.e("WorkoutDetail", "Workout not found with ID: $workoutId")
+                        ErrorHandler.handleLoadError(requireContext(), Exception("Workout not found"))
+                        return@collect
+                    }
+
+                    android.util.Log.d(
+                        "WorkoutDetail",
+                        "Workout loaded: ${workout.type}, distance: ${workout.distance}, has track data: ${workout.trackData != null}"
+                    )
+
+                    currentWorkout = workout
+                    updateFavoriteButton(workout.isFavorite)
+                    statsDisplay?.displayWorkout(workout)
+
+                    // Avoid clean→DB update→Flow→redraw loop (map flicker / missing track).
+                    // Track is cleaned locally for display only when track JSON changes.
+                    if (workout.trackData != boundTrackDataJson) {
+                        boundTrackDataJson = workout.trackData
+                        displayTrackOnMap(workout)
+                    } else if (workout.trackData == null) {
+                        binding.progressBarMapLoading.visibility = View.GONE
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -287,6 +270,16 @@ class WorkoutDetailFragment : Fragment() {
         statsDisplay = null
         mapManager = null
         _binding = null
+    }
+
+    private fun updateFavoriteButton(isFavorite: Boolean) {
+        if (isFavorite) {
+            binding.buttonFavorite.setImageResource(R.drawable.ic_star)
+            binding.buttonFavorite.contentDescription = getString(R.string.workout_favorite_remove)
+        } else {
+            binding.buttonFavorite.setImageResource(R.drawable.ic_star_border)
+            binding.buttonFavorite.contentDescription = getString(R.string.workout_favorite_add)
+        }
     }
 
     private fun showDeleteConfirmationDialog() {

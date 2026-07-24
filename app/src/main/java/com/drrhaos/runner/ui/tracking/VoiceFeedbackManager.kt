@@ -59,6 +59,31 @@ class VoiceFeedbackManager(
         lastDistanceKmVoiceSpoken = -1
     }
 
+    fun notifyGpsStatus(current: com.drrhaos.runner.data.GpsStatus, previous: com.drrhaos.runner.data.GpsStatus?) {
+        if (previous == current) return
+        when {
+            current == com.drrhaos.runner.data.GpsStatus.LOST &&
+                previous != null &&
+                previous != com.drrhaos.runner.data.GpsStatus.LOST -> {
+                tts?.speak(
+                    context.getString(R.string.voice_gps_lost),
+                    TextToSpeech.QUEUE_ADD,
+                    null,
+                    "gps_lost"
+                )
+            }
+            current == com.drrhaos.runner.data.GpsStatus.FOUND &&
+                previous == com.drrhaos.runner.data.GpsStatus.LOST -> {
+                tts?.speak(
+                    context.getString(R.string.voice_gps_recovered),
+                    TextToSpeech.QUEUE_ADD,
+                    null,
+                    "gps_recovered"
+                )
+            }
+        }
+    }
+
     fun notifyDistance(session: WorkoutSession) {
         val completedKm = kotlin.math.floor(session.distance.toDouble()).toInt()
         if (completedKm < 1) return

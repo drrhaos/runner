@@ -148,6 +148,7 @@ object SpeedPaceCalculator {
         if (points.size < 2) return 0f
         var maxSpeed = 0f
         for (i in 1 until points.size) {
+            if (points[i].afterGap) continue
             val speed = derivedSpeedMs(points[i - 1], points[i])
             if (speed > maxSpeed) maxSpeed = speed
         }
@@ -202,6 +203,8 @@ object SpeedPaceCalculator {
         if (points.size < 2) return 0f
         var total = 0f
         for (i in 1 until points.size) {
+            // Skip phantom distance across GPS gaps
+            if (points[i].afterGap) continue
             total += distanceMeters(points[i - 1], points[i])
         }
         return total
@@ -268,6 +271,7 @@ object SpeedPaceCalculator {
         for (i in 1 until points.size) {
             val prev = points[i - 1]
             val point = points[i]
+            if (point.afterGap) continue
             val speedMs = derivedSpeedMs(prev, point)
             val speedKmh = speedMsToKmh(speedMs)
             val paceMinPerKm = paceMinPerKmFromSpeedMs(speedMs)
@@ -302,7 +306,7 @@ object SpeedPaceCalculator {
         var cumulativeKm = 0f
 
         for (i in points.indices) {
-            if (i > 0) {
+            if (i > 0 && !points[i].afterGap) {
                 cumulativeKm += metersToKm(distanceMeters(points[i - 1], points[i]))
             }
             val altitude = points[i].altitude ?: 0.0
@@ -339,6 +343,25 @@ object SpeedPaceCalculator {
         for (i in 1 until points.size) {
             val prev = points[i - 1]
             val point = points[i]
+            if (point.afterGap) {
+                // Close current partial segment, then restart after the gap
+                if (currentSegmentDistanceKm > 0f) {
+                    val durationMs = prev.timestamp - segmentStartTime
+                    segments.add(
+                        createSegmentStats(
+                            durationMs = durationMs,
+                            distanceKm = currentSegmentDistanceKm,
+                            metric = metric,
+                            startIndex = segmentStartIndex,
+                            endIndex = i - 1
+                        )
+                    )
+                }
+                currentSegmentDistanceKm = 0f
+                segmentStartTime = point.timestamp
+                segmentStartIndex = i
+                continue
+            }
             val stepKm = metersToKm(distanceMeters(prev, point))
             if (stepKm <= 0f) {
                 if (i == points.size - 1 && currentSegmentDistanceKm > 0f) {

@@ -35,7 +35,9 @@ class WorkoutSessionManager {
     // Lifecycle transitions
     // ------------------------------------------------------------------
 
-    fun startNewSession() {
+    fun startNewSession(
+        initialGpsStatus: GpsStatus = GpsStatus.SEARCHING
+    ) {
         val currentTime = System.currentTimeMillis()
         lastUpdateTime = 0L
         session = WorkoutSession(
@@ -52,7 +54,7 @@ class WorkoutSessionManager {
             currentSpeed = 0f,
             heartRate = 0,
             calories = 0,
-            gpsStatus = GpsStatus.SEARCHING,
+            gpsStatus = initialGpsStatus,
             trackPoints = emptyList(),
             trackDataPoints = emptyList(),
             rawTrackDataPoints = emptyList(),

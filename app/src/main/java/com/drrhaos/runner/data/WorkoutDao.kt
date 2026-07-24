@@ -8,6 +8,9 @@ interface WorkoutDao {
     @Query("SELECT * FROM workouts ORDER BY date DESC")
     fun getAllWorkouts(): Flow<List<Workout>>
 
+    @Query("SELECT * FROM workouts WHERE isFavorite = 1 ORDER BY date DESC")
+    fun getFavoriteWorkouts(): Flow<List<Workout>>
+
     @Query("SELECT * FROM workouts WHERE id = :id")
     fun getWorkoutById(id: Long): Flow<Workout?>
 
@@ -19,6 +22,9 @@ interface WorkoutDao {
 
     @Update
     suspend fun updateWorkout(workout: Workout)
+
+    @Query("UPDATE workouts SET isFavorite = :isFavorite WHERE id = :id")
+    suspend fun setFavorite(id: Long, isFavorite: Boolean)
 
     @Delete
     suspend fun deleteWorkout(workout: Workout)

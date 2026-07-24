@@ -81,6 +81,7 @@ class WorkoutTrackingFragment : Fragment() {
     private var stopHoldJob: Job? = null
     private var stopHoldStartTime = 0L
     private var countdownJob: Job? = null
+    private var lastAnnouncedGpsStatus: GpsStatus? = null
 
     // GPS monitoring via LocationManager
     private lateinit var locationManager: android.location.LocationManager
@@ -473,9 +474,10 @@ class WorkoutTrackingFragment : Fragment() {
     private fun updateUI(session: WorkoutSession) {
         val now = System.currentTimeMillis()
 
-        // Map updates always run to keep track current
-        mapManager?.updateTrack(session.trackPoints, session.currentLocation)
+        // Map updates always run to keep track current (respect GPS gaps)
+        mapManager?.updateTrackFromDataPoints(session.trackDataPoints, session.currentLocation)
         mapManager?.updateMapOrientation(session)
+        updateGpsBanner(session)
 
         val forceNumericRefresh = session.gpsStatus == GpsStatus.LOST
             || session.gpsStatus == GpsStatus.DENIED
@@ -506,6 +508,18 @@ class WorkoutTrackingFragment : Fragment() {
 
         if (isVoiceEnabled) {
             voiceFeedbackManager?.notifyDistance(session)
+            voiceFeedbackManager?.notifyGpsStatus(session.gpsStatus, lastAnnouncedGpsStatus)
+            lastAnnouncedGpsStatus = session.gpsStatus
+        }
+    }
+
+    private fun updateGpsBanner(session: WorkoutSession) {
+        val banner = binding.textViewGpsBanner
+        if (session.gpsStatus == GpsStatus.LOST && session.isTracking) {
+            banner.visibility = View.VISIBLE
+            banner.text = getString(R.string.gps_lost_banner)
+        } else {
+            banner.visibility = View.GONE
         }
     }
 
@@ -536,6 +550,7 @@ class WorkoutTrackingFragment : Fragment() {
 
     private fun beginWorkout() {
         isStoppingWorkout = false
+        lastAnnouncedGpsStatus = null
         voiceFeedbackManager?.resetMilestones()
         requestBatteryOptimizationExemption()
         viewModel.initializeService()
@@ -553,38 +568,94 @@ class WorkoutTrackingFragment : Fragment() {
             binding.textViewGpsAccuracy.visibility = View.GONE
             binding.buttonStop.isEnabled = false
 
-            viewLifecycleOwner.lifecycleScope.launch {
-                try {
-                    val workoutId = viewModel.saveWorkoutToDatabase(selectedWorkoutType)
-                    if (workoutId != null) {
-                        Toast.makeText(context, String.format(
-                            getString(R.string.workout_saved_format),
-                            session.distance,
-                            viewModel.formatTime(session.currentTime)
-                        ), Toast.LENGTH_LONG).show()
+            val needsDistancePrompt = session.distance <= 0f &&
+                session.trackDataPoints.size < 2
 
-                        val bundle = Bundle().apply {
-                            putLong("workoutId", workoutId)
-                        }
-                        findNavController().navigate(com.drrhaos.runner.R.id.nav_workout_detail, bundle)
-                    } else {
-                        com.drrhaos.runner.util.ErrorHandler.handleSaveError(
-                            requireContext(),
-                            Exception("Failed to save workout")
-                        )
-                    }
-                } catch (e: Exception) {
-                    com.drrhaos.runner.util.ErrorHandler.handleSaveError(requireContext(), e)
-                } finally {
-                    binding.textViewGpsAccuracy.visibility = View.GONE
-                    binding.buttonStop.isEnabled = true
-                    viewModel.resetWorkout()
-                    isStoppingWorkout = false
+            if (needsDistancePrompt) {
+                showManualDistanceDialog { manualKm ->
+                    persistAndOpenDetails(manualKm)
                 }
+            } else {
+                persistAndOpenDetails(manualDistanceKm = null)
             }
         } else {
             Toast.makeText(context, getString(R.string.no_data_to_save), Toast.LENGTH_SHORT).show()
             isStoppingWorkout = false
+        }
+    }
+
+    private fun showManualDistanceDialog(onResult: (Float?) -> Unit) {
+        val input = android.widget.EditText(requireContext()).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or
+                android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            hint = getString(R.string.save_distance_hint)
+        }
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.save_distance_dialog_title)
+            .setMessage(R.string.save_distance_dialog_message)
+            .setView(input)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val km = input.text.toString().replace(',', '.').toFloatOrNull()
+                if (km != null && km >= 0f) {
+                    onResult(km)
+                } else {
+                    onResult(0f)
+                }
+            }
+            .setNeutralButton(R.string.save_without_distance) { _, _ ->
+                onResult(0f)
+            }
+            .setNegativeButton(R.string.cancel) { _, _ ->
+                binding.buttonStop.isEnabled = true
+                isStoppingWorkout = false
+            }
+            .setOnCancelListener {
+                binding.buttonStop.isEnabled = true
+                isStoppingWorkout = false
+            }
+            .show()
+    }
+
+    private fun persistAndOpenDetails(manualDistanceKm: Float?) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val session = viewModel.workoutSession.value
+                val workoutId = viewModel.saveWorkoutToDatabase(
+                    selectedWorkoutType,
+                    manualDistanceKm = manualDistanceKm
+                )
+                if (workoutId != null) {
+                    val distanceForToast = manualDistanceKm ?: session.distance
+                    Toast.makeText(
+                        context,
+                        String.format(
+                            getString(R.string.workout_saved_format),
+                            distanceForToast,
+                            viewModel.formatTime(session.currentTime)
+                        ),
+                        Toast.LENGTH_LONG
+                    ).show()
+
+                    val bundle = Bundle().apply {
+                        putLong("workoutId", workoutId)
+                    }
+                    findNavController().navigate(com.drrhaos.runner.R.id.nav_workout_detail, bundle)
+                } else {
+                    com.drrhaos.runner.util.ErrorHandler.handleSaveError(
+                        requireContext(),
+                        Exception("Failed to save workout")
+                    )
+                }
+            } catch (e: Exception) {
+                com.drrhaos.runner.util.ErrorHandler.handleSaveError(requireContext(), e)
+            } finally {
+                binding.textViewGpsAccuracy.visibility = View.GONE
+                binding.buttonStop.isEnabled = true
+                viewModel.resetWorkout()
+                isStoppingWorkout = false
+                lastAnnouncedGpsStatus = null
+            }
         }
     }
 

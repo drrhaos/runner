@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("org.jetbrains.kotlin.kapt")
+    id("androidx.room") version "2.7.0"
     id("jacoco")
 }
 
@@ -97,10 +98,22 @@ kotlin {
 
 kapt {
     correctErrorTypes = true
-    arguments {
-        arg("room.schemaLocation", "$projectDir/schemas")
-        arg("room.incremental", "true")
-    }
+}
+
+// Prefer Room Gradle Plugin over global kapt args — those args are also passed to
+// unit-test kapt (no Room types there) and produce "options were not recognized".
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
+// Unit/androidTest sources have no Room/Dagger annotations to process; keeping kapt
+// enabled only produces "options were not recognized by any processor" warnings.
+tasks.matching {
+    it.name.startsWith("kapt") &&
+        (it.name.contains("UnitTest") || it.name.contains("AndroidTest")) &&
+        !it.name.contains("GenerateStubs")
+}.configureEach {
+    enabled = false
 }
 
 dependencies {

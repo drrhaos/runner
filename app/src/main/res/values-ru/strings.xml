@@ -43,6 +43,13 @@
     <string name="gps_accuracy_value">Точность: %1$d м</string>
     <string name="gps_accuracy_lost">Сигнал потерян</string>
     <string name="gps_accuracy_denied">Нет доступа к GPS</string>
+    <string name="gps_lost_banner">GPS потерян — время идёт, дистанция паузится до возврата сигнала</string>
+    <string name="save_distance_dialog_title">Укажите дистанцию</string>
+    <string name="save_distance_dialog_message">Дистанция по GPS не записана. Введите км или сохраните только время.</string>
+    <string name="save_distance_hint">Дистанция (км)</string>
+    <string name="save_without_distance">Сохранить без дистанции</string>
+    <string name="voice_gps_lost">Сигнал GPS потерян</string>
+    <string name="voice_gps_recovered">Сигнал GPS восстановлен</string>
 
     <string name="kilometers_per_hour_float">%.1f км/ч</string>
     <string name="kilometers_per_hour_float_tts">%.1f километров в час</string>
@@ -75,6 +82,20 @@
     <string name="add_workout_hint_distance">Введите дистанцию</string>
     <string name="add_workout_hint_calories">Введите количество калорий</string>
     <string name="add_workout_hint_notes">Пару слов о тренировке</string>
+    <string name="edit_workout_title">Редактировать тренировку</string>
+    <string name="edit_workout_label_route">Маршрут</string>
+    <string name="edit_workout_route_none">Маршрут не привязан</string>
+    <string name="edit_workout_route_attached">Маршрут привязан (%1$d точек)</string>
+    <string name="edit_workout_select_route">Выбрать маршрут</string>
+    <string name="edit_workout_clear_route">Очистить</string>
+    <string name="edit_workout_pick_route_title">Выберите маршрут</string>
+    <string name="edit_workout_no_routes">Пока нет сохранённых маршрутов. Запишите тренировку с GPS или добавьте в избранное.</string>
+    <string name="edit_workout_route_selected">Маршрут выбран</string>
+    <string name="edit_workout_route_cleared">Маршрут очищен</string>
+    <string name="edit_workout_route_preview_cd">Превью маршрута</string>
+    <string name="edit_workout_route_meta">%1$.1f км · %2$s</string>
+    <string name="edit_workout_route_points">%1$d точек</string>
+    <string name="workout_updated">Тренировка обновлена</string>
 
     <string name="settings_title">Настройки</string>
     <string name="settings_profile_title">Профиль пользователя</string>
@@ -157,8 +178,11 @@
     <string name="workout_details_calories">Калории</string>
     <string name="workout_details_btn_share">Поделиться</string>
     <string name="workout_details_btn_export_gpx">Экспорт GPX</string>
-    <string name="workout_details_btn_edit">Исправить</string>
     <string name="workout_details_btn_delete">Удалить</string>
+    <string name="workout_favorite_add">Добавить в избранное</string>
+    <string name="workout_favorite_remove">Убрать из избранного</string>
+    <string name="workout_favorite_added">Добавлено в избранное</string>
+    <string name="workout_favorite_removed">Удалено из избранного</string>
     <string name="workout_details_pace_speed_pulse_title">Темп / Скорость / Пульс</string>
     <string name="workout_details_height_title">Высота</string>
     <string name="workout_details_pace_speed_title">Темп / Скорость по сегментам</string>
@@ -171,10 +195,6 @@
     <string name="gpx_file_ready">GPX файл готов к экспорту</string>
     <string name="file_save_error">Ошибка сохранения файла: %1$s</string>
     <string name="share_workout_title">Поделиться тренировкой</string>
-    <string name="track_no_data_fix">Нет данных трека для исправления</string>
-    <string name="workout_data_fixed">Данные тренировки исправлены</string>
-    <string name="workout_data_fix_failed">Не удалось исправить данные</string>
-    <string name="workout_data_fix_error">Ошибка при исправлении данных: %1$s</string>
     <string name="workout_invalid_id">Ошибка: неверный ID тренировки</string>
     <string name="route_empty">Маршрут пуст</string>
     <string name="route_load_error">Ошибка загрузки маршрута</string>
@@ -241,6 +261,10 @@
     <string name="workout_list_message_start_workout">Начните тренировку, чтобы появилась первая запись.</string>
     <string name="workout_list_empty_start">Начать тренировку</string>
     <string name="workout_list_content_description_empty">Пока нет тренировок</string>
+    <string name="workout_list_filter_all">Все</string>
+    <string name="workout_list_filter_favorites">Избранное</string>
+    <string name="workout_list_message_no_favorites">Пока нет избранных маршрутов</string>
+    <string name="workout_list_message_add_favorites">Отметьте тренировку звёздочкой, чтобы сохранить её здесь.</string>
     <string name="gps_label">GPS</string>
     <string name="gps_status_a11y">Сигнал GPS: %1$s</string>
     <string name="workout_fragment_label">Тренировка</string>
@@ -287,7 +311,7 @@
     <string name="csv_breakdown_header">\nРаспределение по типам тренировок\nТип тренировки,Количество,Дистанция (км)\n</string>
 
     <string name="gps_denied_message">GPS недоступен. Включите GPS в настройках.</string>
-    <string name="gps_lost_message">Потерян сигнал GPS. Проверьте соединение.</string>
+    <string name="gps_lost_message">Потерян сигнал GPS. Время идёт; дистанция продолжится после возврата сигнала.</string>
     <string name="gps_searching_message">Поиск GPS сигнала…</string>
     <string name="gps_weak_message">GPS сигнал слабый. Точность может быть низкой.</string>
     <string name="gps_medium_message">GPS сигнал средний.</string>

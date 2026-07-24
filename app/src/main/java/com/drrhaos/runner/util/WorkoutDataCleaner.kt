@@ -29,19 +29,26 @@ object WorkoutDataCleaner {
         for (trackPoint in trackData.points) {
             // Создаем Location из TrackPoint для проверки
             val location = createLocationFromTrackPoint(trackPoint)
-            
-            // Применяем фильтрацию GPS
-            val filteredLocation = GpsFilter.filterGpsOutlier(location, previousLocation)
-            
+            val forceGap = GpsFilter.isGapResume(previousLocation, location) || trackPoint.afterGap
+
+            // Применяем фильтрацию GPS (с учётом разрывов сигнала)
+            val filteredLocation = GpsFilter.filterGpsOutlier(
+                location,
+                previousLocation,
+                forceGapResume = forceGap
+            )
+
             if (filteredLocation != null) {
-                // Создаем очищенный TrackPoint
+                val afterGap = forceGap && previousLocation != null
                 val cleanedTrackPoint = TrackPoint(
                     latitude = filteredLocation.latitude,
                     longitude = filteredLocation.longitude,
                     timestamp = filteredLocation.time,
                     accuracy = filteredLocation.accuracy,
                     speed = filteredLocation.speed,
-                    altitude = filteredLocation.altitude
+                    altitude = filteredLocation.altitude,
+                    afterGap = afterGap,
+                    source = trackPoint.source
                 )
                 cleanedPoints.add(cleanedTrackPoint)
                 previousLocation = filteredLocation
@@ -140,9 +147,9 @@ object WorkoutDataCleaner {
             
             if (!GpsFilter.isValidGpsLocation(location)) {
                 outlierCount++
-            } else if (previousLocation != null) {
+            } else if (previousLocation != null && !trackPoint.afterGap) {
                 val distance = location.distanceTo(previousLocation)
-                if (distance > 500) { // Более 500м между точками
+                if (distance > 500) { // Более 500м между точками без разрыва GPS
                     outlierCount++
                 }
             }
