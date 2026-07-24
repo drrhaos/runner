@@ -100,14 +100,6 @@ class WorkoutDetailFragment : Fragment() {
             showDeleteConfirmationDialog()
         }
 
-        binding.buttonFix.setOnClickListener {
-            currentWorkout?.let { workout ->
-                fixWorkoutData(workout)
-            } ?: run {
-                Toast.makeText(requireContext(), getString(R.string.workout_not_loaded), Toast.LENGTH_SHORT).show()
-            }
-        }
-
         binding.buttonBasicInfo.isChecked = true
 
         binding.toggleGroupAnalysis.addOnButtonCheckedListener { _, checkedId, isChecked ->
@@ -135,43 +127,6 @@ class WorkoutDetailFragment : Fragment() {
                     chartRenderer?.segmentsDisplayMode = ChartRenderer.SegmentsDisplayMode.SPEED
                     currentTrackData?.let { chartRenderer?.updateSegmentsChartOnly(it) }
                 }
-            }
-        }
-    }
-
-    private fun fixWorkoutData(workout: com.drrhaos.runner.data.Workout) {
-        if (workout.trackData == null) {
-            Toast.makeText(requireContext(), getString(R.string.track_no_data_fix), Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        binding.progressBarMapLoading.visibility = View.VISIBLE
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                val cleanedWorkout = viewModel.cleanWorkoutData(workout, forceClean = true)
-
-                if (cleanedWorkout != null) {
-                    currentWorkout = cleanedWorkout
-                    statsDisplay?.displayWorkout(cleanedWorkout)
-                    displayTrackOnMap(cleanedWorkout)
-
-                    cleanedWorkout.trackData?.let { trackDataJson ->
-                        val gson = Gson()
-                        val cleanedTrackData = gson.fromJson(trackDataJson, TrackData::class.java)
-                        currentTrackData = cleanedTrackData
-                        chartRenderer?.updateAllCharts(cleanedTrackData)
-                    }
-
-                    Toast.makeText(requireContext(), getString(R.string.workout_data_fixed), Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(requireContext(), getString(R.string.workout_data_fix_failed), Toast.LENGTH_SHORT).show()
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("WorkoutDetail", "Error fixing workout data: ${e.message}", e)
-                Toast.makeText(requireContext(), getString(R.string.workout_data_fix_error, e.message), Toast.LENGTH_LONG).show()
-            } finally {
-                binding.progressBarMapLoading.visibility = View.GONE
             }
         }
     }

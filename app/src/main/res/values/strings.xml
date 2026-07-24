@@ -176,7 +176,6 @@
     <string name="workout_details_calories">Calories</string>
     <string name="workout_details_btn_share">Share</string>
     <string name="workout_details_btn_export_gpx">GPX export</string>
-    <string name="workout_details_btn_edit">Edit</string>
     <string name="workout_details_btn_delete">Delete</string>
     <string name="workout_details_pace_speed_pulse_title">Pace / Speed / Pulse</string>
     <string name="workout_details_height_title">Height</string>
@@ -190,10 +189,6 @@
     <string name="gpx_file_ready">GPX file ready to export</string>
     <string name="file_save_error">File save error: %1$s</string>
     <string name="share_workout_title">Share workout</string>
-    <string name="track_no_data_fix">No track data to fix</string>
-    <string name="workout_data_fixed">Workout data fixed</string>
-    <string name="workout_data_fix_failed">Could not fix data</string>
-    <string name="workout_data_fix_error">Error fixing data: %1$s</string>
     <string name="workout_invalid_id">Error: invalid workout ID</string>
     <string name="route_empty">Route is empty</string>
     <string name="route_load_error">Error loading route</string>

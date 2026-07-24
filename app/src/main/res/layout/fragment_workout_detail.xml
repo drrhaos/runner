@@ -316,20 +316,9 @@
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:layout_marginEnd="8dp"
                         android:padding="2dp"
                         android:text="@string/workout_details_btn_export_gpx"
                         android:drawableStart="@android:drawable/ic_menu_upload"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/button_fix"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:padding="2dp"
-                        android:text="@string/workout_details_btn_edit"
-                        android:drawableStart="@android:drawable/ic_menu_edit"
                         style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
                 </LinearLayout>
 

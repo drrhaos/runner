@@ -164,7 +164,6 @@
     <string name="workout_details_calories">Калории</string>
     <string name="workout_details_btn_share">Поделиться</string>
     <string name="workout_details_btn_export_gpx">Экспорт GPX</string>
-    <string name="workout_details_btn_edit">Исправить</string>
     <string name="workout_details_btn_delete">Удалить</string>
     <string name="workout_details_pace_speed_pulse_title">Темп / Скорость / Пульс</string>
     <string name="workout_details_height_title">Высота</string>
@@ -178,10 +177,6 @@
     <string name="gpx_file_ready">GPX файл готов к экспорту</string>
     <string name="file_save_error">Ошибка сохранения файла: %1$s</string>
     <string name="share_workout_title">Поделиться тренировкой</string>
-    <string name="track_no_data_fix">Нет данных трека для исправления</string>
-    <string name="workout_data_fixed">Данные тренировки исправлены</string>
-    <string name="workout_data_fix_failed">Не удалось исправить данные</string>
-    <string name="workout_data_fix_error">Ошибка при исправлении данных: %1$s</string>
     <string name="workout_invalid_id">Ошибка: неверный ID тренировки</string>
     <string name="route_empty">Маршрут пуст</string>
     <string name="route_load_error">Ошибка загрузки маршрута</string>
