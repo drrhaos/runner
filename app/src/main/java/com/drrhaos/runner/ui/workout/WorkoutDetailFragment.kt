@@ -101,6 +101,13 @@ class WorkoutDetailFragment : Fragment() {
             showDeleteConfirmationDialog()
         }
 
+        binding.buttonEdit.setOnClickListener {
+            val bundle = Bundle().apply {
+                putLong("workoutId", workoutId)
+            }
+            findNavController().navigate(R.id.nav_add_workout, bundle)
+        }
+
         binding.buttonFavorite.setOnClickListener {
             currentWorkout?.let { workout ->
                 val willBeFavorite = !workout.isFavorite

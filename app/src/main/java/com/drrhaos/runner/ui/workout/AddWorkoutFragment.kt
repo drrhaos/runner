@@ -9,15 +9,25 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.drrhaos.runner.R
+import com.drrhaos.runner.data.TrackData
 import com.drrhaos.runner.data.Workout
 import com.drrhaos.runner.data.WorkoutDatabase
 import com.drrhaos.runner.data.WorkoutType
 import com.drrhaos.runner.data.displayName
+import com.drrhaos.runner.databinding.DialogRoutePickerBinding
 import com.drrhaos.runner.databinding.FragmentAddWorkoutBinding
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.gson.Gson
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import androidx.recyclerview.widget.LinearLayoutManager
 
 class AddWorkoutFragment : Fragment() {
 
@@ -30,8 +40,21 @@ class AddWorkoutFragment : Fragment() {
         WorkoutViewModelFactory(repository)
     }
 
+    private val workoutId: Long by lazy {
+        arguments?.getLong(ARG_WORKOUT_ID, NO_WORKOUT_ID) ?: NO_WORKOUT_ID
+    }
+
+    private val isEditMode: Boolean
+        get() = workoutId != NO_WORKOUT_ID
+
     private var selectedDate: Date = Date()
     private var selectedWorkoutType: WorkoutType = WorkoutType.EASY_RUN
+    private var selectedTrackDataJson: String? = null
+    private var editingIsFavorite: Boolean = false
+    private var hasLoadedExistingWorkout: Boolean = false
+
+    private val gson = Gson()
+    private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -45,30 +68,41 @@ class AddWorkoutFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        if (isEditMode) {
+            binding.textViewTitle.setText(R.string.edit_workout_title)
+        }
+
         setupWorkoutTypeSpinner()
         setupClickListeners()
         setupDatePicker()
+        updateRouteStatus()
+
+        if (isEditMode) {
+            loadExistingWorkout()
+        }
     }
 
     private fun setupWorkoutTypeSpinner() {
         val workoutTypes = WorkoutType.entries
         val typeNames = workoutTypes.map { it.displayName(requireContext()) }
-        
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, typeNames)
+
+        val adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_dropdown_item_1line,
+            typeNames
+        )
         binding.autoCompleteTextViewType.setAdapter(adapter)
-        
+
         binding.autoCompleteTextViewType.setOnItemClickListener { _, _, position, _ ->
             selectedWorkoutType = workoutTypes[position]
         }
-        
-        // Устанавливаем значение по умолчанию
+
         binding.autoCompleteTextViewType.setText(typeNames[0], false)
     }
 
     private fun setupDatePicker() {
-        val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
         binding.editTextDate.setText(dateFormat.format(selectedDate))
-        
+
         binding.editTextDate.setOnClickListener {
             val calendar = Calendar.getInstance().apply { time = selectedDate }
             DatePickerDialog(
@@ -86,12 +120,169 @@ class AddWorkoutFragment : Fragment() {
     }
 
     private fun setupClickListeners() {
-        binding.buttonSave.setOnClickListener {
-            saveWorkout()
+        binding.buttonSave.setOnClickListener { saveWorkout() }
+        binding.buttonCancel.setOnClickListener { findNavController().navigateUp() }
+        binding.buttonSelectRoute.setOnClickListener { showRoutePicker() }
+        binding.buttonClearRoute.setOnClickListener { clearRoute() }
+    }
+
+    private fun loadExistingWorkout() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val workout = viewModel.getWorkoutById(workoutId).first()
+                if (!isAdded || isDetached) return@launch
+
+                if (workout == null) {
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.workout_invalid_id),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    findNavController().navigateUp()
+                    return@launch
+                }
+
+                bindWorkout(workout)
+                hasLoadedExistingWorkout = true
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error loading workout for edit: ${e.message}", e)
+                if (isAdded) {
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.route_load_error),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    findNavController().navigateUp()
+                }
+            }
+        }
+    }
+
+    private fun bindWorkout(workout: Workout) {
+        selectedDate = workout.date
+        selectedWorkoutType = workout.type
+        selectedTrackDataJson = workout.trackData
+        editingIsFavorite = workout.isFavorite
+
+        binding.editTextDate.setText(dateFormat.format(selectedDate))
+        binding.autoCompleteTextViewType.setText(
+            selectedWorkoutType.displayName(requireContext()),
+            false
+        )
+        binding.editTextDistance.setText(formatDistance(workout.distance))
+
+        val totalSeconds = (workout.duration / 1000).toInt()
+        binding.editTextHours.setText((totalSeconds / 3600).toString())
+        binding.editTextMinutes.setText(((totalSeconds % 3600) / 60).toString())
+        binding.editTextSeconds.setText((totalSeconds % 60).toString())
+
+        binding.editTextCalories.setText(workout.calories?.toString().orEmpty())
+        binding.editTextNotes.setText(workout.notes.orEmpty())
+        updateRouteStatus()
+    }
+
+    private fun showRoutePicker() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val workouts = viewModel.allWorkouts.first()
+                    .filter { !it.trackData.isNullOrBlank() && it.id != workoutId }
+                    .sortedWith(
+                        compareByDescending<Workout> { it.isFavorite }
+                            .thenByDescending { it.date }
+                    )
+
+                if (!isAdded || isDetached) return@launch
+
+                if (workouts.isEmpty()) {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle(R.string.edit_workout_pick_route_title)
+                        .setMessage(R.string.edit_workout_no_routes)
+                        .setPositiveButton(R.string.cancel, null)
+                        .show()
+                    return@launch
+                }
+
+                val dialogBinding = DialogRoutePickerBinding.inflate(layoutInflater)
+                val dialog = MaterialAlertDialogBuilder(requireContext())
+                    .setTitle(R.string.edit_workout_pick_route_title)
+                    .setView(dialogBinding.root)
+                    .setNegativeButton(R.string.cancel, null)
+                    .create()
+
+                val adapter = RoutePickerAdapter { workout ->
+                    dialog.dismiss()
+                    onRouteSelected(workout)
+                }
+                dialogBinding.recyclerViewRoutes.layoutManager =
+                    LinearLayoutManager(requireContext())
+                dialogBinding.recyclerViewRoutes.adapter = adapter
+                adapter.submitList(workouts)
+
+                dialog.show()
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error loading routes: ${e.message}", e)
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.route_load_error),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun onRouteSelected(source: Workout) {
+        selectedTrackDataJson = source.trackData
+        applyDistanceFromRoute(source)
+        updateRouteStatus()
+        Toast.makeText(requireContext(), getString(R.string.edit_workout_route_selected), Toast.LENGTH_SHORT)
+            .show()
+    }
+
+    private fun applyDistanceFromRoute(source: Workout) {
+        val trackJson = source.trackData
+        val distanceKm = try {
+            val trackData = trackJson?.let { gson.fromJson(it, TrackData::class.java) }
+            if (trackData != null && trackData.totalDistance > 0) {
+                trackData.totalDistance / 1000f
+            } else {
+                source.distance
+            }
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "Error reading route distance: ${e.message}", e)
+            source.distance
+        }
+        binding.editTextDistance.setText(formatDistance(distanceKm))
+    }
+
+    private fun clearRoute() {
+        selectedTrackDataJson = null
+        updateRouteStatus()
+        Toast.makeText(requireContext(), getString(R.string.edit_workout_route_cleared), Toast.LENGTH_SHORT)
+            .show()
+    }
+
+    private fun updateRouteStatus() {
+        val trackJson = selectedTrackDataJson
+        if (trackJson.isNullOrBlank()) {
+            binding.textViewRouteStatus.setText(R.string.edit_workout_route_none)
+            binding.buttonClearRoute.isEnabled = false
+            return
         }
 
-        binding.buttonCancel.setOnClickListener {
-            findNavController().navigateUp()
+        val pointCount = try {
+            gson.fromJson(trackJson, TrackData::class.java)?.points?.size ?: 0
+        } catch (_: Exception) {
+            0
+        }
+        binding.textViewRouteStatus.text = getString(R.string.edit_workout_route_attached, pointCount)
+        binding.buttonClearRoute.isEnabled = true
+    }
+
+    private fun formatDistance(distance: Float): String {
+        return if (distance == distance.toLong().toFloat()) {
+            distance.toLong().toString()
+        } else {
+            String.format(Locale.US, "%.2f", distance)
         }
     }
 
@@ -103,7 +294,6 @@ class AddWorkoutFragment : Fragment() {
         val caloriesText = binding.editTextCalories.text.toString()
         val notesText = binding.editTextNotes.text.toString()
 
-        // Валидация обязательных полей
         if (distanceText.isBlank() || hoursText.isBlank() || minutesText.isBlank() || secondsText.isBlank()) {
             Toast.makeText(context, getString(R.string.fill_required_fields), Toast.LENGTH_SHORT).show()
             return
@@ -114,15 +304,15 @@ class AddWorkoutFragment : Fragment() {
             val hours = hoursText.toInt()
             val minutes = minutesText.toInt()
             val seconds = secondsText.toInt()
-            
+
             if (distance <= 0) {
                 Toast.makeText(context, getString(R.string.distance_must_be_positive), Toast.LENGTH_SHORT).show()
                 return
             }
 
             val totalSeconds = hours * 3600 + minutes * 60 + seconds
-            val duration = totalSeconds * 1000L // конвертируем в миллисекунды
-            
+            val duration = totalSeconds * 1000L
+
             if (duration <= 0) {
                 Toast.makeText(context, getString(R.string.time_must_be_positive), Toast.LENGTH_SHORT).show()
                 return
@@ -130,11 +320,13 @@ class AddWorkoutFragment : Fragment() {
 
             val calories = if (caloriesText.isNotBlank()) {
                 caloriesText.toIntOrNull()
-            } else null
+            } else {
+                null
+            }
 
             val avgPace = viewModel.calculatePace(distance, duration)
-
             val workout = Workout(
+                id = if (isEditMode) workoutId else 0,
                 date = selectedDate,
                 distance = distance,
                 duration = duration,
@@ -142,14 +334,23 @@ class AddWorkoutFragment : Fragment() {
                 calories = calories,
                 notes = notesText.ifBlank { null },
                 type = selectedWorkoutType,
-                trackData = null // для ручного добавления тренировки траектория не нужна
+                trackData = selectedTrackDataJson,
+                isFavorite = if (isEditMode) editingIsFavorite else false
             )
 
-            viewModel.insertWorkout(workout)
-            
-            Toast.makeText(context, getString(R.string.workout_saved), Toast.LENGTH_SHORT).show()
+            if (isEditMode) {
+                if (!hasLoadedExistingWorkout) {
+                    Toast.makeText(context, getString(R.string.workout_not_loaded), Toast.LENGTH_SHORT).show()
+                    return
+                }
+                viewModel.updateWorkout(workout)
+                Toast.makeText(context, getString(R.string.workout_updated), Toast.LENGTH_SHORT).show()
+            } else {
+                viewModel.insertWorkout(workout)
+                Toast.makeText(context, getString(R.string.workout_saved), Toast.LENGTH_SHORT).show()
+            }
+
             findNavController().navigateUp()
-            
         } catch (e: NumberFormatException) {
             Toast.makeText(context, getString(R.string.check_input_data), Toast.LENGTH_SHORT).show()
         }
@@ -158,5 +359,11 @@ class AddWorkoutFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
+    }
+
+    companion object {
+        private const val TAG = "AddWorkoutFragment"
+        const val ARG_WORKOUT_ID = "workoutId"
+        const val NO_WORKOUT_ID = -1L
     }
 }

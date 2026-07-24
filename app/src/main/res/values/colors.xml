@@ -30,4 +30,10 @@
 
     <!-- AppBar colors -->
     <color name="app_bar_background">#E0FFFFFF</color>
+
+    <!-- Route picker mini-preview -->
+    <color name="route_preview_background">#FFE8EEF5</color>
+    <color name="route_preview_track">#FFE53935</color>
+    <color name="route_preview_start">#FF43A047</color>
+    <color name="route_preview_end">#FF1E88E5</color>
 </resources>

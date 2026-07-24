@@ -92,6 +92,20 @@
     <string name="add_workout_hint_distance">Insert distance</string>
     <string name="add_workout_hint_calories">Insert calories amount</string>
     <string name="add_workout_hint_notes">Few words about workout</string>
+    <string name="edit_workout_title">Edit workout</string>
+    <string name="edit_workout_label_route">Route</string>
+    <string name="edit_workout_route_none">No route attached</string>
+    <string name="edit_workout_route_attached">Route attached (%1$d points)</string>
+    <string name="edit_workout_select_route">Select route</string>
+    <string name="edit_workout_clear_route">Clear</string>
+    <string name="edit_workout_pick_route_title">Select a route</string>
+    <string name="edit_workout_no_routes">No saved routes yet. Complete a GPS workout or mark one as favorite.</string>
+    <string name="edit_workout_route_selected">Route selected</string>
+    <string name="edit_workout_route_cleared">Route cleared</string>
+    <string name="edit_workout_route_preview_cd">Route preview</string>
+    <string name="edit_workout_route_meta">%1$.1f km · %2$s</string>
+    <string name="edit_workout_route_points">%1$d points</string>
+    <string name="workout_updated">Workout updated</string>
 
     <string name="settings_title">Settings</string>
     <string name="settings_profile_title">User profile</string>
