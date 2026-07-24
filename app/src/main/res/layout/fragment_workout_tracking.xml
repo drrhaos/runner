@@ -61,6 +61,26 @@
             </LinearLayout>
         </LinearLayout>
 
+        <!-- Баннер потери GPS / режима без GPS -->
+        <TextView
+            android:id="@+id/textView_gps_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/layout_gps_status"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="4dp"
+            android:background="@drawable/tracking_panel_background"
+            android:elevation="4dp"
+            android:gravity="center"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="8dp"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?attr/colorOnSurface"
+            android:visibility="gone"
+            tools:text="@string/gps_lost_banner"
+            tools:visibility="visible" />
+
         <!-- Элементы управления картой в правом верхнем углу -->
         <LinearLayout
             android:layout_width="wrap_content"

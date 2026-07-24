@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName
 data class TrackPoint(
     @SerializedName("latitude")
     val latitude: Double,
-    @SerializedName("longitude") 
+    @SerializedName("longitude")
     val longitude: Double,
     @SerializedName("timestamp")
     val timestamp: Long, // время в миллисекундах
@@ -14,7 +14,12 @@ data class TrackPoint(
     @SerializedName("speed")
     val speed: Float?, // скорость в м/с
     @SerializedName("altitude")
-    val altitude: Double? // высота над уровнем моря
+    val altitude: Double?, // высота над уровнем моря
+    /** True when this point resumes the track after a GPS gap — do not count distance to previous. */
+    @SerializedName("after_gap")
+    val afterGap: Boolean = false,
+    @SerializedName("source")
+    val source: String = LocationSource.GPS.name
 )
 
 data class TrackData(

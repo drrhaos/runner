@@ -23,6 +23,7 @@ import com.drrhaos.runner.data.TrackData
 import com.drrhaos.runner.data.WorkoutSession
 import com.drrhaos.runner.data.GpsStatus
 import com.drrhaos.runner.data.WorkoutState
+import com.drrhaos.runner.data.LocationSource
 import androidx.lifecycle.ViewModelProvider
 import com.google.gson.Gson
 import com.drrhaos.runner.service.WorkoutTrackingService
@@ -32,6 +33,7 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import com.drrhaos.runner.util.GpsFilter
 import com.drrhaos.runner.util.SpeedPaceCalculator
+import com.drrhaos.runner.util.UserPreferences
 import java.util.Date
 
 class WorkoutTrackingViewModel(private val repository: WorkoutRepository, private val application: Application) : ViewModel() {
@@ -258,7 +260,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
     fun startWorkoutWithRetry(workoutType: WorkoutType = WorkoutType.EASY_RUN, maxRetries: Int = 3) {
         var retryCount = 0
-        
+
         fun attemptStart() {
             if (isServiceBound && trackingService != null) {
                 startWorkout(workoutType)
@@ -273,7 +275,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
                 startWorkout(workoutType)
             }
         }
-        
+
         attemptStart()
     }
 
@@ -425,7 +427,10 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         return com.drrhaos.runner.util.FormatUtils.formatPace(paceMinutesPerKm)
     }
 
-    suspend fun saveWorkoutToDatabase(workoutType: WorkoutType = WorkoutType.EASY_RUN): Long? {
+    suspend fun saveWorkoutToDatabase(
+        workoutType: WorkoutType = WorkoutType.EASY_RUN,
+        manualDistanceKm: Float? = null
+    ): Long? {
         val session = _workoutSession.value
 
         if (session.currentTime <= 0) {
@@ -441,6 +446,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         val hasTrack = sanitizedPoints.size >= 2
 
         val totalDistanceMeters = when {
+            manualDistanceKm != null && manualDistanceKm >= 0f -> manualDistanceKm * 1000f
             hasTrack -> SpeedPaceCalculator.totalDistanceMeters(sanitizedPoints)
             session.distance > 0f -> session.distance * 1000f
             else -> 0f
@@ -464,16 +470,16 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         } else {
             0f
         }
-        val maxSpeedMps = if (hasTrack) {
+        val maxSpeedMps = if (hasTrack && manualDistanceKm == null) {
             SpeedPaceCalculator.maxDerivedSpeedMs(sanitizedPoints)
         } else {
             0f
         }
 
-        val userPrefs = com.drrhaos.runner.util.UserPreferences(application)
+        val userPrefs = UserPreferences(application)
         val calories = com.drrhaos.runner.util.FormatUtils.calculateCalories(totalDistanceKm, userPrefs.userWeight)
 
-        val trackDataJson = if (hasTrack && totalDistanceMeters > 0f) {
+        val trackDataJson = if (hasTrack && manualDistanceKm == null && totalDistanceMeters > 0f) {
             val trackData = TrackData(
                 points = sanitizedPoints,
                 totalDistance = totalDistanceMeters,
@@ -533,9 +539,15 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
         for (point in rawPoints) {
             val rawLocation = trackPointToLocation(point)
-            val filteredLocation = GpsFilter.filterGpsOutlier(rawLocation, previousLocation)
+            val forceGap = GpsFilter.isGapResume(previousLocation, rawLocation) || point.afterGap
+            val filteredLocation = GpsFilter.filterGpsOutlier(
+                rawLocation,
+                previousLocation,
+                forceGapResume = forceGap
+            )
             if (filteredLocation != null) {
-                if (previousLocation != null) {
+                val afterGap = forceGap && previousLocation != null
+                if (!afterGap && previousLocation != null) {
                     val segmentDistance = filteredLocation.distanceTo(previousLocation)
                     if (segmentDistance < com.drrhaos.runner.service.GpsLocationProcessor.MIN_POINT_DISTANCE_METERS) {
                         continue
@@ -548,7 +560,9 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
                         longitude = filteredLocation.longitude,
                         accuracy = filteredLocation.accuracy,
                         speed = filteredLocation.speed,
-                        altitude = filteredLocation.altitude
+                        altitude = filteredLocation.altitude,
+                        afterGap = afterGap,
+                        source = point.source.ifBlank { LocationSource.GPS.name }
                     )
                 )
                 previousLocation = filteredLocation
