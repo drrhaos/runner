@@ -165,6 +165,10 @@
     <string name="workout_details_btn_share">Поделиться</string>
     <string name="workout_details_btn_export_gpx">Экспорт GPX</string>
     <string name="workout_details_btn_delete">Удалить</string>
+    <string name="workout_favorite_add">Добавить в избранное</string>
+    <string name="workout_favorite_remove">Убрать из избранного</string>
+    <string name="workout_favorite_added">Добавлено в избранное</string>
+    <string name="workout_favorite_removed">Удалено из избранного</string>
     <string name="workout_details_pace_speed_pulse_title">Темп / Скорость / Пульс</string>
     <string name="workout_details_height_title">Высота</string>
     <string name="workout_details_pace_speed_title">Темп / Скорость по сегментам</string>
@@ -243,6 +247,10 @@
     <string name="workout_list_message_start_workout">Начните тренировку, чтобы появилась первая запись.</string>
     <string name="workout_list_empty_start">Начать тренировку</string>
     <string name="workout_list_content_description_empty">Пока нет тренировок</string>
+    <string name="workout_list_filter_all">Все</string>
+    <string name="workout_list_filter_favorites">Избранное</string>
+    <string name="workout_list_message_no_favorites">Пока нет избранных маршрутов</string>
+    <string name="workout_list_message_add_favorites">Отметьте тренировку звёздочкой, чтобы сохранить её здесь.</string>
     <string name="gps_label">GPS</string>
     <string name="gps_status_a11y">Сигнал GPS: %1$s</string>
     <string name="workout_fragment_label">Тренировка</string>
