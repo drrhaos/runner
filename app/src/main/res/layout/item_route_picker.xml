@@ -18,7 +18,7 @@
         android:orientation="horizontal"
         android:padding="10dp">
 
-        <com.drrhaos.runner.ui.workout.RoutePreviewView
+        <com.runner.academy.ui.workout.RoutePreviewView
             android:id="@+id/route_preview"
             android:layout_width="96dp"
             android:layout_height="72dp"

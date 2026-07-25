@@ -22,11 +22,11 @@ val hasReleaseKeystore = keystorePropertiesFile.exists().also { exists ->
 }
 
 android {
-    namespace = "com.drrhaos.runner"
+    namespace = "com.runner.academy"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.drrhaos.runner"
+        applicationId = "com.runner.academy"
         minSdk = 26
         targetSdk = 36
         versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
