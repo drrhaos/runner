@@ -8,7 +8,7 @@
 -keepattributes *Annotation*
 -dontwarn sun.misc.**
 -keep class com.google.gson.** { *; }
--keep class com.drrhaos.runner.data.** { *; }
+-keep class com.runner.academy.data.** { *; }
 
 # OSMDroid
 -keep class org.osmdroid.** { *; }
