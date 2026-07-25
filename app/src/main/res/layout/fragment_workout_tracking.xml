@@ -114,7 +114,7 @@
         </LinearLayout>
 
     <!-- Объединенная панель с параметрами тренировки и кнопками -->
-    <com.drrhaos.runner.ui.tracking.TouchInterceptingLinearLayout
+    <com.runner.academy.ui.tracking.TouchInterceptingLinearLayout
         android:id="@+id/layout_workout_panel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -479,7 +479,7 @@
                     android:alpha="0.72" />
             </LinearLayout>
         </LinearLayout>
-    </com.drrhaos.runner.ui.tracking.TouchInterceptingLinearLayout>
+    </com.runner.academy.ui.tracking.TouchInterceptingLinearLayout>
     <!--  Серый фон окна с отсчетом  -->
     <FrameLayout
         android:id="@+id/stop_hold_background"

@@ -448,7 +448,7 @@ Quick start:
 ## 🐛 Known Issues
 
 - Heart rate is shown as a placeholder (`--`) — no BLE/Health Connect integration yet
-- Changing `applicationId` from `com.example.runner` to `com.drrhaos.runner` requires a fresh install for existing users
+- Changing `applicationId` from `com.example.runner` to `com.runner.academy` requires a fresh install for existing users
 
 ## 🔮 Future Plans
 
