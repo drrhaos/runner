@@ -7,13 +7,13 @@
 
     <fragment
         android:id="@+id/nav_workouts"
-        android:name="com.drrhaos.runner.ui.workout.WorkoutListFragment"
+        android:name="com.runner.academy.ui.workout.WorkoutListFragment"
         android:label="@string/menu_workouts"
         tools:layout="@layout/fragment_workout_list" />
 
     <fragment
         android:id="@+id/nav_add_workout"
-        android:name="com.drrhaos.runner.ui.workout.AddWorkoutFragment"
+        android:name="com.runner.academy.ui.workout.AddWorkoutFragment"
         android:label="@string/menu_add_workout"
         tools:layout="@layout/fragment_add_workout">
         <argument
@@ -23,13 +23,13 @@
     </fragment>
     <fragment
         android:id="@+id/nav_tracking"
-        android:name="com.drrhaos.runner.ui.tracking.WorkoutTrackingFragment"
+        android:name="com.runner.academy.ui.tracking.WorkoutTrackingFragment"
         android:label="@string/workout_fragment_label"
         tools:layout="@layout/fragment_workout_tracking" />
 
     <fragment
         android:id="@+id/nav_workout_detail"
-        android:name="com.drrhaos.runner.ui.workout.WorkoutDetailFragment"
+        android:name="com.runner.academy.ui.workout.WorkoutDetailFragment"
         android:label="@string/workout_details_label"
         tools:layout="@layout/fragment_workout_detail">
         <argument
@@ -39,13 +39,13 @@
 
     <fragment
         android:id="@+id/nav_statistics"
-        android:name="com.drrhaos.runner.ui.statistics.StatisticsFragment"
+        android:name="com.runner.academy.ui.statistics.StatisticsFragment"
         android:label="@string/menu_statistics"
         tools:layout="@layout/fragment_statistics" />
 
     <fragment
         android:id="@+id/nav_settings"
-        android:name="com.drrhaos.runner.ui.settings.SettingsFragment"
+        android:name="com.runner.academy.ui.settings.SettingsFragment"
         android:label="@string/menu_settings"
         tools:layout="@layout/fragment_settings" />
 </navigation>

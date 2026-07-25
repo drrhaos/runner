@@ -8,5 +8,5 @@ After installing the Android SDK, generate schemas with:
 ./gradlew :app:kaptDebugKotlin
 ```
 
-Commit the generated JSON files under `com.drrhaos.runner.data.WorkoutDatabase/`.
+Commit the generated JSON files under `com.runner.academy.data.WorkoutDatabase/`.
 They are required for `WorkoutDatabaseMigrationTest` in instrumented tests.
