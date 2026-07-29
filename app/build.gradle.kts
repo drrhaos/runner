@@ -1,15 +1,14 @@
 import java.io.FileInputStream
 import java.util.Properties
 import org.gradle.api.tasks.testing.Test
-import org.gradle.kotlin.dsl.version
 import org.gradle.testing.jacoco.plugins.JacocoTaskExtension
 import org.gradle.testing.jacoco.tasks.JacocoReport
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id("org.jetbrains.kotlin.kapt")
-    id("androidx.room") version "2.7.0"
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.androidx.room)
     id("jacoco")
 }
 
@@ -96,24 +95,8 @@ kotlin {
     }
 }
 
-kapt {
-    correctErrorTypes = true
-}
-
-// Prefer Room Gradle Plugin over global kapt args — those args are also passed to
-// unit-test kapt (no Room types there) and produce "options were not recognized".
 room {
     schemaDirectory("$projectDir/schemas")
-}
-
-// Unit/androidTest sources have no Room/Dagger annotations to process; keeping kapt
-// enabled only produces "options were not recognized by any processor" warnings.
-tasks.matching {
-    it.name.startsWith("kapt") &&
-        (it.name.contains("UnitTest") || it.name.contains("AndroidTest")) &&
-        !it.name.contains("GenerateStubs")
-}.configureEach {
-    enabled = false
 }
 
 dependencies {
@@ -128,11 +111,11 @@ dependencies {
     implementation(libs.androidx.navigation.ui.ktx)
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 
-    // Room database
-    implementation("androidx.room:room-runtime:2.7.0")
-    implementation("androidx.room:room-ktx:2.7.0")
-    kapt("androidx.room:room-compiler:2.7.0")
-    androidTestImplementation("androidx.room:room-testing:2.7.0")
+    // Room database (KSP — avoids kapt "options were not recognized" warnings)
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+    androidTestImplementation(libs.androidx.room.testing)
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
@@ -145,8 +128,9 @@ dependencies {
     // Location services
     implementation("com.google.android.gms:play-services-location:21.0.1")
 
-    // Permissions
+    // Permissions / SAF
     implementation("androidx.activity:activity-ktx:1.8.2")
+    implementation("androidx.documentfile:documentfile:1.0.1")
 
     // JSON serialization
     implementation("com.google.code.gson:gson:2.10.1")

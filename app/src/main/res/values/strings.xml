@@ -278,6 +278,26 @@
     <string name="workout_list_filter_favorites">Favorites</string>
     <string name="workout_list_message_no_favorites">No favorite routes yet</string>
     <string name="workout_list_message_add_favorites">Mark a workout with a star to save it here.</string>
+    <string name="workout_list_import">Import workouts</string>
+    <string name="workout_list_export">Export workouts</string>
+    <string name="workout_list_export_choose_format">Choose export format</string>
+    <string name="workout_list_export_json">JSON backup</string>
+    <string name="workout_list_export_gpx">GPX (ZIP archive)</string>
+    <string name="workout_list_export_progress">Exporting…</string>
+    <string name="workout_list_export_ready">Export ready</string>
+    <string name="workout_list_export_title">Export workouts</string>
+    <string name="workout_list_export_gpx_partial">Exported %1$d GPX files (%2$d without track skipped)</string>
+    <string name="workout_list_fab_actions">Workout actions</string>
+    <string name="workout_list_fab_close">Close actions</string>
+    <string name="workout_list_import_choose_source">Choose import source</string>
+    <string name="workout_list_import_json">JSON backup</string>
+    <string name="workout_list_import_gpx_folder">Folder with GPX files</string>
+    <string name="workout_list_import_progress">Importing…</string>
+    <string name="workout_list_import_success">Imported %1$d workouts</string>
+    <string name="workout_list_import_partial">Imported %1$d workouts (%2$d files failed)</string>
+    <string name="workout_list_import_empty">Nothing to import</string>
+    <string name="workout_list_import_error">Import error: %1$s</string>
+    <string name="workout_list_import_no_gpx">No GPX files found in the folder</string>
 
     <string name="gps_label">GPS</string>
     <string name="gps_status_a11y">GPS signal: %1$s</string>
