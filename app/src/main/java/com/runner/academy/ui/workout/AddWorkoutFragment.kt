@@ -19,8 +19,8 @@ import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.DialogRoutePickerBinding
 import com.runner.academy.databinding.FragmentAddWorkoutBinding
+import com.runner.academy.util.TrackDataJson
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.gson.Gson
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -53,7 +53,6 @@ class AddWorkoutFragment : Fragment() {
     private var editingIsFavorite: Boolean = false
     private var hasLoadedExistingWorkout: Boolean = false
 
-    private val gson = Gson()
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
     override fun onCreateView(
@@ -241,7 +240,7 @@ class AddWorkoutFragment : Fragment() {
     private fun applyDistanceFromRoute(source: Workout) {
         val trackJson = source.trackData
         val distanceKm = try {
-            val trackData = trackJson?.let { gson.fromJson(it, TrackData::class.java) }
+            val trackData = trackJson?.let { TrackDataJson.parse(it) }
             if (trackData != null && trackData.totalDistance > 0) {
                 trackData.totalDistance / 1000f
             } else {
@@ -270,7 +269,7 @@ class AddWorkoutFragment : Fragment() {
         }
 
         val pointCount = try {
-            gson.fromJson(trackJson, TrackData::class.java)?.points?.size ?: 0
+            TrackDataJson.parse(trackJson)?.points?.size ?: 0
         } catch (_: Exception) {
             0
         }

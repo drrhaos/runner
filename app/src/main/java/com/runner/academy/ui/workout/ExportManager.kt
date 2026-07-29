@@ -5,7 +5,6 @@ import androidx.core.content.FileProvider
 import com.runner.academy.R
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.Workout
-import com.google.gson.Gson
 
 /**
  * Handles data export operations for workout detail screen.
@@ -54,14 +53,7 @@ class ExportManager(
     }
 
     private fun parseTrackData(trackDataJson: String?): TrackData? {
-        if (trackDataJson == null) return null
-        return try {
-            val gson = Gson()
-            gson.fromJson(trackDataJson, TrackData::class.java)
-        } catch (e: Exception) {
-            android.util.Log.e("ExportManager", "Error parsing track data: ${e.message}", e)
-            null
-        }
+        return com.runner.academy.util.TrackDataJson.parse(trackDataJson)
     }
 
     private fun saveAndShareGpxFile(gpxContent: String, workout: Workout) {
