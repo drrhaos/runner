@@ -14,8 +14,8 @@ import com.runner.academy.data.TrackData
 import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.databinding.FragmentWorkoutDetailBinding
 import com.runner.academy.util.ErrorHandler
+import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.WorkoutDataCleaner
-import com.google.gson.Gson
 import kotlinx.coroutines.launch
 
 class WorkoutDetailFragment : Fragment() {
@@ -215,8 +215,7 @@ class WorkoutDetailFragment : Fragment() {
 
         workout.trackData?.let { trackDataJson ->
             try {
-                val gson = Gson()
-                val trackData = gson.fromJson(trackDataJson, TrackData::class.java)
+                val trackData = TrackDataJson.parse(trackDataJson) ?: return
 
                 if (trackData.points.isNotEmpty()) {
                     android.util.Log.d("WorkoutDetail", "Original track data has ${trackData.points.size} points")

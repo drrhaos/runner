@@ -1,8 +1,6 @@
 package com.runner.academy.util
 
 import android.content.Context
-import com.google.gson.Gson
-import com.runner.academy.data.TrackData
 import com.runner.academy.data.Workout
 import java.io.File
 import java.time.Instant
@@ -16,7 +14,6 @@ import java.util.zip.ZipOutputStream
  */
 object WorkoutGpxBulkExporter {
 
-    private val gson = Gson()
     private val fileDateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd_HHmmss")
         .withZone(ZoneOffset.UTC)
 
@@ -35,7 +32,7 @@ object WorkoutGpxBulkExporter {
 
         ZipOutputStream(zipFile.outputStream().buffered()).use { zip ->
             workouts.forEach { workout ->
-                val trackData = parseTrackData(workout.trackData)
+                val trackData = TrackDataJson.parse(workout.trackData)
                 if (trackData == null || trackData.points.isEmpty()) {
                     skipped++
                     return@forEach
@@ -71,15 +68,6 @@ object WorkoutGpxBulkExporter {
             val candidate = "${stem}_$i.$ext"
             if (used.add(candidate)) return candidate
             i++
-        }
-    }
-
-    private fun parseTrackData(json: String?): TrackData? {
-        if (json.isNullOrBlank()) return null
-        return try {
-            gson.fromJson(json, TrackData::class.java)
-        } catch (_: Exception) {
-            null
         }
     }
 }
