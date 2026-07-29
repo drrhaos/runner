@@ -78,6 +78,17 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         }
     }
 
+    /**
+     * Imports workouts (always with new auto-generated IDs). Returns inserted count.
+     */
+    suspend fun importWorkouts(workouts: List<Workout>): Int {
+        if (workouts.isEmpty()) return 0
+        val toInsert = workouts.map { it.copy(id = 0) }
+        repository.insertWorkouts(toInsert)
+        loadStatistics()
+        return toInsert.size
+    }
+
     fun updateWorkout(workout: Workout) {
         viewModelScope.launch {
             try {
