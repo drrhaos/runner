@@ -37,6 +37,13 @@ class WorkoutRepository(private val workoutDao: WorkoutDao) {
     }
 
     /**
+     * Insert multiple workouts (IDs should be 0 for auto-generation).
+     */
+    suspend fun insertWorkouts(workouts: List<Workout>): List<Long> = withContext(Dispatchers.IO) {
+        workoutDao.insertWorkouts(workouts)
+    }
+
+    /**
      * Update an existing workout.
      */
     suspend fun updateWorkout(workout: Workout) = withContext(Dispatchers.IO) {

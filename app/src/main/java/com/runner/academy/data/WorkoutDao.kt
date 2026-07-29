@@ -20,6 +20,9 @@ interface WorkoutDao {
     @Insert
     suspend fun insertWorkout(workout: Workout): Long
 
+    @Insert
+    suspend fun insertWorkouts(workouts: List<Workout>): List<Long>
+
     @Update
     suspend fun updateWorkout(workout: Workout)
 
