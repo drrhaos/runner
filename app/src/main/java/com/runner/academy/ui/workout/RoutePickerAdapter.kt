@@ -11,7 +11,7 @@ import com.runner.academy.data.TrackData
 import com.runner.academy.data.Workout
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.ItemRoutePickerBinding
-import com.google.gson.Gson
+import com.runner.academy.util.TrackDataJson
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -19,7 +19,6 @@ class RoutePickerAdapter(
     private val onRouteClick: (Workout) -> Unit
 ) : ListAdapter<Workout, RoutePickerAdapter.RouteViewHolder>(DiffCallback) {
 
-    private val gson = Gson()
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RouteViewHolder {
@@ -62,14 +61,8 @@ class RoutePickerAdapter(
             binding.root.setOnClickListener { onRouteClick(workout) }
         }
 
-        private fun parseTrack(trackJson: String?): TrackData? {
-            if (trackJson.isNullOrBlank()) return null
-            return try {
-                gson.fromJson(trackJson, TrackData::class.java)
-            } catch (_: Exception) {
-                null
-            }
-        }
+        private fun parseTrack(trackJson: String?): TrackData? =
+            TrackDataJson.parse(trackJson)
     }
 
     private object DiffCallback : DiffUtil.ItemCallback<Workout>() {

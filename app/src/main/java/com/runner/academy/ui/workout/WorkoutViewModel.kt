@@ -7,6 +7,7 @@ import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.SpeedPaceCalculator
+import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.WorkoutDataCleaner
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -189,8 +190,11 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
                 return workout
             }
             
-            val gson = com.google.gson.Gson()
-            val trackData = gson.fromJson(workout.trackData, com.runner.academy.data.TrackData::class.java)
+            val trackData = TrackDataJson.parse(workout.trackData)
+                ?: run {
+                    android.util.Log.d("WorkoutViewModel", "Workout track data could not be parsed")
+                    return workout
+                }
             
             // Проверяем, нужна ли очистка (если не принудительная)
             if (!forceClean) {
@@ -219,7 +223,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
                 distance = cleanedTrackData.totalDistance / 1000f, // Конвертируем в км
                 duration = cleanedTrackData.totalDuration,
                 avgPace = calculatePace(cleanedTrackData.totalDistance / 1000f, cleanedTrackData.totalDuration),
-                trackData = gson.toJson(cleanedTrackData)
+                trackData = TrackDataJson.toJson(cleanedTrackData)
             )
             
             // Сохраняем очищенные данные в базу
