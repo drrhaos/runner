@@ -399,6 +399,9 @@
     </plurals>
 
     <!-- Training plans -->
+    <string name="menu_plans">Training plans</string>
+    <string name="menu_my_plan">My plan</string>
+    <string name="menu_templates">Base workouts</string>
     <string name="intensity_icon_label">Intensity icon</string>
     <string name="intensity_icon_selected">Selected: %1$s</string>
     <string name="intensity_icon_recovery">Recovery</string>
@@ -433,6 +436,16 @@
     <string name="plans_title">Training plans</string>
     <string name="plans_empty">No plans yet</string>
     <string name="plans_add">New plan</string>
+    <string name="plans_fab_actions">Plan actions</string>
+    <string name="plans_fab_close">Close</string>
+    <string name="plans_import">Import plans</string>
+    <string name="plans_export">Export plans</string>
+    <string name="plans_export_title">Export training plans</string>
+    <string name="plans_export_progress">Exporting…</string>
+    <string name="plans_export_ready">Export ready</string>
+    <string name="plans_import_progress">Importing…</string>
+    <string name="plans_import_success">Imported %1$d base workouts and %2$d plans</string>
+    <string name="plans_import_error">Import error: %1$s</string>
     <string name="plan_edit_title">Edit plan</string>
     <string name="plan_name_hint">Plan name</string>
     <string name="plan_duration_hint">Duration (days)</string>
