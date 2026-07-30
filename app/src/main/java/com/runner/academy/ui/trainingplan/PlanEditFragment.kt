@@ -1,6 +1,5 @@
 package com.runner.academy.ui.trainingplan
 
-import android.app.DatePickerDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -22,7 +21,6 @@ import com.runner.academy.databinding.FragmentPlanEditBinding
 import com.runner.academy.databinding.ItemPlanDayBinding
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.util.Calendar
 
 class PlanEditFragment : Fragment() {
     private var _binding: FragmentPlanEditBinding? = null
@@ -75,7 +73,6 @@ class PlanEditFragment : Fragment() {
         binding.buttonSavePlan.setOnClickListener { savePlan() }
         binding.buttonDeletePlan.setOnClickListener { confirmDelete() }
         binding.buttonRepeatPattern.setOnClickListener { repeatPattern() }
-        binding.buttonApplyCalendar.setOnClickListener { pickStartDateAndApply() }
         updateRepeatButtonState()
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -211,28 +208,6 @@ class PlanEditFragment : Fragment() {
             updateRepeatButtonState()
             dayAdapter.notifyDataSetChanged()
         }
-    }
-
-    private fun pickStartDateAndApply() {
-        if (planId <= 0) {
-            Toast.makeText(requireContext(), R.string.plan_build_first, Toast.LENGTH_SHORT).show()
-            return
-        }
-        val cal = Calendar.getInstance()
-        DatePickerDialog(
-            requireContext(),
-            { _, y, m, d ->
-                cal.set(y, m, d, 0, 0, 0)
-                cal.set(Calendar.MILLISECOND, 0)
-                viewLifecycleOwner.lifecycleScope.launch {
-                    viewModel.applyToCalendar(planId, cal.timeInMillis)
-                    Toast.makeText(requireContext(), R.string.plan_applied, Toast.LENGTH_LONG).show()
-                }
-            },
-            cal.get(Calendar.YEAR),
-            cal.get(Calendar.MONTH),
-            cal.get(Calendar.DAY_OF_MONTH)
-        ).show()
     }
 
     override fun onDestroyView() {

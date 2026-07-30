@@ -400,6 +400,7 @@
 
     <!-- Training plans -->
     <string name="menu_plans">Training plans</string>
+    <string name="menu_my_plan">My plan</string>
     <string name="menu_templates">Base workouts</string>
     <string name="templates_title">Base workouts</string>
     <string name="templates_empty">No base workouts yet</string>
@@ -440,15 +441,26 @@
     <string name="plan_pick_template">Choose base workout</string>
     <string name="plan_repeat_to_end">Repeat selection to end</string>
     <string name="plan_repeat_need_selection">Select at least one day</string>
-    <string name="plan_apply_calendar">Apply to calendar</string>
+    <string name="plan_apply_calendar">Choose training plan</string>
     <string name="plan_apply_pick_start">Choose start date</string>
-    <string name="plan_applied">Plan applied to calendar</string>
+    <string name="plan_applied">Plan activated</string>
+    <string name="plan_pick_to_apply">Choose a training plan</string>
+    <string name="plan_active_name">Active: %1$s</string>
+    <string name="plan_day_outside">No workout in the active plan</string>
+    <string name="plan_day_no_intervals">No intervals</string>
+    <string name="plan_month_training_days">Training days this month: %1$d</string>
+    <string name="plan_month_no_schedule">No plan on the calendar yet</string>
+    <string name="plan_status_planned">Planned</string>
+    <string name="plan_status_done">Done</string>
+    <string name="plan_status_skipped">Skipped</string>
+    <string name="plan_status_rest">Rest</string>
     <string name="plan_saved">Plan saved</string>
     <string name="plan_delete_confirm">Delete this plan?</string>
     <string name="plan_active_banner">Today: %1$s</string>
     <string name="plan_today_rest">Rest day on the active plan</string>
     <string name="plan_no_active">No active plan</string>
     <string name="plan_deactivate">Deactivate plan</string>
+    <string name="plan_deactivate_confirm">Remove the plan from the calendar?</string>
     <string name="tracking_interval_progress">Interval %1$d / %2$d</string>
     <string name="tracking_follow_plan">Follow plan</string>
     <string name="tracking_free_run">Free run</string>

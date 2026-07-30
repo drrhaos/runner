@@ -49,6 +49,9 @@ class PlanListFragment : Fragment() {
         binding.fabAddPlan.setOnClickListener {
             findNavController().navigate(R.id.nav_plan_edit, bundleOf("planId" to -1L))
         }
+        binding.buttonOpenTemplates.setOnClickListener {
+            findNavController().navigate(R.id.nav_templates)
+        }
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.plans.collect { list ->
                 adapter.submitList(list)
