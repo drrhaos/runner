@@ -2,38 +2,72 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    
-    <!-- Blue palette -->
-    <color name="blue_50">#FFE3F2FD</color>
-    <color name="blue_100">#FFBBDEFB</color>
-    <color name="blue_200">#FF90CAF9</color>
-    <color name="blue_300">#FF64B5F6</color>
-    <color name="blue_400">#FF42A5F5</color>
-    <color name="blue_500">#FF2196F3</color>
-    <color name="blue_600">#FF1E88E5</color>
-    <color name="blue_700">#FF1976D2</color>
-    <color name="blue_800">#FF1565C0</color>
-    <color name="blue_900">#FF0D47A1</color>
-    
-    <!-- GPS status colors -->
-    <color name="green_500">#FF4CAF50</color>
-    <color name="yellow_500">#FFFFEB3B</color>
-    <color name="orange_500">#FFFF9800</color>
-    <color name="red_500">#FFF44336</color>
-    <color name="gps_signal_level_1">#FFE53935</color>
-    <color name="gps_signal_level_2">#FFF57C00</color>
-    <color name="gps_signal_level_3">#FFFBC02D</color>
-    <color name="gps_signal_level_4">#FF43A047</color>
-    <color name="gps_signal_inactive">#40888888</color>
-    <color name="map_navigation_circle_fill">#33FFC107</color>
-    <color name="map_navigation_circle_stroke">#80FFC107</color>
 
-    <!-- AppBar colors -->
-    <color name="app_bar_background">#E0FFFFFF</color>
+    <!-- iOS system palette (light) -->
+    <color name="ios_blue">#FF007AFF</color>
+    <color name="ios_indigo">#FF5856D6</color>
+    <color name="ios_purple">#FFAF52DE</color>
+    <color name="ios_pink">#FFFF2D55</color>
+    <color name="ios_red">#FFFF3B30</color>
+    <color name="ios_orange">#FFFF9500</color>
+    <color name="ios_yellow">#FFFFCC00</color>
+    <color name="ios_green">#FF34C759</color>
+    <color name="ios_teal">#FF5AC8FA</color>
+    <color name="ios_gray">#FF8E8E93</color>
+    <color name="ios_gray2">#FFAEAEB2</color>
+    <color name="ios_gray3">#FFC7C7CC</color>
+    <color name="ios_gray4">#FFD1D1D6</color>
+    <color name="ios_gray5">#FFE5E5EA</color>
+    <color name="ios_gray6">#FFF2F2F7</color>
+    <color name="ios_label">#FF000000</color>
+    <color name="ios_secondary_label">#993C3C43</color>
+    <color name="ios_tertiary_label">#4D3C3C43</color>
+    <color name="ios_separator">#493C3C43</color>
+    <color name="ios_opaque_separator">#FFC6C6C8</color>
+    <color name="ios_grouped_background">#FFF2F2F7</color>
+    <color name="ios_secondary_grouped_background">#FFFFFFFF</color>
+    <color name="ios_fill">#33787880</color>
+    <color name="ios_blue_fill">#1A007AFF</color>
+    <color name="ios_tertiary_container">#FFFFE8CC</color>
+    <color name="ios_on_tertiary_container">#FF663A00</color>
+    <color name="ios_error_container">#FFFFE5E3</color>
+    <color name="ios_on_error_container">#FF93000A</color>
+
+    <!-- Blue palette (iOS-aligned aliases for existing drawables) -->
+    <color name="blue_50">#FFE5F2FF</color>
+    <color name="blue_100">#FFCCE4FF</color>
+    <color name="blue_200">#FF99C9FF</color>
+    <color name="blue_300">#FF66ADFF</color>
+    <color name="blue_400">#FF3392FF</color>
+    <color name="blue_500">#FF007AFF</color>
+    <color name="blue_600">#FF0070E6</color>
+    <color name="blue_700">#FF0066CC</color>
+    <color name="blue_800">#FF0052A3</color>
+    <color name="blue_900">#FF003D7A</color>
+
+    <!-- GPS status colors -->
+    <color name="green_100">#FFD8F5DE</color>
+    <color name="green_500">#FF34C759</color>
+    <color name="yellow_500">#FFFFCC00</color>
+    <color name="orange_500">#FFFF9500</color>
+    <color name="red_500">#FFFF3B30</color>
+    <color name="gps_signal_level_1">#99E57373</color>
+    <color name="gps_signal_level_2">#99FFB74D</color>
+    <color name="gps_signal_level_3">#99000000</color>
+    <color name="gps_signal_level_4">#B3000000</color>
+    <color name="gps_signal_active">#B3000000</color>
+    <color name="gps_signal_inactive">#33000000</color>
+    <color name="map_control_surface">#B3FFFFFF</color>
+    <color name="map_control_icon">#99000000</color>
+    <color name="map_navigation_circle_fill">#33FF9500</color>
+    <color name="map_navigation_circle_stroke">#80FF9500</color>
+
+    <!-- AppBar — frosted iOS nav bar -->
+    <color name="app_bar_background">#F2F9F9F9</color>
 
     <!-- Route picker mini-preview -->
-    <color name="route_preview_background">#FFE8EEF5</color>
-    <color name="route_preview_track">#FFE53935</color>
-    <color name="route_preview_start">#FF43A047</color>
-    <color name="route_preview_end">#FF1E88E5</color>
+    <color name="route_preview_background">#FFF2F2F7</color>
+    <color name="route_preview_track">#FFFF3B30</color>
+    <color name="route_preview_start">#FF34C759</color>
+    <color name="route_preview_end">#FF007AFF</color>
 </resources>

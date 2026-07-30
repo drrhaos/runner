@@ -9,7 +9,6 @@ import android.util.Log
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import androidx.core.content.ContextCompat
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Polyline
@@ -23,6 +22,7 @@ import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.util.GpsFilter
 import com.runner.academy.util.OsmMapConfig
+import com.runner.academy.util.OsmMapTiles
 import org.osmdroid.views.overlay.CopyrightOverlay
 
 /**
@@ -80,8 +80,7 @@ class MapManager(
 
     fun initialize() {
         OsmMapConfig.apply(context)
-
-        mapView.setTileSource(TileSourceFactory.MAPNIK)
+        OsmMapTiles.applyForTheme(context, mapView)
         mapView.setMultiTouchControls(true)
         mapView.setClickable(true)
         mapView.isHorizontalMapRepetitionEnabled = false
@@ -106,6 +105,7 @@ class MapManager(
     }
 
     fun onResume() {
+        OsmMapTiles.applyForTheme(context, mapView)
         mapView.onResume()
     }
 

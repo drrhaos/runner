@@ -1,35 +1,186 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- iOS-inspired Material 3 theme -->
     <style name="Theme.Runner" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/blue_500</item>
+        <!-- Brand / accents (iOS systemBlue, indigo, orange) -->
+        <item name="colorPrimary">@color/ios_blue</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorPrimaryContainer">@color/blue_100</item>
         <item name="colorOnPrimaryContainer">@color/blue_900</item>
-        <item name="colorSecondary">@color/blue_300</item>
+        <item name="colorSecondary">@color/ios_indigo</item>
         <item name="colorOnSecondary">@color/white</item>
-        <item name="colorSecondaryContainer">@color/blue_50</item>
-        <item name="colorOnSecondaryContainer">@color/blue_900</item>
-        <item name="colorTertiary">@color/orange_500</item>
+        <item name="colorSecondaryContainer">@color/ios_gray5</item>
+        <item name="colorOnSecondaryContainer">@color/ios_label</item>
+        <item name="colorTertiary">@color/ios_orange</item>
         <item name="colorOnTertiary">@color/white</item>
-        <item name="colorError">@color/red_500</item>
+        <item name="colorTertiaryContainer">@color/ios_tertiary_container</item>
+        <item name="colorOnTertiaryContainer">@color/ios_on_tertiary_container</item>
+        <item name="colorError">@color/ios_red</item>
         <item name="colorOnError">@color/white</item>
-        <item name="android:statusBarColor">@color/blue_700</item>
-        <item name="android:navigationBarColor">@color/white</item>
+        <item name="colorErrorContainer">@color/ios_error_container</item>
+        <item name="colorOnErrorContainer">@color/ios_on_error_container</item>
+
+        <!-- Surfaces — iOS grouped backgrounds -->
+        <item name="android:colorBackground">@color/ios_grouped_background</item>
+        <item name="colorOnBackground">@color/ios_label</item>
+        <item name="colorSurface">@color/ios_secondary_grouped_background</item>
+        <item name="colorOnSurface">@color/ios_label</item>
+        <item name="colorSurfaceVariant">@color/ios_gray5</item>
+        <item name="colorOnSurfaceVariant">@color/ios_gray</item>
+        <item name="colorSurfaceContainerLowest">@color/white</item>
+        <item name="colorSurfaceContainerLow">@color/ios_gray6</item>
+        <item name="colorSurfaceContainer">@color/ios_gray6</item>
+        <item name="colorSurfaceContainerHigh">@color/ios_gray5</item>
+        <item name="colorSurfaceContainerHighest">@color/ios_gray4</item>
+        <item name="colorOutline">@color/ios_opaque_separator</item>
+        <item name="colorOutlineVariant">@color/ios_gray5</item>
+
+        <!-- System bars — light iOS chrome -->
+        <item name="android:statusBarColor">@color/ios_grouped_background</item>
+        <item name="android:navigationBarColor">@color/ios_grouped_background</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
+
+        <!-- Soft iOS-like shapes -->
+        <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.Runner.SmallComponent</item>
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.Runner.MediumComponent</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.Runner.LargeComponent</item>
+
+        <!-- Component styles -->
+        <item name="materialButtonStyle">@style/Widget.Runner.Button</item>
+        <item name="materialButtonOutlinedStyle">@style/Widget.Runner.Button.Outlined</item>
+        <item name="borderlessButtonStyle">@style/Widget.Runner.Button.Text</item>
+        <item name="materialCardViewStyle">@style/Widget.Runner.Card</item>
+        <item name="floatingActionButtonStyle">@style/Widget.Runner.Fab</item>
+        <item name="navigationViewStyle">@style/Widget.Runner.NavigationView</item>
+        <item name="toolbarStyle">@style/Widget.Runner.Toolbar</item>
+        <item name="textInputStyle">@style/Widget.Runner.TextInput</item>
+        <item name="switchStyle">@style/Widget.Runner.Switch</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.Runner.MaterialAlertDialog</item>
+        <item name="snackbarStyle">@style/Widget.Runner.Snackbar</item>
+        <item name="snackbarButtonStyle">@style/Widget.Runner.Snackbar.Button</item>
     </style>
 
     <style name="Theme.Runner.NoActionBar" parent="Theme.Runner" />
 
-    <style name="Theme.Runner.AppBarOverlay" parent="ThemeOverlay.Material3.Light" />
+    <style name="Theme.Runner.AppBarOverlay" parent="ThemeOverlay.Material3.Light">
+        <item name="colorControlNormal">@color/ios_blue</item>
+        <item name="android:textColorPrimary">@color/ios_label</item>
+    </style>
 
     <style name="Theme.Runner.PopupOverlay" parent="ThemeOverlay.Material3.Light" />
 
-    <style name="SettingsButtonStyle" parent="Widget.Material3.Button.TextButton">
-        <item name="android:textColor">?attr/colorPrimary</item>
-        <item name="android:textSize">14sp</item>
-        <item name="android:textStyle">normal</item>
-        <item name="android:background">@android:color/transparent</item>
+    <!-- Shapes -->
+    <style name="ShapeAppearance.Runner.SmallComponent" parent="ShapeAppearance.Material3.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Runner.MediumComponent" parent="ShapeAppearance.Material3.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <style name="ShapeAppearance.Runner.LargeComponent" parent="ShapeAppearance.Material3.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <!-- Buttons — continuous-corner / soft fill like iOS -->
+    <style name="Widget.Runner.Button" parent="Widget.Material3.Button">
+        <item name="cornerRadius">12dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">-0.01</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <style name="Widget.Runner.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="cornerRadius">12dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="strokeColor">@color/ios_opaque_separator</item>
+        <item name="strokeWidth">1dp</item>
+    </style>
+
+    <style name="Widget.Runner.Button.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="cornerRadius">12dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">-0.01</item>
+        <item name="elevation">0dp</item>
+    </style>
+
+    <style name="Widget.Runner.Button.Text" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/ios_blue</item>
+    </style>
+
+    <style name="SettingsButtonStyle" parent="Widget.Runner.Button.Text">
+        <item name="android:textSize">17sp</item>
         <item name="android:paddingStart">8dp</item>
         <item name="android:paddingEnd">8dp</item>
         <item name="android:paddingTop">4dp</item>
         <item name="android:paddingBottom">4dp</item>
+    </style>
+
+    <!-- Cards — flat grouped cells -->
+    <style name="Widget.Runner.Card" parent="Widget.Material3.CardView.Elevated">
+        <item name="cardElevation">0dp</item>
+        <item name="cardCornerRadius">12dp</item>
+        <item name="strokeWidth">0dp</item>
+        <item name="cardBackgroundColor">@color/ios_secondary_grouped_background</item>
+    </style>
+
+    <style name="Widget.Runner.Fab" parent="Widget.Material3.FloatingActionButton.Primary">
+        <item name="shapeAppearance">@style/ShapeAppearance.Runner.LargeComponent</item>
+        <item name="elevation">4dp</item>
+        <item name="hoveredFocusedTranslationZ">6dp</item>
+        <item name="pressedTranslationZ">6dp</item>
+    </style>
+
+    <style name="Widget.Runner.NavigationView" parent="Widget.Material3.NavigationView">
+        <item name="itemShapeAppearance">@style/ShapeAppearance.Runner.SmallComponent</item>
+        <item name="itemShapeInsetStart">12dp</item>
+        <item name="itemShapeInsetEnd">12dp</item>
+        <item name="itemShapeInsetTop">2dp</item>
+        <item name="itemShapeInsetBottom">2dp</item>
+        <item name="itemIconTint">@color/nav_item_color</item>
+        <item name="itemTextColor">@color/nav_item_color</item>
+        <item name="itemRippleColor">@color/ios_blue_fill</item>
+    </style>
+
+    <style name="Widget.Runner.Toolbar" parent="Widget.Material3.Toolbar">
+        <item name="titleTextColor">@color/ios_label</item>
+        <item name="subtitleTextColor">@color/ios_gray</item>
+        <item name="android:background">@android:color/transparent</item>
+    </style>
+
+    <style name="Widget.Runner.TextInput" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="boxCornerRadiusTopStart">10dp</item>
+        <item name="boxCornerRadiusTopEnd">10dp</item>
+        <item name="boxCornerRadiusBottomStart">10dp</item>
+        <item name="boxCornerRadiusBottomEnd">10dp</item>
+        <item name="boxStrokeColor">@color/ios_text_input_stroke</item>
+    </style>
+
+    <style name="Widget.Runner.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="thumbTint">@color/ios_switch_thumb</item>
+        <item name="trackTint">@color/ios_switch_track</item>
+    </style>
+
+    <style name="ThemeOverlay.Runner.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="shapeAppearanceOverlay">@style/ShapeAppearance.Runner.LargeComponent</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Widget.Runner.Button.Text</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Widget.Runner.Button.Text</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Widget.Runner.Button.Text</item>
+        <item name="colorPrimary">@color/ios_blue</item>
+        <item name="colorSurface">@color/ios_secondary_grouped_background</item>
+    </style>
+
+    <style name="Widget.Runner.Snackbar" parent="Widget.Material3.Snackbar">
+        <item name="shapeAppearance">@style/ShapeAppearance.Runner.SmallComponent</item>
+    </style>
+
+    <style name="Widget.Runner.Snackbar.Button" parent="Widget.Material3.Button.TextButton.Snackbar">
+        <item name="android:textColor">@color/ios_blue</item>
+        <item name="android:textAllCaps">false</item>
     </style>
 </resources>

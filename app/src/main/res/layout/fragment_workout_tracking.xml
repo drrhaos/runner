@@ -14,52 +14,52 @@
             android:clickable="true" />
 
         <!-- Индикатор GPS сигнала в левом верхнем углу -->
-        <LinearLayout
+        <FrameLayout
             android:id="@+id/layout_gps_status"
-            android:layout_width="wrap_content"
-            android:layout_height="72dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_alignParentTop="true"
             android:layout_alignParentStart="true"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="16dp"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_map_control_circle">
 
             <LinearLayout
                 android:id="@+id/layout_gps_signal_bars"
                 android:layout_width="wrap_content"
-                android:layout_height="16dp"
+                android:layout_height="14dp"
+                android:layout_gravity="center"
                 android:gravity="bottom"
                 android:orientation="horizontal">
 
                 <View
                     android:id="@+id/view_gps_bar_1"
-                    android:layout_width="4dp"
-                    android:layout_height="6dp"
+                    android:layout_width="3dp"
+                    android:layout_height="5dp"
                     android:layout_marginEnd="2dp"
                     android:background="@drawable/gps_signal_bar_background" />
 
                 <View
                     android:id="@+id/view_gps_bar_2"
-                    android:layout_width="4dp"
-                    android:layout_height="10dp"
+                    android:layout_width="3dp"
+                    android:layout_height="8dp"
                     android:layout_marginEnd="2dp"
                     android:background="@drawable/gps_signal_bar_background" />
 
                 <View
                     android:id="@+id/view_gps_bar_3"
-                    android:layout_width="4dp"
-                    android:layout_height="14dp"
+                    android:layout_width="3dp"
+                    android:layout_height="11dp"
                     android:layout_marginEnd="2dp"
                     android:background="@drawable/gps_signal_bar_background" />
 
                 <View
                     android:id="@+id/view_gps_bar_4"
-                    android:layout_width="4dp"
-                    android:layout_height="16dp"
+                    android:layout_width="3dp"
+                    android:layout_height="14dp"
                     android:background="@drawable/gps_signal_bar_background" />
             </LinearLayout>
-        </LinearLayout>
+        </FrameLayout>
 
         <!-- Баннер потери GPS / режима без GPS -->
         <TextView
@@ -81,37 +81,29 @@
             tools:text="@string/gps_lost_banner"
             tools:visibility="visible" />
 
-        <!-- Элементы управления картой в правом верхнем углу -->
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+        <!-- Кнопка текущего местоположения в правом верхнем углу -->
+        <FrameLayout
+            android:id="@+id/button_my_location_container"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:layout_alignParentTop="true"
             android:layout_alignParentEnd="true"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="16dp"
-            android:orientation="vertical"
-            android:gravity="center_horizontal">
+            android:layout_marginEnd="12dp"
+            android:layout_marginTop="12dp"
+            android:visibility="gone">
 
-            <!-- Кнопка поиска текущего местоположения -->
-            <FrameLayout
-                android:layout_width="72dp"
-                android:layout_height="72dp"
-                android:visibility="gone"
-                android:id="@+id/button_my_location_container">
-
-                <ImageButton
-                    android:id="@+id/button_my_location"
-                    android:layout_width="56dp"
-                    android:layout_height="56dp"
-                    android:layout_gravity="center"
-                    android:background="@android:color/transparent"
-                    android:src="@drawable/ic_navigation_yellow"
-                    android:scaleType="centerInside"
-                    android:padding="8dp"
-                    android:rotation="45"
-                    android:contentDescription="@string/btn_my_location_description" />
-            </FrameLayout>
-        </LinearLayout>
+            <ImageButton
+                android:id="@+id/button_my_location"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:background="@drawable/bg_map_control_circle"
+                android:src="@drawable/ic_my_location_subtle"
+                android:scaleType="centerInside"
+                android:padding="9dp"
+                app:tint="@color/map_control_icon"
+                android:contentDescription="@string/btn_my_location_description" />
+        </FrameLayout>
 
     <!-- Объединенная панель с параметрами тренировки и кнопками -->
     <com.runner.academy.ui.tracking.TouchInterceptingLinearLayout
@@ -143,21 +135,54 @@
 
         </LinearLayout>
 
-        <!-- Выпадающее меню выбора типа тренировки (видно когда не стартовали) -->
+        <!-- Выбор режима тренировки (видно когда не стартовали) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
-            android:layout_marginTop="8dp">
+            android:layout_marginTop="8dp"
+            android:orientation="vertical"
+            android:paddingHorizontal="12dp">
 
             <Spinner
                 android:id="@+id/spinner_workout_type"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
                 android:spinnerMode="dropdown"
                 android:backgroundTint="?attr/colorPrimary"
                 android:paddingHorizontal="8dp" />
+        </LinearLayout>
 
+        <!-- Шкала интервалов выбранной тренировки -->
+        <LinearLayout
+            android:id="@+id/layout_interval_panel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:paddingHorizontal="12dp">
+
+            <TextView
+                android:id="@+id/textView_interval_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:gravity="center_horizontal" />
+
+            <TextView
+                android:id="@+id/textView_interval_progress_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <com.runner.academy.ui.tracking.SegmentProgressView
+                android:id="@+id/progress_interval_segments"
+                android:layout_width="match_parent"
+                android:layout_height="12dp"
+                android:layout_marginTop="8dp" />
         </LinearLayout>
 
         <!-- Текст обратного отсчета до старта -->

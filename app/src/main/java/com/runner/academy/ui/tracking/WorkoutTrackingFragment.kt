@@ -28,14 +28,22 @@ import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.databinding.FragmentWorkoutTrackingBinding
 import com.runner.academy.data.GpsStatus
+import com.runner.academy.data.ScheduledWorkoutStatus
+import com.runner.academy.data.ScheduledWorkoutWithTemplate
+import com.runner.academy.data.SegmentGoalType
+import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.data.WorkoutState
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
 import com.runner.academy.data.WorkoutSession
+import com.runner.academy.data.WorkoutTemplateSegment
+import com.runner.academy.data.WorkoutTemplateWithSegments
 import com.runner.academy.ui.settings.SettingsViewModel
 import com.runner.academy.ui.settings.SettingsViewModelFactory
+import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.GpsConfig
+import com.runner.academy.util.IntervalEngine
 import com.runner.academy.util.UserPreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
@@ -65,6 +73,15 @@ class WorkoutTrackingFragment : Fragment() {
         SettingsViewModelFactory(requireContext())
     }
 
+    private val planRepository: TrainingPlanRepository by lazy {
+        val db = WorkoutDatabase.getDatabase(requireContext())
+        TrainingPlanRepository(
+            db.workoutTemplateDao(),
+            db.trainingPlanDao(),
+            db.planScheduleDao()
+        )
+    }
+
     // Managers
     private var mapManager: MapManager? = null
     private var gpsStatusUpdater: GpsStatusUiUpdater? = null
@@ -82,6 +99,14 @@ class WorkoutTrackingFragment : Fragment() {
     private var stopHoldStartTime = 0L
     private var countdownJob: Job? = null
     private var lastAnnouncedGpsStatus: GpsStatus? = null
+
+    // Active plan / intervals
+    private var todaysScheduled: ScheduledWorkoutWithTemplate? = null
+    private var modeOptions: List<TrackingWorkoutMode> = listOf(TrackingWorkoutMode.EasyRun)
+    private var selectedMode: TrackingWorkoutMode = TrackingWorkoutMode.EasyRun
+    private var intervalEngine: IntervalEngine? = null
+    private var activeScheduledId: Long? = null
+    private var suppressModeSelectionCallback = false
 
     // GPS monitoring via LocationManager
     private lateinit var locationManager: android.location.LocationManager
@@ -155,7 +180,7 @@ class WorkoutTrackingFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         initializeManagers()
-        setupWorkoutTypeSpinner()
+        setupWorkoutModeSpinner()
         setupClickListeners()
 //        setupSwipeGesture()
         observeViewModel()
@@ -163,6 +188,7 @@ class WorkoutTrackingFragment : Fragment() {
         setupBackButtonHandler()
         setupWindowInsets()
         setupGpsStatusMonitoring()
+        loadTrackingModes()
 
         gpsStatusUpdater?.updateStatusIcon()
         gpsStatusHandler.post(gpsStatusRunnable)
@@ -171,6 +197,7 @@ class WorkoutTrackingFragment : Fragment() {
         val ws = viewModel.workoutSession.value
         if (ws.isTracking || ws.isPaused) {
             viewModel.initializeService()
+            maybeStartIntervalEngineForActiveSession()
         }
     }
 
@@ -210,21 +237,30 @@ class WorkoutTrackingFragment : Fragment() {
         panelStateManager?.setupGesture(requireContext())
 
         // MetricsDisplayManager
-        metricsDisplayManager = MetricsDisplayManager(MetricsDisplayManager.Views(
-            textViewWorkoutTime = binding.textViewWorkoutTime,
-            textViewWorkoutDistance = binding.textViewWorkoutDistance,
-            textViewWorkoutTimeExpanded = binding.textViewWorkoutTimeExpanded,
-            textViewWorkoutDistanceExpanded = binding.textViewWorkoutDistanceExpanded,
-            textViewWorkoutPace = binding.textViewWorkoutPace,
-            textViewWorkoutHeartRate = binding.textViewWorkoutHeartRate,
-            textViewAvgSpeed = binding.textViewAvgSpeed,
-            textViewCurrentPace = binding.textViewCurrentPace,
-            textViewCaloriesBurned = binding.textViewCaloriesBurned,
-            spinnerWorkoutType = binding.spinnerWorkoutType,
-            buttonStart = binding.buttonStart,
-            buttonPause = binding.buttonPause,
-            buttonStop = binding.buttonStop,
-        ), viewModel)
+        metricsDisplayManager = MetricsDisplayManager(
+            MetricsDisplayManager.Views(
+                textViewWorkoutTime = binding.textViewWorkoutTime,
+                textViewWorkoutDistance = binding.textViewWorkoutDistance,
+                textViewWorkoutTimeExpanded = binding.textViewWorkoutTimeExpanded,
+                textViewWorkoutDistanceExpanded = binding.textViewWorkoutDistanceExpanded,
+                textViewWorkoutPace = binding.textViewWorkoutPace,
+                textViewWorkoutHeartRate = binding.textViewWorkoutHeartRate,
+                textViewAvgSpeed = binding.textViewAvgSpeed,
+                textViewCurrentPace = binding.textViewCurrentPace,
+                textViewCaloriesBurned = binding.textViewCaloriesBurned,
+                spinnerWorkoutType = binding.spinnerWorkoutType,
+                buttonStart = binding.buttonStart,
+                buttonPause = binding.buttonPause,
+                buttonStop = binding.buttonStop,
+            ),
+            viewModel
+        ) {
+            if (!it && intervalEngine == null) {
+                binding.layoutIntervalPanel.visibility = View.GONE
+            } else if (it) {
+                updateIntervalPreview()
+            }
+        }
     }
 
     // -- Setup methods --
@@ -262,18 +298,205 @@ class WorkoutTrackingFragment : Fragment() {
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, callback)
     }
 
-    private fun setupWorkoutTypeSpinner() {
+    private fun setupWorkoutModeSpinner() {
+        binding.spinnerWorkoutType.onItemSelectedListener =
+            object : android.widget.AdapterView.OnItemSelectedListener {
+                override fun onItemSelected(
+                    parent: android.widget.AdapterView<*>?,
+                    view: View?,
+                    position: Int,
+                    id: Long
+                ) {
+                    if (suppressModeSelectionCallback) return
+                    val mode = modeOptions.getOrNull(position) ?: return
+                    applySelectedMode(mode)
+                }
 
-        val workoutTypes = WorkoutType.entries
-        val typeNames = workoutTypes.map { it.displayName(requireContext()) }
-        val adapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_spinner_item, typeNames)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.spinnerWorkoutType.adapter = adapter
-        binding.spinnerWorkoutType.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
-                selectedWorkoutType = workoutTypes[position]
+                override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
             }
-            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+    }
+
+    private fun loadTrackingModes() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            todaysScheduled = planRepository.getTodaysScheduledWorkout()
+            val templates = planRepository.getAllTemplatesWithSegments()
+            rebuildModeOptions(templates)
+            maybeStartIntervalEngineForActiveSession()
+        }
+    }
+
+    private fun hasFollowablePlan(): Boolean {
+        val today = todaysScheduled ?: return false
+        return today.scheduled.status == ScheduledWorkoutStatus.PLANNED &&
+            today.template != null &&
+            today.segments.isNotEmpty()
+    }
+
+    private fun rebuildModeOptions(templates: List<WorkoutTemplateWithSegments>) {
+        val options = mutableListOf<TrackingWorkoutMode>(TrackingWorkoutMode.EasyRun)
+        if (hasFollowablePlan()) {
+            options.add(TrackingWorkoutMode.PlanToday(todaysScheduled!!))
+        }
+        templates.forEach { options.add(TrackingWorkoutMode.Template(it)) }
+        modeOptions = options
+
+        val labels = options.map { mode ->
+            when (mode) {
+                TrackingWorkoutMode.EasyRun ->
+                    getString(R.string.workout_type_easy_run)
+                is TrackingWorkoutMode.PlanToday ->
+                    getString(
+                        R.string.tracking_mode_plan,
+                        mode.scheduled.template?.name.orEmpty()
+                    )
+                is TrackingWorkoutMode.Template ->
+                    mode.data.template.name
+            }
+        }
+        val adapter = android.widget.ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_item,
+            labels
+        )
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+        val preferred = when {
+            selectedMode is TrackingWorkoutMode.Template -> {
+                val id = (selectedMode as TrackingWorkoutMode.Template).data.template.id
+                options.indexOfFirst {
+                    it is TrackingWorkoutMode.Template && it.data.template.id == id
+                }.takeIf { it >= 0 }
+                    ?: if (hasFollowablePlan()) {
+                        options.indexOfFirst { it is TrackingWorkoutMode.PlanToday }
+                    } else {
+                        0
+                    }
+            }
+            hasFollowablePlan() ->
+                options.indexOfFirst { it is TrackingWorkoutMode.PlanToday }
+            else -> 0
+        }.coerceAtLeast(0)
+
+        suppressModeSelectionCallback = true
+        binding.spinnerWorkoutType.adapter = adapter
+        binding.spinnerWorkoutType.setSelection(preferred, false)
+        suppressModeSelectionCallback = false
+        applySelectedMode(options[preferred.coerceAtMost(options.lastIndex)])
+    }
+
+    private fun applySelectedMode(mode: TrackingWorkoutMode) {
+        selectedMode = mode
+        selectedWorkoutType = mode.workoutType()
+        updateIntervalPreview()
+    }
+
+    private fun updateIntervalPreview() {
+        val session = viewModel.workoutSession.value
+        if (session.isTracking || session.isPaused) return
+        val segments = selectedMode.segments()
+        if (selectedMode.hasIntervals()) {
+            binding.layoutIntervalPanel.visibility = View.VISIBLE
+            binding.progressIntervalSegments.setSegments(segments)
+            binding.progressIntervalSegments.setProgress(0, 0f)
+            val first = segments.firstOrNull()
+            val title = selectedMode.displayTitle()
+            binding.textViewIntervalTitle.text = if (first != null && title.isNotEmpty()) {
+                "$title · ${first.title}"
+            } else {
+                first?.title ?: title
+            }
+            binding.textViewIntervalProgressLabel.text = if (first != null) {
+                getString(
+                    R.string.tracking_interval_status,
+                    1,
+                    segments.size,
+                    first.kind.displayName(requireContext()),
+                    0
+                )
+            } else {
+                getString(R.string.tracking_interval_progress, 1, segments.size)
+            }
+        } else {
+            binding.layoutIntervalPanel.visibility = View.GONE
+        }
+    }
+
+    private fun maybeStartIntervalEngineForActiveSession() {
+        val session = viewModel.workoutSession.value
+        if (!(session.isTracking || session.isPaused)) return
+        if (intervalEngine != null) return
+        if (!selectedMode.hasIntervals()) return
+        startIntervalEngine()
+        updateIntervals(session, announce = false)
+    }
+
+    private fun startIntervalEngine() {
+        val segments = selectedMode.segments()
+        if (segments.isEmpty()) {
+            intervalEngine = null
+            activeScheduledId = null
+            return
+        }
+        intervalEngine = IntervalEngine(segments)
+        activeScheduledId = selectedMode.scheduledIdOrNull()
+        binding.layoutIntervalPanel.visibility = View.VISIBLE
+        binding.progressIntervalSegments.setSegments(segments)
+        binding.progressIntervalSegments.setProgress(0, 0f)
+    }
+
+    private fun clearIntervalEngine() {
+        intervalEngine = null
+        activeScheduledId = null
+        if (!selectedMode.hasIntervals()) {
+            binding.layoutIntervalPanel.visibility = View.GONE
+        }
+    }
+
+    private fun updateIntervals(session: WorkoutSession, announce: Boolean = true) {
+        val engine = intervalEngine ?: return
+        val distanceMeters = session.distance * 1000f
+        val state = engine.update(session.currentTime, distanceMeters)
+        val segment = state.segment
+        binding.layoutIntervalPanel.visibility = View.VISIBLE
+        binding.progressIntervalSegments.setProgress(state.segmentIndex, state.segmentProgress)
+
+        val percent = (state.segmentProgress * 100f).toInt().coerceIn(0, 100)
+        binding.textViewIntervalTitle.text = segment?.title
+            ?: selectedMode.displayTitle()
+        binding.textViewIntervalProgressLabel.text = if (segment != null) {
+            getString(
+                R.string.tracking_interval_status,
+                (state.segmentIndex + 1).coerceAtMost(engine.segmentCount()),
+                engine.segmentCount(),
+                segment.kind.displayName(requireContext()),
+                percent
+            )
+        } else {
+            getString(
+                R.string.tracking_interval_progress,
+                (state.segmentIndex + 1).coerceAtMost(engine.segmentCount()),
+                engine.segmentCount()
+            )
+        }
+
+        if (announce && isVoiceEnabled && engine.consumeSegmentAnnouncement(state) && segment != null) {
+            voiceFeedbackManager?.announceIntervalStart(
+                segment.title,
+                formatSegmentGoalDetail(segment)
+            )
+        }
+    }
+
+    private fun formatSegmentGoalDetail(segment: WorkoutTemplateSegment): String? {
+        return when (segment.goalType) {
+            SegmentGoalType.DURATION -> segment.durationMs?.let { FormatUtils.formatTime(it) }
+            SegmentGoalType.DISTANCE -> segment.distanceMeters?.let { meters ->
+                if (meters >= 1000f) {
+                    String.format("%.2f km", meters / 1000f)
+                } else {
+                    String.format("%.0f m", meters)
+                }
+            }
         }
     }
 
@@ -478,6 +701,7 @@ class WorkoutTrackingFragment : Fragment() {
         mapManager?.updateTrackFromDataPoints(session.trackDataPoints, session.currentLocation)
         mapManager?.updateMapOrientation(session)
         updateGpsBanner(session)
+        updateIntervals(session)
 
         val forceNumericRefresh = session.gpsStatus == GpsStatus.LOST
             || session.gpsStatus == GpsStatus.DENIED
@@ -552,6 +776,11 @@ class WorkoutTrackingFragment : Fragment() {
         isStoppingWorkout = false
         lastAnnouncedGpsStatus = null
         voiceFeedbackManager?.resetMilestones()
+        if (selectedMode.hasIntervals()) {
+            startIntervalEngine()
+        } else {
+            clearIntervalEngine()
+        }
         requestBatteryOptimizationExemption()
         viewModel.initializeService()
         viewLifecycleOwner.lifecycleScope.launch {
@@ -626,6 +855,10 @@ class WorkoutTrackingFragment : Fragment() {
                     manualDistanceKm = manualDistanceKm
                 )
                 if (workoutId != null) {
+                    activeScheduledId?.let { scheduledId ->
+                        planRepository.markScheduledDone(scheduledId, workoutId)
+                        todaysScheduled = planRepository.getTodaysScheduledWorkout()
+                    }
                     val distanceForToast = manualDistanceKm ?: session.distance
                     Toast.makeText(
                         context,
@@ -650,11 +883,13 @@ class WorkoutTrackingFragment : Fragment() {
             } catch (e: Exception) {
                 com.runner.academy.util.ErrorHandler.handleSaveError(requireContext(), e)
             } finally {
+                clearIntervalEngine()
                 binding.textViewGpsAccuracy.visibility = View.GONE
                 binding.buttonStop.isEnabled = true
                 viewModel.resetWorkout()
                 isStoppingWorkout = false
                 lastAnnouncedGpsStatus = null
+                loadTrackingModes()
             }
         }
     }

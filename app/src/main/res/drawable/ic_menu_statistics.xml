@@ -1,74 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bar chart -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24"
-    app:tint="?attr/colorOnSurface">
-    
-    <!-- График с диаграммой -->
-    <group>
-        <!-- Оси графика -->
-        <path
-            android:fillColor="@android:color/black"
-            android:pathData="M4,20 L20,20" 
-            android:strokeWidth="1"
-            android:strokeColor="@android:color/black"
-            android:strokeLineCap="round" />
-        
-        <path
-            android:fillColor="@android:color/black"
-            android:pathData="M4,20 L4,4" 
-            android:strokeWidth="1"
-            android:strokeColor="@android:color/black"
-            android:strokeLineCap="round" />
-        
-        <!-- Столбцы диаграммы -->
-        <rect
-            android:fillColor="@android:color/black"
-            android:x="6dp"
-            android:y="16dp"
-            android:width="2dp"
-            android:height="4dp" />
-        
-        <rect
-            android:fillColor="@android:color/black"
-            android:x="10dp"
-            android:y="12dp"
-            android:width="2dp"
-            android:height="8dp" />
-        
-        <rect
-            android:fillColor="@android:color/black"
-            android:x="14dp"
-            android:y="8dp"
-            android:width="2dp"
-            android:height="12dp" />
-        
-        <rect
-            android:fillColor="@android:color/black"
-            android:x="18dp"
-            android:y="6dp"
-            android:width="2dp"
-            android:height="14dp" />
-        
-        <!-- Маленькая фигура бегуна -->
-        <group
-            android:translateX="22"
-            android:translateY="2"
-            android:scaleX="0.4"
-            android:scaleY="0.4">
-            <circle
-                android:fillColor="@android:color/black"
-                android:centerX="0"
-                android:centerY="0"
-                android:radius="1.5dp" />
-            <path
-                android:fillColor="@android:color/black"
-                android:pathData="M0,1.5 L0,6" 
-                android:strokeWidth="0.8"
-                android:strokeColor="@android:color/black"
-                android:strokeLineCap="round" />
-        </group>
-    </group>
+    app:tint="?attr/colorControlNormal">
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M5,9.2h3V19H5V9.2zM10.6,5h2.8v14h-2.8V5zM16.2,13H19v6h-2.8V13z" />
 </vector>
