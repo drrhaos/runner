@@ -1,40 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Blue palette for dark theme (same hue, adapted for dark backgrounds) -->
-    <color name="blue_50">#FF1A237E</color>
-    <color name="blue_100">#FF283593</color>
-    <color name="blue_200">#FF303F9F</color>
-    <color name="blue_300">#FF3949AB</color>
-    <color name="blue_400">#FF5C6BC0</color>
-    <color name="blue_500">#FF42A5F5</color>
-    <color name="blue_600">#FF64B5F6</color>
-    <color name="blue_700">#FF90CAF9</color>
-    <color name="blue_800">#FFBBDEFB</color>
-    <color name="blue_900">#FFE3F2FD</color>
+    <!-- iOS system palette (dark) -->
+    <color name="ios_blue">#FF0A84FF</color>
+    <color name="ios_indigo">#FF5E5CE6</color>
+    <color name="ios_purple">#FFBF5AF2</color>
+    <color name="ios_pink">#FFFF375F</color>
+    <color name="ios_red">#FFFF453A</color>
+    <color name="ios_orange">#FFFF9F0A</color>
+    <color name="ios_yellow">#FFFFD60A</color>
+    <color name="ios_green">#FF30D158</color>
+    <color name="ios_teal">#FF64D2FF</color>
+    <color name="ios_gray">#FF8E8E93</color>
+    <color name="ios_gray2">#FF636366</color>
+    <color name="ios_gray3">#FF48484A</color>
+    <color name="ios_gray4">#FF3A3A3C</color>
+    <color name="ios_gray5">#FF2C2C2E</color>
+    <color name="ios_gray6">#FF1C1C1E</color>
+    <color name="ios_label">#FFFFFFFF</color>
+    <color name="ios_secondary_label">#99EBEBF5</color>
+    <color name="ios_tertiary_label">#4DEBEBF5</color>
+    <color name="ios_separator">#99545458</color>
+    <color name="ios_opaque_separator">#FF38383A</color>
+    <color name="ios_grouped_background">#FF000000</color>
+    <color name="ios_secondary_grouped_background">#FF1C1C1E</color>
+    <color name="ios_fill">#33787880</color>
+    <color name="ios_blue_fill">#330A84FF</color>
+    <color name="ios_tertiary_container">#FF4D3000</color>
+    <color name="ios_on_tertiary_container">#FFFFE8CC</color>
+    <color name="ios_error_container">#FF5C0006</color>
+    <color name="ios_on_error_container">#FFFFDAD6</color>
 
-    <!-- Additional colors for GPS status (adjusted for dark theme) -->
-    <color name="green_500">#FF81C784</color>
-    <color name="yellow_500">#FFFFF176</color>
-    <color name="orange_500">#FFFFB74D</color>
-    <color name="red_500">#FFE57373</color>
+    <!-- Blue palette for dark theme -->
+    <color name="blue_50">#FF0A1F33</color>
+    <color name="blue_100">#FF0F2E4D</color>
+    <color name="blue_200">#FF153D66</color>
+    <color name="blue_300">#FF1A4C80</color>
+    <color name="blue_400">#FF3D8FD9</color>
+    <color name="blue_500">#FF0A84FF</color>
+    <color name="blue_600">#FF409CFF</color>
+    <color name="blue_700">#FF64B0FF</color>
+    <color name="blue_800">#FF8FC4FF</color>
+    <color name="blue_900">#FFB8D9FF</color>
 
-    <!-- GPS signal indicators for dark theme -->
-    <color name="gps_signal_level_1">#FFEF5350</color>
-    <color name="gps_signal_level_2">#FFFF9800</color>
-    <color name="gps_signal_level_3">#FFFFD54F</color>
-    <color name="gps_signal_level_4">#FF66BB6A</color>
-    <color name="gps_signal_inactive">#40888888</color>
+    <!-- GPS / status (dark) -->
+    <color name="green_100">#FF0D2818</color>
+    <color name="green_500">#FF30D158</color>
+    <color name="yellow_500">#FFFFD60A</color>
+    <color name="orange_500">#FFFF9F0A</color>
+    <color name="red_500">#FFFF453A</color>
+    <color name="gps_signal_level_1">#99EF9A9A</color>
+    <color name="gps_signal_level_2">#99FFCC80</color>
+    <color name="gps_signal_level_3">#99FFFFFF</color>
+    <color name="gps_signal_level_4">#B3FFFFFF</color>
+    <color name="gps_signal_active">#B3FFFFFF</color>
+    <color name="gps_signal_inactive">#33FFFFFF</color>
+    <color name="map_control_surface">#99000000</color>
+    <color name="map_control_icon">#CCFFFFFF</color>
+    <color name="map_navigation_circle_fill">#33FF9F0A</color>
+    <color name="map_navigation_circle_stroke">#80FF9F0A</color>
 
-    <!-- Map navigation colors for dark theme -->
-    <color name="map_navigation_circle_fill">#33FFC107</color>
-    <color name="map_navigation_circle_stroke">#80FFC107</color>
-
-    <!-- AppBar colors -->
-    <color name="app_bar_background">#80000000</color>
+    <!-- AppBar -->
+    <color name="app_bar_background">#E01C1C1E</color>
 
     <!-- Route picker mini-preview -->
-    <color name="route_preview_background">#FF243447</color>
-    <color name="route_preview_track">#FFEF5350</color>
-    <color name="route_preview_start">#FF81C784</color>
-    <color name="route_preview_end">#FF64B5F6</color>
+    <color name="route_preview_background">#FF1C1C1E</color>
+    <color name="route_preview_track">#FFFF453A</color>
+    <color name="route_preview_start">#FF30D158</color>
+    <color name="route_preview_end">#FF0A84FF</color>
 </resources>

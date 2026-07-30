@@ -188,6 +188,9 @@ class WorkoutTrackingService : Service() {
                 }
 
                 is GpsLocationProcessor.ProcessResult.Rejected -> {
+                    if (result.refreshGapClock) {
+                        lastLocationTime = System.currentTimeMillis()
+                    }
                     sessionManager.updateLocationOnly(
                         currentLocation = location,
                         rawTrackDataPoints = result.rawTrackDataPoints

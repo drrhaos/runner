@@ -74,21 +74,24 @@ class GpsLocationProcessor {
             )
             decimateRawPointsIfNeeded(newRawTrackDataPoints)
             return ProcessResult.Rejected(
-                newTrackPoints,
-                newTrackDataPoints,
-                newRawTrackDataPoints
+                trackPoints = newTrackPoints,
+                trackDataPoints = newTrackDataPoints,
+                rawTrackDataPoints = newRawTrackDataPoints,
+                refreshGapClock = false
             )
         }
 
-        // Minimum distance check — skipped on gap resume (new anchor)
+        // Minimum distance check — skipped on gap resume (new anchor).
+        // Close points refresh the gap clock so slow jogging doesn't look like a GPS outage.
         if (!gapResume && previousLocation != null) {
             val distanceToLastMeters = filteredLocation.distanceTo(previousLocation)
             if (distanceToLastMeters < MIN_POINT_DISTANCE_METERS) {
                 decimateRawPointsIfNeeded(newRawTrackDataPoints)
                 return ProcessResult.Rejected(
-                    newTrackPoints,
-                    newTrackDataPoints,
-                    newRawTrackDataPoints
+                    trackPoints = newTrackPoints,
+                    trackDataPoints = newTrackDataPoints,
+                    rawTrackDataPoints = newRawTrackDataPoints,
+                    refreshGapClock = true
                 )
             }
         }
@@ -216,7 +219,9 @@ class GpsLocationProcessor {
         data class Rejected(
             override val trackPoints: MutableList<GeoPoint>,
             override val trackDataPoints: MutableList<TrackPoint>,
-            override val rawTrackDataPoints: MutableList<TrackPoint>
+            override val rawTrackDataPoints: MutableList<TrackPoint>,
+            /** True when the fix was valid but too close — keep gap timer alive. */
+            val refreshGapClock: Boolean = false
         ) : ProcessResult
     }
 }

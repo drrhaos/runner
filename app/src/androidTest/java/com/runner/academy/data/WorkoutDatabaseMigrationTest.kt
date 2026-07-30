@@ -92,4 +92,90 @@ class WorkoutDatabaseMigrationTest {
             close()
         }
     }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate3To4_addsTrainingPlanTables() {
+        helper.createDatabase(testDb, 3).apply {
+            execSQL(
+                """
+                INSERT INTO workouts (date, distance, duration, avgPace, calories, notes, type, trackData, isFavorite)
+                VALUES (1700000000000, 5.0, 1800000, 6.0, 350, NULL, 'EASY_RUN', NULL, 0)
+                """.trimIndent()
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            testDb,
+            4,
+            true,
+            WorkoutDatabase.MIGRATION_3_4
+        ).apply {
+            val expectedTables = listOf(
+                "workout_templates",
+                "workout_template_segments",
+                "training_plans",
+                "training_plan_days",
+                "plan_schedules",
+                "scheduled_workouts"
+            )
+            expectedTables.forEach { table ->
+                query(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                    arrayOf(table)
+                ).use { cursor ->
+                    assertTrue("Missing table $table", cursor.moveToFirst())
+                }
+            }
+            close()
+        }
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate4To5_addsIconKeyColumns() {
+        helper.createDatabase(testDb, 4).apply {
+            execSQL(
+                """
+                INSERT INTO workout_templates (name, workoutType, notes, createdAt, updatedAt)
+                VALUES ('Intervals', 'INTERVAL_TRAINING', NULL, 1700000000000, 1700000000000)
+                """.trimIndent()
+            )
+            execSQL(
+                """
+                INSERT INTO training_plans (name, durationDays, notes, createdAt, updatedAt)
+                VALUES ('Base plan', 56, NULL, 1700000000000, 1700000000000)
+                """.trimIndent()
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            testDb,
+            5,
+            true,
+            WorkoutDatabase.MIGRATION_4_5
+        ).apply {
+            query("PRAGMA table_info(workout_templates)").use { cursor ->
+                var hasIcon = false
+                while (cursor.moveToNext()) {
+                    if (cursor.getString(cursor.getColumnIndexOrThrow("name")) == "iconKey") {
+                        hasIcon = true
+                        break
+                    }
+                }
+                assertTrue(hasIcon)
+            }
+            query("SELECT iconKey FROM workout_templates").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertTrue(cursor.getString(0) == "INTERVAL")
+            }
+            query("SELECT iconKey FROM training_plans").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertTrue(cursor.getString(0) == "PLAN")
+            }
+            close()
+        }
+    }
 }
