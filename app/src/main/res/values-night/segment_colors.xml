@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="segment_warmup">#FF64D2FF</color>
+    <color name="segment_work">#FFFF453A</color>
+    <color name="segment_recovery">#FF30D158</color>
+    <color name="segment_cooldown">#FFBF5AF2</color>
+    <color name="segment_custom">#FFFF9F0A</color>
+    <color name="segment_track_dim">#33FFFFFF</color>
+</resources>

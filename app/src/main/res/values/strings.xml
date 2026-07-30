@@ -492,7 +492,8 @@
     <string name="plan_deactivate">Deactivate plan</string>
     <string name="plan_deactivate_confirm">Remove the plan from the calendar?</string>
     <string name="tracking_interval_progress">Interval %1$d / %2$d</string>
-    <string name="tracking_follow_plan">Follow plan</string>
+    <string name="tracking_interval_status">%1$d/%2$d · %3$s · %4$d%%</string>
+    <string name="tracking_mode_plan">Plan: %1$s</string>
     <string name="tracking_free_run">Free run</string>
     <string name="voice_interval_start">Interval: %1$s</string>
     <string name="voice_interval_start_with_detail">Interval: %1$s. %2$s</string>

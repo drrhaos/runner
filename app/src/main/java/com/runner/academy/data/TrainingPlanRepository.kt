@@ -32,6 +32,16 @@ class TrainingPlanRepository(
             WorkoutTemplateWithSegments(template, templateDao.getSegmentsForTemplate(templateId))
         }
 
+    suspend fun getAllTemplatesWithSegments(): List<WorkoutTemplateWithSegments> =
+        withContext(Dispatchers.IO) {
+            templateDao.getAllTemplates().first().map { template ->
+                WorkoutTemplateWithSegments(
+                    template,
+                    templateDao.getSegmentsForTemplate(template.id)
+                )
+            }
+        }
+
     suspend fun saveTemplate(
         template: WorkoutTemplate,
         segments: List<WorkoutTemplateSegment>

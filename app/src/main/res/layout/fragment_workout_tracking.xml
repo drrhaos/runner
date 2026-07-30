@@ -143,32 +143,25 @@
 
         </LinearLayout>
 
-        <!-- Выпадающее меню выбора типа тренировки (видно когда не стартовали) -->
+        <!-- Выбор режима тренировки (видно когда не стартовали) -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:layout_marginTop="8dp"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingHorizontal="12dp">
 
             <Spinner
                 android:id="@+id/spinner_workout_type"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
                 android:spinnerMode="dropdown"
                 android:backgroundTint="?attr/colorPrimary"
                 android:paddingHorizontal="8dp" />
-
-            <com.google.android.material.switchmaterial.SwitchMaterial
-                android:id="@+id/switch_follow_plan"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="@string/tracking_follow_plan"
-                android:visibility="gone" />
         </LinearLayout>
 
-        <!-- Шкала интервалов активного плана -->
+        <!-- Шкала интервалов выбранной тренировки -->
         <LinearLayout
             android:id="@+id/layout_interval_panel"
             android:layout_width="match_parent"
@@ -193,12 +186,11 @@
                 android:textAppearance="?attr/textAppearanceBodySmall"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
-            <com.google.android.material.progressindicator.LinearProgressIndicator
-                android:id="@+id/progress_interval"
+            <com.runner.academy.ui.tracking.SegmentProgressView
+                android:id="@+id/progress_interval_segments"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
-                app:trackThickness="8dp" />
+                android:layout_height="12dp"
+                android:layout_marginTop="8dp" />
         </LinearLayout>
 
         <!-- Текст обратного отсчета до старта -->
