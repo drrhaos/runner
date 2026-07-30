@@ -13,6 +13,14 @@
             android:icon="@drawable/ic_menu_workouts"
             android:title="@string/menu_workouts" />
         <item
+            android:id="@+id/nav_templates"
+            android:icon="@drawable/ic_menu_workouts"
+            android:title="@string/menu_templates" />
+        <item
+            android:id="@+id/nav_plans"
+            android:icon="@drawable/ic_menu_plans"
+            android:title="@string/menu_plans" />
+        <item
             android:id="@+id/nav_statistics"
             android:icon="@drawable/ic_menu_statistics"
             android:title="@string/menu_statistics" />

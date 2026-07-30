@@ -99,6 +99,15 @@ class VoiceFeedbackManager(
         tts?.speak(notification, TextToSpeech.QUEUE_ADD, null, "distance_${completedKm}km")
     }
 
+    fun announceIntervalStart(title: String, detail: String? = null) {
+        val text = if (detail.isNullOrBlank()) {
+            context.getString(R.string.voice_interval_start, title)
+        } else {
+            context.getString(R.string.voice_interval_start_with_detail, title, detail)
+        }
+        tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "interval_${System.currentTimeMillis()}")
+    }
+
     fun destroy() {
         val _tts = tts
         if (_tts != null) {
