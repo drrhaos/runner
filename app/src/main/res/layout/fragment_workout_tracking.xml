@@ -101,7 +101,7 @@
                 android:src="@drawable/ic_my_location_subtle"
                 android:scaleType="centerInside"
                 android:padding="9dp"
-                android:tint="@color/map_control_icon"
+                app:tint="@color/map_control_icon"
                 android:contentDescription="@string/btn_my_location_description" />
         </FrameLayout>
 

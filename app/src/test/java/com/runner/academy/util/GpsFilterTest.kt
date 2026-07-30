@@ -77,37 +77,37 @@ class GpsFilterTest {
     @Test
     fun isvalidgpslocation_should_reject_location_with_poor_accuracy() {
         // Given
-        val location = createLocation(55.7558, 37.6173, accuracy = 150f, speed = 3f)
+        val location = createLocation(55.7558, 37.6173, accuracy = 200f, speed = 3f)
 
         // When
         val result = GpsFilter.isValidGpsLocation(location)
 
         // Then
-        assertFalse("Location with accuracy > 100m should be rejected", result)
+        assertFalse("Location with accuracy > 150m should be rejected", result)
     }
 
     @Test
-    fun isvalidgpslocation_should_reject_location_with_too_high_speed() {
-        // Given - скорость 15 м/с = 54 км/ч, что больше MAX_REASONABLE_SPEED (14 м/с)
+    fun isvalidgpslocation_should_reject_location_with_absurd_reported_speed() {
+        // Given — мгновенная скорость с GPS часто врёт; режем только абсурд
+        val location = createLocation(55.7558, 37.6173, accuracy = 10f, speed = 55f)
+
+        // When
+        val result = GpsFilter.isValidGpsLocation(location)
+
+        // Then
+        assertFalse("Location with absurd reported speed should be rejected", result)
+    }
+
+    @Test
+    fun isvalidgpslocation_should_accept_location_with_elevated_reported_speed() {
+        // Given — 15 м/с (~54 км/ч) раньше отбрасывалось, но для спусков/шума GPS это нормально
         val location = createLocation(55.7558, 37.6173, accuracy = 10f, speed = 15f)
 
         // When
         val result = GpsFilter.isValidGpsLocation(location)
 
         // Then
-        assertFalse("Location with speed > 14 m/s should be rejected", result)
-    }
-
-    @Test
-    fun isvalidgpslocation_should_accept_location_with_acceptable_speed() {
-        // Given - скорость 10 м/с = 36 км/ч, что приемлемо
-        val location = createLocation(55.7558, 37.6173, accuracy = 10f, speed = 10f)
-
-        // When
-        val result = GpsFilter.isValidGpsLocation(location)
-
-        // Then
-        assertTrue("Location with acceptable speed should be accepted", result)
+        assertTrue("Elevated reported speed should be accepted", result)
     }
 
     @Test
@@ -162,7 +162,7 @@ class GpsFilterTest {
     @Test
     fun filtergpsoutlier_should_reject_first_location_if_invalid() {
         // Given
-        val location = createLocation(55.7558, 37.6173, accuracy = 150f, speed = 3f)
+        val location = createLocation(55.7558, 37.6173, accuracy = 200f, speed = 3f)
 
         // When
         val result = GpsFilter.filterGpsOutlier(location, null)
@@ -188,10 +188,9 @@ class GpsFilterTest {
 
     @Test
     fun filtergpsoutlier_should_reject_outlier_too_far_from_previous() {
-        // Given - расстояние > 500м (MAX_DISTANCE_BETWEEN_POINTS)
+        // Given — телепорт ~900м за 2с (выше MAX_DISTANCE 800м)
         val previousLocation = createLocation(55.7558, 37.6173, accuracy = 10f, speed = 3f)
-        // Новое местоположение на расстоянии ~700м от предыдущего
-        val newLocation = createLocation(55.7640, 37.6200, accuracy = 10f, speed = 3f,
+        val newLocation = createLocation(55.7640, 37.6250, accuracy = 10f, speed = 3f,
             time = previousLocation.time + 2000)
 
         // When
@@ -262,9 +261,9 @@ class GpsFilterTest {
 
     @Test
     fun createvalidgeopointwithfiltering_should_return_null_for_outlier() {
-        // Given - выброс (слишком далеко)
+        // Given — выброс (слишком далеко за короткое время)
         val previousLocation = createLocation(55.7558, 37.6173, accuracy = 10f, speed = 3f)
-        val newLocation = createLocation(55.7640, 37.6200, accuracy = 10f, speed = 3f,
+        val newLocation = createLocation(55.7640, 37.6250, accuracy = 10f, speed = 3f,
             time = previousLocation.time + 2000)
 
         // When
@@ -290,42 +289,50 @@ class GpsFilterTest {
 
     @Test
     fun filtergpsoutlier_should_handle_location_at_boundary_distances() {
-        // Given - расстояние близко к MAX_DISTANCE_BETWEEN_POINTS (500м)
+        // Given — ~450 м за 35 с при разумной скорости
         val previousLocation = createLocation(55.7558, 37.6173, accuracy = 10f, speed = 3f)
-        // Примерно 450 метров от предыдущей точки; интервал ~35 с, чтобы скорость была < 14 м/с
         val newLocation = createLocation(55.7598, 37.6173, accuracy = 10f, speed = 3f,
             time = previousLocation.time + 35_000)
 
         // When
         val result = GpsFilter.filterGpsOutlier(newLocation, previousLocation)
 
-        // Then - должно быть принято: расстояние < 500м и скорость в допустимых пределах
+        // Then
         assertNotNull("Location at boundary distance should be accepted", result)
     }
 
     @Test
     fun isvalidgpslocation_should_accept_location_with_boundary_accuracy() {
-        // Given - точность ровно 100м (граница)
-        val location = createLocation(55.7558, 37.6173, accuracy = 100f, speed = 3f)
+        // Given — точность ровно 150м (граница)
+        val location = createLocation(55.7558, 37.6173, accuracy = 150f, speed = 3f)
 
         // When
         val result = GpsFilter.isValidGpsLocation(location)
 
         // Then
-        assertTrue("Location with boundary accuracy (100m) should be accepted", result)
+        assertTrue("Location with boundary accuracy (150m) should be accepted", result)
+    }
+
+    @Test
+    fun filtergpsoutlier_should_accept_when_previous_speed_is_zero() {
+        // Given — раньше expectedMaxDistance ≈ 0 при speed=0 и отбрасывал нормальное движение
+        val previousLocation = createLocation(55.7558, 37.6173, accuracy = 25f, speed = 0f, time = 1_000_000L)
+        val newLocation = createLocation(55.7560, 37.6173, accuracy = 25f, speed = 2f,
+            time = previousLocation.time + 2_000L)
+
+        val result = GpsFilter.filterGpsOutlier(newLocation, previousLocation)
+
+        assertNotNull("Movement after zero-speed fix should be accepted", result)
     }
 
     @Test
     fun filtergpsoutlier_should_accept_far_point_after_gap_threshold() {
-        // Given — ~700м за 20 с (раньше отвергалось как выброс)
         val previousLocation = createLocation(55.7558, 37.6173, accuracy = 10f, speed = 3f, time = 1_000_000L)
         val newLocation = createLocation(55.7640, 37.6200, accuracy = 10f, speed = 3f,
             time = previousLocation.time + GpsFilter.GAP_RESUME_THRESHOLD_MS)
 
-        // When
         val result = GpsFilter.filterGpsOutlier(newLocation, previousLocation)
 
-        // Then
         assertNotNull("Point after GPS gap should be accepted as resume anchor", result)
         assertTrue(GpsFilter.isGapResume(previousLocation, newLocation))
     }
@@ -349,7 +356,7 @@ class GpsFilterTest {
     @Test
     fun filtergpsoutlier_should_still_reject_invalid_point_on_gap_resume() {
         val previousLocation = createLocation(55.7558, 37.6173, accuracy = 10f, speed = 3f, time = 1_000_000L)
-        val newLocation = createLocation(55.7640, 37.6200, accuracy = 150f, speed = 3f,
+        val newLocation = createLocation(55.7640, 37.6200, accuracy = 200f, speed = 3f,
             time = previousLocation.time + GpsFilter.GAP_RESUME_THRESHOLD_MS)
 
         val result = GpsFilter.filterGpsOutlier(newLocation, previousLocation, forceGapResume = true)
