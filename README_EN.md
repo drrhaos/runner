@@ -2,7 +2,9 @@
 
 🇬🇧 English | [🇷🇺 Русский](README.md)
 
-Android application for tracking running workouts with GPS tracking, maps, statistics, and data export.
+Android application for tracking running workouts with GPS tracking, maps, statistics, data export and import.
+
+Package ID: `com.runner.academy`.
 
 ## 📸 Screenshots
 
@@ -20,7 +22,7 @@ Runner is a full-featured running app that allows you to:
 - View your route on an interactive map
 - Analyze workout statistics
 - Save history of all workouts
-- Export data to GPX and CSV formats
+- Export and import data (JSON, GPX, CSV)
 
 ## ✨ Key Features
 
@@ -50,10 +52,12 @@ Runner is a full-featured running app that allows you to:
 - Automatic map orientation based on movement direction
 - Smooth animation when centering
 
-### 📈 Statistics
+### 📈 Statistics and history
 - View history of all workouts
-- Detailed information about each workout
+- Detailed information about each workout (map, charts)
 - Statistics by workout type
+- **Favorite routes** — All / Favorites filter on the list
+- **Edit** a workout and pick a route from saved workouts
 
 ### ⚙️ Settings
 - User weight, height, age
@@ -65,10 +69,18 @@ Runner is a full-featured running app that allows you to:
 - Voice feedback
 - **Start countdown** (3, 5, 10, 15, or 30 seconds)
 
-### 💾 Data Export
-- Export workouts to **GPX format** (compatible with Strava, Garmin, and others)
-- Export to **CSV format** for analysis in Excel/Google Sheets
-- Save complete trajectory with timestamps
+### 💾 Export and import
+On **My Workouts**, the **+** FAB opens a speed dial:
+
+**Export**
+- **JSON backup** — full backup of all workouts (including `trackData`), file `runner_workouts_backup_*.json`
+- **GPX (ZIP)** — archive of GPX files for workouts that have a track
+- Single-workout **GPX** from the detail screen
+- Statistics **CSV** export
+
+**Import**
+- **JSON backup** — including older `com.example.runner` / `export-all-workouts-example` builds (no `isFavorite`, no `after_gap` on points)
+- **Folder of GPX files** — recursive import of `.gpx`
 
 ### 🎨 Interface
 - Material Design
@@ -200,7 +212,7 @@ The app manages four workout states:
 4. **STOPPED** - workout stopped
    - All data is saved to database
    - Workout is available in history
-   - Can be exported to GPX/CSV
+   - Can be exported / imported (JSON, GPX, CSV)
 
 ### Background Service
 
@@ -242,6 +254,7 @@ Workout {
     notes: String?
     type: WorkoutType
     trackData: String? (JSON with TrackPoint[])
+    isFavorite: Boolean
 }
 ```
 
@@ -253,17 +266,17 @@ Each track point contains:
 - GPS accuracy
 - Speed
 - Altitude (if available)
+- GPS gap flag (`after_gap`) — optional in older backups
+- Point source (`source`) — defaults to GPS
 
-#### Export
+#### Export and import
 
-- **GPX**: Standard format for fitness apps
-  - Includes metadata (date, workout type, calories)
-  - Complete trajectory with timestamps
+- **JSON backup** (`formatVersion = 1`): full snapshot for migrating between installs / package IDs
+  - Compatible with exports from `com.example.runner` (`feature/export-all-workouts-example`)
+  - Legacy tracks without `after_gap`/`source` are normalized on import
+- **GPX**: standard fitness format (single workout or ZIP of all tracks)
   - Compatible with Strava, Garmin Connect, etc.
-
-- **CSV**: For analysis in spreadsheets
-  - Separate files for each workout
-  - Summary file with statistics
+- **CSV**: statistics / workout list for spreadsheets
 
 ## 🛠️ Technologies
 
@@ -271,7 +284,7 @@ Each track point contains:
 - **Minimum Android version**: 8.0 (API 26)
 - **Target Android version**: 16 (API 36)
 - **Architecture**: MVVM (Model-View-ViewModel)
-- **Database**: Room Database
+- **Database**: Room Database 2.7 + Room Gradle Plugin, codegen via **KSP**
 - **Maps**: OSMDroid (OpenStreetMap)
 - **Location**: Google Play Services Location API
 - **Asynchrony**: Kotlin Coroutines
@@ -281,11 +294,13 @@ Each track point contains:
 ## 📦 Dependencies
 
 Main libraries:
-- `androidx.room:room-runtime:2.6.1` - database
+- `androidx.room:room-*:2.7.0` - database (compiler via KSP)
+- `com.google.devtools.ksp` / Kotlin 2.0.21 - Room annotations
 - `org.osmdroid:osmdroid-android:6.1.18` - maps
 - `com.google.android.gms:play-services-location:21.0.1` - GPS
 - `org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3` - coroutines
 - `com.google.code.gson:gson:2.10.1` - JSON serialization
+- `androidx.documentfile:documentfile` - folder import (SAF)
 
 ## 🚀 Installation
 
@@ -337,10 +352,16 @@ cd runner
    - Stop the workout (hold button for 3 seconds)
 
 ### Viewing Workouts
-1. Open **"My Workouts"** section
-2. Select a workout to view details
-3. View the route on the map
-4. Export the workout to GPX or CSV
+1. Open **"My Workouts"**
+2. Optionally filter **Favorites**
+3. Select a workout for details (map, charts)
+4. From the detail screen: GPX, share, edit, favorite
+5. Via **+** on the list: import / export all workouts (JSON or GPX ZIP)
+
+### Migrating from old `com.example.runner`
+1. In the old build, export a JSON backup (or GPX files)
+2. Install `com.runner.academy`
+3. **My Workouts → + → Import** and pick the JSON file or a GPX folder
 
 ### Settings
 1. Open **"Settings"** section from the side menu
@@ -351,26 +372,29 @@ cd runner
 
 ```
 app/src/main/
-├── java/com/drrhaos/runner/
+├── java/com/runner/academy/
 │   ├── data/                    # Data models and Room DAO
-│   │   ├── Workout.kt           # Workout model
-│   │   ├── TrackPoint.kt        # Track point
+│   │   ├── Workout.kt           # Workout model (+ isFavorite)
+│   │   ├── TrackPoint.kt        # Track point / TrackData
 │   │   ├── WorkoutDao.kt        # DAO for database operations
+│   │   ├── WorkoutRepository.kt
 │   │   └── WorkoutDatabase.kt   # Room database
 │   ├── ui/
 │   │   ├── tracking/            # Tracking screen
-│   │   │   ├── WorkoutTrackingFragment.kt
-│   │   │   └── WorkoutTrackingViewModel.kt
-│   │   ├── workout/             # Workout list
+│   │   ├── workout/             # List / detail / add / edit
 │   │   ├── statistics/          # Statistics
 │   │   └── settings/            # Settings
 │   ├── service/
 │   │   └── WorkoutTrackingService.kt  # Background service
 │   └── util/                    # Utilities
-│       ├── GpxExporter.kt      # GPX export
-│       ├── CsvExporter.kt      # CSV export
-│       ├── GpsFilter.kt        # GPS point filtering
-│       └── FormatUtils.kt      # Data formatting
+│       ├── GpxExporter.kt           # Single-workout GPX export
+│       ├── GpxImporter.kt           # GPX import
+│       ├── WorkoutGpxBulkExporter.kt # ZIP of all GPX
+│       ├── WorkoutBackupFormat.kt   # JSON backup import/export
+│       ├── TrackDataJson.kt         # Safe track parse (legacy)
+│       ├── CsvExporter.kt           # CSV export
+│       ├── GpsFilter.kt             # GPS point filtering
+│       └── FormatUtils.kt           # Data formatting
 ├── res/
 │   ├── layout/                  # XML layouts
 │   ├── drawable/                # Icons and graphic resources
@@ -428,6 +452,14 @@ Quick start:
 
 ## 📝 Changelog
 
+### Version 1.2
+- Import/export all workouts from the list screen (FAB speed dial)
+- JSON backup and GPX ZIP; import JSON and GPX folders
+- JSON compatible with `com.example.runner` / `export-all-workouts-example` backups
+- Room via KSP (replacing kapt)
+- Favorite workouts, edit with route picker
+- GPS gap handling, OSM map updates, `applicationId` `com.runner.academy`
+
 ### Version 1.1
 - Workout type selection from dropdown menu before start
 - Countdown timer before workout start
@@ -448,7 +480,7 @@ Quick start:
 ## 🐛 Known Issues
 
 - Heart rate is shown as a placeholder (`--`) — no BLE/Health Connect integration yet
-- Changing `applicationId` from `com.example.runner` to `com.runner.academy` requires a fresh install for existing users
+- Changing `applicationId` (`com.example.runner` / `com.drrhaos.runner` → `com.runner.academy`) does not migrate data automatically — use **JSON/GPX export** on the old build and **import** on the new one
 
 ## 🔮 Future Plans
 
@@ -457,7 +489,8 @@ Quick start:
 - [ ] Workout plans
 - [x] Progress analysis with charts
 - [x] Voice prompts during workout
-- [ ] Import workouts from other apps (TCX, FIT, GPX)
+- [x] Workout import (JSON backup, GPX)
+- [ ] TCX / FIT import
 
 ## 📞 Support
 
