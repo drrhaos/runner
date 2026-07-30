@@ -10,7 +10,7 @@ Package ID: `com.runner.academy`.
 
 <p align="center">
   <img src="screenshot/Workout.png" width="200" alt="Workout tracking" />
-  <img src="screenshot/Run.png" width="200" alt="Active workout" />
+  <img src="screenshot/Plan.png" width="200" alt="My plan" />
   <img src="screenshot/SideBar.png" width="200" alt="Side menu" />
   <img src="screenshot/Settings.png" width="200" alt="Settings" />
 </p>
@@ -20,6 +20,7 @@ Package ID: `com.runner.academy`.
 Runner is a full-featured running app that allows you to:
 - Track workouts in real-time using GPS
 - View your route on an interactive map
+- Follow **training plans** and base interval workouts
 - Analyze workout statistics
 - Save history of all workouts
 - Export and import data (JSON, GPX, CSV)
@@ -28,11 +29,13 @@ Runner is a full-featured running app that allows you to:
 
 ### 🏃 Workout Tracking
 - **Real-time GPS tracking** with route display on map
-- **GPS signal quality indicator** with colored bars (red/orange/yellow/green)
+- **GPS signal indicator** — compact bars in a translucent circle (subtle on the map)
 - **Automatic map centering** on current location
-- **Centering button** appears when map is shifted (yellow navigation icon)
-- **Current location display** with blue circle marker
-- **Workout type selection** from dropdown menu before start (Easy run, Tempo run, Interval, etc.)
+- **My location button** — same size as the GPS indicator; appears when the map is panned
+- **Current location** marker on the map
+- **Mode selection before start**: easy run → today’s plan workout (default when a planned day exists) → base workout templates
+- **Colored interval scale** (warm-up / work / recovery / cool-down) with current status and progress
+- **Spoken interval changes** when voice feedback is enabled
 - **Countdown timer** before workout start (configurable 3–30 s)
 - **Pause and resume** workout
 - **Long press** stop button (3 seconds) to prevent accidental stops
@@ -46,9 +49,9 @@ Runner is a full-featured running app that allows you to:
 - Heart rate (bpm) — UI placeholder; sensor integration is planned
 
 ### 🗺️ Map
-- **OpenStreetMap** for map display
+- **OpenStreetMap** (Mapnik) in light theme; **CARTO Dark Matter** basemap in dark theme
 - Interactive map with zoom and scroll gestures
-- Workout track displayed as red line
+- Workout track as a red line; GPS gaps shown as dashed segments
 - Automatic map orientation based on movement direction
 - Smooth animation when centering
 
@@ -71,8 +74,8 @@ Runner is a full-featured running app that allows you to:
 
 ### 📋 Training plans
 - **My plan** — calendar with the active plan, day details, and “Choose training plan”
-- **Training plans** — create plans; **base workouts** live inside this section; JSON import/export of plans together with base workouts
-- On the tracking screen with an active plan: “Follow plan” toggle, current-interval progress bar, spoken interval changes
+- **Training plans** — create plans; **base workouts** (templates with segments and intensity icons) live in this section; JSON import/export of plans with base workouts
+- On tracking: pick “Plan: …” from the mode list (no separate toggle), colored segment scale, mark the planned day done after save
 
 ### 💾 Export and import
 On **My Workouts**, the **+** FAB opens a speed dial:
@@ -88,7 +91,7 @@ On **My Workouts**, the **+** FAB opens a speed dial:
 - **Folder of GPX files** — recursive import of `.gpx`
 
 ### 🎨 Interface
-- Material Design
+- Material 3 with an iOS-inspired look (system blue, grouped backgrounds, flat cards)
 - Dark and light theme support
 - Responsive design
 - Intuitive navigation through side menu
@@ -168,25 +171,29 @@ GPS → LocationCallback → GpsFilter → WorkoutTrackingService
 
 #### GPS Data Filtering
 
-The app uses intelligent GPS coordinate filtering to improve accuracy:
+The app filters GPS coordinates with deliberately soft thresholds (urban GPS is often noisy):
 
 1. **Coordinate Validation**
    - Latitude/longitude range check (-90..90, -180..180)
    - NaN and infinite value checks
 
 2. **Accuracy Filtering**
-   - Maximum acceptable accuracy: **100 meters**
-   - Minimum acceptable accuracy: **20 meters** (always accepted)
-   - Accuracy above 100 m - point is rejected
+   - Maximum acceptable accuracy: **150 meters**
+   - Points worse than 150 m are rejected
 
 3. **Outlier Filtering**
-   - Maximum distance between points: **500 meters**
-   - If distance exceeds 500 m - point is considered an outlier
-   - Speed check (maximum 50 km/h for running)
+   - Absolute jump between consecutive points: **800 meters**
+   - Calculated speed between points with a ×1.75 margin over the workout-type cap
+   - Instantaneous GPS `speed` is barely used (only absurd values ~180+ km/h)
+   - Altitude: reject only extreme cliffs (noisy altitude does not break the track)
 
-4. **Temporal Validation**
-   - Rejection of points with earlier time (temporal anomalies)
-   - Calculation of expected maximum distance based on speed
+4. **GPS gaps**
+   - After ~**20 s** without a fix, the next point re-anchors with no phantom distance (dashed on the map)
+   - Near-duplicate points (&lt; 2 m) do not reset the gap timer
+
+5. **Temporal Validation**
+   - Rejection of points with earlier time
+   - Expected distance floors on the workout speed cap (does not collapse when reported `speed = 0`)
 
 #### Location Updates
 
@@ -345,12 +352,13 @@ cd runner
 
 ### Starting a Workout
 1. Open **"Start Workout"** section from the side menu
-2. Wait for GPS signal (indicator will turn green)
-3. Select **workout type** from the dropdown in the bottom panel
+2. Wait for a GPS signal (compact indicator in the map corner)
+3. Select a **mode**: easy run, today’s plan workout (if any), or a base template
 4. Press the **"Start"** button — the countdown will begin
 5. After the countdown finishes, the workout starts automatically
 6. During the workout you can:
-   - View the map with route
+   - View the map with route (dark basemap in dark theme)
+   - Follow the interval scale when a plan/base workout is selected
    - See current metrics
    - Expand panel for detailed statistics
    - Pause the workout
@@ -393,13 +401,16 @@ app/src/main/
 │   ├── service/
 │   │   └── WorkoutTrackingService.kt  # Background service
 │   └── util/                    # Utilities
-│       ├── GpxExporter.kt           # Single-workout GPX export
+│       ├── GpxExporter.kt           # GPX export (single workout)
 │       ├── GpxImporter.kt           # GPX import
 │       ├── WorkoutGpxBulkExporter.kt # ZIP of all GPX
 │       ├── WorkoutBackupFormat.kt   # JSON backup import/export
+│       ├── TrainingPlanBackupFormat.kt # Plans + templates JSON
 │       ├── TrackDataJson.kt         # Safe track parse (legacy)
 │       ├── CsvExporter.kt           # CSV export
 │       ├── GpsFilter.kt             # GPS point filtering
+│       ├── OsmMapTiles.kt           # Light/dark map basemap
+│       ├── OsmMapConfig.kt          # OSM User-Agent and cache
 │       └── FormatUtils.kt           # Data formatting
 ├── res/
 │   ├── layout/                  # XML layouts
@@ -458,30 +469,9 @@ Quick start:
 
 ## 📝 Changelog
 
-### Version 1.2
-- Import/export all workouts from the list screen (FAB speed dial)
-- JSON backup and GPX ZIP; import JSON and GPX folders
-- JSON compatible with `com.example.runner` / `export-all-workouts-example` backups
-- Room via KSP (replacing kapt)
-- Favorite workouts, edit with route picker
-- GPS gap handling, OSM map updates, `applicationId` `com.runner.academy`
+Full version history (aligned with git tags): [CHANGELOG_EN.md](CHANGELOG_EN.md) · [Русский](CHANGELOG.md).
 
-### Version 1.1
-- Workout type selection from dropdown menu before start
-- Countdown timer before workout start
-- Configurable countdown duration in settings
-- Movement direction calculated from last 10 track points
-- Track polyline connects to current position
-- Original location icon (blue circle with arrow)
-
-### Version 1.0
-- Initial release
-- GPS workout tracking
-- Map display with route
-- Statistics and workout history
-- Export to GPX and CSV
-- User settings
-- Background tracking service
+Current release: **`v.0.0.7`**.
 
 ## 🐛 Known Issues
 
@@ -492,7 +482,7 @@ Quick start:
 
 - [ ] Fitness tracker integration
 - [ ] Social features (share workouts)
-- [ ] Workout plans
+- [x] Training plans and base interval templates
 - [x] Progress analysis with charts
 - [x] Voice prompts during workout
 - [x] Workout import (JSON backup, GPX)
