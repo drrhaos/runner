@@ -48,11 +48,14 @@
     <color name="yellow_500">#FFFFD60A</color>
     <color name="orange_500">#FFFF9F0A</color>
     <color name="red_500">#FFFF453A</color>
-    <color name="gps_signal_level_1">#FFFF453A</color>
-    <color name="gps_signal_level_2">#FFFF9F0A</color>
-    <color name="gps_signal_level_3">#FFFFD60A</color>
-    <color name="gps_signal_level_4">#FF30D158</color>
-    <color name="gps_signal_inactive">#408E8E93</color>
+    <color name="gps_signal_level_1">#99EF9A9A</color>
+    <color name="gps_signal_level_2">#99FFCC80</color>
+    <color name="gps_signal_level_3">#99FFFFFF</color>
+    <color name="gps_signal_level_4">#B3FFFFFF</color>
+    <color name="gps_signal_active">#B3FFFFFF</color>
+    <color name="gps_signal_inactive">#33FFFFFF</color>
+    <color name="map_control_surface">#99000000</color>
+    <color name="map_control_icon">#CCFFFFFF</color>
     <color name="map_navigation_circle_fill">#33FF9F0A</color>
     <color name="map_navigation_circle_stroke">#80FF9F0A</color>
 

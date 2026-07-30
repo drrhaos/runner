@@ -5,7 +5,7 @@ import android.graphics.DashPathEffect
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.util.OsmMapConfig
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import com.runner.academy.util.OsmMapTiles
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -39,8 +39,7 @@ class DetailMapManager(
 
     fun initialize() {
         OsmMapConfig.apply(context)
-
-        mapView.setTileSource(TileSourceFactory.MAPNIK)
+        OsmMapTiles.applyForTheme(context, mapView)
         mapView.setMultiTouchControls(true)
         mapView.controller.setZoom(15.0)
         mapView.setUseDataConnection(true)
@@ -217,6 +216,7 @@ class DetailMapManager(
     }
 
     fun onResume() {
+        OsmMapTiles.applyForTheme(context, mapView)
         mapView.onResume()
     }
 
