@@ -13,6 +13,7 @@ import com.runner.academy.data.WorkoutTemplateSegment
 import com.runner.academy.data.WorkoutType
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -29,11 +30,21 @@ class TrainingPlanViewModel(
     val activeSchedule = repository.observeActiveSchedule()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    val activeScheduledWorkouts = repository.observeActiveScheduledWorkouts()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     fun observePlanDays(planId: Long) = repository.observePlanDays(planId)
 
     suspend fun loadTemplate(id: Long) = repository.getTemplateWithSegments(id)
 
     suspend fun loadPlan(id: Long) = repository.getPlanWithDays(id)
+
+    suspend fun getActivePlan() = repository.getActivePlan()
+
+    suspend fun listPlans() = repository.observePlans().first()
+
+    suspend fun getScheduledForDate(dateMillis: Long) =
+        repository.getScheduledWorkoutForDate(dateMillis)
 
     suspend fun saveTemplate(
         id: Long,

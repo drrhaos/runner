@@ -115,6 +115,9 @@ interface PlanScheduleDao {
     @Query("SELECT * FROM scheduled_workouts WHERE scheduleId = :scheduleId ORDER BY dateMillis ASC")
     suspend fun getScheduledWorkouts(scheduleId: Long): List<ScheduledWorkout>
 
+    @Query("SELECT * FROM scheduled_workouts WHERE scheduleId = :scheduleId ORDER BY dateMillis ASC")
+    fun observeScheduledWorkouts(scheduleId: Long): Flow<List<ScheduledWorkout>>
+
     @Query(
         """
         SELECT * FROM scheduled_workouts

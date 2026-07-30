@@ -70,8 +70,8 @@ Runner is a full-featured running app that allows you to:
 - **Start countdown** (3, 5, 10, 15, or 30 seconds)
 
 ### 📋 Training plans
-- **Base workouts** — templates with ordered intervals (duration / distance, optional target pace)
-- **Plans** — assign templates to days, “repeat to end”, apply to calendar from a start date
+- **My plan** — calendar with the active plan, day details, and “Choose training plan”
+- **Training plans** — create plans; **base workouts** (interval templates) live inside this section
 - On the tracking screen with an active plan: “Follow plan” toggle, current-interval progress bar, spoken interval changes
 
 ### 💾 Export and import

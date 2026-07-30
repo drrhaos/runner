@@ -401,6 +401,7 @@
 
     <!-- Планы тренировок -->
     <string name="menu_plans">Планы тренировок</string>
+    <string name="menu_my_plan">Мой план</string>
     <string name="menu_templates">Базовые тренировки</string>
     <string name="templates_title">Базовые тренировки</string>
     <string name="templates_empty">Пока нет базовых тренировок</string>
@@ -441,15 +442,26 @@
     <string name="plan_pick_template">Выберите базовую тренировку</string>
     <string name="plan_repeat_to_end">Повторить до конца</string>
     <string name="plan_repeat_need_selection">Выберите хотя бы один день</string>
-    <string name="plan_apply_calendar">Наложить на календарь</string>
+    <string name="plan_apply_calendar">Выбрать план тренировок</string>
     <string name="plan_apply_pick_start">Выберите дату старта</string>
-    <string name="plan_applied">План наложен на календарь</string>
+    <string name="plan_applied">План активирован</string>
+    <string name="plan_pick_to_apply">Выберите план тренировок</string>
+    <string name="plan_active_name">Активен: %1$s</string>
+    <string name="plan_day_outside">В активном плане на этот день нет тренировки</string>
+    <string name="plan_day_no_intervals">Нет интервалов</string>
+    <string name="plan_month_training_days">Тренировочных дней в месяце: %1$d</string>
+    <string name="plan_month_no_schedule">План ещё не наложен на календарь</string>
+    <string name="plan_status_planned">Запланировано</string>
+    <string name="plan_status_done">Выполнено</string>
+    <string name="plan_status_skipped">Пропущено</string>
+    <string name="plan_status_rest">Отдых</string>
     <string name="plan_saved">План сохранён</string>
     <string name="plan_delete_confirm">Удалить этот план?</string>
     <string name="plan_active_banner">Сегодня: %1$s</string>
     <string name="plan_today_rest">Сегодня день отдыха по плану</string>
     <string name="plan_no_active">Нет активного плана</string>
     <string name="plan_deactivate">Отключить план</string>
+    <string name="plan_deactivate_confirm">Убрать план с календаря?</string>
     <string name="tracking_interval_progress">Интервал %1$d / %2$d</string>
     <string name="tracking_follow_plan">По плану</string>
     <string name="tracking_free_run">Свободный бег</string>

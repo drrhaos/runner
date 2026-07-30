@@ -44,6 +44,12 @@
         tools:layout="@layout/fragment_statistics" />
 
     <fragment
+        android:id="@+id/nav_my_plan"
+        android:name="com.runner.academy.ui.trainingplan.MyPlanFragment"
+        android:label="@string/menu_my_plan"
+        tools:layout="@layout/fragment_my_plan" />
+
+    <fragment
         android:id="@+id/nav_templates"
         android:name="com.runner.academy.ui.trainingplan.TemplateListFragment"
         android:label="@string/menu_templates"

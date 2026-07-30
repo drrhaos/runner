@@ -33,7 +33,7 @@ class MainActivity : AppCompatActivity() {
             setOf(
                 R.id.nav_tracking,
                 R.id.nav_workouts,
-                R.id.nav_templates,
+                R.id.nav_my_plan,
                 R.id.nav_plans,
                 R.id.nav_statistics,
                 R.id.nav_settings

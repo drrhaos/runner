@@ -1,7 +1,10 @@
 package com.runner.academy.data
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.withContext
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -175,16 +178,44 @@ class TrainingPlanRepository(
 
     suspend fun getTodaysScheduledWorkout(
         nowMillis: Long = System.currentTimeMillis()
+    ): ScheduledWorkoutWithTemplate? = getScheduledWorkoutForDate(nowMillis)
+
+    suspend fun getScheduledWorkoutForDate(
+        dateMillis: Long
     ): ScheduledWorkoutWithTemplate? = withContext(Dispatchers.IO) {
         val schedule = scheduleDao.getActiveSchedule() ?: return@withContext null
-        val dayStart = startOfDay(nowMillis)
+        val dayStart = startOfDay(dateMillis)
         val scheduled = scheduleDao.getScheduledForDate(schedule.id, dayStart)
             ?: return@withContext null
+        enrichScheduled(scheduled)
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun observeActiveScheduledWorkouts(): Flow<List<ScheduledWorkout>> =
+        scheduleDao.observeActiveSchedule().flatMapLatest { schedule ->
+            if (schedule == null) {
+                flowOf(emptyList())
+            } else {
+                scheduleDao.observeScheduledWorkouts(schedule.id)
+            }
+        }
+
+    suspend fun getActivePlan(): TrainingPlan? = withContext(Dispatchers.IO) {
+        val schedule = scheduleDao.getActiveSchedule() ?: return@withContext null
+        planDao.getPlanById(schedule.planId)
+    }
+
+    suspend fun getActiveSchedule(): PlanSchedule? = withContext(Dispatchers.IO) {
+        scheduleDao.getActiveSchedule()
+    }
+
+    private suspend fun enrichScheduled(scheduled: ScheduledWorkout): ScheduledWorkoutWithTemplate {
         val template = scheduled.templateId?.let { templateDao.getTemplateById(it) }
         val segments = scheduled.templateId?.let { templateDao.getSegmentsForTemplate(it) }
             ?: emptyList()
-        ScheduledWorkoutWithTemplate(scheduled, template, segments)
+        return ScheduledWorkoutWithTemplate(scheduled, template, segments)
     }
+
 
     suspend fun markScheduledDone(scheduledId: Long, workoutId: Long) =
         withContext(Dispatchers.IO) {
