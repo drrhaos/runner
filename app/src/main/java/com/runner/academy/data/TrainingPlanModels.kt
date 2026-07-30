@@ -1,9 +1,11 @@
 package com.runner.academy.data
 
+import android.content.Context
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.runner.academy.R
 
 /** Kind of interval inside a base workout template. */
 enum class SegmentKind {
@@ -12,6 +14,14 @@ enum class SegmentKind {
     RECOVERY,
     COOLDOWN,
     CUSTOM
+}
+
+fun SegmentKind.displayName(context: Context): String = when (this) {
+    SegmentKind.WARMUP -> context.getString(R.string.segment_kind_warmup)
+    SegmentKind.WORK -> context.getString(R.string.segment_kind_work)
+    SegmentKind.RECOVERY -> context.getString(R.string.segment_kind_recovery)
+    SegmentKind.COOLDOWN -> context.getString(R.string.segment_kind_cooldown)
+    SegmentKind.CUSTOM -> context.getString(R.string.segment_kind_custom)
 }
 
 /**

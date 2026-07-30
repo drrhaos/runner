@@ -37,6 +37,8 @@ class IntervalEngine(
 
     fun currentIndex(): Int = index
 
+    fun allSegments(): List<WorkoutTemplateSegment> = segments
+
     /**
      * @param workoutElapsedMs total moving time of the workout
      * @param workoutDistanceMeters total distance of the workout
