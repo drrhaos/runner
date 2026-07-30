@@ -16,10 +16,13 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.SegmentKind
+import com.runner.academy.data.TrainingIcon
 import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.data.defaultTrainingIcon
 import com.runner.academy.data.displayName
+import com.runner.academy.data.parseTrainingIcon
 import com.runner.academy.databinding.FragmentTemplateEditBinding
 import com.runner.academy.databinding.ItemTemplateSegmentBinding
 import kotlinx.coroutines.launch
@@ -45,7 +48,19 @@ class TemplateEditFragment : Fragment() {
 
     private val drafts = mutableListOf<SegmentDraft>()
     private var selectedType: WorkoutType = WorkoutType.INTERVAL_TRAINING
+    private var selectedIcon: TrainingIcon = TrainingIcon.INTERVAL
+    private var iconChosenManually = false
     private lateinit var segmentAdapter: SegmentDraftAdapter
+    private lateinit var iconAdapter: TrainingIconPickerAdapter
+
+    private val templateIcons = listOf(
+        TrainingIcon.RECOVERY,
+        TrainingIcon.EASY,
+        TrainingIcon.LONG,
+        TrainingIcon.TEMPO,
+        TrainingIcon.INTERVAL,
+        TrainingIcon.RACE
+    )
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -65,7 +80,23 @@ class TemplateEditFragment : Fragment() {
         binding.autoCompleteWorkoutType.setText(selectedType.displayName(requireContext()), false)
         binding.autoCompleteWorkoutType.setOnItemClickListener { _, _, position, _ ->
             selectedType = types[position]
+            if (!iconChosenManually) {
+                selectedIcon = selectedType.defaultTrainingIcon()
+                iconAdapter.selected = selectedIcon
+                updateIconHint()
+            }
         }
+
+        iconAdapter = TrainingIconPickerAdapter(templateIcons) { icon ->
+            selectedIcon = icon
+            iconChosenManually = true
+            updateIconHint()
+        }
+        iconAdapter.selected = selectedIcon
+        binding.recyclerViewIcons.layoutManager =
+            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        binding.recyclerViewIcons.adapter = iconAdapter
+        updateIconHint()
 
         segmentAdapter = SegmentDraftAdapter(drafts) {
             segmentAdapter.notifyDataSetChanged()
@@ -90,6 +121,13 @@ class TemplateEditFragment : Fragment() {
                 val loaded = viewModel.loadTemplate(templateId) ?: return@launch
                 binding.editTextTemplateName.setText(loaded.template.name)
                 selectedType = loaded.template.workoutType
+                selectedIcon = parseTrainingIcon(
+                    loaded.template.iconKey,
+                    selectedType.defaultTrainingIcon()
+                )
+                iconChosenManually = true
+                iconAdapter.selected = selectedIcon
+                updateIconHint()
                 binding.autoCompleteWorkoutType.setText(
                     selectedType.displayName(requireContext()),
                     false
@@ -102,6 +140,9 @@ class TemplateEditFragment : Fragment() {
                 segmentAdapter.notifyDataSetChanged()
             }
         } else if (drafts.isEmpty()) {
+            selectedIcon = selectedType.defaultTrainingIcon()
+            iconAdapter.selected = selectedIcon
+            updateIconHint()
             drafts.add(SegmentDraft(title = getString(R.string.segment_kind_warmup), kind = SegmentKind.WARMUP))
             drafts.add(SegmentDraft(title = getString(R.string.segment_kind_work), kind = SegmentKind.WORK))
             drafts.add(
@@ -112,6 +153,13 @@ class TemplateEditFragment : Fragment() {
             )
             segmentAdapter.notifyDataSetChanged()
         }
+    }
+
+    private fun updateIconHint() {
+        binding.textViewIconHint.text = getString(
+            R.string.intensity_icon_selected,
+            selectedIcon.displayName(requireContext())
+        )
     }
 
     private fun scrollToNewestSegment() {
@@ -142,6 +190,7 @@ class TemplateEditFragment : Fragment() {
                 id = id,
                 name = name,
                 type = selectedType,
+                icon = selectedIcon,
                 segments = drafts.mapIndexed { index, draft -> draft.toEntity(0, index) }
             )
             Toast.makeText(requireContext(), R.string.template_saved, Toast.LENGTH_SHORT).show()

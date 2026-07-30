@@ -6,8 +6,11 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.runner.academy.R
+import com.runner.academy.data.TrainingIcon
 import com.runner.academy.data.WorkoutTemplate
 import com.runner.academy.data.displayName
+import com.runner.academy.data.drawableRes
+import com.runner.academy.data.parseTrainingIcon
 import com.runner.academy.databinding.ItemSimpleTwoLineBinding
 
 class TemplateListAdapter(
@@ -28,6 +31,8 @@ class TemplateListAdapter(
     inner class VH(private val binding: ItemSimpleTwoLineBinding) :
         RecyclerView.ViewHolder(binding.root) {
         fun bind(item: WorkoutTemplate) {
+            val icon = parseTrainingIcon(item.iconKey, TrainingIcon.INTERVAL)
+            binding.imageViewIcon.setImageResource(icon.drawableRes())
             binding.textViewTitle.text = item.name
             binding.textViewSubtitle.text = item.workoutType.displayName(binding.root.context)
             binding.root.setOnClickListener { onClick(item) }
@@ -58,6 +63,8 @@ class PlanListAdapter(
     inner class VH(private val binding: ItemSimpleTwoLineBinding) :
         RecyclerView.ViewHolder(binding.root) {
         fun bind(item: com.runner.academy.data.TrainingPlan) {
+            val icon = parseTrainingIcon(item.iconKey, TrainingIcon.PLAN)
+            binding.imageViewIcon.setImageResource(icon.drawableRes())
             binding.textViewTitle.text = item.name
             binding.textViewSubtitle.text = binding.root.context.getString(
                 R.string.plan_duration_days_format,
