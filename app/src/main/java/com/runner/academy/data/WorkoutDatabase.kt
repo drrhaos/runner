@@ -18,7 +18,7 @@ import android.content.Context
         PlanSchedule::class,
         ScheduledWorkout::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -154,6 +154,17 @@ abstract class WorkoutDatabase : RoomDatabase() {
             }
         }
 
+        internal val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE workout_templates ADD COLUMN iconKey TEXT NOT NULL DEFAULT 'INTERVAL'"
+                )
+                database.execSQL(
+                    "ALTER TABLE training_plans ADD COLUMN iconKey TEXT NOT NULL DEFAULT 'PLAN'"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): WorkoutDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -161,7 +172,7 @@ abstract class WorkoutDatabase : RoomDatabase() {
                     WorkoutDatabase::class.java,
                     "workout_database"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                 INSTANCE = instance
                 instance

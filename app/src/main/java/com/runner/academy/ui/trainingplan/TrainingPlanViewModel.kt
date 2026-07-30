@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.SegmentKind
+import com.runner.academy.data.TrainingIcon
 import com.runner.academy.data.TrainingPlan
 import com.runner.academy.data.TrainingPlanDay
 import com.runner.academy.data.TrainingPlanRepository
@@ -50,10 +51,16 @@ class TrainingPlanViewModel(
         id: Long,
         name: String,
         type: WorkoutType,
+        icon: TrainingIcon,
         segments: List<WorkoutTemplateSegment>
     ): Long {
         return repository.saveTemplate(
-            WorkoutTemplate(id = id, name = name, workoutType = type),
+            WorkoutTemplate(
+                id = id,
+                name = name,
+                workoutType = type,
+                iconKey = icon.name
+            ),
             segments
         )
     }
@@ -62,9 +69,19 @@ class TrainingPlanViewModel(
         viewModelScope.launch { repository.deleteTemplate(template) }
     }
 
-    suspend fun savePlan(id: Long, name: String, durationDays: Int): Long {
+    suspend fun savePlan(
+        id: Long,
+        name: String,
+        durationDays: Int,
+        icon: TrainingIcon
+    ): Long {
         return repository.savePlan(
-            TrainingPlan(id = id, name = name, durationDays = durationDays.coerceAtLeast(1))
+            TrainingPlan(
+                id = id,
+                name = name,
+                durationDays = durationDays.coerceAtLeast(1),
+                iconKey = icon.name
+            )
         )
     }
 

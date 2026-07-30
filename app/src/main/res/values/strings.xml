@@ -399,9 +399,15 @@
     </plurals>
 
     <!-- Training plans -->
-    <string name="menu_plans">Training plans</string>
-    <string name="menu_my_plan">My plan</string>
-    <string name="menu_templates">Base workouts</string>
+    <string name="intensity_icon_label">Intensity icon</string>
+    <string name="intensity_icon_selected">Selected: %1$s</string>
+    <string name="intensity_icon_recovery">Recovery</string>
+    <string name="intensity_icon_easy">Easy</string>
+    <string name="intensity_icon_long">Long</string>
+    <string name="intensity_icon_tempo">Tempo</string>
+    <string name="intensity_icon_interval">Interval</string>
+    <string name="intensity_icon_race">Race</string>
+    <string name="intensity_icon_plan">Plan</string>
     <string name="templates_title">Base workouts</string>
     <string name="templates_empty">No base workouts yet</string>
     <string name="templates_add">New base workout</string>

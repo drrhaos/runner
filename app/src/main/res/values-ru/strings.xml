@@ -400,9 +400,15 @@
     </plurals>
 
     <!-- Планы тренировок -->
-    <string name="menu_plans">Планы тренировок</string>
-    <string name="menu_my_plan">Мой план</string>
-    <string name="menu_templates">Базовые тренировки</string>
+    <string name="intensity_icon_label">Иконка интенсивности</string>
+    <string name="intensity_icon_selected">Выбрано: %1$s</string>
+    <string name="intensity_icon_recovery">Восстановление</string>
+    <string name="intensity_icon_easy">Лёгкая</string>
+    <string name="intensity_icon_long">Длинная</string>
+    <string name="intensity_icon_tempo">Темповая</string>
+    <string name="intensity_icon_interval">Интервалы</string>
+    <string name="intensity_icon_race">Соревнование</string>
+    <string name="intensity_icon_plan">План</string>
     <string name="templates_title">Базовые тренировки</string>
     <string name="templates_empty">Пока нет базовых тренировок</string>
     <string name="templates_add">Новая базовая тренировка</string>

@@ -12,6 +12,14 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 
+    <ImageView
+        android:id="@+id/imageView_day_icon"
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:layout_marginEnd="4dp"
+        android:contentDescription="@null"
+        android:visibility="gone" />
+
     <TextView
         android:id="@+id/textView_day"
         android:layout_width="72dp"

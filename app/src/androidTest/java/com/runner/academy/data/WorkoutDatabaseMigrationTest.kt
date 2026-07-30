@@ -131,4 +131,51 @@ class WorkoutDatabaseMigrationTest {
             close()
         }
     }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate4To5_addsIconKeyColumns() {
+        helper.createDatabase(testDb, 4).apply {
+            execSQL(
+                """
+                INSERT INTO workout_templates (name, workoutType, notes, createdAt, updatedAt)
+                VALUES ('Intervals', 'INTERVAL_TRAINING', NULL, 1700000000000, 1700000000000)
+                """.trimIndent()
+            )
+            execSQL(
+                """
+                INSERT INTO training_plans (name, durationDays, notes, createdAt, updatedAt)
+                VALUES ('Base plan', 56, NULL, 1700000000000, 1700000000000)
+                """.trimIndent()
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            testDb,
+            5,
+            true,
+            WorkoutDatabase.MIGRATION_4_5
+        ).apply {
+            query("PRAGMA table_info(workout_templates)").use { cursor ->
+                var hasIcon = false
+                while (cursor.moveToNext()) {
+                    if (cursor.getString(cursor.getColumnIndexOrThrow("name")) == "iconKey") {
+                        hasIcon = true
+                        break
+                    }
+                }
+                assertTrue(hasIcon)
+            }
+            query("SELECT iconKey FROM workout_templates").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertTrue(cursor.getString(0) == "INTERVAL")
+            }
+            query("SELECT iconKey FROM training_plans").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertTrue(cursor.getString(0) == "PLAN")
+            }
+            close()
+        }
+    }
 }

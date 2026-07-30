@@ -35,6 +35,8 @@ data class WorkoutTemplate(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val workoutType: WorkoutType = WorkoutType.INTERVAL_TRAINING,
+    /** Intensity icon key, see [TrainingIcon]. */
+    val iconKey: String = TrainingIcon.INTERVAL.name,
     val notes: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()
@@ -73,6 +75,8 @@ data class TrainingPlan(
     val name: String,
     /** Total length of the plan in days (e.g. 56 for 8 weeks). */
     val durationDays: Int,
+    /** Plan icon key, see [TrainingIcon]. */
+    val iconKey: String = TrainingIcon.PLAN.name,
     val notes: String? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis()

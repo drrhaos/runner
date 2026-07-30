@@ -18,10 +18,14 @@ import com.runner.academy.data.ScheduledWorkout
 import com.runner.academy.data.ScheduledWorkoutStatus
 import com.runner.academy.data.ScheduledWorkoutWithTemplate
 import com.runner.academy.data.SegmentGoalType
+import com.runner.academy.data.TrainingIcon
 import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.data.WorkoutTemplateSegment
+import com.runner.academy.data.defaultTrainingIcon
 import com.runner.academy.data.displayName
+import com.runner.academy.data.drawableRes
+import com.runner.academy.data.parseTrainingIcon
 import com.runner.academy.databinding.FragmentMyPlanBinding
 import com.runner.academy.databinding.ItemCalendarDayBinding
 import com.runner.academy.util.FormatUtils
@@ -176,6 +180,7 @@ class MyPlanFragment : Fragment() {
         binding.textViewDayDate.text = dateLabel
 
         if (day == null) {
+            binding.imageViewDayIcon.visibility = View.GONE
             binding.textViewDayTitle.text = getString(R.string.plan_day_outside)
             binding.textViewDayStatus.text = ""
             binding.textViewDaySegments.text = ""
@@ -184,12 +189,19 @@ class MyPlanFragment : Fragment() {
 
         when (day.scheduled.status) {
             ScheduledWorkoutStatus.REST -> {
+                binding.imageViewDayIcon.visibility = View.GONE
                 binding.textViewDayTitle.text = getString(R.string.plan_day_rest)
                 binding.textViewDayStatus.text = statusLabel(day.scheduled.status)
                 binding.textViewDaySegments.text = ""
             }
             else -> {
                 val template = day.template
+                val icon = parseTrainingIcon(
+                    template?.iconKey,
+                    template?.workoutType?.defaultTrainingIcon() ?: TrainingIcon.EASY
+                )
+                binding.imageViewDayIcon.visibility = View.VISIBLE
+                binding.imageViewDayIcon.setImageResource(icon.drawableRes())
                 binding.textViewDayTitle.text = template?.name
                     ?: getString(R.string.plan_day_rest)
                 val typeLine = template?.workoutType?.displayName(requireContext()).orEmpty()

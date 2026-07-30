@@ -13,10 +13,15 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
+import com.runner.academy.data.TrainingIcon
 import com.runner.academy.data.TrainingPlanDay
 import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.data.WorkoutTemplate
+import com.runner.academy.data.defaultTrainingIcon
+import com.runner.academy.data.displayName
+import com.runner.academy.data.drawableRes
+import com.runner.academy.data.parseTrainingIcon
 import com.runner.academy.databinding.FragmentPlanEditBinding
 import com.runner.academy.databinding.ItemPlanDayBinding
 import kotlinx.coroutines.flow.collectLatest
@@ -44,7 +49,11 @@ class PlanEditFragment : Fragment() {
     private val selectedDays = linkedSetOf<Int>()
     private var days: List<TrainingPlanDay> = emptyList()
     private var templates: List<WorkoutTemplate> = emptyList()
+    private var selectedIcon: TrainingIcon = TrainingIcon.PLAN
     private lateinit var dayAdapter: PlanDayAdapter
+    private lateinit var iconAdapter: TrainingIconPickerAdapter
+
+    private val planIcons = TrainingIcon.entries
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -60,6 +69,11 @@ class PlanEditFragment : Fragment() {
         dayAdapter = PlanDayAdapter(
             selectedDays = selectedDays,
             templateName = { id -> templates.find { it.id == id }?.name },
+            templateIcon = { id ->
+                templates.find { it.id == id }?.let { t ->
+                    parseTrainingIcon(t.iconKey, t.workoutType.defaultTrainingIcon())
+                }
+            },
             onToggleSelect = { index, checked ->
                 if (checked) selectedDays.add(index) else selectedDays.remove(index)
                 updateRepeatButtonState()
@@ -68,6 +82,16 @@ class PlanEditFragment : Fragment() {
         )
         binding.recyclerViewPlanDays.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerViewPlanDays.adapter = dayAdapter
+
+        iconAdapter = TrainingIconPickerAdapter(planIcons) { icon ->
+            selectedIcon = icon
+            updateIconHint()
+        }
+        iconAdapter.selected = selectedIcon
+        binding.recyclerViewIcons.layoutManager =
+            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        binding.recyclerViewIcons.adapter = iconAdapter
+        updateIconHint()
 
         binding.buttonBuildSchedule.setOnClickListener { buildSchedule() }
         binding.buttonSavePlan.setOnClickListener { savePlan() }
@@ -85,6 +109,9 @@ class PlanEditFragment : Fragment() {
                 val loaded = viewModel.loadPlan(planId) ?: return@launch
                 binding.editTextPlanName.setText(loaded.first.name)
                 binding.editTextPlanDays.setText(loaded.first.durationDays.toString())
+                selectedIcon = parseTrainingIcon(loaded.first.iconKey, TrainingIcon.PLAN)
+                iconAdapter.selected = selectedIcon
+                updateIconHint()
                 showScheduleUi(hasSchedule = true)
                 observeDays()
             }
@@ -92,6 +119,13 @@ class PlanEditFragment : Fragment() {
             binding.editTextPlanDays.setText("56")
             showScheduleUi(hasSchedule = false)
         }
+    }
+
+    private fun updateIconHint() {
+        binding.textViewIconHint.text = getString(
+            R.string.intensity_icon_selected,
+            selectedIcon.displayName(requireContext())
+        )
     }
 
     private fun showScheduleUi(hasSchedule: Boolean) {
@@ -135,7 +169,8 @@ class PlanEditFragment : Fragment() {
             planId = viewModel.savePlan(
                 id = if (planId > 0) planId else 0L,
                 name = fields.first,
-                durationDays = fields.second
+                durationDays = fields.second,
+                icon = selectedIcon
             )
             selectedDays.clear()
             updateRepeatButtonState()
@@ -156,7 +191,8 @@ class PlanEditFragment : Fragment() {
             planId = viewModel.savePlan(
                 id = planId,
                 name = fields.first,
-                durationDays = fields.second
+                durationDays = fields.second,
+                icon = selectedIcon
             )
             Toast.makeText(requireContext(), R.string.plan_saved, Toast.LENGTH_SHORT).show()
             observeDays()
@@ -219,6 +255,7 @@ class PlanEditFragment : Fragment() {
 private class PlanDayAdapter(
     private val selectedDays: MutableSet<Int>,
     private val templateName: (Long) -> String?,
+    private val templateIcon: (Long) -> TrainingIcon?,
     private val onToggleSelect: (Int, Boolean) -> Unit,
     private val onAssignClick: (Int) -> Unit
 ) : RecyclerView.Adapter<PlanDayAdapter.VH>() {
@@ -246,8 +283,21 @@ private class PlanDayAdapter(
         fun bind(day: TrainingPlanDay) {
             val ctx = binding.root.context
             binding.textViewDay.text = ctx.getString(R.string.plan_day_label, day.dayIndex + 1)
-            binding.textViewAssignment.text = day.templateId?.let { templateName(it) }
-                ?: ctx.getString(R.string.plan_day_rest)
+            val templateId = day.templateId
+            if (templateId != null) {
+                binding.textViewAssignment.text = templateName(templateId)
+                    ?: ctx.getString(R.string.plan_day_rest)
+                val icon = templateIcon(templateId)
+                if (icon != null) {
+                    binding.imageViewDayIcon.visibility = View.VISIBLE
+                    binding.imageViewDayIcon.setImageResource(icon.drawableRes())
+                } else {
+                    binding.imageViewDayIcon.visibility = View.GONE
+                }
+            } else {
+                binding.textViewAssignment.text = ctx.getString(R.string.plan_day_rest)
+                binding.imageViewDayIcon.visibility = View.GONE
+            }
             binding.checkBoxSelect.setOnCheckedChangeListener(null)
             binding.checkBoxSelect.isChecked = selectedDays.contains(day.dayIndex)
             binding.checkBoxSelect.setOnCheckedChangeListener { _, checked ->
