@@ -112,7 +112,8 @@ class GpsStatusUiUpdater(
                 DrawableCompat.setTint(it, color)
                 view.background = it
             }
-            view.alpha = if (index < level) 1f else 0.3f
+            // Keep bars readable but not loud on the map
+            view.alpha = if (index < level) 0.9f else 0.35f
         }
     }
 
