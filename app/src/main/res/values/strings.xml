@@ -430,6 +430,10 @@
     <string name="plan_name_hint">Plan name</string>
     <string name="plan_duration_hint">Duration (days)</string>
     <string name="plan_duration_days_format">%1$d days</string>
+    <string name="plan_build_schedule">Build schedule</string>
+    <string name="plan_schedule_built">Schedule created</string>
+    <string name="plan_build_hint">Enter a name and duration, then tap Build schedule</string>
+    <string name="plan_build_first">Build the schedule first</string>
     <string name="plan_days_title">Days</string>
     <string name="plan_day_rest">Rest</string>
     <string name="plan_day_label">Day %1$d</string>

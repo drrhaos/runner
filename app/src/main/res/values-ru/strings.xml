@@ -431,6 +431,10 @@
     <string name="plan_name_hint">Название плана</string>
     <string name="plan_duration_hint">Длительность (дней)</string>
     <string name="plan_duration_days_format">%1$d дн.</string>
+    <string name="plan_build_schedule">Сформировать график</string>
+    <string name="plan_schedule_built">График сформирован</string>
+    <string name="plan_build_hint">Укажите название и длительность, затем нажмите «Сформировать график»</string>
+    <string name="plan_build_first">Сначала сформируйте график</string>
     <string name="plan_days_title">Дни</string>
     <string name="plan_day_rest">Отдых</string>
     <string name="plan_day_label">День %1$d</string>
