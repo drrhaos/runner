@@ -30,6 +30,7 @@ class PlanEditFragment : Fragment() {
 
     private val planIdArg: Long by lazy { arguments?.getLong("planId", -1L) ?: -1L }
     private var planId: Long = -1L
+    private var observingDays = false
 
     private val viewModel: TrainingPlanViewModel by viewModels {
         val db = WorkoutDatabase.getDatabase(requireContext())
@@ -63,16 +64,19 @@ class PlanEditFragment : Fragment() {
             templateName = { id -> templates.find { it.id == id }?.name },
             onToggleSelect = { index, checked ->
                 if (checked) selectedDays.add(index) else selectedDays.remove(index)
+                updateRepeatButtonState()
             },
             onAssignClick = { dayIndex -> showTemplatePicker(dayIndex) }
         )
         binding.recyclerViewPlanDays.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerViewPlanDays.adapter = dayAdapter
 
+        binding.buttonBuildSchedule.setOnClickListener { buildSchedule() }
         binding.buttonSavePlan.setOnClickListener { savePlan() }
         binding.buttonDeletePlan.setOnClickListener { confirmDelete() }
         binding.buttonRepeatPattern.setOnClickListener { repeatPattern() }
         binding.buttonApplyCalendar.setOnClickListener { pickStartDateAndApply() }
+        updateRepeatButtonState()
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.templates.collectLatest { templates = it }
@@ -84,37 +88,79 @@ class PlanEditFragment : Fragment() {
                 val loaded = viewModel.loadPlan(planId) ?: return@launch
                 binding.editTextPlanName.setText(loaded.first.name)
                 binding.editTextPlanDays.setText(loaded.first.durationDays.toString())
+                showScheduleUi(hasSchedule = true)
                 observeDays()
             }
         } else {
             binding.editTextPlanDays.setText("56")
+            showScheduleUi(hasSchedule = false)
         }
     }
 
+    private fun showScheduleUi(hasSchedule: Boolean) {
+        val scheduleVisibility = if (hasSchedule) View.VISIBLE else View.GONE
+        val hintVisibility = if (hasSchedule) View.GONE else View.VISIBLE
+        binding.textViewBuildHint.visibility = hintVisibility
+        binding.layoutPlanActions.visibility = scheduleVisibility
+        binding.textViewDaysTitle.visibility = scheduleVisibility
+        binding.recyclerViewPlanDays.visibility = scheduleVisibility
+    }
+
+    private fun updateRepeatButtonState() {
+        binding.buttonRepeatPattern.isEnabled = selectedDays.isNotEmpty()
+    }
+
     private fun observeDays() {
-        if (planId <= 0) return
+        if (planId <= 0 || observingDays) return
+        observingDays = true
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.observePlanDays(planId).collectLatest { list ->
                 days = list
                 dayAdapter.submit(list)
+                showScheduleUi(hasSchedule = list.isNotEmpty())
             }
         }
     }
 
-    private fun savePlan() {
+    private fun readPlanFields(): Pair<String, Int>? {
         val name = binding.editTextPlanName.text?.toString()?.trim().orEmpty()
         val duration = binding.editTextPlanDays.text?.toString()?.toIntOrNull() ?: 0
         if (name.isEmpty() || duration <= 0) {
             Toast.makeText(requireContext(), R.string.fill_required_fields, Toast.LENGTH_SHORT).show()
-            return
+            return null
         }
+        return name to duration
+    }
+
+    private fun buildSchedule() {
+        val fields = readPlanFields() ?: return
         viewLifecycleOwner.lifecycleScope.launch {
             planId = viewModel.savePlan(
                 id = if (planId > 0) planId else 0L,
-                name = name,
-                durationDays = duration
+                name = fields.first,
+                durationDays = fields.second
             )
+            selectedDays.clear()
+            updateRepeatButtonState()
             binding.buttonDeletePlan.visibility = View.VISIBLE
+            showScheduleUi(hasSchedule = true)
+            observeDays()
+            Toast.makeText(requireContext(), R.string.plan_schedule_built, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun savePlan() {
+        if (planId <= 0) {
+            Toast.makeText(requireContext(), R.string.plan_build_first, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val fields = readPlanFields() ?: return
+        viewLifecycleOwner.lifecycleScope.launch {
+            planId = viewModel.savePlan(
+                id = planId,
+                name = fields.first,
+                durationDays = fields.second
+            )
             Toast.makeText(requireContext(), R.string.plan_saved, Toast.LENGTH_SHORT).show()
             observeDays()
         }
@@ -136,7 +182,7 @@ class PlanEditFragment : Fragment() {
 
     private fun showTemplatePicker(dayIndex: Int) {
         if (planId <= 0) {
-            Toast.makeText(requireContext(), R.string.fill_required_fields, Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), R.string.plan_build_first, Toast.LENGTH_SHORT).show()
             return
         }
         val labels = mutableListOf(getString(R.string.plan_day_rest))
@@ -162,13 +208,14 @@ class PlanEditFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.repeatPattern(planId, selectedDays.toList())
             selectedDays.clear()
+            updateRepeatButtonState()
             dayAdapter.notifyDataSetChanged()
         }
     }
 
     private fun pickStartDateAndApply() {
         if (planId <= 0) {
-            Toast.makeText(requireContext(), R.string.fill_required_fields, Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), R.string.plan_build_first, Toast.LENGTH_SHORT).show()
             return
         }
         val cal = Calendar.getInstance()

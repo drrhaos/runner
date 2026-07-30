@@ -117,13 +117,15 @@ class TemplateEditFragment : Fragment() {
     private fun scrollToNewestSegment() {
         val recycler = binding.recyclerViewSegments
         val scroll = binding.scrollTemplateEdit
-        recycler.post {
-            recycler.requestLayout()
-            scroll.post {
-                val target = binding.buttonAddSegment
-                scroll.smoothScrollTo(0, target.bottom + (target.parent as View).paddingBottom)
+        recycler.viewTreeObserver.addOnGlobalLayoutListener(
+            object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    recycler.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    scroll.post { scroll.fullScroll(View.FOCUS_DOWN) }
+                }
             }
-        }
+        )
+        recycler.requestLayout()
     }
 
     private fun save() {
