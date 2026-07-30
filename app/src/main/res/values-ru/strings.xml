@@ -451,6 +451,17 @@
     <string name="plan_day_no_intervals">Нет интервалов</string>
     <string name="plan_month_training_days">Тренировочных дней в месяце: %1$d</string>
     <string name="plan_month_no_schedule">План ещё не наложен на календарь</string>
+    <string name="plan_prev_month">Предыдущий месяц</string>
+    <string name="plan_next_month">Следующий месяц</string>
+    <string name="plan_legend_training">Тренировка</string>
+    <string name="plan_legend_done">Выполнено</string>
+    <string name="plan_weekday_1">Пн</string>
+    <string name="plan_weekday_2">Вт</string>
+    <string name="plan_weekday_3">Ср</string>
+    <string name="plan_weekday_4">Чт</string>
+    <string name="plan_weekday_5">Пт</string>
+    <string name="plan_weekday_6">Сб</string>
+    <string name="plan_weekday_7">Вс</string>
     <string name="plan_status_planned">Запланировано</string>
     <string name="plan_status_done">Выполнено</string>
     <string name="plan_status_skipped">Пропущено</string>

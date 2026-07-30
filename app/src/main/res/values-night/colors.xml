@@ -13,6 +13,7 @@
     <color name="blue_900">#FFE3F2FD</color>
 
     <!-- Additional colors for GPS status (adjusted for dark theme) -->
+    <color name="green_100">#FF1B5E20</color>
     <color name="green_500">#FF81C784</color>
     <color name="yellow_500">#FFFFF176</color>
     <color name="orange_500">#FFFFB74D</color>
