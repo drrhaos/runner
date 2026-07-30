@@ -71,7 +71,7 @@ Runner is a full-featured running app that allows you to:
 
 ### 📋 Training plans
 - **My plan** — calendar with the active plan, day details, and “Choose training plan”
-- **Training plans** — create plans; **base workouts** (interval templates) live inside this section
+- **Training plans** — create plans; **base workouts** live inside this section; JSON import/export of plans together with base workouts
 - On the tracking screen with an active plan: “Follow plan” toggle, current-interval progress bar, spoken interval changes
 
 ### 💾 Export and import

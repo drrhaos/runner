@@ -3,9 +3,11 @@ package com.runner.academy.data
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.withContext
+import com.runner.academy.util.TrainingPlanBackupFormat
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
@@ -78,6 +80,72 @@ class TrainingPlanRepository(
 
     suspend fun deletePlan(plan: TrainingPlan) = withContext(Dispatchers.IO) {
         planDao.deletePlan(plan)
+    }
+
+    suspend fun buildExportSnapshot(): Pair<
+        List<TrainingPlanBackupFormat.WorkoutTemplateWithSegmentsExport>,
+        List<TrainingPlanBackupFormat.PlanWithDaysExport>
+        > = withContext(Dispatchers.IO) {
+        val templates = templateDao.getAllTemplates().first()
+        val templateExports = templates.map { template ->
+            TrainingPlanBackupFormat.WorkoutTemplateWithSegmentsExport(
+                template = template,
+                segments = templateDao.getSegmentsForTemplate(template.id)
+            )
+        }
+        val plans = planDao.getAllPlans().first()
+        val planExports = plans.map { plan ->
+            val days = planDao.getDaysForPlan(plan.id)
+            TrainingPlanBackupFormat.PlanWithDaysExport(
+                plan = plan,
+                days = days.map {
+                    TrainingPlanBackupFormat.PlanDayDto(
+                        dayIndex = it.dayIndex,
+                        templateId = it.templateId
+                    )
+                }
+            )
+        }
+        templateExports to planExports
+    }
+
+    suspend fun importBackup(
+        parsed: TrainingPlanBackupFormat.ParsedBackup
+    ): TrainingPlanBackupFormat.ImportResult = withContext(Dispatchers.IO) {
+        val templateIdMap = mutableMapOf<Long, Long>()
+        for ((exportId, item) in parsed.templates) {
+            val newId = saveTemplate(item.template.copy(id = 0), item.segments)
+            templateIdMap[exportId] = newId
+        }
+
+        var plansImported = 0
+        for ((_, item) in parsed.plans) {
+            val now = System.currentTimeMillis()
+            val newPlanId = planDao.insertPlan(
+                item.plan.copy(
+                    id = 0,
+                    createdAt = item.plan.createdAt.takeIf { it > 0 } ?: now,
+                    updatedAt = now
+                )
+            )
+            val days = item.days.map { day ->
+                TrainingPlanDay(
+                    planId = newPlanId,
+                    dayIndex = day.dayIndex,
+                    templateId = day.templateId?.let { oldId -> templateIdMap[oldId] }
+                )
+            }
+            if (days.isNotEmpty()) {
+                planDao.insertDays(days)
+            }
+            ensurePlanDays(newPlanId, item.plan.durationDays)
+            plansImported++
+        }
+
+        TrainingPlanBackupFormat.ImportResult(
+            templatesImported = parsed.templates.size,
+            plansImported = plansImported
+        )
     }
 
     suspend fun setPlanDayTemplate(planId: Long, dayIndex: Int, templateId: Long?) =

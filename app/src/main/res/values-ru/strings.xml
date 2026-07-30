@@ -400,6 +400,9 @@
     </plurals>
 
     <!-- Планы тренировок -->
+    <string name="menu_plans">Планы тренировок</string>
+    <string name="menu_my_plan">Мой план</string>
+    <string name="menu_templates">Базовые тренировки</string>
     <string name="intensity_icon_label">Иконка интенсивности</string>
     <string name="intensity_icon_selected">Выбрано: %1$s</string>
     <string name="intensity_icon_recovery">Восстановление</string>
@@ -434,6 +437,16 @@
     <string name="plans_title">Планы тренировок</string>
     <string name="plans_empty">Пока нет планов</string>
     <string name="plans_add">Новый план</string>
+    <string name="plans_fab_actions">Действия с планами</string>
+    <string name="plans_fab_close">Закрыть</string>
+    <string name="plans_import">Импорт планов</string>
+    <string name="plans_export">Экспорт планов</string>
+    <string name="plans_export_title">Экспорт планов тренировок</string>
+    <string name="plans_export_progress">Экспорт…</string>
+    <string name="plans_export_ready">Экспорт готов</string>
+    <string name="plans_import_progress">Импорт…</string>
+    <string name="plans_import_success">Импортировано базовых: %1$d, планов: %2$d</string>
+    <string name="plans_import_error">Ошибка импорта: %1$s</string>
     <string name="plan_edit_title">Редактирование плана</string>
     <string name="plan_name_hint">Название плана</string>
     <string name="plan_duration_hint">Длительность (дней)</string>

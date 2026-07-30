@@ -12,6 +12,7 @@ import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutTemplate
 import com.runner.academy.data.WorkoutTemplateSegment
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.util.TrainingPlanBackupFormat
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -99,6 +100,19 @@ class TrainingPlanViewModel(
 
     suspend fun applyToCalendar(planId: Long, startMillis: Long): Long {
         return repository.applyPlanToCalendar(planId, startMillis)
+    }
+
+    suspend fun exportBackupJson(packageName: String): String {
+        val (templates, plans) = repository.buildExportSnapshot()
+        if (templates.isEmpty() && plans.isEmpty()) {
+            throw IllegalStateException("empty")
+        }
+        return TrainingPlanBackupFormat.toBackupJson(templates, plans, packageName)
+    }
+
+    suspend fun importBackupJson(json: String): TrainingPlanBackupFormat.ImportResult {
+        val parsed = TrainingPlanBackupFormat.parseBackupJson(json)
+        return repository.importBackup(parsed)
     }
 
     suspend fun todaysWorkout() = repository.getTodaysScheduledWorkout()
