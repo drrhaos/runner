@@ -1,11 +1,12 @@
 # Room database schemas
 
-Room exports database schemas here when `exportSchema = true`.
+Room exports database schemas here when `exportSchema = true`
+(configured via the Room Gradle Plugin `schemaDirectory`).
 
 After installing the Android SDK, generate schemas with:
 
 ```bash
-./gradlew :app:kaptDebugKotlin
+./gradlew :app:kspDebugKotlin
 ```
 
 Commit the generated JSON files under `com.runner.academy.data.WorkoutDatabase/`.

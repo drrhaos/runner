@@ -35,7 +35,7 @@ Edit `local.properties` and set `sdk.dir` to your Android SDK path.
 4. Generate and commit Room schemas (first-time setup after SDK install):
 
 ```bash
-./gradlew :app:kaptDebugKotlin
+./gradlew :app:kspDebugKotlin
 git add app/schemas/
 ```
 

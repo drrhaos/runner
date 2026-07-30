@@ -36,9 +36,16 @@ Google Play Services Location is used for GPS updates. Google's privacy policy a
 | Internet | Map tiles |
 | Wake lock | Keep tracking active during workouts |
 
-## Data export and deletion
+## Data export, import, and deletion
 
-You can export workouts as GPX or CSV files. To delete data, remove individual workouts in the app or clear app data in Android system settings.
+You can export workouts as:
+- **JSON backup** (full restore, including routes)
+- **GPX** (single workout or ZIP of all tracks)
+- **CSV** (statistics)
+
+You can import workouts from a **JSON backup** (including older `com.example.runner` exports) or a **folder of GPX files**.
+
+To delete data, remove individual workouts in the app or clear app data in Android system settings.
 
 ## Backups
 
