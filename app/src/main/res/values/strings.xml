@@ -450,6 +450,17 @@
     <string name="plan_day_no_intervals">No intervals</string>
     <string name="plan_month_training_days">Training days this month: %1$d</string>
     <string name="plan_month_no_schedule">No plan on the calendar yet</string>
+    <string name="plan_prev_month">Previous month</string>
+    <string name="plan_next_month">Next month</string>
+    <string name="plan_legend_training">Workout</string>
+    <string name="plan_legend_done">Done</string>
+    <string name="plan_weekday_1">Mon</string>
+    <string name="plan_weekday_2">Tue</string>
+    <string name="plan_weekday_3">Wed</string>
+    <string name="plan_weekday_4">Thu</string>
+    <string name="plan_weekday_5">Fri</string>
+    <string name="plan_weekday_6">Sat</string>
+    <string name="plan_weekday_7">Sun</string>
     <string name="plan_status_planned">Planned</string>
     <string name="plan_status_done">Done</string>
     <string name="plan_status_skipped">Skipped</string>
