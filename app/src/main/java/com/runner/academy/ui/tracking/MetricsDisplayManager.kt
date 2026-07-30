@@ -18,7 +18,8 @@ import com.runner.academy.data.WorkoutState
  */
 class MetricsDisplayManager(
     private val views: Views,
-    private val viewModel: WorkoutTrackingViewModel
+    private val viewModel: WorkoutTrackingViewModel,
+    private val onIdleControlsVisible: ((Boolean) -> Unit)? = null
 ) {
 
     data class Views(
@@ -59,6 +60,7 @@ class MetricsDisplayManager(
                 views.buttonStart.visibility = View.VISIBLE
                 views.buttonPause.visibility = View.GONE
                 views.buttonStop.visibility = View.GONE
+                onIdleControlsVisible?.invoke(true)
             }
             WorkoutState.RUNNING -> {
                 views.spinnerWorkoutType.visibility = View.GONE
@@ -66,6 +68,7 @@ class MetricsDisplayManager(
                 views.buttonPause.visibility = View.VISIBLE
                 views.buttonStop.visibility = View.VISIBLE
                 views.buttonPause.setImageResource(R.drawable.ic_pause)
+                onIdleControlsVisible?.invoke(false)
             }
             WorkoutState.PAUSED -> {
                 views.spinnerWorkoutType.visibility = View.GONE
@@ -73,12 +76,14 @@ class MetricsDisplayManager(
                 views.buttonPause.visibility = View.VISIBLE
                 views.buttonStop.visibility = View.VISIBLE
                 views.buttonPause.setImageResource(R.drawable.ic_play_arrow)
+                onIdleControlsVisible?.invoke(false)
             }
             WorkoutState.STOPPED -> {
                 views.spinnerWorkoutType.visibility = View.VISIBLE
                 views.buttonStart.visibility = View.VISIBLE
                 views.buttonPause.visibility = View.GONE
                 views.buttonStop.visibility = View.GONE
+                onIdleControlsVisible?.invoke(true)
             }
         }
     }

@@ -29,4 +29,25 @@ class Converters {
             WorkoutType.EASY_RUN
         }
     }
+
+    @TypeConverter
+    fun fromSegmentKind(value: SegmentKind): String = value.name
+
+    @TypeConverter
+    fun toSegmentKind(value: String): SegmentKind =
+        SegmentKind.entries.find { it.name == value } ?: SegmentKind.CUSTOM
+
+    @TypeConverter
+    fun fromSegmentGoalType(value: SegmentGoalType): String = value.name
+
+    @TypeConverter
+    fun toSegmentGoalType(value: String): SegmentGoalType =
+        SegmentGoalType.entries.find { it.name == value } ?: SegmentGoalType.DURATION
+
+    @TypeConverter
+    fun fromScheduledWorkoutStatus(value: ScheduledWorkoutStatus): String = value.name
+
+    @TypeConverter
+    fun toScheduledWorkoutStatus(value: String): ScheduledWorkoutStatus =
+        ScheduledWorkoutStatus.entries.find { it.name == value } ?: ScheduledWorkoutStatus.PLANNED
 }

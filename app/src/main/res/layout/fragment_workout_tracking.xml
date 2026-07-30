@@ -148,7 +148,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
-            android:layout_marginTop="8dp">
+            android:layout_marginTop="8dp"
+            android:orientation="vertical">
 
             <Spinner
                 android:id="@+id/spinner_workout_type"
@@ -158,6 +159,46 @@
                 android:backgroundTint="?attr/colorPrimary"
                 android:paddingHorizontal="8dp" />
 
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switch_follow_plan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/tracking_follow_plan"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Шкала интервалов активного плана -->
+        <LinearLayout
+            android:id="@+id/layout_interval_panel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:paddingHorizontal="12dp">
+
+            <TextView
+                android:id="@+id/textView_interval_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:gravity="center_horizontal" />
+
+            <TextView
+                android:id="@+id/textView_interval_progress_label"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_horizontal"
+                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/progress_interval"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                app:trackThickness="8dp" />
         </LinearLayout>
 
         <!-- Текст обратного отсчета до старта -->

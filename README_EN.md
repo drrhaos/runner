@@ -69,6 +69,11 @@ Runner is a full-featured running app that allows you to:
 - Voice feedback
 - **Start countdown** (3, 5, 10, 15, or 30 seconds)
 
+### 📋 Training plans
+- **Base workouts** — templates with ordered intervals (duration / distance, optional target pace)
+- **Plans** — assign templates to days, “repeat to end”, apply to calendar from a start date
+- On the tracking screen with an active plan: “Follow plan” toggle, current-interval progress bar, spoken interval changes
+
 ### 💾 Export and import
 On **My Workouts**, the **+** FAB opens a speed dial:
 
@@ -382,6 +387,7 @@ app/src/main/
 │   ├── ui/
 │   │   ├── tracking/            # Tracking screen
 │   │   ├── workout/             # List / detail / add / edit
+│   │   ├── trainingplan/        # Base workouts and plans
 │   │   ├── statistics/          # Statistics
 │   │   └── settings/            # Settings
 │   ├── service/

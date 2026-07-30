@@ -398,4 +398,58 @@
         <item quantity="many">%d километров в час</item>
         <item quantity="other">%d километра в час</item>
     </plurals>
+
+    <!-- Планы тренировок -->
+    <string name="menu_plans">Планы тренировок</string>
+    <string name="menu_templates">Базовые тренировки</string>
+    <string name="templates_title">Базовые тренировки</string>
+    <string name="templates_empty">Пока нет базовых тренировок</string>
+    <string name="templates_add">Новая базовая тренировка</string>
+    <string name="template_edit_title">Редактирование базовой</string>
+    <string name="template_name_hint">Название (напр. Интервальная 1)</string>
+    <string name="template_segments">Интервалы</string>
+    <string name="template_add_segment">Добавить интервал</string>
+    <string name="template_saved">Базовая тренировка сохранена</string>
+    <string name="template_delete_confirm">Удалить эту базовую тренировку?</string>
+    <string name="segment_title_hint">Название интервала</string>
+    <string name="segment_kind">Тип</string>
+    <string name="segment_goal">Цель</string>
+    <string name="segment_goal_duration">Время</string>
+    <string name="segment_goal_distance">Дистанция</string>
+    <string name="segment_duration_hint">Минуты</string>
+    <string name="segment_distance_hint">Метры</string>
+    <string name="segment_pace_hint">Целевой темп (мин/км), опционально</string>
+    <string name="segment_kind_warmup">Разминка</string>
+    <string name="segment_kind_work">Работа</string>
+    <string name="segment_kind_recovery">Восстановление</string>
+    <string name="segment_kind_cooldown">Заминка</string>
+    <string name="segment_kind_custom">Свой</string>
+    <string name="plans_title">Планы тренировок</string>
+    <string name="plans_empty">Пока нет планов</string>
+    <string name="plans_add">Новый план</string>
+    <string name="plan_edit_title">Редактирование плана</string>
+    <string name="plan_name_hint">Название плана</string>
+    <string name="plan_duration_hint">Длительность (дней)</string>
+    <string name="plan_duration_days_format">%1$d дн.</string>
+    <string name="plan_days_title">Дни</string>
+    <string name="plan_day_rest">Отдых</string>
+    <string name="plan_day_label">День %1$d</string>
+    <string name="plan_pick_template">Выберите базовую тренировку</string>
+    <string name="plan_repeat_to_end">Повторить до конца</string>
+    <string name="plan_repeat_need_selection">Выберите хотя бы один день</string>
+    <string name="plan_apply_calendar">Наложить на календарь</string>
+    <string name="plan_apply_pick_start">Выберите дату старта</string>
+    <string name="plan_applied">План наложен на календарь</string>
+    <string name="plan_saved">План сохранён</string>
+    <string name="plan_delete_confirm">Удалить этот план?</string>
+    <string name="plan_active_banner">Сегодня: %1$s</string>
+    <string name="plan_today_rest">Сегодня день отдыха по плану</string>
+    <string name="plan_no_active">Нет активного плана</string>
+    <string name="plan_deactivate">Отключить план</string>
+    <string name="tracking_interval_progress">Интервал %1$d / %2$d</string>
+    <string name="tracking_follow_plan">По плану</string>
+    <string name="tracking_free_run">Свободный бег</string>
+    <string name="voice_interval_start">Интервал: %1$s</string>
+    <string name="voice_interval_start_with_detail">Интервал: %1$s. %2$s</string>
+
 </resources>
