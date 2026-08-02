@@ -407,6 +407,34 @@
     <string name="templates_title">Base workouts</string>
     <string name="templates_empty">No base workouts yet</string>
     <string name="templates_add">New base workout</string>
+    <string name="template_wizard_intro_title">New base workout</string>
+    <string name="template_wizard_intro_message">Generate intervals automatically, or skip and build the template manually.</string>
+    <string name="template_wizard_generate">Generate</string>
+    <string name="template_wizard_skip">Skip</string>
+    <string name="template_wizard_intervals_title">Number of intervals</string>
+    <string name="template_wizard_intervals_label">Intervals</string>
+    <string name="template_wizard_goal_title">Interval type</string>
+    <string name="template_wizard_interval_duration_title">Interval duration</string>
+    <string name="template_wizard_interval_distance_title">Interval distance</string>
+    <string name="template_wizard_pace_title">Base pace (0:00 = none)</string>
+    <string name="template_wizard_recovery_goal_title">Recovery type</string>
+    <string name="template_wizard_recovery_duration_title">Recovery duration</string>
+    <string name="template_wizard_recovery_distance_title">Recovery distance</string>
+    <string name="template_wizard_recovery_pace_title">Recovery pace (0:00 = none)</string>
+    <string name="template_wizard_warmup_title">Warm-up</string>
+    <string name="template_wizard_warmup_message">Add a warm-up before the intervals?</string>
+    <string name="template_wizard_warmup_goal_title">Warm-up type</string>
+    <string name="template_wizard_warmup_duration_title">Warm-up duration</string>
+    <string name="template_wizard_warmup_distance_title">Warm-up distance</string>
+    <string name="template_wizard_warmup_pace_title">Warm-up pace (0:00 = none)</string>
+    <string name="template_wizard_cooldown_title">Cool-down</string>
+    <string name="template_wizard_cooldown_message">Add a cool-down after the intervals?</string>
+    <string name="template_wizard_cooldown_goal_title">Cool-down type</string>
+    <string name="template_wizard_cooldown_duration_title">Cool-down duration</string>
+    <string name="template_wizard_cooldown_distance_title">Cool-down distance</string>
+    <string name="template_wizard_cooldown_pace_title">Cool-down pace (0:00 = none)</string>
+    <string name="template_wizard_default_name">Intervals ×%1$d</string>
+    <string name="segment_interval_name">Interval %1$d</string>
     <string name="template_edit_title">Edit base workout</string>
     <string name="template_name_hint">Name (e.g. Interval 1)</string>
     <string name="template_segments">Intervals</string>
