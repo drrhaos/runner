@@ -535,5 +535,8 @@
     <string name="tracking_free_run">Свободный бег</string>
     <string name="voice_interval_start">Интервал: %1$s</string>
     <string name="voice_interval_start_with_detail">Интервал: %1$s. %2$s</string>
+    <string name="voice_interval_upcoming">Следующий интервал: %1$s</string>
+    <string name="voice_interval_upcoming_with_detail">Следующий интервал: %1$s. %2$s</string>
+    <string name="chart_interval_n">Инт %1$d</string>
 
 </resources>
