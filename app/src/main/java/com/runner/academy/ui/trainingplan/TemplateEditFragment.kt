@@ -1,12 +1,10 @@
 package com.runner.academy.ui.trainingplan
 
-import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
-import android.widget.NumberPicker
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -26,7 +24,6 @@ import com.runner.academy.data.defaultTrainingIcon
 import com.runner.academy.data.displayName
 import com.runner.academy.data.isDefaultTitle
 import com.runner.academy.data.parseTrainingIcon
-import com.runner.academy.databinding.DialogSegmentValuePickerBinding
 import com.runner.academy.databinding.FragmentTemplateEditBinding
 import com.runner.academy.databinding.ItemTemplateSegmentBinding
 import kotlinx.coroutines.launch
@@ -147,11 +144,57 @@ class TemplateEditFragment : Fragment() {
             selectedIcon = selectedType.defaultTrainingIcon()
             iconAdapter.selected = selectedIcon
             updateIconHint()
-            drafts.add(SegmentDraft(kind = SegmentKind.WARMUP))
-            drafts.add(SegmentDraft(kind = SegmentKind.WORK))
-            drafts.add(SegmentDraft(kind = SegmentKind.COOLDOWN))
-            segmentAdapter.notifyDataSetChanged()
+            binding.root.visibility = View.INVISIBLE
+            TemplateCreateWizard.start(
+                context = requireContext(),
+                onComplete = { config ->
+                    if (!isAdded) return@start
+                    applyGeneratedTemplate(config)
+                },
+                onSkip = {
+                    if (!isAdded) return@start
+                    applySkippedTemplate()
+                },
+                onCancel = {
+                    if (isAdded) findNavController().navigateUp()
+                }
+            )
         }
+    }
+
+    private fun applyGeneratedTemplate(config: TemplateCreateConfig) {
+        drafts.clear()
+        drafts.addAll(TemplateCreateWizard.buildSegments(requireContext(), config))
+        binding.editTextTemplateName.setText(
+            TemplateCreateWizard.suggestedName(requireContext(), config)
+        )
+        selectedType = WorkoutType.INTERVAL_TRAINING
+        selectedIcon = selectedType.defaultTrainingIcon()
+        iconChosenManually = false
+        iconAdapter.selected = selectedIcon
+        binding.autoCompleteWorkoutType.setText(
+            selectedType.displayName(requireContext()),
+            false
+        )
+        updateIconHint()
+        segmentAdapter.notifyDataSetChanged()
+        binding.root.visibility = View.VISIBLE
+    }
+
+    private fun applySkippedTemplate() {
+        drafts.clear()
+        drafts.add(SegmentDraft(kind = SegmentKind.WORK))
+        selectedType = WorkoutType.INTERVAL_TRAINING
+        selectedIcon = selectedType.defaultTrainingIcon()
+        iconChosenManually = false
+        iconAdapter.selected = selectedIcon
+        binding.autoCompleteWorkoutType.setText(
+            selectedType.displayName(requireContext()),
+            false
+        )
+        updateIconHint()
+        segmentAdapter.notifyDataSetChanged()
+        binding.root.visibility = View.VISIBLE
     }
 
     private fun updateIconHint() {
@@ -317,13 +360,37 @@ private class SegmentDraftAdapter(
                 if (!hasFocus) draft.title = binding.editTextSegmentTitle.text?.toString().orEmpty()
             }
             binding.editTextDuration.setOnClickListener {
-                showDurationPicker(ctx, draft) { bindValueFields(draft) }
+                showDurationValuePicker(
+                    context = ctx,
+                    titleRes = R.string.segment_dialog_duration_title,
+                    initialSeconds = draft.durationTotalSeconds,
+                    onPicked = { seconds ->
+                        draft.durationTotalSeconds = seconds
+                        bindValueFields(draft)
+                    }
+                )
             }
             binding.editTextDistance.setOnClickListener {
-                showDistancePicker(ctx, draft) { bindValueFields(draft) }
+                showDistanceValuePicker(
+                    context = ctx,
+                    titleRes = R.string.segment_dialog_distance_title,
+                    initialMeters = draft.distanceTotalMeters,
+                    onPicked = { meters ->
+                        draft.distanceTotalMeters = meters
+                        bindValueFields(draft)
+                    }
+                )
             }
             binding.editTextPace.setOnClickListener {
-                showPacePicker(ctx, draft) { bindValueFields(draft) }
+                showPaceValuePicker(
+                    context = ctx,
+                    titleRes = R.string.segment_dialog_pace_title,
+                    initialPaceSeconds = draft.paceTotalSeconds,
+                    onPicked = { pace ->
+                        draft.paceTotalSeconds = pace
+                        bindValueFields(draft)
+                    }
+                )
             }
 
             binding.buttonRemoveSegment.setOnClickListener {
@@ -344,107 +411,4 @@ private class SegmentDraftAdapter(
             binding.editTextPace.setText(formatSegmentPace(ctx, draft.paceTotalSeconds))
         }
     }
-}
-
-private fun formatSegmentDuration(totalSeconds: Int): String {
-    val safe = totalSeconds.coerceAtLeast(0)
-    val hours = safe / 3600
-    val minutes = (safe % 3600) / 60
-    val seconds = safe % 60
-    return String.format("%d:%02d:%02d", hours, minutes, seconds)
-}
-
-private fun formatSegmentDistance(context: Context, meters: Int): String {
-    val safe = meters.coerceAtLeast(0)
-    val km = safe / 1000
-    val m = safe % 1000
-    return if (km > 0) {
-        context.getString(R.string.segment_distance_format_km_m, km, m)
-    } else {
-        context.getString(R.string.segment_distance_format_m, m)
-    }
-}
-
-private fun formatSegmentPace(context: Context, paceTotalSeconds: Int): String {
-    if (paceTotalSeconds <= 0) {
-        return context.getString(R.string.segment_pace_none)
-    }
-    val minutes = paceTotalSeconds / 60
-    val seconds = paceTotalSeconds % 60
-    return context.getString(R.string.segment_pace_format, minutes, seconds)
-}
-
-private fun NumberPicker.configure(min: Int, max: Int, value: Int) {
-    minValue = min
-    maxValue = max
-    this.value = value.coerceIn(min, max)
-    wrapSelectorWheel = true
-}
-
-private fun showDurationPicker(context: Context, draft: SegmentDraft, onApplied: () -> Unit) {
-    val dialogBinding = DialogSegmentValuePickerBinding.inflate(LayoutInflater.from(context))
-    dialogBinding.column3.visibility = View.VISIBLE
-
-    val total = draft.durationTotalSeconds.coerceIn(0, 24 * 3600 + 59 * 60 + 59)
-    dialogBinding.label1.setText(R.string.add_workout_hint_time_hours)
-    dialogBinding.label2.setText(R.string.add_workout_hint_time_minutes)
-    dialogBinding.label3.setText(R.string.add_workout_hint_time_seconds)
-    dialogBinding.picker1.configure(0, 24, total / 3600)
-    dialogBinding.picker2.configure(0, 59, (total % 3600) / 60)
-    dialogBinding.picker3.configure(0, 59, total % 60)
-
-    MaterialAlertDialogBuilder(context)
-        .setTitle(R.string.segment_dialog_duration_title)
-        .setView(dialogBinding.root)
-        .setPositiveButton(R.string.save) { _, _ ->
-            val h = dialogBinding.picker1.value
-            val m = dialogBinding.picker2.value
-            val s = dialogBinding.picker3.value
-            draft.durationTotalSeconds = (h * 3600 + m * 60 + s).coerceAtLeast(1)
-            onApplied()
-        }
-        .setNegativeButton(R.string.cancel, null)
-        .show()
-}
-
-private fun showDistancePicker(context: Context, draft: SegmentDraft, onApplied: () -> Unit) {
-    val dialogBinding = DialogSegmentValuePickerBinding.inflate(LayoutInflater.from(context))
-
-    val total = draft.distanceTotalMeters.coerceIn(0, 50 * 1000 + 999)
-    dialogBinding.label1.setText(R.string.segment_picker_km)
-    dialogBinding.label2.setText(R.string.segment_picker_m)
-    dialogBinding.picker1.configure(0, 50, total / 1000)
-    dialogBinding.picker2.configure(0, 999, total % 1000)
-
-    MaterialAlertDialogBuilder(context)
-        .setTitle(R.string.segment_dialog_distance_title)
-        .setView(dialogBinding.root)
-        .setPositiveButton(R.string.save) { _, _ ->
-            val km = dialogBinding.picker1.value
-            val m = dialogBinding.picker2.value
-            draft.distanceTotalMeters = (km * 1000 + m).coerceAtLeast(1)
-            onApplied()
-        }
-        .setNegativeButton(R.string.cancel, null)
-        .show()
-}
-
-private fun showPacePicker(context: Context, draft: SegmentDraft, onApplied: () -> Unit) {
-    val dialogBinding = DialogSegmentValuePickerBinding.inflate(LayoutInflater.from(context))
-
-    val total = draft.paceTotalSeconds.coerceIn(0, 30 * 60 + 59)
-    dialogBinding.label1.setText(R.string.segment_picker_pace_min)
-    dialogBinding.label2.setText(R.string.add_workout_hint_time_seconds)
-    dialogBinding.picker1.configure(0, 30, total / 60)
-    dialogBinding.picker2.configure(0, 59, total % 60)
-
-    MaterialAlertDialogBuilder(context)
-        .setTitle(R.string.segment_dialog_pace_title)
-        .setView(dialogBinding.root)
-        .setPositiveButton(R.string.save) { _, _ ->
-            draft.paceTotalSeconds = dialogBinding.picker1.value * 60 + dialogBinding.picker2.value
-            onApplied()
-        }
-        .setNegativeButton(R.string.cancel, null)
-        .show()
 }

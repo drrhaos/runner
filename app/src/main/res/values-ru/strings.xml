@@ -408,6 +408,34 @@
     <string name="templates_title">Базовые тренировки</string>
     <string name="templates_empty">Пока нет базовых тренировок</string>
     <string name="templates_add">Новая базовая тренировка</string>
+    <string name="template_wizard_intro_title">Новая базовая тренировка</string>
+    <string name="template_wizard_intro_message">Сгенерировать интервалы автоматически или пропустить и собрать шаблон вручную.</string>
+    <string name="template_wizard_generate">Сгенерировать</string>
+    <string name="template_wizard_skip">Пропустить</string>
+    <string name="template_wizard_intervals_title">Количество интервалов</string>
+    <string name="template_wizard_intervals_label">Интервалы</string>
+    <string name="template_wizard_goal_title">Тип интервала</string>
+    <string name="template_wizard_interval_duration_title">Длительность интервала</string>
+    <string name="template_wizard_interval_distance_title">Дистанция интервала</string>
+    <string name="template_wizard_pace_title">Базовый темп (0:00 = без темпа)</string>
+    <string name="template_wizard_recovery_goal_title">Тип восстановления</string>
+    <string name="template_wizard_recovery_duration_title">Длительность восстановления</string>
+    <string name="template_wizard_recovery_distance_title">Дистанция восстановления</string>
+    <string name="template_wizard_recovery_pace_title">Темп восстановления (0:00 = без темпа)</string>
+    <string name="template_wizard_warmup_title">Разминка</string>
+    <string name="template_wizard_warmup_message">Добавить разминку перед интервалами?</string>
+    <string name="template_wizard_warmup_goal_title">Тип разминки</string>
+    <string name="template_wizard_warmup_duration_title">Длительность разминки</string>
+    <string name="template_wizard_warmup_distance_title">Дистанция разминки</string>
+    <string name="template_wizard_warmup_pace_title">Темп разминки (0:00 = без темпа)</string>
+    <string name="template_wizard_cooldown_title">Заминка</string>
+    <string name="template_wizard_cooldown_message">Добавить заминку после интервалов?</string>
+    <string name="template_wizard_cooldown_goal_title">Тип заминки</string>
+    <string name="template_wizard_cooldown_duration_title">Длительность заминки</string>
+    <string name="template_wizard_cooldown_distance_title">Дистанция заминки</string>
+    <string name="template_wizard_cooldown_pace_title">Темп заминки (0:00 = без темпа)</string>
+    <string name="template_wizard_default_name">Интервалы ×%1$d</string>
+    <string name="segment_interval_name">Интервал %1$d</string>
     <string name="template_edit_title">Редактирование базовой тренировки</string>
     <string name="template_name_hint">Название (напр. Интервальная 1)</string>
     <string name="template_segments">Интервалы</string>
