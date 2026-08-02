@@ -181,8 +181,9 @@
             <com.runner.academy.ui.tracking.SegmentProgressView
                 android:id="@+id/progress_interval_segments"
                 android:layout_width="match_parent"
-                android:layout_height="12dp"
-                android:layout_marginTop="8dp" />
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:minHeight="24dp" />
         </LinearLayout>
 
         <!-- Текст обратного отсчета до старта -->

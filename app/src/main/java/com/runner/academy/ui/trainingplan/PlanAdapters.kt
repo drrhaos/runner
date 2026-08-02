@@ -1,6 +1,7 @@
 package com.runner.academy.ui.trainingplan
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -8,17 +9,19 @@ import androidx.recyclerview.widget.RecyclerView
 import com.runner.academy.R
 import com.runner.academy.data.TrainingIcon
 import com.runner.academy.data.WorkoutTemplate
+import com.runner.academy.data.WorkoutTemplateWithSegments
 import com.runner.academy.data.displayName
 import com.runner.academy.data.drawableRes
 import com.runner.academy.data.parseTrainingIcon
 import com.runner.academy.databinding.ItemSimpleTwoLineBinding
+import com.runner.academy.databinding.ItemTemplateListBinding
 
 class TemplateListAdapter(
     private val onClick: (WorkoutTemplate) -> Unit
-) : ListAdapter<WorkoutTemplate, TemplateListAdapter.VH>(Diff) {
+) : ListAdapter<WorkoutTemplateWithSegments, TemplateListAdapter.VH>(Diff) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val binding = ItemSimpleTwoLineBinding.inflate(
+        val binding = ItemTemplateListBinding.inflate(
             LayoutInflater.from(parent.context), parent, false
         )
         return VH(binding)
@@ -28,20 +31,39 @@ class TemplateListAdapter(
         holder.bind(getItem(position))
     }
 
-    inner class VH(private val binding: ItemSimpleTwoLineBinding) :
+    inner class VH(private val binding: ItemTemplateListBinding) :
         RecyclerView.ViewHolder(binding.root) {
-        fun bind(item: WorkoutTemplate) {
-            val icon = parseTrainingIcon(item.iconKey, TrainingIcon.INTERVAL)
+        fun bind(item: WorkoutTemplateWithSegments) {
+            val template = item.template
+            val ctx = binding.root.context
+            val icon = parseTrainingIcon(template.iconKey, TrainingIcon.INTERVAL)
             binding.imageViewIcon.setImageResource(icon.drawableRes())
-            binding.textViewTitle.text = item.name
-            binding.textViewSubtitle.text = item.workoutType.displayName(binding.root.context)
-            binding.root.setOnClickListener { onClick(item) }
+            binding.textViewTitle.text = template.name
+            binding.textViewSubtitle.text = template.workoutType.displayName(ctx)
+
+            if (item.segments.isEmpty()) {
+                binding.progressTemplateScheme.visibility = View.GONE
+                binding.progressTemplateScheme.setSegments(emptyList())
+            } else {
+                binding.progressTemplateScheme.visibility = View.VISIBLE
+                binding.progressTemplateScheme.setSegments(item.segments)
+                // All segments fully colored — static scheme preview (no "current" highlight).
+                binding.progressTemplateScheme.setProgress(item.segments.size, 1f)
+            }
+            binding.root.setOnClickListener { onClick(template) }
         }
     }
 
-    private object Diff : DiffUtil.ItemCallback<WorkoutTemplate>() {
-        override fun areItemsTheSame(a: WorkoutTemplate, b: WorkoutTemplate) = a.id == b.id
-        override fun areContentsTheSame(a: WorkoutTemplate, b: WorkoutTemplate) = a == b
+    private object Diff : DiffUtil.ItemCallback<WorkoutTemplateWithSegments>() {
+        override fun areItemsTheSame(
+            a: WorkoutTemplateWithSegments,
+            b: WorkoutTemplateWithSegments
+        ) = a.template.id == b.template.id
+
+        override fun areContentsTheSame(
+            a: WorkoutTemplateWithSegments,
+            b: WorkoutTemplateWithSegments
+        ) = a == b
     }
 }
 

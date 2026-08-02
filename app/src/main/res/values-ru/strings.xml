@@ -407,6 +407,8 @@
     <string name="intensity_icon_plan">План</string>
     <string name="templates_title">Базовые тренировки</string>
     <string name="templates_empty">Пока нет базовых тренировок</string>
+    <string name="template_scheme_empty">Нет интервалов</string>
+    <string name="template_scheme_details_title">Схема тренировки</string>
     <string name="templates_add">Новая базовая тренировка</string>
     <string name="template_wizard_intro_title">Новая базовая тренировка</string>
     <string name="template_wizard_intro_message">Сгенерировать интервалы автоматически или пропустить и собрать шаблон вручную.</string>
@@ -465,6 +467,10 @@
     <string name="segment_kind_recovery">Восстановление</string>
     <string name="segment_kind_cooldown">Заминка</string>
     <string name="segment_kind_custom">Свой</string>
+    <string name="segment_scheme_warmup">Рз</string>
+    <string name="segment_scheme_recovery">Вс</string>
+    <string name="segment_scheme_cooldown">Зм</string>
+    <string name="segment_scheme_custom">Св</string>
     <string name="plans_title">Планы тренировок</string>
     <string name="plans_empty">Пока нет планов</string>
     <string name="plans_add">Новый план</string>

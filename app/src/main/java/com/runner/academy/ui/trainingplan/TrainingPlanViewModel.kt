@@ -11,6 +11,7 @@ import com.runner.academy.data.TrainingPlanDay
 import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutTemplate
 import com.runner.academy.data.WorkoutTemplateSegment
+import com.runner.academy.data.WorkoutTemplateWithSegments
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.TrainingPlanBackupFormat
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,6 +26,10 @@ class TrainingPlanViewModel(
 
     val templates: StateFlow<List<WorkoutTemplate>> = repository.observeTemplates()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val templatesWithSegments: StateFlow<List<WorkoutTemplateWithSegments>> =
+        repository.observeTemplatesWithSegments()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val plans: StateFlow<List<TrainingPlan>> = repository.observePlans()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
