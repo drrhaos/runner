@@ -406,6 +406,8 @@
     <string name="intensity_icon_plan">Plan</string>
     <string name="templates_title">Base workouts</string>
     <string name="templates_empty">No base workouts yet</string>
+    <string name="template_scheme_empty">No intervals</string>
+    <string name="template_scheme_details_title">Workout scheme</string>
     <string name="templates_add">New base workout</string>
     <string name="template_wizard_intro_title">New base workout</string>
     <string name="template_wizard_intro_message">Generate intervals automatically, or skip and build the template manually.</string>
@@ -464,6 +466,10 @@
     <string name="segment_kind_recovery">Recovery</string>
     <string name="segment_kind_cooldown">Cool-down</string>
     <string name="segment_kind_custom">Custom</string>
+    <string name="segment_scheme_warmup">WU</string>
+    <string name="segment_scheme_recovery">R</string>
+    <string name="segment_scheme_cooldown">CD</string>
+    <string name="segment_scheme_custom">C</string>
     <string name="plans_title">Training plans</string>
     <string name="plans_empty">No plans yet</string>
     <string name="plans_add">New plan</string>

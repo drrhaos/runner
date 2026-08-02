@@ -3,6 +3,7 @@ package com.runner.academy.data
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -18,6 +19,20 @@ class TrainingPlanRepository(
 ) {
 
     fun observeTemplates(): Flow<List<WorkoutTemplate>> = templateDao.getAllTemplates()
+
+    fun observeTemplatesWithSegments(): Flow<List<WorkoutTemplateWithSegments>> =
+        combine(
+            templateDao.getAllTemplates(),
+            templateDao.getAllSegments()
+        ) { templates, segments ->
+            val byTemplateId = segments.groupBy { it.templateId }
+            templates.map { template ->
+                WorkoutTemplateWithSegments(
+                    template = template,
+                    segments = byTemplateId[template.id].orEmpty()
+                )
+            }
+        }
 
     fun observePlans(): Flow<List<TrainingPlan>> = planDao.getAllPlans()
 

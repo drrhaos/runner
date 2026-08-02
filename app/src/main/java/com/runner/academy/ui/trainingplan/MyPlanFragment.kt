@@ -17,7 +17,6 @@ import com.runner.academy.R
 import com.runner.academy.data.ScheduledWorkout
 import com.runner.academy.data.ScheduledWorkoutStatus
 import com.runner.academy.data.ScheduledWorkoutWithTemplate
-import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.TrainingIcon
 import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutDatabase
@@ -25,12 +24,9 @@ import com.runner.academy.data.WorkoutTemplateSegment
 import com.runner.academy.data.defaultTrainingIcon
 import com.runner.academy.data.displayName
 import com.runner.academy.data.drawableRes
-import com.runner.academy.data.localizedTitle
 import com.runner.academy.data.parseTrainingIcon
 import com.runner.academy.databinding.FragmentMyPlanBinding
 import com.runner.academy.databinding.ItemCalendarDayBinding
-import com.runner.academy.util.FormatUtils
-import com.runner.academy.util.SpeedPaceCalculator
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -191,7 +187,7 @@ class MyPlanFragment : Fragment() {
             binding.imageViewDayIcon.visibility = View.GONE
             binding.textViewDayTitle.text = getString(R.string.plan_day_outside)
             binding.textViewDayStatus.text = ""
-            binding.textViewDaySegments.text = ""
+            clearDayScheme()
             return
         }
 
@@ -200,7 +196,7 @@ class MyPlanFragment : Fragment() {
                 binding.imageViewDayIcon.visibility = View.GONE
                 binding.textViewDayTitle.text = getString(R.string.plan_day_rest)
                 binding.textViewDayStatus.text = statusLabel(day.scheduled.status)
-                binding.textViewDaySegments.text = ""
+                clearDayScheme()
             }
             else -> {
                 val template = day.template
@@ -222,27 +218,24 @@ class MyPlanFragment : Fragment() {
                     append(" · ")
                     append(getString(R.string.plan_day_label, day.scheduled.dayIndex + 1))
                 }
-                binding.textViewDaySegments.text = formatSegments(day.segments)
+                bindDayScheme(day.segments)
             }
         }
     }
 
-    private fun formatSegments(segments: List<WorkoutTemplateSegment>): String {
-        if (segments.isEmpty()) return getString(R.string.plan_day_no_intervals)
-        val ctx = requireContext()
-        return segments.joinToString("\n") { segment ->
-            val goal = when (segment.goalType) {
-                SegmentGoalType.DURATION -> segment.durationMs?.let { FormatUtils.formatTime(it) }
-                    ?: "—"
-                SegmentGoalType.DISTANCE -> segment.distanceMeters?.let { meters ->
-                    FormatUtils.formatDistanceMeters(meters, ctx)
-                } ?: "—"
-            }
-            val pace = segment.targetPaceMinPerKm?.let { pace ->
-                " @ ${SpeedPaceCalculator.formatPaceMmSs(pace)}"
-            }.orEmpty()
-            "• ${segment.localizedTitle(ctx)}: $goal$pace"
+    private fun clearDayScheme() {
+        binding.progressDayScheme.visibility = View.GONE
+        binding.progressDayScheme.setSegments(emptyList())
+    }
+
+    private fun bindDayScheme(segments: List<WorkoutTemplateSegment>) {
+        if (segments.isEmpty()) {
+            clearDayScheme()
+            return
         }
+        binding.progressDayScheme.visibility = View.VISIBLE
+        binding.progressDayScheme.setSegments(segments)
+        binding.progressDayScheme.setProgress(segments.size, 1f)
     }
 
     private fun statusLabel(status: ScheduledWorkoutStatus): String = when (status) {

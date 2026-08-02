@@ -56,7 +56,7 @@ class TemplateListFragment : Fragment() {
             )
         }
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.templates.collect { list ->
+            viewModel.templatesWithSegments.collect { list ->
                 adapter.submitList(list)
                 binding.textViewEmpty.visibility =
                     if (list.isEmpty()) View.VISIBLE else View.GONE
