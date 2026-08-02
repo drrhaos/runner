@@ -534,5 +534,8 @@
     <string name="tracking_free_run">Free run</string>
     <string name="voice_interval_start">Interval: %1$s</string>
     <string name="voice_interval_start_with_detail">Interval: %1$s. %2$s</string>
+    <string name="voice_interval_upcoming">Next interval: %1$s</string>
+    <string name="voice_interval_upcoming_with_detail">Next interval: %1$s. %2$s</string>
+    <string name="chart_interval_n">Int %1$d</string>
 
 </resources>

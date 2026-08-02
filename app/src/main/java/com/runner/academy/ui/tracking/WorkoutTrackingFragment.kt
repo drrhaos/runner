@@ -42,9 +42,11 @@ import com.runner.academy.data.WorkoutTemplateSegment
 import com.runner.academy.data.WorkoutTemplateWithSegments
 import com.runner.academy.ui.settings.SettingsViewModel
 import com.runner.academy.ui.settings.SettingsViewModelFactory
+import com.runner.academy.ui.trainingplan.formatSegmentParams
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.GpsConfig
 import com.runner.academy.util.IntervalEngine
+import com.runner.academy.util.IntervalSegmentsJson
 import com.runner.academy.util.UserPreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
@@ -407,8 +409,10 @@ class WorkoutTrackingFragment : Fragment() {
             } else {
                 firstTitle ?: title
             }
-            binding.textViewIntervalProgressLabel.text = if (first != null) {
-                getString(
+            if (first != null) {
+                binding.textViewIntervalParams.visibility = View.VISIBLE
+                binding.textViewIntervalParams.text = formatSegmentParams(requireContext(), first)
+                binding.textViewIntervalProgressLabel.text = getString(
                     R.string.tracking_interval_status,
                     1,
                     segments.size,
@@ -416,7 +420,9 @@ class WorkoutTrackingFragment : Fragment() {
                     0
                 )
             } else {
-                getString(R.string.tracking_interval_progress, 1, segments.size)
+                binding.textViewIntervalParams.visibility = View.GONE
+                binding.textViewIntervalProgressLabel.text =
+                    getString(R.string.tracking_interval_progress, 1, segments.size)
             }
         } else {
             binding.layoutIntervalPanel.visibility = View.GONE
@@ -465,8 +471,10 @@ class WorkoutTrackingFragment : Fragment() {
         val percent = (state.segmentProgress * 100f).toInt().coerceIn(0, 100)
         binding.textViewIntervalTitle.text = segment?.localizedTitle(requireContext())
             ?: selectedMode.displayTitle()
-        binding.textViewIntervalProgressLabel.text = if (segment != null) {
-            getString(
+        if (segment != null) {
+            binding.textViewIntervalParams.visibility = View.VISIBLE
+            binding.textViewIntervalParams.text = formatSegmentParams(requireContext(), segment)
+            binding.textViewIntervalProgressLabel.text = getString(
                 R.string.tracking_interval_status,
                 (state.segmentIndex + 1).coerceAtMost(engine.segmentCount()),
                 engine.segmentCount(),
@@ -474,28 +482,48 @@ class WorkoutTrackingFragment : Fragment() {
                 percent
             )
         } else {
-            getString(
+            binding.textViewIntervalParams.visibility = View.GONE
+            binding.textViewIntervalProgressLabel.text = getString(
                 R.string.tracking_interval_progress,
                 (state.segmentIndex + 1).coerceAtMost(engine.segmentCount()),
                 engine.segmentCount()
             )
         }
 
-        if (announce && isVoiceEnabled && engine.consumeSegmentAnnouncement(state) && segment != null) {
-            voiceFeedbackManager?.announceIntervalStart(
-                segment.localizedTitle(requireContext()),
-                formatSegmentGoalDetail(segment)
-            )
+        if (announce && engine.consumeSegmentAnnouncement(state) && segment != null) {
+            voiceFeedbackManager?.playIntervalBeep()
+            if (isVoiceEnabled) {
+                voiceFeedbackManager?.announceIntervalStart(
+                    segment.localizedTitle(requireContext()),
+                    formatSegmentVoiceDetail(segment)
+                )
+            }
+        }
+
+        if (announce && isVoiceEnabled) {
+            val remainingMs = engine.estimateRemainingMs(state, session.avgPace)
+            val next = engine.peekNextSegment()
+            if (next != null && engine.consumeUpcomingWarning(state, remainingMs)) {
+                voiceFeedbackManager?.announceIntervalUpcoming(
+                    next.localizedTitle(requireContext()),
+                    formatSegmentVoiceDetail(next)
+                )
+            }
         }
     }
 
-    private fun formatSegmentGoalDetail(segment: WorkoutTemplateSegment): String? {
-        return when (segment.goalType) {
+    private fun formatSegmentVoiceDetail(segment: WorkoutTemplateSegment): String {
+        val goal = when (segment.goalType) {
             SegmentGoalType.DURATION -> segment.durationMs?.let { FormatUtils.formatTime(it) }
             SegmentGoalType.DISTANCE -> segment.distanceMeters?.let { meters ->
                 FormatUtils.formatDistanceMeters(meters, requireContext())
             }
-        }
+        }.orEmpty()
+        val pace = segment.targetPaceMinPerKm
+            ?.takeIf { it > 0f }
+            ?.let { FormatUtils.formatPaceForTTS(it, requireContext()) }
+            .orEmpty()
+        return listOf(goal, pace).filter { it.isNotBlank() }.joinToString(", ")
     }
 
     private fun setupClickListeners() {
@@ -848,9 +876,12 @@ class WorkoutTrackingFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val session = viewModel.workoutSession.value
+                val intervalJson = intervalEngine?.allSegments()
+                    ?.let { IntervalSegmentsJson.toJson(it) }
                 val workoutId = viewModel.saveWorkoutToDatabase(
                     selectedWorkoutType,
-                    manualDistanceKm = manualDistanceKm
+                    manualDistanceKm = manualDistanceKm,
+                    intervalSegmentsJson = intervalJson
                 )
                 if (workoutId != null) {
                     activeScheduledId?.let { scheduledId ->

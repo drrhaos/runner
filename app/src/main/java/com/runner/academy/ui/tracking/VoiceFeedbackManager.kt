@@ -1,6 +1,8 @@
 package com.runner.academy.ui.tracking
 
 import android.content.Context
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.speech.tts.TextToSpeech
 import android.util.Log
 import com.runner.academy.R
@@ -13,6 +15,7 @@ import com.runner.academy.util.FormatUtils
  * Responsibilities:
  * - Text-to-speech initialization and lifecycle
  * - Distance milestone announcements
+ * - Interval start / upcoming announcements and beep
  * - Voice feedback configuration from UserPreferences
  */
 class VoiceFeedbackManager(
@@ -21,12 +24,15 @@ class VoiceFeedbackManager(
 
     companion object {
         private const val TAG = "VoiceFeedbackManager"
+        private const val BEEP_DURATION_MS = 220
     }
 
     private var tts: TextToSpeech? = null
+    private var toneGenerator: ToneGenerator? = null
     private var lastDistanceKmVoiceSpoken = -1
 
     fun initTTS() {
+        ensureToneGenerator()
         tts = TextToSpeech(context, object : TextToSpeech.OnInitListener {
             override fun onInit(status: Int) {
                 if (status == TextToSpeech.SUCCESS) {
@@ -40,16 +46,16 @@ class VoiceFeedbackManager(
                         }
                         TextToSpeech.LANG_MISSING_DATA -> {
                             Log.d(TAG, "TTS onInit: missing language data")
-                            destroy()
+                            destroyTtsOnly()
                         }
                         TextToSpeech.LANG_NOT_SUPPORTED -> {
                             Log.d(TAG, "TTS onInit: language unsupported")
-                            destroy()
+                            destroyTtsOnly()
                         }
                     }
                 } else {
                     Log.d(TAG, "TTS onInit: failure")
-                    destroy()
+                    destroyTtsOnly()
                 }
             }
         })
@@ -108,12 +114,50 @@ class VoiceFeedbackManager(
         tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "interval_${System.currentTimeMillis()}")
     }
 
+    fun announceIntervalUpcoming(title: String, detail: String? = null) {
+        val text = if (detail.isNullOrBlank()) {
+            context.getString(R.string.voice_interval_upcoming, title)
+        } else {
+            context.getString(R.string.voice_interval_upcoming_with_detail, title, detail)
+        }
+        tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "interval_upcoming_${System.currentTimeMillis()}")
+    }
+
+    /** Short beep at the start of each interval (independent of TTS). */
+    fun playIntervalBeep() {
+        try {
+            ensureToneGenerator()
+            toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, BEEP_DURATION_MS)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to play interval beep", e)
+        }
+    }
+
     fun destroy() {
-        val _tts = tts
-        if (_tts != null) {
-            _tts.stop()
-            _tts.shutdown()
+        destroyTtsOnly()
+        try {
+            toneGenerator?.release()
+        } catch (_: Exception) {
+        }
+        toneGenerator = null
+    }
+
+    private fun destroyTtsOnly() {
+        val active = tts
+        if (active != null) {
+            active.stop()
+            active.shutdown()
             tts = null
+        }
+    }
+
+    private fun ensureToneGenerator() {
+        if (toneGenerator != null) return
+        try {
+            toneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 90)
+        } catch (e: Exception) {
+            Log.w(TAG, "ToneGenerator unavailable", e)
+            toneGenerator = null
         }
     }
 }

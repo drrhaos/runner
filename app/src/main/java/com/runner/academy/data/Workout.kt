@@ -18,7 +18,9 @@ data class Workout(
     val notes: String?,
     val type: WorkoutType,
     val trackData: String? = null, // JSON с траекторией и временными метками
-    val isFavorite: Boolean = false
+    val isFavorite: Boolean = false,
+    /** JSON snapshot of template intervals used during this workout (for charts). */
+    val intervalSegmentsJson: String? = null
 )
 
 enum class WorkoutType {

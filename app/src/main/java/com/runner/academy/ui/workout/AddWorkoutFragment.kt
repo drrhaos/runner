@@ -51,6 +51,7 @@ class AddWorkoutFragment : Fragment() {
     private var selectedWorkoutType: WorkoutType = WorkoutType.EASY_RUN
     private var selectedTrackDataJson: String? = null
     private var editingIsFavorite: Boolean = false
+    private var editingIntervalSegmentsJson: String? = null
     private var hasLoadedExistingWorkout: Boolean = false
 
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
@@ -162,6 +163,7 @@ class AddWorkoutFragment : Fragment() {
         selectedWorkoutType = workout.type
         selectedTrackDataJson = workout.trackData
         editingIsFavorite = workout.isFavorite
+        editingIntervalSegmentsJson = workout.intervalSegmentsJson
 
         binding.editTextDate.setText(dateFormat.format(selectedDate))
         binding.autoCompleteTextViewType.setText(
@@ -334,7 +336,8 @@ class AddWorkoutFragment : Fragment() {
                 notes = notesText.ifBlank { null },
                 type = selectedWorkoutType,
                 trackData = selectedTrackDataJson,
-                isFavorite = if (isEditMode) editingIsFavorite else false
+                isFavorite = if (isEditMode) editingIsFavorite else false,
+                intervalSegmentsJson = if (isEditMode) editingIntervalSegmentsJson else null
             )
 
             if (isEditMode) {

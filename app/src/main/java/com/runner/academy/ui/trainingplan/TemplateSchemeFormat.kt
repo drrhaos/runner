@@ -17,7 +17,7 @@ fun formatTemplateScheme(
         return context.getString(R.string.template_scheme_empty)
     }
     return segments.joinToString(" → ") { segment ->
-        formatSegmentLine(context, segment)
+        formatSegmentParams(context, segment)
     }
 }
 
@@ -30,11 +30,12 @@ fun formatTemplateSchemeDetailed(
         return context.getString(R.string.template_scheme_empty)
     }
     return segments.joinToString("\n") { segment ->
-        "• ${formatSegmentLine(context, segment)}"
+        "• ${formatSegmentParams(context, segment)}"
     }
 }
 
-private fun formatSegmentLine(
+/** Single segment params: "Warm-up 10:00 @ 6:00". */
+fun formatSegmentParams(
     context: Context,
     segment: WorkoutTemplateSegment
 ): String {

@@ -429,7 +429,8 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
     suspend fun saveWorkoutToDatabase(
         workoutType: WorkoutType = WorkoutType.EASY_RUN,
-        manualDistanceKm: Float? = null
+        manualDistanceKm: Float? = null,
+        intervalSegmentsJson: String? = null
     ): Long? {
         val session = _workoutSession.value
 
@@ -502,7 +503,8 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
             calories = calories,
             notes = null,
             type = workoutType,
-            trackData = trackDataJson
+            trackData = trackDataJson,
+            intervalSegmentsJson = intervalSegmentsJson
         )
 
         return try {
