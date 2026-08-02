@@ -271,6 +271,7 @@
     <string name="workout_list_filter_favorites">Favorites</string>
     <string name="workout_list_message_no_favorites">No favorite routes yet</string>
     <string name="workout_list_message_add_favorites">Mark a workout with a star to save it here.</string>
+    <string name="workout_list_no_route_preview">No route</string>
     <string name="workout_list_import">Import workouts</string>
     <string name="workout_list_export">Export workouts</string>
     <string name="workout_list_export_choose_format">Choose export format</string>

@@ -14,6 +14,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
@@ -24,6 +25,7 @@ import com.runner.academy.util.GpxImporter
 import com.runner.academy.util.WorkoutBackupFormat
 import com.runner.academy.util.WorkoutGpxBulkExporter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -78,12 +80,7 @@ class WorkoutListFragment : Fragment() {
     private fun setupSwipeRefresh() {
         binding.swipeRefreshWorkouts.setOnRefreshListener {
             viewModel.refreshStatistics()
-            viewLifecycleOwner.lifecycleScope.launch {
-                kotlinx.coroutines.delay(350)
-                if (_binding != null) {
-                    binding.swipeRefreshWorkouts.isRefreshing = false
-                }
-            }
+            workoutAdapter.refresh()
         }
     }
 
@@ -104,6 +101,23 @@ class WorkoutListFragment : Fragment() {
         binding.recyclerViewWorkouts.apply {
             adapter = workoutAdapter
             layoutManager = LinearLayoutManager(context)
+            setHasFixedSize(true)
+        }
+
+        workoutAdapter.addLoadStateListener { loadStates ->
+            if (_binding == null || !isAdded || isDetached) return@addLoadStateListener
+            val refresh = loadStates.refresh
+            binding.swipeRefreshWorkouts.isRefreshing = refresh is LoadState.Loading
+            val isEmpty = refresh is LoadState.NotLoading &&
+                loadStates.append.endOfPaginationReached &&
+                workoutAdapter.itemCount == 0
+            updateEmptyState(isEmpty)
+            if (refresh is LoadState.NotLoading &&
+                workoutAdapter.itemCount > 0 &&
+                viewModel.listFilter.value == WorkoutListFilter.ALL
+            ) {
+                cleanVisibleWorkoutsInBackground()
+            }
         }
     }
 
@@ -421,21 +435,25 @@ class WorkoutListFragment : Fragment() {
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                viewModel.displayedWorkouts.collect { workouts ->
-                    if (isAdded && !isDetached) {
-                        workoutAdapter.submitList(workouts)
-                        updateEmptyState(workouts.isEmpty())
-                        if (workouts.isNotEmpty() &&
-                            viewModel.listFilter.value == WorkoutListFilter.ALL
-                        ) {
-                            cleanWorkoutsInBackground(workouts)
-                        }
+                viewModel.pagedWorkouts.collectLatest { pagingData ->
+                    workoutAdapter.submitData(pagingData)
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                android.util.Log.d("WorkoutList", "Paging cancelled: ${e.message}")
+            } catch (e: Exception) {
+                android.util.Log.e("WorkoutList", "Error loading workouts: ${e.message}", e)
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                viewModel.listItemCount.collect { count ->
+                    if (isAdded && !isDetached && workoutAdapter.itemCount == 0) {
+                        updateEmptyState(count == 0)
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
-                android.util.Log.d("WorkoutList", "Loading cancelled: ${e.message}")
-            } catch (e: Exception) {
-                android.util.Log.e("WorkoutList", "Error loading workouts: ${e.message}", e)
+                android.util.Log.d("WorkoutList", "List count cancelled")
             }
         }
 
@@ -496,16 +514,26 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
-    private fun cleanWorkoutsInBackground(workouts: List<Workout>) {
+    private val cleanedWorkoutIds = mutableSetOf<Long>()
+    private var cleaningInProgress = false
+
+    private fun cleanVisibleWorkoutsInBackground() {
+        if (cleaningInProgress) return
+        if (viewModel.listFilter.value != WorkoutListFilter.ALL) return
+        val snapshot = (0 until workoutAdapter.itemCount).mapNotNull { index ->
+            workoutAdapter.peek(index)
+        }.filter { it.trackData != null && it.id !in cleanedWorkoutIds }
+        if (snapshot.isEmpty()) return
+
+        cleaningInProgress = true
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 var cleanedCount = 0
-                for (workout in workouts) {
-                    if (workout.trackData != null) {
-                        val cleanedWorkout = viewModel.cleanWorkoutData(workout)
-                        if (cleanedWorkout != null && cleanedWorkout != workout) {
-                            cleanedCount++
-                        }
+                for (workout in snapshot) {
+                    cleanedWorkoutIds.add(workout.id)
+                    val cleanedWorkout = viewModel.cleanWorkoutData(workout)
+                    if (cleanedWorkout != null && cleanedWorkout != workout) {
+                        cleanedCount++
                     }
                 }
                 if (cleanedCount > 0) {
@@ -517,7 +545,27 @@ class WorkoutListFragment : Fragment() {
                     "Error cleaning workouts in background: ${e.message}",
                     e
                 )
+            } finally {
+                cleaningInProgress = false
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        forEachVisibleMapPreview { it.onHostResume() }
+    }
+
+    override fun onPause() {
+        forEachVisibleMapPreview { it.onHostPause() }
+        super.onPause()
+    }
+
+    private fun forEachVisibleMapPreview(action: (RouteMapPreviewView) -> Unit) {
+        val recycler = _binding?.recyclerViewWorkouts ?: return
+        for (i in 0 until recycler.childCount) {
+            val preview = recycler.getChildAt(i)?.findViewById<RouteMapPreviewView>(R.id.route_preview)
+            if (preview != null) action(preview)
         }
     }
 
