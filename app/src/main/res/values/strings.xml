@@ -121,15 +121,10 @@
     <string name="settings_label_units_type">Units type</string>
     <string name="settings_units_metric">Metric</string>
     <string name="settings_units_imperial">Imperial</string>
-    <string name="settings_label_gps_accuracy">GPS accuracy</string>
-    <string name="settings_gps_accuracy_high">High</string>
-    <string name="settings_gps_accuracy_medium">Medium</string>
-    <string name="settings_gps_accuracy_low">Low</string>
     <string name="settings_label_theme">Application theme</string>
     <string name="settings_theme_system">As in the system</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
-    <string name="settings_label_autopause">Automatic pause</string>
     <string name="settings_label_voice_notifications">Voice notifications</string>
     <string name="settings_btn_reset">Reset settings</string>
     <string name="settings_weight_saved">Weight saved</string>
@@ -137,7 +132,6 @@
     <string name="settings_birthdate_saved">Date of birth saved</string>
     <string name="settings_gender_saved">Gender saved</string>
     <string name="settings_units_changed">Units system changed</string>
-    <string name="settings_gps_accuracy_changed">GPS accuracy changed</string>
     <string name="settings_theme_changed">Theme changed</string>
     <string name="settings_reset_done">Settings reset</string>
     <string name="settings_weight_format">%d kg</string>
@@ -155,8 +149,6 @@
     <string name="settings_dialog_gender_title">User gender</string>
     <string name="settings_dialog_gender_message">Select your gender:</string>
     <string name="settings_dialog_units_title">Units system</string>
-    <string name="settings_dialog_gps_title">GPS accuracy</string>
-    <string name="settings_dialog_gps_message">Select GPS accuracy level. High accuracy consumes more battery.</string>
     <string name="settings_dialog_theme_title">Application theme</string>
     <string name="settings_dialog_reset_title">Reset settings</string>
     <string name="settings_dialog_reset_message">Are you sure you want to reset all settings to default values?</string>

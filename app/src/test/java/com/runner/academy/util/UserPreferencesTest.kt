@@ -187,28 +187,6 @@ class UserPreferencesTest {
     }
 
     @Test
-    fun autopause_should_have_default_value() {
-        // When
-        val autoPause = userPreferences.autoPause
-
-        // Then
-        assertTrue("Should have default autoPause of true", autoPause)
-    }
-
-    @Test
-    fun autopause_should_save_and_load_correctly() {
-        // Given
-        val testAutoPause = false
-
-        // When
-        userPreferences.autoPause = testAutoPause
-        val loadedAutoPause = userPreferences.autoPause
-
-        // Then
-        assertEquals("Should save and load autoPause correctly", testAutoPause, loadedAutoPause)
-    }
-
-    @Test
     fun voicefeedback_should_have_default_value() {
         // When
         val voiceFeedback = userPreferences.voiceFeedback
@@ -228,41 +206,6 @@ class UserPreferencesTest {
 
         // Then
         assertEquals("Should save and load voiceFeedback correctly", testVoiceFeedback, loadedVoiceFeedback)
-    }
-
-    @Test
-    fun gpsaccuracy_should_have_default_value() {
-        // When
-        val gpsAccuracy = userPreferences.gpsAccuracy
-
-        // Then
-        assertEquals("Should have default gpsAccuracy of 'high'", "high", gpsAccuracy)
-    }
-
-    @Test
-    fun gpsaccuracy_should_save_and_load_correctly() {
-        // Given
-        val testGpsAccuracy = "medium"
-
-        // When
-        userPreferences.gpsAccuracy = testGpsAccuracy
-        val loadedGpsAccuracy = userPreferences.gpsAccuracy
-
-        // Then
-        assertEquals("Should save and load gpsAccuracy correctly", testGpsAccuracy, loadedGpsAccuracy)
-    }
-
-    @Test
-    fun getgpsaccuracylevel_should_return_current_gps_accuracy() {
-        // Given
-        val testGpsAccuracy = "low"
-        userPreferences.gpsAccuracy = testGpsAccuracy
-
-        // When
-        val accuracyLevel = userPreferences.getGpsAccuracyLevel()
-
-        // Then
-        assertEquals("Should return current gps accuracy level", testGpsAccuracy, accuracyLevel)
     }
 
     @Test
@@ -294,9 +237,7 @@ class UserPreferencesTest {
         userPreferences.userHeight = 190f
         userPreferences.userGender = "female"
         userPreferences.unitSystem = "imperial"
-        userPreferences.autoPause = false
         userPreferences.voiceFeedback = true
-        userPreferences.gpsAccuracy = "low"
         userPreferences.isFirstLaunch = false
 
         // When
@@ -307,9 +248,7 @@ class UserPreferencesTest {
         assertEquals("Height should reset to default", 175f, userPreferences.userHeight, 0.01f)
         assertEquals("Gender should reset to default", "male", userPreferences.userGender)
         assertEquals("Unit system should reset to default", "metric", userPreferences.unitSystem)
-        assertTrue("Auto pause should reset to default", userPreferences.autoPause)
         assertFalse("Voice feedback should reset to default", userPreferences.voiceFeedback)
-        assertEquals("GPS accuracy should reset to default", "high", userPreferences.gpsAccuracy)
         assertTrue("Is first launch should reset to default", userPreferences.isFirstLaunch)
     }
 
