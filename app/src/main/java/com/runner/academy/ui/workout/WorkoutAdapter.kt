@@ -14,6 +14,13 @@ import com.runner.academy.data.displayName
 import com.runner.academy.databinding.ItemWorkoutBinding
 import com.runner.academy.util.SpeedPaceCalculator
 import com.runner.academy.util.TrackDataJson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
@@ -26,6 +33,9 @@ class WorkoutAdapter(
 
     private val trackCache = ConcurrentHashMap<Long, Pair<String?, TrackData?>>()
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+    private val adapterJob = SupervisorJob()
+    private val adapterScope = CoroutineScope(adapterJob + Dispatchers.Main.immediate)
+    private val previewSizePx = (96f * context.resources.displayMetrics.density).toInt()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WorkoutViewHolder {
         val binding = ItemWorkoutBinding.inflate(
@@ -46,6 +56,11 @@ class WorkoutAdapter(
         super.onViewRecycled(holder)
     }
 
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        adapterJob.cancelChildren()
+        super.onDetachedFromRecyclerView(recyclerView)
+    }
+
     private fun resolveTrack(workout: Workout): TrackData? {
         if (workout.trackData.isNullOrBlank()) return null
         val cached = trackCache[workout.id]
@@ -61,7 +76,11 @@ class WorkoutAdapter(
         private val binding: ItemWorkoutBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        private var previewJob: Job? = null
+        private var boundWorkoutId: Long = -1L
+
         fun bind(workout: Workout) {
+            boundWorkoutId = workout.id
             binding.apply {
                 textViewWorkoutDate.text = dateFormat.format(workout.date)
                 textViewWorkoutType.text = workout.type.displayName(context)
@@ -89,29 +108,54 @@ class WorkoutAdapter(
 
                 root.setOnClickListener { onItemClick(workout) }
                 buttonFavorite.setOnClickListener { onFavoriteClick(workout) }
-                routePreview.setClickRelay { onItemClick(workout) }
             }
         }
 
         fun clearPreview() {
-            binding.routePreview.setClickRelay(null)
-            binding.routePreview.clear()
+            previewJob?.cancel()
+            previewJob = null
+            boundWorkoutId = -1L
+            binding.routePreview.setImageDrawable(null)
             binding.routePreview.visibility = View.INVISIBLE
             binding.textViewRoutePreviewEmpty.visibility = View.VISIBLE
         }
 
         private fun bindRoutePreview(workout: Workout) {
+            previewJob?.cancel()
             val trackData = resolveTrack(workout)
             if (trackData == null || trackData.points.size < 2) {
-                binding.routePreview.clear()
+                binding.routePreview.setImageDrawable(null)
                 binding.routePreview.visibility = View.INVISIBLE
                 binding.textViewRoutePreviewEmpty.visibility = View.VISIBLE
                 return
             }
+
             binding.textViewRoutePreviewEmpty.visibility = View.GONE
             binding.routePreview.visibility = View.VISIBLE
-            val trackKey = "${workout.id}:${workout.trackData?.length ?: 0}"
-            binding.routePreview.setTrack(trackData, trackKey)
+
+            val cacheKey = "${workout.id}:${workout.trackData?.length ?: 0}:$previewSizePx"
+            val cached = RouteMapBitmapRenderer.peek(cacheKey)
+            if (cached != null) {
+                binding.routePreview.setImageBitmap(cached)
+                return
+            }
+
+            binding.routePreview.setImageDrawable(null)
+            val workoutId = workout.id
+            previewJob = adapterScope.launch {
+                val bitmap = withContext(Dispatchers.IO) {
+                    RouteMapBitmapRenderer.getOrRender(
+                        context = context,
+                        cacheKey = cacheKey,
+                        trackData = trackData,
+                        widthPx = previewSizePx,
+                        heightPx = previewSizePx
+                    )
+                }
+                if (boundWorkoutId == workoutId && bitmap != null) {
+                    binding.routePreview.setImageBitmap(bitmap)
+                }
+            }
         }
 
         private fun updateFavoriteButton(workout: Workout) {

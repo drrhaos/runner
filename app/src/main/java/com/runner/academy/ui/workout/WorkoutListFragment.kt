@@ -551,24 +551,6 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        forEachVisibleMapPreview { it.onHostResume() }
-    }
-
-    override fun onPause() {
-        forEachVisibleMapPreview { it.onHostPause() }
-        super.onPause()
-    }
-
-    private fun forEachVisibleMapPreview(action: (RouteMapPreviewView) -> Unit) {
-        val recycler = _binding?.recyclerViewWorkouts ?: return
-        for (i in 0 until recycler.childCount) {
-            val preview = recycler.getChildAt(i)?.findViewById<RouteMapPreviewView>(R.id.route_preview)
-            if (preview != null) action(preview)
-        }
-    }
-
     override fun onDestroyView() {
         isSpeedDialOpen = false
         super.onDestroyView()
