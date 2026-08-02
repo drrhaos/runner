@@ -22,13 +22,15 @@
             android:layout_width="96dp"
             android:layout_height="96dp"
             android:layout_marginEnd="12dp"
-            android:background="@drawable/bg_route_preview_slot">
+            android:background="@drawable/bg_route_preview_slot"
+            android:clipToOutline="true">
 
-            <com.runner.academy.ui.workout.RouteMapPreviewView
+            <ImageView
                 android:id="@+id/route_preview"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:contentDescription="@string/edit_workout_route_preview_cd" />
+                android:contentDescription="@string/edit_workout_route_preview_cd"
+                android:scaleType="centerCrop" />
 
             <TextView
                 android:id="@+id/textView_route_preview_empty"
