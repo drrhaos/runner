@@ -258,6 +258,7 @@
     <string name="workout_list_filter_favorites">Избранное</string>
     <string name="workout_list_message_no_favorites">Пока нет избранных маршрутов</string>
     <string name="workout_list_message_add_favorites">Отметьте тренировку звёздочкой, чтобы сохранить её здесь.</string>
+    <string name="workout_list_no_route_preview">Нет трека</string>
     <string name="workout_list_import">Импорт тренировок</string>
     <string name="workout_list_export">Экспорт тренировок</string>
     <string name="workout_list_export_choose_format">Выберите формат экспорта</string>

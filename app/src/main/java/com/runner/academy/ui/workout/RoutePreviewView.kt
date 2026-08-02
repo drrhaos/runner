@@ -65,19 +65,25 @@ class RoutePreviewView @JvmOverloads constructor(
 
     fun setTrackData(trackData: TrackData?) {
         points = trackData?.points.orEmpty()
-        rebuildPath(width, height)
-        invalidate()
+        rebuildPathOrSchedule()
     }
 
     fun setTrackPoints(trackPoints: List<TrackPoint>) {
         points = trackPoints
-        rebuildPath(width, height)
-        invalidate()
+        rebuildPathOrSchedule()
     }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         rebuildPath(w, h)
+        invalidate()
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+        if (changedView === this && visibility == VISIBLE && points.size >= 2) {
+            rebuildPathOrSchedule()
+        }
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -99,10 +105,26 @@ class RoutePreviewView @JvmOverloads constructor(
         canvas.restoreToCount(save)
     }
 
+    private fun rebuildPathOrSchedule() {
+        if (width <= 0 || height <= 0) {
+            // Still GONE / not laid out — rebuild after the next measure pass.
+            requestLayout()
+            post {
+                if (width > 0 && height > 0) {
+                    rebuildPath(width, height)
+                    invalidate()
+                }
+            }
+            return
+        }
+        rebuildPath(width, height)
+        invalidate()
+    }
+
     private fun rebuildPath(viewWidth: Int, viewHeight: Int) {
         trackPath.reset()
         hasGeometry = false
-        if (viewWidth <= 0 || viewHeight <= 0 || points.isEmpty()) return
+        if (viewWidth <= 0 || viewHeight <= 0 || points.size < 2) return
 
         val sampled = downsample(points, MAX_DRAW_POINTS)
         var minLat = Double.POSITIVE_INFINITY

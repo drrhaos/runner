@@ -12,162 +12,189 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="12dp">
 
-        <!-- Заголовок с датой и типом -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+        <!-- Reserved preview slot on the left -->
+        <FrameLayout
+            android:id="@+id/layout_route_preview_slot"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_route_preview_slot">
+
+            <com.runner.academy.ui.workout.RouteMapPreviewView
+                android:id="@+id/route_preview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:contentDescription="@string/edit_workout_route_preview_cd" />
 
             <TextView
-                android:id="@+id/textView_workout_date"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="?attr/colorOnSurface"
-                tools:text="01.01.2024"/>
-
-            <ImageButton
-                android:id="@+id/button_favorite"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/workout_favorite_add"
+                android:id="@+id/textView_route_preview_empty"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
                 android:padding="8dp"
-                android:src="@drawable/ic_star_border"
-                tools:src="@drawable/ic_star" />
-
-            <TextView
-                android:id="@+id/textView_workout_type"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textSize="12sp"
-                android:textColor="?attr/colorOnPrimary"
-                android:background="@drawable/type_chip_background"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:paddingTop="4dp"
-                android:paddingBottom="4dp"
-                tools:text="Легкий бег"/>
-        </LinearLayout>
-
-        <!-- Основная информация -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
-
-            <!-- Дистанция -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/textView_distance"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorPrimary"
-                    tools:text="5.0 км"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="@dimen/workout_item_metric_caption"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:text="@string/workout_distance_label"/>
-            </LinearLayout>
-
-            <!-- Время -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/textView_duration"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorSecondary"
-                    tools:text="25:30"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="@dimen/workout_item_metric_caption"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:text="@string/workout_time_label" />
-            </LinearLayout>
-
-            <!-- Темп -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:id="@+id/textView_pace"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorTertiary"
-                    tools:text="5:06" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/workout_pace_label_km"
-                    android:textSize="@dimen/workout_item_metric_caption"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- Калории и заметки (если есть) -->
-        <LinearLayout
-            android:id="@+id/layout_calories"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp"
-            android:visibility="gone"
-            tools:visibility="visible">
-
-            <TextView
-                android:id="@+id/textView_calories"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textSize="12sp"
+                android:text="@string/workout_list_no_route_preview"
                 android:textColor="?attr/colorOnSurfaceVariant"
-                tools:text="300 ккал"/>
+                android:textSize="11sp"
+                android:visibility="gone"
+                tools:visibility="visible" />
+        </FrameLayout>
 
-            <TextView
-                android:id="@+id/textView_notes_preview"
-                android:layout_width="0dp"
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="2"
-                android:textSize="12sp"
-                android:textColor="?attr/colorOnSurfaceVariant"
-                android:maxLines="1"
-                android:ellipsize="end"
-                tools:text="@string/workout_summary_good"/>
-        </LinearLayout>
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
+                <TextView
+                    android:id="@+id/textView_workout_date"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    tools:text="01.01.2024" />
+
+                <ImageButton
+                    android:id="@+id/button_favorite"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/workout_favorite_add"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_star_border"
+                    tools:src="@drawable/ic_star" />
+
+                <TextView
+                    android:id="@+id/textView_workout_type"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/type_chip_background"
+                    android:paddingStart="8dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="8dp"
+                    android:paddingBottom="4dp"
+                    android:textColor="?attr/colorOnPrimary"
+                    android:textSize="12sp"
+                    tools:text="Легкий бег" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/textView_distance"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        tools:text="5.0 км" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/workout_distance_label"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="@dimen/workout_item_metric_caption" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/textView_duration"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/colorSecondary"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        tools:text="25:30" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/workout_time_label"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="@dimen/workout_item_metric_caption" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/textView_pace"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/colorTertiary"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        tools:text="5:06" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/workout_pace_label_km"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:textSize="@dimen/workout_item_metric_caption" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layout_calories"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:id="@+id/textView_calories"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp"
+                    tools:text="300 ккал" />
+
+                <TextView
+                    android:id="@+id/textView_notes_preview"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp"
+                    tools:text="@string/workout_summary_good" />
+            </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 
 </androidx.cardview.widget.CardView>
