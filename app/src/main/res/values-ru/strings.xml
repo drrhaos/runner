@@ -111,15 +111,10 @@
     <string name="settings_label_units_type">Система единиц</string>
     <string name="settings_units_metric">Метрическая (км)</string>
     <string name="settings_units_imperial">Имперская (мили)</string>
-    <string name="settings_label_gps_accuracy">Точность GPS</string>
-    <string name="settings_gps_accuracy_high">Высокая</string>
-    <string name="settings_gps_accuracy_medium">Срелняя</string>
-    <string name="settings_gps_accuracy_low">Низкая</string>
     <string name="settings_label_theme">Тема приложения</string>
     <string name="settings_theme_system">Как в системе</string>
     <string name="settings_theme_light">Светлая</string>
     <string name="settings_theme_dark">Темная</string>
-    <string name="settings_label_autopause">Автоматическая пауза</string>
     <string name="settings_label_voice_notifications">Голосовые уведомления</string>
     <string name="settings_btn_reset">Сбросить настройки</string>
     <string name="settings_weight_saved">Вес сохранен</string>
@@ -127,7 +122,6 @@
     <string name="settings_birthdate_saved">Дата рождения сохранена</string>
     <string name="settings_gender_saved">Пол сохранен</string>
     <string name="settings_units_changed">Система единиц изменена</string>
-    <string name="settings_gps_accuracy_changed">Точность GPS изменена</string>
     <string name="settings_theme_changed">Тема изменена</string>
     <string name="settings_reset_done">Настройки сброшены</string>
     <string name="settings_weight_format">%d кг</string>
@@ -145,8 +139,6 @@
     <string name="settings_dialog_gender_title">Пол пользователя</string>
     <string name="settings_dialog_gender_message">Выберите ваш пол:</string>
     <string name="settings_dialog_units_title">Система единиц</string>
-    <string name="settings_dialog_gps_title">Точность GPS</string>
-    <string name="settings_dialog_gps_message">Выберите уровень точности GPS. Высокая точность потребляет больше батареи.</string>
     <string name="settings_dialog_theme_title">Тема приложения</string>
     <string name="settings_dialog_reset_title">Сброс настроек</string>
     <string name="settings_dialog_reset_message">Вы уверены, что хотите сбросить все настройки к значениям по умолчанию?</string>
@@ -214,6 +206,7 @@
     <string name="chart_elevation_x_format">%.1f км</string>
     <string name="chart_elevation_y_format">%d м</string>
     <string name="unit_km">км</string>
+    <string name="unit_m">м</string>
     <string name="unit_mile">миля</string>
     <string name="unit_kmh">км/ч</string>
     <string name="unit_mph">миль/ч</string>
@@ -265,6 +258,7 @@
     <string name="workout_list_filter_favorites">Избранное</string>
     <string name="workout_list_message_no_favorites">Пока нет избранных маршрутов</string>
     <string name="workout_list_message_add_favorites">Отметьте тренировку звёздочкой, чтобы сохранить её здесь.</string>
+    <string name="workout_list_no_route_preview">Нет трека</string>
     <string name="workout_list_import">Импорт тренировок</string>
     <string name="workout_list_export">Экспорт тренировок</string>
     <string name="workout_list_export_choose_format">Выберите формат экспорта</string>
@@ -414,8 +408,38 @@
     <string name="intensity_icon_plan">План</string>
     <string name="templates_title">Базовые тренировки</string>
     <string name="templates_empty">Пока нет базовых тренировок</string>
+    <string name="template_scheme_empty">Нет интервалов</string>
+    <string name="template_scheme_details_title">Схема тренировки</string>
     <string name="templates_add">Новая базовая тренировка</string>
-    <string name="template_edit_title">Редактирование базовой</string>
+    <string name="template_wizard_intro_title">Новая базовая тренировка</string>
+    <string name="template_wizard_intro_message">Сгенерировать интервалы автоматически или пропустить и собрать шаблон вручную.</string>
+    <string name="template_wizard_generate">Сгенерировать</string>
+    <string name="template_wizard_skip">Пропустить</string>
+    <string name="template_wizard_intervals_title">Количество интервалов</string>
+    <string name="template_wizard_intervals_label">Интервалы</string>
+    <string name="template_wizard_goal_title">Тип интервала</string>
+    <string name="template_wizard_interval_duration_title">Длительность интервала</string>
+    <string name="template_wizard_interval_distance_title">Дистанция интервала</string>
+    <string name="template_wizard_pace_title">Базовый темп (0:00 = без темпа)</string>
+    <string name="template_wizard_recovery_goal_title">Тип восстановления</string>
+    <string name="template_wizard_recovery_duration_title">Длительность восстановления</string>
+    <string name="template_wizard_recovery_distance_title">Дистанция восстановления</string>
+    <string name="template_wizard_recovery_pace_title">Темп восстановления (0:00 = без темпа)</string>
+    <string name="template_wizard_warmup_title">Разминка</string>
+    <string name="template_wizard_warmup_message">Добавить разминку перед интервалами?</string>
+    <string name="template_wizard_warmup_goal_title">Тип разминки</string>
+    <string name="template_wizard_warmup_duration_title">Длительность разминки</string>
+    <string name="template_wizard_warmup_distance_title">Дистанция разминки</string>
+    <string name="template_wizard_warmup_pace_title">Темп разминки (0:00 = без темпа)</string>
+    <string name="template_wizard_cooldown_title">Заминка</string>
+    <string name="template_wizard_cooldown_message">Добавить заминку после интервалов?</string>
+    <string name="template_wizard_cooldown_goal_title">Тип заминки</string>
+    <string name="template_wizard_cooldown_duration_title">Длительность заминки</string>
+    <string name="template_wizard_cooldown_distance_title">Дистанция заминки</string>
+    <string name="template_wizard_cooldown_pace_title">Темп заминки (0:00 = без темпа)</string>
+    <string name="template_wizard_default_name">Интервалы ×%1$d</string>
+    <string name="segment_interval_name">Интервал %1$d</string>
+    <string name="template_edit_title">Редактирование базовой тренировки</string>
     <string name="template_name_hint">Название (напр. Интервальная 1)</string>
     <string name="template_segments">Интервалы</string>
     <string name="template_add_segment">Добавить интервал</string>
@@ -426,14 +450,28 @@
     <string name="segment_goal">Цель</string>
     <string name="segment_goal_duration">Время</string>
     <string name="segment_goal_distance">Дистанция</string>
-    <string name="segment_duration_hint">Минуты</string>
-    <string name="segment_distance_hint">Метры</string>
-    <string name="segment_pace_hint">Целевой темп (мин/км), опционально</string>
+    <string name="segment_duration_hint">Время</string>
+    <string name="segment_distance_hint">Дистанция</string>
+    <string name="segment_pace_hint">Целевой темп (опционально)</string>
+    <string name="segment_dialog_duration_title">Время</string>
+    <string name="segment_dialog_distance_title">Дистанция</string>
+    <string name="segment_dialog_pace_title">Целевой темп</string>
+    <string name="segment_picker_km">км</string>
+    <string name="segment_picker_m">м</string>
+    <string name="segment_picker_pace_min">мин</string>
+    <string name="segment_distance_format_km_m">%1$d км %2$d м</string>
+    <string name="segment_distance_format_m">%1$d м</string>
+    <string name="segment_pace_format">%1$d:%2$02d /км</string>
+    <string name="segment_pace_none">Не задан</string>
     <string name="segment_kind_warmup">Разминка</string>
     <string name="segment_kind_work">Работа</string>
     <string name="segment_kind_recovery">Восстановление</string>
     <string name="segment_kind_cooldown">Заминка</string>
     <string name="segment_kind_custom">Свой</string>
+    <string name="segment_scheme_warmup">Рз</string>
+    <string name="segment_scheme_recovery">Вс</string>
+    <string name="segment_scheme_cooldown">Зм</string>
+    <string name="segment_scheme_custom">Св</string>
     <string name="plans_title">Планы тренировок</string>
     <string name="plans_empty">Пока нет планов</string>
     <string name="plans_add">Новый план</string>
@@ -445,7 +483,7 @@
     <string name="plans_export_progress">Экспорт…</string>
     <string name="plans_export_ready">Экспорт готов</string>
     <string name="plans_import_progress">Импорт…</string>
-    <string name="plans_import_success">Импортировано базовых: %1$d, планов: %2$d</string>
+    <string name="plans_import_success">Импортировано базовых тренировок: %1$d, планов: %2$d</string>
     <string name="plans_import_error">Ошибка импорта: %1$s</string>
     <string name="plan_edit_title">Редактирование плана</string>
     <string name="plan_name_hint">Название плана</string>
@@ -498,5 +536,8 @@
     <string name="tracking_free_run">Свободный бег</string>
     <string name="voice_interval_start">Интервал: %1$s</string>
     <string name="voice_interval_start_with_detail">Интервал: %1$s. %2$s</string>
+    <string name="voice_interval_upcoming">Следующий интервал: %1$s</string>
+    <string name="voice_interval_upcoming_with_detail">Следующий интервал: %1$s. %2$s</string>
+    <string name="chart_interval_n">Инт %1$d</string>
 
 </resources>

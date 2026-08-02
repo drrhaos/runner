@@ -22,6 +22,7 @@ import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.defaultTrainingIcon
 import com.runner.academy.data.displayName
+import com.runner.academy.data.isDefaultTitle
 import com.runner.academy.data.parseTrainingIcon
 import com.runner.academy.databinding.FragmentTemplateEditBinding
 import com.runner.academy.databinding.ItemTemplateSegmentBinding
@@ -107,7 +108,7 @@ class TemplateEditFragment : Fragment() {
         binding.recyclerViewSegments.isNestedScrollingEnabled = false
 
         binding.buttonAddSegment.setOnClickListener {
-            drafts.add(SegmentDraft(title = getString(R.string.segment_kind_work)))
+            drafts.add(SegmentDraft(kind = SegmentKind.WORK))
             val index = drafts.lastIndex
             segmentAdapter.notifyItemInserted(index)
             scrollToNewestSegment()
@@ -143,16 +144,57 @@ class TemplateEditFragment : Fragment() {
             selectedIcon = selectedType.defaultTrainingIcon()
             iconAdapter.selected = selectedIcon
             updateIconHint()
-            drafts.add(SegmentDraft(title = getString(R.string.segment_kind_warmup), kind = SegmentKind.WARMUP))
-            drafts.add(SegmentDraft(title = getString(R.string.segment_kind_work), kind = SegmentKind.WORK))
-            drafts.add(
-                SegmentDraft(
-                    title = getString(R.string.segment_kind_cooldown),
-                    kind = SegmentKind.COOLDOWN
-                )
+            binding.root.visibility = View.INVISIBLE
+            TemplateCreateWizard.start(
+                context = requireContext(),
+                onComplete = { config ->
+                    if (!isAdded) return@start
+                    applyGeneratedTemplate(config)
+                },
+                onSkip = {
+                    if (!isAdded) return@start
+                    applySkippedTemplate()
+                },
+                onCancel = {
+                    if (isAdded) findNavController().navigateUp()
+                }
             )
-            segmentAdapter.notifyDataSetChanged()
         }
+    }
+
+    private fun applyGeneratedTemplate(config: TemplateCreateConfig) {
+        drafts.clear()
+        drafts.addAll(TemplateCreateWizard.buildSegments(requireContext(), config))
+        binding.editTextTemplateName.setText(
+            TemplateCreateWizard.suggestedName(requireContext(), config)
+        )
+        selectedType = WorkoutType.INTERVAL_TRAINING
+        selectedIcon = selectedType.defaultTrainingIcon()
+        iconChosenManually = false
+        iconAdapter.selected = selectedIcon
+        binding.autoCompleteWorkoutType.setText(
+            selectedType.displayName(requireContext()),
+            false
+        )
+        updateIconHint()
+        segmentAdapter.notifyDataSetChanged()
+        binding.root.visibility = View.VISIBLE
+    }
+
+    private fun applySkippedTemplate() {
+        drafts.clear()
+        drafts.add(SegmentDraft(kind = SegmentKind.WORK))
+        selectedType = WorkoutType.INTERVAL_TRAINING
+        selectedIcon = selectedType.defaultTrainingIcon()
+        iconChosenManually = false
+        iconAdapter.selected = selectedIcon
+        binding.autoCompleteWorkoutType.setText(
+            selectedType.displayName(requireContext()),
+            false
+        )
+        updateIconHint()
+        segmentAdapter.notifyDataSetChanged()
+        binding.root.visibility = View.VISIBLE
     }
 
     private fun updateIconHint() {
@@ -183,6 +225,12 @@ class TemplateEditFragment : Fragment() {
         if (name.isEmpty() || drafts.isEmpty()) {
             Toast.makeText(requireContext(), R.string.fill_required_fields, Toast.LENGTH_SHORT).show()
             return
+        }
+        val ctx = requireContext()
+        drafts.forEach { draft ->
+            if (draft.kind.isDefaultTitle(ctx, draft.title)) {
+                draft.title = ""
+            }
         }
         viewLifecycleOwner.lifecycleScope.launch {
             val id = if (templateId > 0) templateId else 0L
@@ -251,24 +299,13 @@ private class SegmentDraftAdapter(
         fun flushToDraft() {
             val draft = boundDraft ?: return
             draft.title = binding.editTextSegmentTitle.text?.toString().orEmpty()
-            draft.durationMinutes = binding.editTextDurationMin.text?.toString().orEmpty()
-            draft.distanceMeters = binding.editTextDistanceM.text?.toString().orEmpty()
-            draft.paceMinPerKm = binding.editTextPace.text?.toString().orEmpty()
         }
 
         fun bind(draft: SegmentDraft, position: Int) {
             boundDraft = draft
             val ctx = binding.root.context
             val kinds = SegmentKind.entries
-            val kindLabels = kinds.map {
-                when (it) {
-                    SegmentKind.WARMUP -> ctx.getString(R.string.segment_kind_warmup)
-                    SegmentKind.WORK -> ctx.getString(R.string.segment_kind_work)
-                    SegmentKind.RECOVERY -> ctx.getString(R.string.segment_kind_recovery)
-                    SegmentKind.COOLDOWN -> ctx.getString(R.string.segment_kind_cooldown)
-                    SegmentKind.CUSTOM -> ctx.getString(R.string.segment_kind_custom)
-                }
-            }
+            val kindLabels = kinds.map { it.displayName(ctx) }
             binding.autoCompleteSegmentKind.setAdapter(
                 ArrayAdapter(ctx, android.R.layout.simple_list_item_1, kindLabels)
             )
@@ -277,7 +314,15 @@ private class SegmentDraftAdapter(
                 false
             )
             binding.autoCompleteSegmentKind.setOnItemClickListener { _, _, i, _ ->
-                draft.kind = kinds[i]
+                val previousKind = draft.kind
+                val newKind = kinds[i]
+                val titleNow = binding.editTextSegmentTitle.text?.toString().orEmpty()
+                if (previousKind.isDefaultTitle(ctx, titleNow)) {
+                    val localized = newKind.displayName(ctx)
+                    binding.editTextSegmentTitle.setText(localized)
+                    draft.title = localized
+                }
+                draft.kind = newKind
             }
 
             val goals = SegmentGoalType.entries
@@ -303,27 +348,49 @@ private class SegmentDraftAdapter(
                 updateGoalVisibility()
             }
 
-            binding.editTextSegmentTitle.setText(draft.title)
-            binding.editTextDurationMin.setText(draft.durationMinutes)
-            binding.editTextDistanceM.setText(draft.distanceMeters)
-            binding.editTextPace.setText(draft.paceMinPerKm)
+            val titleForUi = if (draft.kind.isDefaultTitle(ctx, draft.title)) {
+                draft.kind.displayName(ctx)
+            } else {
+                draft.title
+            }
+            binding.editTextSegmentTitle.setText(titleForUi)
+            bindValueFields(draft)
 
             binding.editTextSegmentTitle.setOnFocusChangeListener { _, hasFocus ->
                 if (!hasFocus) draft.title = binding.editTextSegmentTitle.text?.toString().orEmpty()
             }
-            binding.editTextDurationMin.setOnFocusChangeListener { _, hasFocus ->
-                if (!hasFocus) {
-                    draft.durationMinutes =
-                        binding.editTextDurationMin.text?.toString().orEmpty()
-                }
+            binding.editTextDuration.setOnClickListener {
+                showDurationValuePicker(
+                    context = ctx,
+                    titleRes = R.string.segment_dialog_duration_title,
+                    initialSeconds = draft.durationTotalSeconds,
+                    onPicked = { seconds ->
+                        draft.durationTotalSeconds = seconds
+                        bindValueFields(draft)
+                    }
+                )
             }
-            binding.editTextDistanceM.setOnFocusChangeListener { _, hasFocus ->
-                if (!hasFocus) {
-                    draft.distanceMeters = binding.editTextDistanceM.text?.toString().orEmpty()
-                }
+            binding.editTextDistance.setOnClickListener {
+                showDistanceValuePicker(
+                    context = ctx,
+                    titleRes = R.string.segment_dialog_distance_title,
+                    initialMeters = draft.distanceTotalMeters,
+                    onPicked = { meters ->
+                        draft.distanceTotalMeters = meters
+                        bindValueFields(draft)
+                    }
+                )
             }
-            binding.editTextPace.setOnFocusChangeListener { _, hasFocus ->
-                if (!hasFocus) draft.paceMinPerKm = binding.editTextPace.text?.toString().orEmpty()
+            binding.editTextPace.setOnClickListener {
+                showPaceValuePicker(
+                    context = ctx,
+                    titleRes = R.string.segment_dialog_pace_title,
+                    initialPaceSeconds = draft.paceTotalSeconds,
+                    onPicked = { pace ->
+                        draft.paceTotalSeconds = pace
+                        bindValueFields(draft)
+                    }
+                )
             }
 
             binding.buttonRemoveSegment.setOnClickListener {
@@ -335,6 +402,13 @@ private class SegmentDraftAdapter(
                     onChanged()
                 }
             }
+        }
+
+        private fun bindValueFields(draft: SegmentDraft) {
+            val ctx = binding.root.context
+            binding.editTextDuration.setText(formatSegmentDuration(draft.durationTotalSeconds))
+            binding.editTextDistance.setText(formatSegmentDistance(ctx, draft.distanceTotalMeters))
+            binding.editTextPace.setText(formatSegmentPace(ctx, draft.paceTotalSeconds))
         }
     }
 }

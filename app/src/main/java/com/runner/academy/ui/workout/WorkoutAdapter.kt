@@ -2,23 +2,40 @@ package com.runner.academy.ui.workout
 
 import android.content.Context
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.runner.academy.R
+import com.runner.academy.data.TrackData
 import com.runner.academy.data.Workout
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.ItemWorkoutBinding
 import com.runner.academy.util.SpeedPaceCalculator
+import com.runner.academy.util.TrackDataJson
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 
 class WorkoutAdapter(
     private val context: Context,
     private val onItemClick: (Workout) -> Unit,
     private val onFavoriteClick: (Workout) -> Unit
-) : ListAdapter<Workout, WorkoutAdapter.WorkoutViewHolder>(WorkoutDiffCallback()) {
+) : PagingDataAdapter<Workout, WorkoutAdapter.WorkoutViewHolder>(WorkoutDiffCallback()) {
+
+    private val trackCache = ConcurrentHashMap<Long, Pair<String?, TrackData?>>()
+    private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+    private val adapterJob = SupervisorJob()
+    private val adapterScope = CoroutineScope(adapterJob + Dispatchers.Main.immediate)
+    private val previewSizePx = (96f * context.resources.displayMetrics.density).toInt()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WorkoutViewHolder {
         val binding = ItemWorkoutBinding.inflate(
@@ -30,52 +47,113 @@ class WorkoutAdapter(
     }
 
     override fun onBindViewHolder(holder: WorkoutViewHolder, position: Int) {
-        holder.bind(getItem(position))
+        val workout = getItem(position) ?: return
+        holder.bind(workout)
+    }
+
+    override fun onViewRecycled(holder: WorkoutViewHolder) {
+        holder.clearPreview()
+        super.onViewRecycled(holder)
+    }
+
+    override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
+        adapterJob.cancelChildren()
+        super.onDetachedFromRecyclerView(recyclerView)
+    }
+
+    private fun resolveTrack(workout: Workout): TrackData? {
+        if (workout.trackData.isNullOrBlank()) return null
+        val cached = trackCache[workout.id]
+        if (cached != null && cached.first == workout.trackData) {
+            return cached.second
+        }
+        val parsed = TrackDataJson.parse(workout.trackData)
+        trackCache[workout.id] = workout.trackData to parsed
+        return parsed
     }
 
     inner class WorkoutViewHolder(
         private val binding: ItemWorkoutBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
+        private var previewJob: Job? = null
+        private var boundWorkoutId: Long = -1L
+
         fun bind(workout: Workout) {
+            boundWorkoutId = workout.id
             binding.apply {
-                val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
                 textViewWorkoutDate.text = dateFormat.format(workout.date)
-
                 textViewWorkoutType.text = workout.type.displayName(context)
-
                 textViewDistance.text = String.format(
                     "%.1f %s",
                     workout.distance,
                     context.getString(R.string.unit_km)
                 )
-
                 textViewDuration.text = formatDuration(workout.duration)
-
                 textViewPace.text = formatPace(workout.avgPace)
-
                 updateFavoriteButton(workout)
+                bindRoutePreview(workout)
 
                 if (workout.calories != null || !workout.notes.isNullOrEmpty()) {
-                    layoutCalories.visibility = android.view.View.VISIBLE
-
-                    if (workout.calories != null) {
-                        textViewCalories.text =
-                            "${workout.calories} ${context.getString(R.string.workout_details_calories)}"
+                    layoutCalories.visibility = View.VISIBLE
+                    textViewCalories.text = if (workout.calories != null) {
+                        "${workout.calories} ${context.getString(R.string.workout_details_calories)}"
+                    } else {
+                        ""
                     }
-
-                    if (!workout.notes.isNullOrEmpty()) {
-                        textViewNotesPreview.text = workout.notes
-                    }
+                    textViewNotesPreview.text = workout.notes.orEmpty()
                 } else {
-                    layoutCalories.visibility = android.view.View.GONE
+                    layoutCalories.visibility = View.GONE
                 }
 
-                root.setOnClickListener {
-                    onItemClick(workout)
+                root.setOnClickListener { onItemClick(workout) }
+                buttonFavorite.setOnClickListener { onFavoriteClick(workout) }
+            }
+        }
+
+        fun clearPreview() {
+            previewJob?.cancel()
+            previewJob = null
+            boundWorkoutId = -1L
+            binding.routePreview.setImageDrawable(null)
+            binding.routePreview.visibility = View.INVISIBLE
+            binding.textViewRoutePreviewEmpty.visibility = View.VISIBLE
+        }
+
+        private fun bindRoutePreview(workout: Workout) {
+            previewJob?.cancel()
+            val trackData = resolveTrack(workout)
+            if (trackData == null || trackData.points.size < 2) {
+                binding.routePreview.setImageDrawable(null)
+                binding.routePreview.visibility = View.INVISIBLE
+                binding.textViewRoutePreviewEmpty.visibility = View.VISIBLE
+                return
+            }
+
+            binding.textViewRoutePreviewEmpty.visibility = View.GONE
+            binding.routePreview.visibility = View.VISIBLE
+
+            val cacheKey = "${workout.id}:${workout.trackData?.length ?: 0}:$previewSizePx"
+            val cached = RouteMapBitmapRenderer.peek(cacheKey)
+            if (cached != null) {
+                binding.routePreview.setImageBitmap(cached)
+                return
+            }
+
+            binding.routePreview.setImageDrawable(null)
+            val workoutId = workout.id
+            previewJob = adapterScope.launch {
+                val bitmap = withContext(Dispatchers.IO) {
+                    RouteMapBitmapRenderer.getOrRender(
+                        context = context,
+                        cacheKey = cacheKey,
+                        trackData = trackData,
+                        widthPx = previewSizePx,
+                        heightPx = previewSizePx
+                    )
                 }
-                buttonFavorite.setOnClickListener {
-                    onFavoriteClick(workout)
+                if (boundWorkoutId == workoutId && bitmap != null) {
+                    binding.routePreview.setImageBitmap(bitmap)
                 }
             }
         }
@@ -97,7 +175,6 @@ class WorkoutAdapter(
             val hours = totalSeconds / 3600
             val minutes = (totalSeconds % 3600) / 60
             val seconds = totalSeconds % 60
-
             return when {
                 hours > 0 -> String.format("%d:%02d:%02d", hours, minutes, seconds)
                 else -> String.format("%d:%02d", minutes, seconds)

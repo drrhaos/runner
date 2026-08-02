@@ -3,19 +3,22 @@ package com.runner.academy.ui.workout
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.SpeedPaceCalculator
 import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.WorkoutDataCleaner
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 
 enum class WorkoutListFilter {
@@ -23,6 +26,7 @@ enum class WorkoutListFilter {
     FAVORITES
 }
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() {
 
     val allWorkouts: Flow<List<Workout>> = repository.getAllWorkouts()
@@ -30,19 +34,24 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     private val _listFilter = MutableStateFlow(WorkoutListFilter.ALL)
     val listFilter: StateFlow<WorkoutListFilter> = _listFilter.asStateFlow()
 
-    val displayedWorkouts: StateFlow<List<Workout>> = combine(
-        allWorkouts,
-        _listFilter
-    ) { workouts, filter ->
-        when (filter) {
-            WorkoutListFilter.ALL -> workouts
-            WorkoutListFilter.FAVORITES -> workouts.filter { it.isFavorite }
+    val pagedWorkouts: Flow<PagingData<Workout>> = _listFilter
+        .flatMapLatest { filter ->
+            Pager(
+                config = PagingConfig(
+                    pageSize = PAGE_SIZE,
+                    prefetchDistance = PREFETCH_DISTANCE,
+                    initialLoadSize = PAGE_SIZE,
+                    enablePlaceholders = false
+                ),
+                pagingSourceFactory = {
+                    when (filter) {
+                        WorkoutListFilter.ALL -> repository.pagingSourceAll()
+                        WorkoutListFilter.FAVORITES -> repository.pagingSourceFavorites()
+                    }
+                }
+            ).flow
         }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = emptyList()
-    )
+        .cachedIn(viewModelScope)
 
     private val _totalDistance = MutableStateFlow(0f)
     val totalDistance: StateFlow<Float> = _totalDistance.asStateFlow()
@@ -59,9 +68,11 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     private val _averagePace = MutableStateFlow(0f)
     val averagePace: StateFlow<Float> = _averagePace.asStateFlow()
 
+    private val _listItemCount = MutableStateFlow(0)
+    val listItemCount: StateFlow<Int> = _listItemCount.asStateFlow()
+
     init {
         loadStatistics()
-        collectAllWorkouts()
     }
 
     fun refreshStatistics() {
@@ -113,13 +124,16 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     }
 
     fun setListFilter(filter: WorkoutListFilter) {
+        if (_listFilter.value == filter) return
         _listFilter.value = filter
+        refreshListItemCount()
     }
 
     fun toggleFavorite(workout: Workout) {
         viewModelScope.launch {
             try {
                 repository.setFavorite(workout.id, !workout.isFavorite)
+                loadStatistics()
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutViewModel", "Error toggling favorite: ${e.message}", e)
             }
@@ -130,21 +144,15 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         return repository.getWorkoutById(id)
     }
 
-    private fun collectAllWorkouts() {
+    fun refreshListItemCount() {
         viewModelScope.launch {
             try {
-                repository.getAllWorkouts().collect { workouts ->
-                    val totalDistanceKm = workouts.sumOf { it.distance?.toDouble() ?: 0.0 }
-                    val totalDurationMs = workouts.sumOf { it.duration ?: 0L }
-                    _totalDuration.value = totalDurationMs
-                    val averagePace = SpeedPaceCalculator.overallAveragePace(
-                        totalDistanceMeters = totalDistanceKm * 1000.0,
-                        totalDurationSeconds = totalDurationMs / 1000.0
-                    )
-                    _averagePace.value = averagePace
+                _listItemCount.value = when (_listFilter.value) {
+                    WorkoutListFilter.ALL -> repository.getTotalWorkouts()
+                    WorkoutListFilter.FAVORITES -> repository.getFavoriteWorkoutsCount()
                 }
             } catch (e: Exception) {
-                android.util.Log.e("WorkoutViewModel", "Error collecting workouts: ${e.message}", e)
+                android.util.Log.e("WorkoutViewModel", "Error loading list count: ${e.message}", e)
             }
         }
     }
@@ -152,9 +160,17 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     private fun loadStatistics() {
         viewModelScope.launch {
             try {
-                _totalDistance.value = repository.getTotalDistance() ?: 0f
+                val totalDistanceKm = repository.getTotalDistance() ?: 0f
+                val totalDurationMs = repository.getTotalDuration() ?: 0L
+                _totalDistance.value = totalDistanceKm
                 _totalWorkouts.value = repository.getTotalWorkouts()
                 _averageDuration.value = repository.getAverageDuration() ?: 0L
+                _totalDuration.value = totalDurationMs
+                _averagePace.value = SpeedPaceCalculator.overallAveragePace(
+                    totalDistanceMeters = totalDistanceKm.toDouble() * 1000.0,
+                    totalDurationSeconds = totalDurationMs / 1000.0
+                )
+                refreshListItemCount()
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutViewModel", "Error loading statistics: ${e.message}", e)
             }
@@ -178,7 +194,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     fun getWorkoutTypes(): List<WorkoutType> {
         return WorkoutType.entries
     }
-    
+
     /**
      * Очищает данные тренировки от GPS выбросов
      * @param forceClean если true, очистка выполняется принудительно, даже если needsCleaning возвращает false
@@ -189,13 +205,13 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
                 android.util.Log.d("WorkoutViewModel", "Workout has no track data to clean")
                 return workout
             }
-            
+
             val trackData = TrackDataJson.parse(workout.trackData)
                 ?: run {
                     android.util.Log.d("WorkoutViewModel", "Workout track data could not be parsed")
                     return workout
                 }
-            
+
             // Проверяем, нужна ли очистка (если не принудительная)
             if (!forceClean) {
                 val needsCleaning = WorkoutDataCleaner.needsCleaning(trackData)
@@ -204,9 +220,12 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
                     return workout
                 }
             }
-            
-            android.util.Log.d("WorkoutViewModel", "Cleaning workout data for workout ${workout.id} (forceClean=$forceClean)")
-            
+
+            android.util.Log.d(
+                "WorkoutViewModel",
+                "Cleaning workout data for workout ${workout.id} (forceClean=$forceClean)"
+            )
+
             // Очищаем данные
             val cleanedTrackData = WorkoutDataCleaner.cleanTrackData(trackData)
             if (
@@ -222,19 +241,27 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             val cleanedWorkout = workout.copy(
                 distance = cleanedTrackData.totalDistance / 1000f, // Конвертируем в км
                 duration = cleanedTrackData.totalDuration,
-                avgPace = calculatePace(cleanedTrackData.totalDistance / 1000f, cleanedTrackData.totalDuration),
+                avgPace = calculatePace(
+                    cleanedTrackData.totalDistance / 1000f,
+                    cleanedTrackData.totalDuration
+                ),
                 trackData = TrackDataJson.toJson(cleanedTrackData)
             )
-            
+
             // Сохраняем очищенные данные в базу
             repository.updateWorkout(cleanedWorkout)
-            
+
             android.util.Log.d("WorkoutViewModel", "Workout data cleaned and saved successfully")
             cleanedWorkout
         } catch (e: Exception) {
             android.util.Log.e("WorkoutViewModel", "Error cleaning workout data: ${e.message}", e)
             null
         }
+    }
+
+    companion object {
+        const val PAGE_SIZE = 20
+        const val PREFETCH_DISTANCE = 5
     }
 }
 

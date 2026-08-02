@@ -114,8 +114,12 @@ dependencies {
     // Room database (KSP — avoids kapt "options were not recognized" warnings)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.room.paging)
     ksp(libs.androidx.room.compiler)
     androidTestImplementation(libs.androidx.room.testing)
+
+    // Paging
+    implementation(libs.androidx.paging.runtime)
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")

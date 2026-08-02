@@ -1,7 +1,9 @@
 package com.runner.academy.util
 
 import android.location.Location
+import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.TrackPoint
+import com.runner.academy.data.WorkoutTemplateSegment
 import kotlin.math.abs
 
 /**
@@ -422,6 +424,88 @@ object SpeedPaceCalculator {
             }
         }
         return segments
+    }
+
+    /**
+     * Splits the track by template interval goals (duration / distance), matching
+     * [IntervalEngine] progression. Gap steps ([TrackPoint.afterGap]) do not add
+     * distance; their wall-clock delta is excluded from elapsed (pause-like).
+     * After the last plan segment starts, remaining track belongs to that segment.
+     */
+    fun buildSegmentsFromPlan(
+        points: List<TrackPoint>,
+        planSegments: List<WorkoutTemplateSegment>,
+        metric: Boolean
+    ): List<SegmentStats> {
+        if (points.size < 2 || planSegments.isEmpty()) return emptyList()
+
+        val result = mutableListOf<SegmentStats>()
+        var planIndex = 0
+        var elapsedMs = 0L
+        var distanceM = 0f
+        var segmentStartElapsedMs = 0L
+        var segmentStartDistanceM = 0f
+        var segmentStartIndex = 0
+
+        fun progressOf(segment: WorkoutTemplateSegment, segElapsed: Long, segDist: Float): Float {
+            return when (segment.goalType) {
+                SegmentGoalType.DURATION -> {
+                    val target = segment.durationMs?.takeIf { it > 0 } ?: return 1f
+                    (segElapsed.toFloat() / target.toFloat()).coerceIn(0f, 1f)
+                }
+                SegmentGoalType.DISTANCE -> {
+                    val target = segment.distanceMeters?.takeIf { it > 0f } ?: return 1f
+                    (segDist / target).coerceIn(0f, 1f)
+                }
+            }
+        }
+
+        fun closeAt(endIndex: Int) {
+            if (planIndex >= planSegments.size) return
+            val durationMs = (elapsedMs - segmentStartElapsedMs).coerceAtLeast(0L)
+            val distanceKm = metersToKm((distanceM - segmentStartDistanceM).coerceAtLeast(0f))
+            if (durationMs > 0L || distanceKm > 0f) {
+                result.add(
+                    createSegmentStats(
+                        durationMs = durationMs,
+                        distanceKm = distanceKm,
+                        metric = metric,
+                        startIndex = segmentStartIndex,
+                        endIndex = endIndex.coerceIn(0, points.lastIndex)
+                    )
+                )
+            }
+            planIndex++
+            segmentStartElapsedMs = elapsedMs
+            segmentStartDistanceM = distanceM
+            segmentStartIndex = endIndex.coerceIn(0, points.lastIndex)
+        }
+
+        for (i in 1 until points.size) {
+            val prev = points[i - 1]
+            val point = points[i]
+            val stepMs = (point.timestamp - prev.timestamp).coerceAtLeast(0L)
+            if (!point.afterGap) {
+                elapsedMs += stepMs
+                distanceM += distanceMeters(prev, point)
+            }
+
+            // Advance completed segments except the last (remainder stays on last)
+            while (planIndex < planSegments.lastIndex) {
+                val segment = planSegments[planIndex]
+                val segElapsed = elapsedMs - segmentStartElapsedMs
+                val segDist = distanceM - segmentStartDistanceM
+                if (progressOf(segment, segElapsed, segDist) < 1f) break
+                closeAt(i)
+            }
+        }
+
+        // Close the in-progress (or final) segment with whatever track remains
+        if (planIndex < planSegments.size) {
+            closeAt(points.lastIndex)
+        }
+
+        return result
     }
 
     private fun createSegmentStats(

@@ -76,12 +76,13 @@
                     android:textAppearance="?attr/textAppearanceBodySmall"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
-                <TextView
-                    android:id="@+id/textView_day_segments"
+                <com.runner.academy.ui.tracking.SegmentProgressView
+                    android:id="@+id/progress_day_scheme"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:textAppearance="?attr/textAppearanceBodyMedium" />
+                    android:minHeight="24dp"
+                    android:visibility="gone" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

@@ -31,6 +31,9 @@ interface WorkoutTemplateDao {
     @Query("SELECT * FROM workout_template_segments WHERE templateId = :templateId ORDER BY sortOrder ASC")
     fun observeSegmentsForTemplate(templateId: Long): Flow<List<WorkoutTemplateSegment>>
 
+    @Query("SELECT * FROM workout_template_segments ORDER BY templateId ASC, sortOrder ASC")
+    fun getAllSegments(): Flow<List<WorkoutTemplateSegment>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSegment(segment: WorkoutTemplateSegment): Long
 

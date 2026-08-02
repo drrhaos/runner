@@ -206,3 +206,23 @@ local.properties.build
 
 # Reports (keep documentation files)
 # *.md files are tracked, but you can add specific ones to ignore if needed
+
+# AI coding assistants / IDE agents
+.cursor/
+.claude/
+.aider*
+.continue/
+.copilot/
+.windsurf/
+.gemini/
+.codeium/
+.roo/
+.augment/
+.agent/
+.agents/
+.ai/
+.cursorrules
+.clinerules
+CLAUDE.md
+AGENTS.md
+*.canvas.tsx

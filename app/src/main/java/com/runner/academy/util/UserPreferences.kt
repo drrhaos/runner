@@ -19,9 +19,7 @@ class UserPreferences(context: Context) {
         private const val KEY_USER_BIRTH_DATE = "user_birth_date"
         private const val KEY_USER_GENDER = "user_gender"
         private const val KEY_UNIT_SYSTEM = "unit_system"
-        private const val KEY_AUTO_PAUSE = "auto_pause"
         private const val KEY_VOICE_FEEDBACK = "voice_feedback"
-        private const val KEY_GPS_ACCURACY = "gps_accuracy"
         private const val KEY_FIRST_LAUNCH = "first_launch"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_APP_LANGUAGE = "app_language"
@@ -33,9 +31,7 @@ class UserPreferences(context: Context) {
         private const val DEFAULT_BIRTH_DATE = 0L
         private const val DEFAULT_GENDER = "male"
         private const val DEFAULT_UNIT_SYSTEM = "metric"
-        private const val DEFAULT_AUTO_PAUSE = true
         private const val DEFAULT_VOICE_FEEDBACK = false
-        private const val DEFAULT_GPS_ACCURACY = "high"
         private const val DEFAULT_FIRST_LAUNCH = true
         private val DEFAULT_THEME_MODE = ThemeUtils.THEME_SYSTEM
         private const val DEFAULT_APP_LANGUAGE = "en"
@@ -90,25 +86,11 @@ class UserPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_UNIT_SYSTEM, value).apply()
     
     /**
-     * Автоматическая пауза при остановке
-     */
-    var autoPause: Boolean
-        get() = prefs.getBoolean(KEY_AUTO_PAUSE, DEFAULT_AUTO_PAUSE)
-        set(value) = prefs.edit().putBoolean(KEY_AUTO_PAUSE, value).apply()
-    
-    /**
      * Голосовые уведомления
      */
     var voiceFeedback: Boolean
         get() = prefs.getBoolean(KEY_VOICE_FEEDBACK, DEFAULT_VOICE_FEEDBACK)
         set(value) = prefs.edit().putBoolean(KEY_VOICE_FEEDBACK, value).apply()
-    
-    /**
-     * Точность GPS
-     */
-    var gpsAccuracy: String
-        get() = prefs.getString(KEY_GPS_ACCURACY, DEFAULT_GPS_ACCURACY) ?: DEFAULT_GPS_ACCURACY
-        set(value) = prefs.edit().putString(KEY_GPS_ACCURACY, value).apply()
 
     /**
      * Режим темы приложения (system/light/dark)
@@ -152,9 +134,4 @@ class UserPreferences(context: Context) {
      * Проверяет, является ли система единиц метрической
      */
     fun isMetricSystem(): Boolean = unitSystem == "metric"
-    
-    /**
-     * Получает настройки GPS точности
-     */
-    fun getGpsAccuracyLevel(): String = gpsAccuracy
 }

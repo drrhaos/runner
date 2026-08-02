@@ -185,6 +185,8 @@ class WorkoutDetailFragment : Fragment() {
                     currentWorkout = workout
                     updateFavoriteButton(workout.isFavorite)
                     statsDisplay?.displayWorkout(workout)
+                    chartRenderer?.intervalPlanSegments =
+                        com.runner.academy.util.IntervalSegmentsJson.parse(workout.intervalSegmentsJson)
 
                     // Avoid clean→DB update→Flow→redraw loop (map flicker / missing track).
                     // Track is cleaned locally for display only when track JSON changes.
@@ -193,6 +195,8 @@ class WorkoutDetailFragment : Fragment() {
                         displayTrackOnMap(workout)
                     } else if (workout.trackData == null) {
                         binding.progressBarMapLoading.visibility = View.GONE
+                    } else {
+                        currentTrackData?.let { chartRenderer?.updateSegmentsChartOnly(it) }
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {

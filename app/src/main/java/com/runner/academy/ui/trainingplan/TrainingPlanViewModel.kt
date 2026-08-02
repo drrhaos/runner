@@ -11,6 +11,7 @@ import com.runner.academy.data.TrainingPlanDay
 import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutTemplate
 import com.runner.academy.data.WorkoutTemplateSegment
+import com.runner.academy.data.WorkoutTemplateWithSegments
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.TrainingPlanBackupFormat
 import kotlinx.coroutines.flow.SharingStarted
@@ -25,6 +26,10 @@ class TrainingPlanViewModel(
 
     val templates: StateFlow<List<WorkoutTemplate>> = repository.observeTemplates()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val templatesWithSegments: StateFlow<List<WorkoutTemplateWithSegments>> =
+        repository.observeTemplatesWithSegments()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val plans: StateFlow<List<TrainingPlan>> = repository.observePlans()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -143,22 +148,23 @@ data class SegmentDraft(
     var title: String = "",
     var kind: SegmentKind = SegmentKind.WORK,
     var goalType: SegmentGoalType = SegmentGoalType.DURATION,
-    var durationMinutes: String = "10",
-    var distanceMeters: String = "200",
-    var paceMinPerKm: String = ""
+    /** Total duration in seconds (h/m/s pickers). Default 10 min. */
+    var durationTotalSeconds: Int = 10 * 60,
+    /** Total distance in meters (km + m pickers). Default 200 m. */
+    var distanceTotalMeters: Int = 200,
+    /** Target pace as total seconds per km; 0 means no target. */
+    var paceTotalSeconds: Int = 0
 ) {
     fun toEntity(templateId: Long, order: Int): WorkoutTemplateSegment {
-        val pace = paceMinPerKm.replace(',', '.').toFloatOrNull()
+        val pace = if (paceTotalSeconds > 0) paceTotalSeconds / 60f else null
         return when (goalType) {
             SegmentGoalType.DURATION -> WorkoutTemplateSegment(
                 templateId = templateId,
                 sortOrder = order,
                 kind = kind,
-                title = title.ifBlank { kind.name },
+                title = title.trim(),
                 goalType = goalType,
-                durationMs = ((durationMinutes.replace(',', '.').toFloatOrNull() ?: 0f) * 60_000f)
-                    .toLong()
-                    .coerceAtLeast(1L),
+                durationMs = durationTotalSeconds.coerceAtLeast(1) * 1000L,
                 distanceMeters = null,
                 targetPaceMinPerKm = pace
             )
@@ -166,11 +172,10 @@ data class SegmentDraft(
                 templateId = templateId,
                 sortOrder = order,
                 kind = kind,
-                title = title.ifBlank { kind.name },
+                title = title.trim(),
                 goalType = goalType,
                 durationMs = null,
-                distanceMeters = distanceMeters.replace(',', '.').toFloatOrNull()?.coerceAtLeast(1f)
-                    ?: 1f,
+                distanceMeters = distanceTotalMeters.coerceAtLeast(1).toFloat(),
                 targetPaceMinPerKm = pace
             )
         }
@@ -181,9 +186,17 @@ data class SegmentDraft(
             title = segment.title,
             kind = segment.kind,
             goalType = segment.goalType,
-            durationMinutes = segment.durationMs?.let { (it / 60_000f).toString() } ?: "10",
-            distanceMeters = segment.distanceMeters?.toString() ?: "200",
-            paceMinPerKm = segment.targetPaceMinPerKm?.toString() ?: ""
+            durationTotalSeconds = segment.durationMs
+                ?.let { (it / 1000L).toInt().coerceAtLeast(1) }
+                ?: (10 * 60),
+            distanceTotalMeters = segment.distanceMeters
+                ?.toInt()
+                ?.coerceAtLeast(1)
+                ?: 200,
+            paceTotalSeconds = segment.targetPaceMinPerKm
+                ?.takeIf { it > 0f }
+                ?.let { (it * 60f).toInt().coerceAtLeast(0) }
+                ?: 0
         )
     }
 }

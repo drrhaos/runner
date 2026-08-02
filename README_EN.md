@@ -66,9 +66,7 @@ Runner is a full-featured running app that allows you to:
 - User weight, height, age
 - Gender (male/female)
 - Unit system (metric/imperial)
-- GPS accuracy (high/medium/low)
 - Theme mode (light/dark/system)
-- Auto-pause on stop
 - Voice feedback
 - **Start countdown** (3, 5, 10, 15, or 30 seconds)
 

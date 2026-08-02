@@ -1,5 +1,6 @@
 package com.runner.academy.data
 
+import androidx.paging.PagingSource
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -17,6 +18,10 @@ class WorkoutRepository(private val workoutDao: WorkoutDao) {
     fun getAllWorkouts(): Flow<List<Workout>> = workoutDao.getAllWorkouts()
 
     fun getFavoriteWorkouts(): Flow<List<Workout>> = workoutDao.getFavoriteWorkouts()
+
+    fun pagingSourceAll(): PagingSource<Int, Workout> = workoutDao.pagingSourceAll()
+
+    fun pagingSourceFavorites(): PagingSource<Int, Workout> = workoutDao.pagingSourceFavorites()
 
     /**
      * Get a single workout by ID as a Flow.
@@ -75,10 +80,18 @@ class WorkoutRepository(private val workoutDao: WorkoutDao) {
         workoutDao.getTotalWorkouts()
     }
 
+    suspend fun getFavoriteWorkoutsCount(): Int = withContext(Dispatchers.IO) {
+        workoutDao.getFavoriteWorkoutsCount()
+    }
+
     /**
      * Get the average duration across all workouts.
      */
     suspend fun getAverageDuration(): Long? = withContext(Dispatchers.IO) {
         workoutDao.getAverageDuration()
+    }
+
+    suspend fun getTotalDuration(): Long? = withContext(Dispatchers.IO) {
+        workoutDao.getTotalDuration()
     }
 }

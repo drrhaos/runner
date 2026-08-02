@@ -1,5 +1,6 @@
 package com.runner.academy.ui.settings
 
+import android.app.DatePickerDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -11,6 +12,7 @@ import androidx.lifecycle.lifecycleScope
 import com.runner.academy.R
 import com.runner.academy.databinding.FragmentSettingsBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import java.util.Calendar
 import kotlinx.coroutines.launch
 
 class SettingsFragment : Fragment() {
@@ -64,11 +66,6 @@ class SettingsFragment : Fragment() {
             showUnitSystemDialog()
         }
 
-        // Точность GPS
-        binding.rowGpsAccuracy.setOnClickListener {
-            showGpsAccuracyDialog()
-        }
-
         // Тема приложения
         binding.rowThemeMode.setOnClickListener {
             showThemeModeDialog()
@@ -82,11 +79,6 @@ class SettingsFragment : Fragment() {
         // Обратный отсчет перед стартом
         binding.rowStartCountdown.setOnClickListener {
             showStartCountdownDialog()
-        }
-
-        // Автоматическая пауза
-        binding.switchAutoPause.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.updateAutoPause(isChecked)
         }
 
         // Голосовые уведомления
@@ -117,11 +109,9 @@ class SettingsFragment : Fragment() {
         
         // Настройки приложения
         binding.textViewUnitSystemValue.text = viewModel.getUnitSystemDisplayName(settings.unitSystem)
-        binding.textViewGpsAccuracyValue.text = viewModel.getGpsAccuracyDisplayName(settings.gpsAccuracy)
         binding.textViewThemeModeValue.text = viewModel.getThemeModeDisplayName(settings.themeMode)
         binding.textViewLanguageValue.text = viewModel.getLanguageDisplayName(settings.appLanguage)
         binding.textViewStartCountdownValue.text = "${settings.startCountdownSeconds} s"
-        binding.switchAutoPause.isChecked = settings.autoPause
         binding.switchVoiceFeedback.isChecked = settings.voiceFeedback
     }
 
@@ -164,26 +154,6 @@ class SettingsFragment : Fragment() {
                 viewModel.updateUnitSystem(options[which])
                 dialog.dismiss()
                 Toast.makeText(requireContext(), getString(R.string.settings_units_changed), Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton(getString(R.string.cancel), null)
-            .show()
-    }
-
-    private fun showGpsAccuracyDialog() {
-        val options = viewModel.getGpsAccuracyOptions()
-        val currentAccuracy = viewModel.settingsState.value.gpsAccuracy
-        val currentIndex = options.indexOf(currentAccuracy)
-
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(getString(R.string.settings_dialog_gps_title))
-            .setMessage(getString(R.string.settings_dialog_gps_message))
-            .setSingleChoiceItems(
-                options.map { viewModel.getGpsAccuracyDisplayName(it) }.toTypedArray(),
-                currentIndex
-            ) { dialog, which ->
-                viewModel.updateGpsAccuracy(options[which])
-                dialog.dismiss()
-                Toast.makeText(requireContext(), getString(R.string.settings_gps_accuracy_changed), Toast.LENGTH_SHORT).show()
             }
             .setNegativeButton(getString(R.string.cancel), null)
             .show()
@@ -285,34 +255,32 @@ class SettingsFragment : Fragment() {
 
     private fun showBirthDateDialog() {
         val currentBirthDate = viewModel.settingsState.value.userBirthDate
-        val calendar = java.util.Calendar.getInstance()
+        val calendar = Calendar.getInstance()
         if (currentBirthDate > 0) {
             calendar.timeInMillis = currentBirthDate
         } else {
-            // Устанавливаем дату 25 лет назад по умолчанию
-            calendar.add(java.util.Calendar.YEAR, -25)
+            calendar.add(Calendar.YEAR, -25)
         }
 
-        val datePicker = android.widget.DatePicker(requireContext())
-        datePicker.init(
-            calendar.get(java.util.Calendar.YEAR),
-            calendar.get(java.util.Calendar.MONTH),
-            calendar.get(java.util.Calendar.DAY_OF_MONTH),
-            null
-        )
-
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(getString(R.string.settings_dialog_birthdate_title))
-            .setMessage(getString(R.string.settings_dialog_birthdate_message))
-            .setView(datePicker)
-            .setPositiveButton(getString(R.string.save)) { _, _ ->
-                val selectedCalendar = java.util.Calendar.getInstance()
-                selectedCalendar.set(datePicker.year, datePicker.month, datePicker.dayOfMonth)
-                viewModel.updateUserBirthDate(selectedCalendar.timeInMillis)
-                Toast.makeText(requireContext(), getString(R.string.settings_birthdate_saved), Toast.LENGTH_SHORT).show()
-            }
-            .setNegativeButton(getString(R.string.cancel), null)
-            .show()
+        DatePickerDialog(
+            requireContext(),
+            { _, year, month, dayOfMonth ->
+                calendar.set(year, month, dayOfMonth, 0, 0, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                viewModel.updateUserBirthDate(calendar.timeInMillis)
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.settings_birthdate_saved),
+                    Toast.LENGTH_SHORT
+                ).show()
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).apply {
+            setTitle(getString(R.string.settings_dialog_birthdate_title))
+            datePicker.maxDate = System.currentTimeMillis()
+        }.show()
     }
 
     private fun showGenderDialog() {

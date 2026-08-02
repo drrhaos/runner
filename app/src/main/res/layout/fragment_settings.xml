@@ -252,40 +252,6 @@
 
                 </LinearLayout>
 
-                <!-- Точность GPS -->
-                <LinearLayout
-                    android:id="@+id/row_gps_accuracy"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="12dp"
-                    android:background="?attr/selectableItemBackground"
-                    android:clickable="true"
-                    android:focusable="true"
-                    android:paddingStart="0dp"
-                    android:paddingEnd="8dp"
-                    android:paddingTop="8dp"
-                    android:paddingBottom="8dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/settings_label_gps_accuracy"
-                        android:textSize="16sp"
-                        android:textColor="?attr/colorOnSurface" />
-
-                    <TextView
-                        android:id="@+id/textView_gps_accuracy_value"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/settings_gps_accuracy_high"
-                        android:textSize="16sp"
-                        android:textColor="?attr/colorPrimary" />
-
-                </LinearLayout>
-
                 <!-- Тема приложения -->
                 <LinearLayout
                     android:id="@+id/row_theme_mode"
@@ -385,30 +351,6 @@
                         tools:text="5 s"
                         android:textSize="16sp"
                         android:textColor="?attr/colorPrimary" />
-
-                </LinearLayout>
-
-                <!-- Автоматическая пауза -->
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="12dp">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/settings_label_autopause"
-                        android:textSize="16sp"
-                        android:textColor="?attr/colorOnSurface" />
-
-                    <com.google.android.material.switchmaterial.SwitchMaterial
-                        android:id="@+id/switch_auto_pause"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:checked="true" />
 
                 </LinearLayout>
 
