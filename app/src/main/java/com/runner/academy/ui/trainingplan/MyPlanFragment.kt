@@ -25,6 +25,7 @@ import com.runner.academy.data.WorkoutTemplateSegment
 import com.runner.academy.data.defaultTrainingIcon
 import com.runner.academy.data.displayName
 import com.runner.academy.data.drawableRes
+import com.runner.academy.data.localizedTitle
 import com.runner.academy.data.parseTrainingIcon
 import com.runner.academy.databinding.FragmentMyPlanBinding
 import com.runner.academy.databinding.ItemCalendarDayBinding
@@ -66,7 +67,6 @@ class MyPlanFragment : Fragment() {
     private var scheduledByDate: Map<Long, ScheduledWorkout> = emptyMap()
 
     private lateinit var calendarAdapter: PlanCalendarAdapter
-    private val monthTitleFormat = SimpleDateFormat("LLLL yyyy", Locale.getDefault())
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -131,8 +131,10 @@ class MyPlanFragment : Fragment() {
     }
 
     private fun refreshCalendar() {
+        val locale = appLocale()
+        val monthTitleFormat = SimpleDateFormat("LLLL yyyy", locale)
         binding.textViewMonthTitle.text = monthTitleFormat.format(visibleMonth.time)
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }
         calendarAdapter.submit(
             buildMonthCells(visibleMonth),
             selectedDayMillis,
@@ -142,6 +144,11 @@ class MyPlanFragment : Fragment() {
             visibleMonth.get(Calendar.YEAR),
             visibleMonth.get(Calendar.MONTH)
         )
+    }
+
+    private fun appLocale(): Locale {
+        val locales = requireContext().resources.configuration.locales
+        return if (locales.isEmpty) Locale.getDefault() else locales[0]
     }
 
     private fun buildMonthCells(monthStart: Calendar): List<CalendarDayCell> {
@@ -176,7 +183,8 @@ class MyPlanFragment : Fragment() {
     }
 
     private fun bindDayDetail(day: ScheduledWorkoutWithTemplate?) {
-        val dateLabel = DateFormat.getDateInstance(DateFormat.FULL).format(Date(selectedDayMillis))
+        val dateLabel = DateFormat.getDateInstance(DateFormat.FULL, appLocale())
+            .format(Date(selectedDayMillis))
         binding.textViewDayDate.text = dateLabel
 
         if (day == null) {
@@ -221,19 +229,19 @@ class MyPlanFragment : Fragment() {
 
     private fun formatSegments(segments: List<WorkoutTemplateSegment>): String {
         if (segments.isEmpty()) return getString(R.string.plan_day_no_intervals)
+        val ctx = requireContext()
         return segments.joinToString("\n") { segment ->
             val goal = when (segment.goalType) {
                 SegmentGoalType.DURATION -> segment.durationMs?.let { FormatUtils.formatTime(it) }
                     ?: "—"
                 SegmentGoalType.DISTANCE -> segment.distanceMeters?.let { meters ->
-                    if (meters >= 1000f) String.format("%.2f km", meters / 1000f)
-                    else String.format("%.0f m", meters)
+                    FormatUtils.formatDistanceMeters(meters, ctx)
                 } ?: "—"
             }
             val pace = segment.targetPaceMinPerKm?.let { pace ->
                 " @ ${SpeedPaceCalculator.formatPaceMmSs(pace)}"
             }.orEmpty()
-            "• ${segment.title}: $goal$pace"
+            "• ${segment.localizedTitle(ctx)}: $goal$pace"
         }
     }
 

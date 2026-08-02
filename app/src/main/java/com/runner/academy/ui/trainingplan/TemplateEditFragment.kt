@@ -22,6 +22,7 @@ import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.defaultTrainingIcon
 import com.runner.academy.data.displayName
+import com.runner.academy.data.isDefaultTitle
 import com.runner.academy.data.parseTrainingIcon
 import com.runner.academy.databinding.FragmentTemplateEditBinding
 import com.runner.academy.databinding.ItemTemplateSegmentBinding
@@ -107,7 +108,7 @@ class TemplateEditFragment : Fragment() {
         binding.recyclerViewSegments.isNestedScrollingEnabled = false
 
         binding.buttonAddSegment.setOnClickListener {
-            drafts.add(SegmentDraft(title = getString(R.string.segment_kind_work)))
+            drafts.add(SegmentDraft(kind = SegmentKind.WORK))
             val index = drafts.lastIndex
             segmentAdapter.notifyItemInserted(index)
             scrollToNewestSegment()
@@ -143,14 +144,9 @@ class TemplateEditFragment : Fragment() {
             selectedIcon = selectedType.defaultTrainingIcon()
             iconAdapter.selected = selectedIcon
             updateIconHint()
-            drafts.add(SegmentDraft(title = getString(R.string.segment_kind_warmup), kind = SegmentKind.WARMUP))
-            drafts.add(SegmentDraft(title = getString(R.string.segment_kind_work), kind = SegmentKind.WORK))
-            drafts.add(
-                SegmentDraft(
-                    title = getString(R.string.segment_kind_cooldown),
-                    kind = SegmentKind.COOLDOWN
-                )
-            )
+            drafts.add(SegmentDraft(kind = SegmentKind.WARMUP))
+            drafts.add(SegmentDraft(kind = SegmentKind.WORK))
+            drafts.add(SegmentDraft(kind = SegmentKind.COOLDOWN))
             segmentAdapter.notifyDataSetChanged()
         }
     }
@@ -183,6 +179,12 @@ class TemplateEditFragment : Fragment() {
         if (name.isEmpty() || drafts.isEmpty()) {
             Toast.makeText(requireContext(), R.string.fill_required_fields, Toast.LENGTH_SHORT).show()
             return
+        }
+        val ctx = requireContext()
+        drafts.forEach { draft ->
+            if (draft.kind.isDefaultTitle(ctx, draft.title)) {
+                draft.title = ""
+            }
         }
         viewLifecycleOwner.lifecycleScope.launch {
             val id = if (templateId > 0) templateId else 0L
@@ -260,15 +262,7 @@ private class SegmentDraftAdapter(
             boundDraft = draft
             val ctx = binding.root.context
             val kinds = SegmentKind.entries
-            val kindLabels = kinds.map {
-                when (it) {
-                    SegmentKind.WARMUP -> ctx.getString(R.string.segment_kind_warmup)
-                    SegmentKind.WORK -> ctx.getString(R.string.segment_kind_work)
-                    SegmentKind.RECOVERY -> ctx.getString(R.string.segment_kind_recovery)
-                    SegmentKind.COOLDOWN -> ctx.getString(R.string.segment_kind_cooldown)
-                    SegmentKind.CUSTOM -> ctx.getString(R.string.segment_kind_custom)
-                }
-            }
+            val kindLabels = kinds.map { it.displayName(ctx) }
             binding.autoCompleteSegmentKind.setAdapter(
                 ArrayAdapter(ctx, android.R.layout.simple_list_item_1, kindLabels)
             )
@@ -277,7 +271,15 @@ private class SegmentDraftAdapter(
                 false
             )
             binding.autoCompleteSegmentKind.setOnItemClickListener { _, _, i, _ ->
-                draft.kind = kinds[i]
+                val previousKind = draft.kind
+                val newKind = kinds[i]
+                val titleNow = binding.editTextSegmentTitle.text?.toString().orEmpty()
+                if (previousKind.isDefaultTitle(ctx, titleNow)) {
+                    val localized = newKind.displayName(ctx)
+                    binding.editTextSegmentTitle.setText(localized)
+                    draft.title = localized
+                }
+                draft.kind = newKind
             }
 
             val goals = SegmentGoalType.entries
@@ -303,7 +305,12 @@ private class SegmentDraftAdapter(
                 updateGoalVisibility()
             }
 
-            binding.editTextSegmentTitle.setText(draft.title)
+            val titleForUi = if (draft.kind.isDefaultTitle(ctx, draft.title)) {
+                draft.kind.displayName(ctx)
+            } else {
+                draft.title
+            }
+            binding.editTextSegmentTitle.setText(titleForUi)
             binding.editTextDurationMin.setText(draft.durationMinutes)
             binding.editTextDistanceM.setText(draft.distanceMeters)
             binding.editTextPace.setText(draft.paceMinPerKm)

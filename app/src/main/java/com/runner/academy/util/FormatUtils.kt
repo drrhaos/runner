@@ -116,6 +116,15 @@ object FormatUtils {
         }
     }
 
+    /** Formats a distance given in meters (uses km when ≥ 1000). */
+    fun formatDistanceMeters(meters: Float, context: Context): String {
+        return if (meters >= 1000f) {
+            formatDistance(meters / 1000f, context)
+        } else {
+            String.format("%.0f %s", meters, context.getString(R.string.unit_m))
+        }
+    }
+
     fun formatDistanceForTTS(distanceKm: Float, context: Context, kph: Boolean = true): String {
         val km: Int = distanceKm.toInt()
         val m: Int = ((distanceKm - km)*1000).toInt()

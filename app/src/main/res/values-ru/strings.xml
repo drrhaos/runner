@@ -214,6 +214,7 @@
     <string name="chart_elevation_x_format">%.1f км</string>
     <string name="chart_elevation_y_format">%d м</string>
     <string name="unit_km">км</string>
+    <string name="unit_m">м</string>
     <string name="unit_mile">миля</string>
     <string name="unit_kmh">км/ч</string>
     <string name="unit_mph">миль/ч</string>
@@ -415,7 +416,7 @@
     <string name="templates_title">Базовые тренировки</string>
     <string name="templates_empty">Пока нет базовых тренировок</string>
     <string name="templates_add">Новая базовая тренировка</string>
-    <string name="template_edit_title">Редактирование базовой</string>
+    <string name="template_edit_title">Редактирование базовой тренировки</string>
     <string name="template_name_hint">Название (напр. Интервальная 1)</string>
     <string name="template_segments">Интервалы</string>
     <string name="template_add_segment">Добавить интервал</string>
@@ -445,7 +446,7 @@
     <string name="plans_export_progress">Экспорт…</string>
     <string name="plans_export_ready">Экспорт готов</string>
     <string name="plans_import_progress">Импорт…</string>
-    <string name="plans_import_success">Импортировано базовых: %1$d, планов: %2$d</string>
+    <string name="plans_import_success">Импортировано базовых тренировок: %1$d, планов: %2$d</string>
     <string name="plans_import_error">Ошибка импорта: %1$s</string>
     <string name="plan_edit_title">Редактирование плана</string>
     <string name="plan_name_hint">Название плана</string>

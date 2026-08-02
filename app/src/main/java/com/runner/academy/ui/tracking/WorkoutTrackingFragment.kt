@@ -36,6 +36,7 @@ import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.data.WorkoutState
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
+import com.runner.academy.data.localizedTitle
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutTemplateSegment
 import com.runner.academy.data.WorkoutTemplateWithSegments
@@ -400,10 +401,11 @@ class WorkoutTrackingFragment : Fragment() {
             binding.progressIntervalSegments.setProgress(0, 0f)
             val first = segments.firstOrNull()
             val title = selectedMode.displayTitle()
-            binding.textViewIntervalTitle.text = if (first != null && title.isNotEmpty()) {
-                "$title · ${first.title}"
+            val firstTitle = first?.localizedTitle(requireContext())
+            binding.textViewIntervalTitle.text = if (firstTitle != null && title.isNotEmpty()) {
+                "$title · $firstTitle"
             } else {
-                first?.title ?: title
+                firstTitle ?: title
             }
             binding.textViewIntervalProgressLabel.text = if (first != null) {
                 getString(
@@ -461,7 +463,7 @@ class WorkoutTrackingFragment : Fragment() {
         binding.progressIntervalSegments.setProgress(state.segmentIndex, state.segmentProgress)
 
         val percent = (state.segmentProgress * 100f).toInt().coerceIn(0, 100)
-        binding.textViewIntervalTitle.text = segment?.title
+        binding.textViewIntervalTitle.text = segment?.localizedTitle(requireContext())
             ?: selectedMode.displayTitle()
         binding.textViewIntervalProgressLabel.text = if (segment != null) {
             getString(
@@ -481,7 +483,7 @@ class WorkoutTrackingFragment : Fragment() {
 
         if (announce && isVoiceEnabled && engine.consumeSegmentAnnouncement(state) && segment != null) {
             voiceFeedbackManager?.announceIntervalStart(
-                segment.title,
+                segment.localizedTitle(requireContext()),
                 formatSegmentGoalDetail(segment)
             )
         }
@@ -491,11 +493,7 @@ class WorkoutTrackingFragment : Fragment() {
         return when (segment.goalType) {
             SegmentGoalType.DURATION -> segment.durationMs?.let { FormatUtils.formatTime(it) }
             SegmentGoalType.DISTANCE -> segment.distanceMeters?.let { meters ->
-                if (meters >= 1000f) {
-                    String.format("%.2f km", meters / 1000f)
-                } else {
-                    String.format("%.0f m", meters)
-                }
+                FormatUtils.formatDistanceMeters(meters, requireContext())
             }
         }
     }
