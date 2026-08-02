@@ -6,4 +6,6 @@
     <color name="segment_cooldown">#FFBF5AF2</color>
     <color name="segment_custom">#FFFF9F0A</color>
     <color name="segment_track_dim">#33FFFFFF</color>
+    <color name="segment_scheme_label">#B3FFFFFF</color>
+    <color name="segment_scheme_current_stroke">#FFFFFFFF</color>
 </resources>

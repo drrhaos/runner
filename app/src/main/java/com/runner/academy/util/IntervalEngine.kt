@@ -23,15 +23,19 @@ class IntervalEngine(
     private var segmentStartElapsedMs: Long = 0L
     private var segmentStartDistanceM: Float = 0f
     private var lastAnnouncedIndex: Int = -1
+    private var lastUpcomingWarnedIndex: Int = -1
 
     fun reset() {
         index = 0
         segmentStartElapsedMs = 0L
         segmentStartDistanceM = 0f
         lastAnnouncedIndex = -1
+        lastUpcomingWarnedIndex = -1
     }
 
     fun currentSegment(): WorkoutTemplateSegment? = segments.getOrNull(index)
+
+    fun peekNextSegment(): WorkoutTemplateSegment? = segments.getOrNull(index + 1)
 
     fun segmentCount(): Int = segments.size
 
@@ -88,11 +92,51 @@ class IntervalEngine(
         )
     }
 
-    /** Returns true once when a new segment becomes current (for TTS). */
+    /** Returns true once when a new segment becomes current (for TTS / beep). */
     fun consumeSegmentAnnouncement(state: State): Boolean {
         if (state.segment == null) return false
         if (state.segmentIndex == lastAnnouncedIndex) return false
         lastAnnouncedIndex = state.segmentIndex
+        return true
+    }
+
+    /**
+     * Remaining time in the current segment.
+     * Duration goals use the target clock; distance goals estimate from [paceMinPerKm].
+     */
+    fun estimateRemainingMs(state: State, paceMinPerKm: Float?): Long? {
+        val segment = state.segment ?: return null
+        if (state.completed) return 0L
+        return when (segment.goalType) {
+            SegmentGoalType.DURATION -> {
+                val target = segment.durationMs?.takeIf { it > 0 } ?: return null
+                (target - state.segmentElapsedMs).coerceAtLeast(0L)
+            }
+            SegmentGoalType.DISTANCE -> {
+                val target = segment.distanceMeters?.takeIf { it > 0f } ?: return null
+                val remainingM = (target - state.segmentDistanceMeters).coerceAtLeast(0f)
+                if (remainingM <= 0f) return 0L
+                val pace = paceMinPerKm?.takeIf { it > 0f }
+                    ?: segment.targetPaceMinPerKm?.takeIf { it > 0f }
+                    ?: return null
+                (pace * 60_000f * (remainingM / 1000f)).toLong().coerceAtLeast(0L)
+            }
+        }
+    }
+
+    /**
+     * True once per segment when ~30s remain before the next interval.
+     * Skipped for segments shorter than the warning window.
+     */
+    fun consumeUpcomingWarning(state: State, remainingMs: Long?): Boolean {
+        if (state.completed || state.segment == null) return false
+        if (peekNextSegment() == null) return false
+        if (remainingMs == null) return false
+        if (remainingMs <= 0L || remainingMs > UPCOMING_WARNING_MS) return false
+        val totalMs = remainingMs + state.segmentElapsedMs
+        if (totalMs <= UPCOMING_WARNING_MS) return false
+        if (state.segmentIndex == lastUpcomingWarnedIndex) return false
+        lastUpcomingWarnedIndex = state.segmentIndex
         return true
     }
 
@@ -111,5 +155,9 @@ class IntervalEngine(
                 (distanceM / target).coerceIn(0f, 1f)
             }
         }
+    }
+
+    companion object {
+        const val UPCOMING_WARNING_MS = 30_000L
     }
 }

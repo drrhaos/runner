@@ -3,7 +3,7 @@
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="nav_header_title" translatable="false">Runner App</string>
-    <string name="nav_header_subtitle">You personal trainer</string>
+    <string name="nav_header_subtitle">Your personal trainer</string>
     <string name="nav_header_desc">Application icon</string>
     <string name="action_settings">Settings</string>
 
@@ -21,7 +21,7 @@
     <!-- Управление тренировкой -->
     <string name="menu_settings">Settings</string>
     <string name="workout_type_easy_run">Easy run</string>
-    <string name="workout_type_tempo_run">Temp run</string>
+    <string name="workout_type_tempo_run">Tempo run</string>
     <string name="workout_type_interval_training">Interval run</string>
     <string name="workout_type_long_run">Long run</string>
     <string name="workout_type_recovery_run">Recovery run</string>
@@ -111,7 +111,7 @@
     <string name="settings_profile_title">User profile</string>
     <string name="settings_profile_subtitle">Used for calorie estimates</string>
     <string name="settings_label_weight">Weight</string>
-    <string name="settings_label_growth">Growth</string>
+    <string name="settings_label_growth">Height</string>
     <string name="settings_label_age">Age</string>
     <string name="settings_label_gender">Gender</string>
     <string name="settings_profile_gender_male">Male</string>
@@ -121,15 +121,10 @@
     <string name="settings_label_units_type">Units type</string>
     <string name="settings_units_metric">Metric</string>
     <string name="settings_units_imperial">Imperial</string>
-    <string name="settings_label_gps_accuracy">GPS accuracy</string>
-    <string name="settings_gps_accuracy_high">High</string>
-    <string name="settings_gps_accuracy_medium">Medium</string>
-    <string name="settings_gps_accuracy_low">Low</string>
     <string name="settings_label_theme">Application theme</string>
     <string name="settings_theme_system">As in the system</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
-    <string name="settings_label_autopause">Automatic pause</string>
     <string name="settings_label_voice_notifications">Voice notifications</string>
     <string name="settings_btn_reset">Reset settings</string>
     <string name="settings_weight_saved">Weight saved</string>
@@ -137,7 +132,6 @@
     <string name="settings_birthdate_saved">Date of birth saved</string>
     <string name="settings_gender_saved">Gender saved</string>
     <string name="settings_units_changed">Units system changed</string>
-    <string name="settings_gps_accuracy_changed">GPS accuracy changed</string>
     <string name="settings_theme_changed">Theme changed</string>
     <string name="settings_reset_done">Settings reset</string>
     <string name="settings_weight_format">%d kg</string>
@@ -155,8 +149,6 @@
     <string name="settings_dialog_gender_title">User gender</string>
     <string name="settings_dialog_gender_message">Select your gender:</string>
     <string name="settings_dialog_units_title">Units system</string>
-    <string name="settings_dialog_gps_title">GPS accuracy</string>
-    <string name="settings_dialog_gps_message">Select GPS accuracy level. High accuracy consumes more battery.</string>
     <string name="settings_dialog_theme_title">Application theme</string>
     <string name="settings_dialog_reset_title">Reset settings</string>
     <string name="settings_dialog_reset_message">Are you sure you want to reset all settings to default values?</string>
@@ -226,6 +218,7 @@
     <string name="chart_elevation_x_format">%.1f km</string>
     <string name="chart_elevation_y_format">%d m</string>
     <string name="unit_km">km</string>
+    <string name="unit_m">m</string>
     <string name="unit_mile">mile</string>
     <string name="unit_kmh">km/h</string>
     <string name="unit_mph">mi/h</string>
@@ -278,6 +271,7 @@
     <string name="workout_list_filter_favorites">Favorites</string>
     <string name="workout_list_message_no_favorites">No favorite routes yet</string>
     <string name="workout_list_message_add_favorites">Mark a workout with a star to save it here.</string>
+    <string name="workout_list_no_route_preview">No route</string>
     <string name="workout_list_import">Import workouts</string>
     <string name="workout_list_export">Export workouts</string>
     <string name="workout_list_export_choose_format">Choose export format</string>
@@ -413,7 +407,37 @@
     <string name="intensity_icon_plan">Plan</string>
     <string name="templates_title">Base workouts</string>
     <string name="templates_empty">No base workouts yet</string>
+    <string name="template_scheme_empty">No intervals</string>
+    <string name="template_scheme_details_title">Workout scheme</string>
     <string name="templates_add">New base workout</string>
+    <string name="template_wizard_intro_title">New base workout</string>
+    <string name="template_wizard_intro_message">Generate intervals automatically, or skip and build the template manually.</string>
+    <string name="template_wizard_generate">Generate</string>
+    <string name="template_wizard_skip">Skip</string>
+    <string name="template_wizard_intervals_title">Number of intervals</string>
+    <string name="template_wizard_intervals_label">Intervals</string>
+    <string name="template_wizard_goal_title">Interval type</string>
+    <string name="template_wizard_interval_duration_title">Interval duration</string>
+    <string name="template_wizard_interval_distance_title">Interval distance</string>
+    <string name="template_wizard_pace_title">Base pace (0:00 = none)</string>
+    <string name="template_wizard_recovery_goal_title">Recovery type</string>
+    <string name="template_wizard_recovery_duration_title">Recovery duration</string>
+    <string name="template_wizard_recovery_distance_title">Recovery distance</string>
+    <string name="template_wizard_recovery_pace_title">Recovery pace (0:00 = none)</string>
+    <string name="template_wizard_warmup_title">Warm-up</string>
+    <string name="template_wizard_warmup_message">Add a warm-up before the intervals?</string>
+    <string name="template_wizard_warmup_goal_title">Warm-up type</string>
+    <string name="template_wizard_warmup_duration_title">Warm-up duration</string>
+    <string name="template_wizard_warmup_distance_title">Warm-up distance</string>
+    <string name="template_wizard_warmup_pace_title">Warm-up pace (0:00 = none)</string>
+    <string name="template_wizard_cooldown_title">Cool-down</string>
+    <string name="template_wizard_cooldown_message">Add a cool-down after the intervals?</string>
+    <string name="template_wizard_cooldown_goal_title">Cool-down type</string>
+    <string name="template_wizard_cooldown_duration_title">Cool-down duration</string>
+    <string name="template_wizard_cooldown_distance_title">Cool-down distance</string>
+    <string name="template_wizard_cooldown_pace_title">Cool-down pace (0:00 = none)</string>
+    <string name="template_wizard_default_name">Intervals ×%1$d</string>
+    <string name="segment_interval_name">Interval %1$d</string>
     <string name="template_edit_title">Edit base workout</string>
     <string name="template_name_hint">Name (e.g. Interval 1)</string>
     <string name="template_segments">Intervals</string>
@@ -421,18 +445,32 @@
     <string name="template_saved">Base workout saved</string>
     <string name="template_delete_confirm">Delete this base workout?</string>
     <string name="segment_title_hint">Interval title</string>
-    <string name="segment_kind">Kind</string>
+    <string name="segment_kind">Type</string>
     <string name="segment_goal">Goal</string>
     <string name="segment_goal_duration">Duration</string>
     <string name="segment_goal_distance">Distance</string>
-    <string name="segment_duration_hint">Minutes</string>
-    <string name="segment_distance_hint">Meters</string>
-    <string name="segment_pace_hint">Target pace (min/km), optional</string>
+    <string name="segment_duration_hint">Duration</string>
+    <string name="segment_distance_hint">Distance</string>
+    <string name="segment_pace_hint">Target pace (optional)</string>
+    <string name="segment_dialog_duration_title">Duration</string>
+    <string name="segment_dialog_distance_title">Distance</string>
+    <string name="segment_dialog_pace_title">Target pace</string>
+    <string name="segment_picker_km">km</string>
+    <string name="segment_picker_m">m</string>
+    <string name="segment_picker_pace_min">min</string>
+    <string name="segment_distance_format_km_m">%1$d km %2$d m</string>
+    <string name="segment_distance_format_m">%1$d m</string>
+    <string name="segment_pace_format">%1$d:%2$02d /km</string>
+    <string name="segment_pace_none">Not set</string>
     <string name="segment_kind_warmup">Warm-up</string>
     <string name="segment_kind_work">Work</string>
     <string name="segment_kind_recovery">Recovery</string>
     <string name="segment_kind_cooldown">Cool-down</string>
     <string name="segment_kind_custom">Custom</string>
+    <string name="segment_scheme_warmup">WU</string>
+    <string name="segment_scheme_recovery">R</string>
+    <string name="segment_scheme_cooldown">CD</string>
+    <string name="segment_scheme_custom">C</string>
     <string name="plans_title">Training plans</string>
     <string name="plans_empty">No plans yet</string>
     <string name="plans_add">New plan</string>
@@ -497,5 +535,8 @@
     <string name="tracking_free_run">Free run</string>
     <string name="voice_interval_start">Interval: %1$s</string>
     <string name="voice_interval_start_with_detail">Interval: %1$s. %2$s</string>
+    <string name="voice_interval_upcoming">Next interval: %1$s</string>
+    <string name="voice_interval_upcoming_with_detail">Next interval: %1$s. %2$s</string>
+    <string name="chart_interval_n">Int %1$d</string>
 
 </resources>

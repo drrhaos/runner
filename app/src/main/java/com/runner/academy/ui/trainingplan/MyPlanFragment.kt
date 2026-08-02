@@ -17,7 +17,6 @@ import com.runner.academy.R
 import com.runner.academy.data.ScheduledWorkout
 import com.runner.academy.data.ScheduledWorkoutStatus
 import com.runner.academy.data.ScheduledWorkoutWithTemplate
-import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.TrainingIcon
 import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutDatabase
@@ -28,8 +27,6 @@ import com.runner.academy.data.drawableRes
 import com.runner.academy.data.parseTrainingIcon
 import com.runner.academy.databinding.FragmentMyPlanBinding
 import com.runner.academy.databinding.ItemCalendarDayBinding
-import com.runner.academy.util.FormatUtils
-import com.runner.academy.util.SpeedPaceCalculator
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -66,7 +63,6 @@ class MyPlanFragment : Fragment() {
     private var scheduledByDate: Map<Long, ScheduledWorkout> = emptyMap()
 
     private lateinit var calendarAdapter: PlanCalendarAdapter
-    private val monthTitleFormat = SimpleDateFormat("LLLL yyyy", Locale.getDefault())
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -131,8 +127,10 @@ class MyPlanFragment : Fragment() {
     }
 
     private fun refreshCalendar() {
+        val locale = appLocale()
+        val monthTitleFormat = SimpleDateFormat("LLLL yyyy", locale)
         binding.textViewMonthTitle.text = monthTitleFormat.format(visibleMonth.time)
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(locale) else it.toString() }
         calendarAdapter.submit(
             buildMonthCells(visibleMonth),
             selectedDayMillis,
@@ -142,6 +140,11 @@ class MyPlanFragment : Fragment() {
             visibleMonth.get(Calendar.YEAR),
             visibleMonth.get(Calendar.MONTH)
         )
+    }
+
+    private fun appLocale(): Locale {
+        val locales = requireContext().resources.configuration.locales
+        return if (locales.isEmpty) Locale.getDefault() else locales[0]
     }
 
     private fun buildMonthCells(monthStart: Calendar): List<CalendarDayCell> {
@@ -176,14 +179,15 @@ class MyPlanFragment : Fragment() {
     }
 
     private fun bindDayDetail(day: ScheduledWorkoutWithTemplate?) {
-        val dateLabel = DateFormat.getDateInstance(DateFormat.FULL).format(Date(selectedDayMillis))
+        val dateLabel = DateFormat.getDateInstance(DateFormat.FULL, appLocale())
+            .format(Date(selectedDayMillis))
         binding.textViewDayDate.text = dateLabel
 
         if (day == null) {
             binding.imageViewDayIcon.visibility = View.GONE
             binding.textViewDayTitle.text = getString(R.string.plan_day_outside)
             binding.textViewDayStatus.text = ""
-            binding.textViewDaySegments.text = ""
+            clearDayScheme()
             return
         }
 
@@ -192,7 +196,7 @@ class MyPlanFragment : Fragment() {
                 binding.imageViewDayIcon.visibility = View.GONE
                 binding.textViewDayTitle.text = getString(R.string.plan_day_rest)
                 binding.textViewDayStatus.text = statusLabel(day.scheduled.status)
-                binding.textViewDaySegments.text = ""
+                clearDayScheme()
             }
             else -> {
                 val template = day.template
@@ -214,27 +218,24 @@ class MyPlanFragment : Fragment() {
                     append(" · ")
                     append(getString(R.string.plan_day_label, day.scheduled.dayIndex + 1))
                 }
-                binding.textViewDaySegments.text = formatSegments(day.segments)
+                bindDayScheme(day.segments)
             }
         }
     }
 
-    private fun formatSegments(segments: List<WorkoutTemplateSegment>): String {
-        if (segments.isEmpty()) return getString(R.string.plan_day_no_intervals)
-        return segments.joinToString("\n") { segment ->
-            val goal = when (segment.goalType) {
-                SegmentGoalType.DURATION -> segment.durationMs?.let { FormatUtils.formatTime(it) }
-                    ?: "—"
-                SegmentGoalType.DISTANCE -> segment.distanceMeters?.let { meters ->
-                    if (meters >= 1000f) String.format("%.2f km", meters / 1000f)
-                    else String.format("%.0f m", meters)
-                } ?: "—"
-            }
-            val pace = segment.targetPaceMinPerKm?.let { pace ->
-                " @ ${SpeedPaceCalculator.formatPaceMmSs(pace)}"
-            }.orEmpty()
-            "• ${segment.title}: $goal$pace"
+    private fun clearDayScheme() {
+        binding.progressDayScheme.visibility = View.GONE
+        binding.progressDayScheme.setSegments(emptyList())
+    }
+
+    private fun bindDayScheme(segments: List<WorkoutTemplateSegment>) {
+        if (segments.isEmpty()) {
+            clearDayScheme()
+            return
         }
+        binding.progressDayScheme.visibility = View.VISIBLE
+        binding.progressDayScheme.setSegments(segments)
+        binding.progressDayScheme.setProgress(segments.size, 1f)
     }
 
     private fun statusLabel(status: ScheduledWorkoutStatus): String = when (status) {

@@ -1,5 +1,6 @@
 package com.runner.academy.data
 
+import androidx.paging.PagingSource
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
@@ -10,6 +11,12 @@ interface WorkoutDao {
 
     @Query("SELECT * FROM workouts WHERE isFavorite = 1 ORDER BY date DESC")
     fun getFavoriteWorkouts(): Flow<List<Workout>>
+
+    @Query("SELECT * FROM workouts ORDER BY date DESC")
+    fun pagingSourceAll(): PagingSource<Int, Workout>
+
+    @Query("SELECT * FROM workouts WHERE isFavorite = 1 ORDER BY date DESC")
+    fun pagingSourceFavorites(): PagingSource<Int, Workout>
 
     @Query("SELECT * FROM workouts WHERE id = :id")
     fun getWorkoutById(id: Long): Flow<Workout?>
@@ -37,6 +44,9 @@ interface WorkoutDao {
 
     @Query("SELECT COUNT(*) FROM workouts")
     suspend fun getTotalWorkouts(): Int
+
+    @Query("SELECT COUNT(*) FROM workouts WHERE isFavorite = 1")
+    suspend fun getFavoriteWorkoutsCount(): Int
 
     @Query("SELECT AVG(duration) FROM workouts")
     suspend fun getAverageDuration(): Long?

@@ -31,7 +31,8 @@ object WorkoutBackupFormat {
         val notes: String? = null,
         val type: String = WorkoutType.EASY_RUN.name,
         val trackData: String? = null,
-        val isFavorite: Boolean = false
+        val isFavorite: Boolean = false,
+        val intervalSegmentsJson: String? = null
     )
 
     data class WorkoutsBackupFile(
@@ -98,7 +99,8 @@ object WorkoutBackupFormat {
             notes = stringOrNull("notes"),
             type = stringOr("type", WorkoutType.EASY_RUN.name),
             trackData = trackDataOrNull(),
-            isFavorite = booleanOr("isFavorite", false)
+            isFavorite = booleanOr("isFavorite", false),
+            intervalSegmentsJson = stringOrNull("intervalSegmentsJson")
         )
     }
 
@@ -203,7 +205,8 @@ object WorkoutBackupFormat {
             notes = notes,
             type = workoutType,
             trackData = TrackDataJson.normalizeStored(trackData),
-            isFavorite = isFavorite
+            isFavorite = isFavorite,
+            intervalSegmentsJson = intervalSegmentsJson
         )
     }
 
@@ -217,6 +220,7 @@ object WorkoutBackupFormat {
         notes = notes,
         type = type.name,
         trackData = trackData,
-        isFavorite = isFavorite
+        isFavorite = isFavorite,
+        intervalSegmentsJson = intervalSegmentsJson
     )
 }

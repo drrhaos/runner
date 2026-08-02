@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import com.runner.academy.R
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
+import com.runner.academy.data.localizedTitle
 import com.runner.academy.util.SpeedPaceCalculator
 import com.github.mikephil.charting.charts.BarChart
 import com.github.mikephil.charting.charts.LineChart
@@ -36,6 +37,9 @@ class ChartRenderer(
         set(value) {
             field = value
         }
+
+    /** When set, bar chart splits by template intervals instead of km/mile. */
+    var intervalPlanSegments: List<com.runner.academy.data.WorkoutTemplateSegment> = emptyList()
 
     enum class SegmentsDisplayMode {
         PACE, SPEED
@@ -314,11 +318,29 @@ class ChartRenderer(
 
         val isMetric = userPreferences?.isMetricSystem() ?: true
         val unitLabel = if (isMetric) context.getString(R.string.unit_km) else context.getString(R.string.unit_mile)
+        val useIntervalPlan = intervalPlanSegments.isNotEmpty()
 
-        val segments = SpeedPaceCalculator.buildSegments(points, isMetric)
+        val segments = if (useIntervalPlan) {
+            SpeedPaceCalculator.buildSegmentsFromPlan(points, intervalPlanSegments, isMetric)
+        } else {
+            SpeedPaceCalculator.buildSegments(points, isMetric)
+        }
         if (segments.isEmpty()) {
             chart.visibility = android.view.View.GONE
             return
+        }
+
+        val axisLabels: List<String> = if (useIntervalPlan) {
+            intervalPlanSegments.take(segments.size).mapIndexed { index, seg ->
+                val title = seg.localizedTitle(context)
+                title.take(8).ifBlank {
+                    context.getString(R.string.chart_interval_n, index + 1)
+                }
+            }
+        } else {
+            segments.indices.map { index ->
+                "$unitLabel ${index + 1}"
+            }
         }
 
         val dataSet: BarDataSet = when (segmentsDisplayMode) {
@@ -368,10 +390,11 @@ class ChartRenderer(
         chart.xAxis.textColor = textColor
         chart.xAxis.axisLineColor = textColor
         chart.xAxis.granularity = 1f
+        chart.xAxis.setLabelCount(axisLabels.size.coerceAtMost(8), false)
         chart.xAxis.valueFormatter = object : ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
-                val segmentNum = value.toInt() + 1
-                return "$unitLabel $segmentNum"
+                val index = value.toInt()
+                return axisLabels.getOrNull(index) ?: ""
             }
         }
 

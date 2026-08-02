@@ -8,7 +8,7 @@ The app stores the following data **only on your device**:
 
 - Workout history (distance, duration, pace, calories, route points)
 - User profile settings (weight, height, age, gender, preferences)
-- App preferences (theme, language, GPS accuracy, voice notifications)
+- App preferences (theme, language, voice notifications)
 
 Workout routes are stored in a local Room database. No account or cloud sync is required.
 
