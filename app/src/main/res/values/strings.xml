@@ -3,7 +3,7 @@
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="nav_header_title" translatable="false">Runner App</string>
-    <string name="nav_header_subtitle">You personal trainer</string>
+    <string name="nav_header_subtitle">Your personal trainer</string>
     <string name="nav_header_desc">Application icon</string>
     <string name="action_settings">Settings</string>
 
@@ -21,7 +21,7 @@
     <!-- Управление тренировкой -->
     <string name="menu_settings">Settings</string>
     <string name="workout_type_easy_run">Easy run</string>
-    <string name="workout_type_tempo_run">Temp run</string>
+    <string name="workout_type_tempo_run">Tempo run</string>
     <string name="workout_type_interval_training">Interval run</string>
     <string name="workout_type_long_run">Long run</string>
     <string name="workout_type_recovery_run">Recovery run</string>
@@ -111,7 +111,7 @@
     <string name="settings_profile_title">User profile</string>
     <string name="settings_profile_subtitle">Used for calorie estimates</string>
     <string name="settings_label_weight">Weight</string>
-    <string name="settings_label_growth">Growth</string>
+    <string name="settings_label_growth">Height</string>
     <string name="settings_label_age">Age</string>
     <string name="settings_label_gender">Gender</string>
     <string name="settings_profile_gender_male">Male</string>
@@ -226,6 +226,7 @@
     <string name="chart_elevation_x_format">%.1f km</string>
     <string name="chart_elevation_y_format">%d m</string>
     <string name="unit_km">km</string>
+    <string name="unit_m">m</string>
     <string name="unit_mile">mile</string>
     <string name="unit_kmh">km/h</string>
     <string name="unit_mph">mi/h</string>
@@ -421,7 +422,7 @@
     <string name="template_saved">Base workout saved</string>
     <string name="template_delete_confirm">Delete this base workout?</string>
     <string name="segment_title_hint">Interval title</string>
-    <string name="segment_kind">Kind</string>
+    <string name="segment_kind">Type</string>
     <string name="segment_goal">Goal</string>
     <string name="segment_goal_duration">Duration</string>
     <string name="segment_goal_distance">Distance</string>

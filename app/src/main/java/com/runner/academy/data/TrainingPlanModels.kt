@@ -1,11 +1,14 @@
 package com.runner.academy.data
 
 import android.content.Context
+import android.content.res.Configuration
+import androidx.annotation.StringRes
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.runner.academy.R
+import java.util.Locale
 
 /** Kind of interval inside a base workout template. */
 enum class SegmentKind {
@@ -16,12 +19,47 @@ enum class SegmentKind {
     CUSTOM
 }
 
-fun SegmentKind.displayName(context: Context): String = when (this) {
-    SegmentKind.WARMUP -> context.getString(R.string.segment_kind_warmup)
-    SegmentKind.WORK -> context.getString(R.string.segment_kind_work)
-    SegmentKind.RECOVERY -> context.getString(R.string.segment_kind_recovery)
-    SegmentKind.COOLDOWN -> context.getString(R.string.segment_kind_cooldown)
-    SegmentKind.CUSTOM -> context.getString(R.string.segment_kind_custom)
+@StringRes
+fun SegmentKind.titleRes(): Int = when (this) {
+    SegmentKind.WARMUP -> R.string.segment_kind_warmup
+    SegmentKind.WORK -> R.string.segment_kind_work
+    SegmentKind.RECOVERY -> R.string.segment_kind_recovery
+    SegmentKind.COOLDOWN -> R.string.segment_kind_cooldown
+    SegmentKind.CUSTOM -> R.string.segment_kind_custom
+}
+
+fun SegmentKind.displayName(context: Context): String = context.getString(titleRes())
+
+/**
+ * True when [title] is empty or matches this kind's default label in a known app locale
+ * (so UI can re-localize titles saved while another language was active).
+ */
+fun SegmentKind.isDefaultTitle(context: Context, title: String): Boolean {
+    val trimmed = title.trim()
+    if (trimmed.isEmpty()) return true
+    if (trimmed.equals(name, ignoreCase = true)) return true
+    val resId = titleRes()
+    val current = context.getString(resId)
+    if (trimmed.equals(current, ignoreCase = true)) return true
+    return knownAppLocales().any { locale ->
+        trimmed.equals(context.stringInLocale(locale, resId), ignoreCase = true)
+    }
+}
+
+/** Localized segment label: custom titles kept as-is, defaults follow the current app language. */
+fun WorkoutTemplateSegment.localizedTitle(context: Context): String {
+    return if (kind.isDefaultTitle(context, title)) kind.displayName(context) else title
+}
+
+private fun knownAppLocales(): List<Locale> = listOf(
+    Locale.ENGLISH,
+    Locale.forLanguageTag("ru")
+)
+
+private fun Context.stringInLocale(locale: Locale, @StringRes resId: Int): String {
+    val config = Configuration(resources.configuration)
+    config.setLocale(locale)
+    return createConfigurationContext(config).getString(resId)
 }
 
 /**

@@ -154,7 +154,7 @@ data class SegmentDraft(
                 templateId = templateId,
                 sortOrder = order,
                 kind = kind,
-                title = title.ifBlank { kind.name },
+                title = title.trim(),
                 goalType = goalType,
                 durationMs = ((durationMinutes.replace(',', '.').toFloatOrNull() ?: 0f) * 60_000f)
                     .toLong()
@@ -166,7 +166,7 @@ data class SegmentDraft(
                 templateId = templateId,
                 sortOrder = order,
                 kind = kind,
-                title = title.ifBlank { kind.name },
+                title = title.trim(),
                 goalType = goalType,
                 durationMs = null,
                 distanceMeters = distanceMeters.replace(',', '.').toFloatOrNull()?.coerceAtLeast(1f)
