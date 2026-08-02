@@ -111,15 +111,10 @@
     <string name="settings_label_units_type">Система единиц</string>
     <string name="settings_units_metric">Метрическая (км)</string>
     <string name="settings_units_imperial">Имперская (мили)</string>
-    <string name="settings_label_gps_accuracy">Точность GPS</string>
-    <string name="settings_gps_accuracy_high">Высокая</string>
-    <string name="settings_gps_accuracy_medium">Срелняя</string>
-    <string name="settings_gps_accuracy_low">Низкая</string>
     <string name="settings_label_theme">Тема приложения</string>
     <string name="settings_theme_system">Как в системе</string>
     <string name="settings_theme_light">Светлая</string>
     <string name="settings_theme_dark">Темная</string>
-    <string name="settings_label_autopause">Автоматическая пауза</string>
     <string name="settings_label_voice_notifications">Голосовые уведомления</string>
     <string name="settings_btn_reset">Сбросить настройки</string>
     <string name="settings_weight_saved">Вес сохранен</string>
@@ -127,7 +122,6 @@
     <string name="settings_birthdate_saved">Дата рождения сохранена</string>
     <string name="settings_gender_saved">Пол сохранен</string>
     <string name="settings_units_changed">Система единиц изменена</string>
-    <string name="settings_gps_accuracy_changed">Точность GPS изменена</string>
     <string name="settings_theme_changed">Тема изменена</string>
     <string name="settings_reset_done">Настройки сброшены</string>
     <string name="settings_weight_format">%d кг</string>
@@ -145,8 +139,6 @@
     <string name="settings_dialog_gender_title">Пол пользователя</string>
     <string name="settings_dialog_gender_message">Выберите ваш пол:</string>
     <string name="settings_dialog_units_title">Система единиц</string>
-    <string name="settings_dialog_gps_title">Точность GPS</string>
-    <string name="settings_dialog_gps_message">Выберите уровень точности GPS. Высокая точность потребляет больше батареи.</string>
     <string name="settings_dialog_theme_title">Тема приложения</string>
     <string name="settings_dialog_reset_title">Сброс настроек</string>
     <string name="settings_dialog_reset_message">Вы уверены, что хотите сбросить все настройки к значениям по умолчанию?</string>

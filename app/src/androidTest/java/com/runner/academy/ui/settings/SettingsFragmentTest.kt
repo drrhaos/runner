@@ -37,12 +37,6 @@ class SettingsFragmentTest {
         onView(withId(R.id.textView_unit_system_value))
             .check(matches(isDisplayed()))
         
-        onView(withId(R.id.textView_gps_accuracy_value))
-            .check(matches(isDisplayed()))
-        
-        onView(withId(R.id.switch_auto_pause))
-            .check(matches(isDisplayed()))
-        
         onView(withId(R.id.switch_voice_feedback))
             .check(matches(isDisplayed()))
         
@@ -106,34 +100,12 @@ class SettingsFragmentTest {
     }
 
     @Test
-    fun gps_accuracy_row_should_be_clickable() {
-        // Given
-        val scenario = launchFragmentInContainer<SettingsFragment>()
-
-        // When & Then
-        onView(withId(R.id.row_gps_accuracy))
-            .check(matches(isDisplayed()))
-            .check(matches(isClickable()))
-    }
-
-    @Test
     fun reset_settings_button_should_be_clickable() {
         // Given
         val scenario = launchFragmentInContainer<SettingsFragment>()
 
         // When & Then
         onView(withId(R.id.button_reset_settings))
-            .check(matches(isDisplayed()))
-            .check(matches(isClickable()))
-    }
-
-    @Test
-    fun auto_pause_switch_should_be_clickable() {
-        // Given
-        val scenario = launchFragmentInContainer<SettingsFragment>()
-
-        // When & Then
-        onView(withId(R.id.switch_auto_pause))
             .check(matches(isDisplayed()))
             .check(matches(isClickable()))
     }
