@@ -143,12 +143,15 @@ data class SegmentDraft(
     var title: String = "",
     var kind: SegmentKind = SegmentKind.WORK,
     var goalType: SegmentGoalType = SegmentGoalType.DURATION,
-    var durationMinutes: String = "10",
-    var distanceMeters: String = "200",
-    var paceMinPerKm: String = ""
+    /** Total duration in seconds (h/m/s pickers). Default 10 min. */
+    var durationTotalSeconds: Int = 10 * 60,
+    /** Total distance in meters (km + m pickers). Default 200 m. */
+    var distanceTotalMeters: Int = 200,
+    /** Target pace as total seconds per km; 0 means no target. */
+    var paceTotalSeconds: Int = 0
 ) {
     fun toEntity(templateId: Long, order: Int): WorkoutTemplateSegment {
-        val pace = paceMinPerKm.replace(',', '.').toFloatOrNull()
+        val pace = if (paceTotalSeconds > 0) paceTotalSeconds / 60f else null
         return when (goalType) {
             SegmentGoalType.DURATION -> WorkoutTemplateSegment(
                 templateId = templateId,
@@ -156,9 +159,7 @@ data class SegmentDraft(
                 kind = kind,
                 title = title.trim(),
                 goalType = goalType,
-                durationMs = ((durationMinutes.replace(',', '.').toFloatOrNull() ?: 0f) * 60_000f)
-                    .toLong()
-                    .coerceAtLeast(1L),
+                durationMs = durationTotalSeconds.coerceAtLeast(1) * 1000L,
                 distanceMeters = null,
                 targetPaceMinPerKm = pace
             )
@@ -169,8 +170,7 @@ data class SegmentDraft(
                 title = title.trim(),
                 goalType = goalType,
                 durationMs = null,
-                distanceMeters = distanceMeters.replace(',', '.').toFloatOrNull()?.coerceAtLeast(1f)
-                    ?: 1f,
+                distanceMeters = distanceTotalMeters.coerceAtLeast(1).toFloat(),
                 targetPaceMinPerKm = pace
             )
         }
@@ -181,9 +181,17 @@ data class SegmentDraft(
             title = segment.title,
             kind = segment.kind,
             goalType = segment.goalType,
-            durationMinutes = segment.durationMs?.let { (it / 60_000f).toString() } ?: "10",
-            distanceMeters = segment.distanceMeters?.toString() ?: "200",
-            paceMinPerKm = segment.targetPaceMinPerKm?.toString() ?: ""
+            durationTotalSeconds = segment.durationMs
+                ?.let { (it / 1000L).toInt().coerceAtLeast(1) }
+                ?: (10 * 60),
+            distanceTotalMeters = segment.distanceMeters
+                ?.toInt()
+                ?.coerceAtLeast(1)
+                ?: 200,
+            paceTotalSeconds = segment.targetPaceMinPerKm
+                ?.takeIf { it > 0f }
+                ?.let { (it * 60f).toInt().coerceAtLeast(0) }
+                ?: 0
         )
     }
 }
