@@ -341,13 +341,16 @@ object SpeedPaceCalculator {
     }
 
     /**
-     * True when the step from [prev] to [point] should not contribute distance
-     * (explicit gap flag, long silence, or implausible teleport).
+     * True when the step from [prev] to [point] should not contribute distance.
+     *
+     * Uses the explicit [TrackPoint.afterGap] flag and large teleports only.
+     * Do **not** treat moderate timestamp gaps (e.g. 30s–few minutes) as gaps:
+     * sparse GPX / decimated tracks commonly have such spacing, and treating them
+     * as gaps emptied km/mile segment charts (and broke [buildSegments] unit tests).
+     * Live phantom-distance prevention belongs in [GpsFilter] / the tracking service.
      */
     fun isTrackGapStep(prev: TrackPoint, point: TrackPoint): Boolean {
         if (point.afterGap) return true
-        val dt = point.timestamp - prev.timestamp
-        if (dt >= GpsFilter.GAP_RESUME_THRESHOLD_MS) return true
         val stepM = distanceMeters(prev, point)
         return stepM >= GAP_DISTANCE_METERS
     }
