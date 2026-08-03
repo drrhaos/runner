@@ -195,7 +195,6 @@ class WorkoutTrackingFragment : Fragment() {
         initializeManagers()
         setupWorkoutModeSpinner()
         setupClickListeners()
-//        setupSwipeGesture()
         observeViewModel()
         requestLocationPermission()
         setupBackButtonHandler()

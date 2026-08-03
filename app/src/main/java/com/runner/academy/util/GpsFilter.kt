@@ -244,13 +244,4 @@ object GpsFilter {
             GeoPoint(it.latitude, it.longitude)
         }
     }
-
-    fun logGpsInfo(location: Location, isAccepted: Boolean) {
-        Log.d(
-            "GpsFilter",
-            "GPS Point: lat=${location.latitude}, lon=${location.longitude}, " +
-                "accuracy=${location.accuracy}m, speed=${location.speed}m/s, " +
-                "accepted=$isAccepted"
-        )
-    }
 }

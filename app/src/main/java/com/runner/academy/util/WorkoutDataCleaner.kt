@@ -4,7 +4,6 @@ import android.location.Location
 import android.util.Log
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
-import org.osmdroid.util.GeoPoint
 
 /**
  * Утилита для очистки данных тренировок от GPS выбросов
@@ -135,22 +134,6 @@ object WorkoutDataCleaner {
             startTime = startTime,
             endTime = endTime
         )
-    }
-    
-    /**
-     * Очищает список GeoPoint от неправильных координат
-     */
-    fun cleanGeoPoints(geoPoints: List<GeoPoint>): List<GeoPoint> {
-        return geoPoints.filter { geoPoint ->
-            val location = Location("geo_cleaner")
-            location.latitude = geoPoint.latitude
-            location.longitude = geoPoint.longitude
-            location.accuracy = 10f // Предполагаем хорошую точность для отображения
-            location.speed = 0f
-            location.time = System.currentTimeMillis()
-            
-            GpsFilter.isValidGpsLocation(location)
-        }
     }
     
     /**
