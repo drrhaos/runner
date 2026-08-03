@@ -126,14 +126,14 @@ class MapManager(
     }
 
     private fun setupLocationOverlay() {
-        locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(context), mapView).apply {
+        val overlay = MyLocationNewOverlay(GpsMyLocationProvider(context), mapView).apply {
             enableMyLocation()
             enableFollowLocation()
             setDrawAccuracyEnabled(false)
         }
-
+        locationOverlay = overlay
         setupLocationIcon()
-        mapView.overlays.add(locationOverlay!!)
+        mapView.overlays.add(overlay)
     }
 
     private fun setupLocationIcon() {
@@ -151,9 +151,11 @@ class MapManager(
     }
 
     private fun createBitmapFromDrawable(drawable: Drawable): android.graphics.Bitmap {
+        val width = drawable.intrinsicWidth.coerceAtLeast(1)
+        val height = drawable.intrinsicHeight.coerceAtLeast(1)
         val bitmap = android.graphics.Bitmap.createBitmap(
-            drawable.intrinsicWidth,
-            drawable.intrinsicHeight,
+            width,
+            height,
             android.graphics.Bitmap.Config.ARGB_8888
         )
         val canvas = android.graphics.Canvas(bitmap)
@@ -163,11 +165,12 @@ class MapManager(
     }
 
     private fun setupTrackPolyline() {
-        trackPolyline = Polyline().apply {
+        val poly = Polyline().apply {
             outlinePaint.color = TRACK_LINE_COLOR
             outlinePaint.strokeWidth = TRACK_LINE_WIDTH
         }
-        mapView.overlays.add(trackPolyline!!)
+        trackPolyline = poly
+        mapView.overlays.add(poly)
     }
 
     private fun setupMapInteractionListeners() {
@@ -408,10 +411,9 @@ class MapManager(
     }
 
     fun autoCenterIfNeeded(session: WorkoutSession) {
-        session.currentLocation ?: return
+        val location = session.currentLocation ?: return
         if (session.gpsStatus != com.runner.academy.data.GpsStatus.FOUND) return
 
-        val location = session.currentLocation!!
         if (!isUserInteractingWithMap) {
             val mapTick = System.currentTimeMillis()
             if (mapTick - lastMapUpdateTime > 2000) {

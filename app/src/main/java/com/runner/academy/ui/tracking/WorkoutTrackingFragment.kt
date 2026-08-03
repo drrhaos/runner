@@ -389,7 +389,7 @@ class WorkoutTrackingFragment : Fragment() {
     private fun rebuildModeOptions(templates: List<WorkoutTemplateWithSegments>) {
         val options = mutableListOf<TrackingWorkoutMode>(TrackingWorkoutMode.EasyRun)
         if (hasFollowablePlan()) {
-            options.add(TrackingWorkoutMode.PlanToday(todaysScheduled!!))
+            todaysScheduled?.let { options.add(TrackingWorkoutMode.PlanToday(it)) }
         }
         templates.forEach { options.add(TrackingWorkoutMode.Template(it)) }
         modeOptions = options
@@ -811,6 +811,7 @@ class WorkoutTrackingFragment : Fragment() {
     // -- UI updates --
 
     private fun updateUI(session: WorkoutSession) {
+        if (_binding == null || !isAdded || isDetached) return
         val now = System.currentTimeMillis()
 
         // Map updates always run to keep track current (respect GPS gaps)
@@ -952,11 +953,11 @@ class WorkoutTrackingFragment : Fragment() {
                 onResult(0f)
             }
             .setNegativeButton(R.string.cancel) { _, _ ->
-                binding.buttonStop.isEnabled = true
+                _binding?.buttonStop?.isEnabled = true
                 isStoppingWorkout = false
             }
             .setOnCancelListener {
-                binding.buttonStop.isEnabled = true
+                _binding?.buttonStop?.isEnabled = true
                 isStoppingWorkout = false
             }
             .show()
@@ -964,6 +965,7 @@ class WorkoutTrackingFragment : Fragment() {
 
     private fun persistAndOpenDetails(manualDistanceKm: Float?) {
         viewLifecycleOwner.lifecycleScope.launch {
+            var savedOk = false
             try {
                 val session = viewModel.workoutSession.value
                 val intervalJson = (
@@ -976,41 +978,58 @@ class WorkoutTrackingFragment : Fragment() {
                     intervalSegmentsJson = intervalJson
                 )
                 if (workoutId != null) {
+                    savedOk = true
                     activeScheduledId?.let { scheduledId ->
                         planRepository.markScheduledDone(scheduledId, workoutId)
                         todaysScheduled = planRepository.getTodaysScheduledWorkout()
                     }
                     val distanceForToast = manualDistanceKm ?: session.distance
-                    Toast.makeText(
-                        context,
-                        String.format(
-                            getString(R.string.workout_saved_format),
-                            distanceForToast,
-                            viewModel.formatTime(session.currentTime)
-                        ),
-                        Toast.LENGTH_LONG
-                    ).show()
-
-                    val bundle = Bundle().apply {
-                        putLong("workoutId", workoutId)
+                    val ctx = context
+                    if (ctx != null) {
+                        Toast.makeText(
+                            ctx,
+                            String.format(
+                                getString(R.string.workout_saved_format),
+                                distanceForToast,
+                                viewModel.formatTime(session.currentTime)
+                            ),
+                            Toast.LENGTH_LONG
+                        ).show()
                     }
-                    findNavController().navigate(com.runner.academy.R.id.nav_workout_detail, bundle)
-                } else {
+
+                    if (isAdded && !isDetached) {
+                        val bundle = Bundle().apply {
+                            putLong("workoutId", workoutId)
+                        }
+                        findNavController().navigate(com.runner.academy.R.id.nav_workout_detail, bundle)
+                    }
+                } else if (_binding != null && isAdded) {
                     com.runner.academy.util.ErrorHandler.handleSaveError(
                         requireContext(),
                         Exception("Failed to save workout")
                     )
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                com.runner.academy.util.ErrorHandler.handleSaveError(requireContext(), e)
+                if (_binding != null && isAdded) {
+                    com.runner.academy.util.ErrorHandler.handleSaveError(requireContext(), e)
+                }
             } finally {
-                clearIntervalEngine()
-                binding.textViewGpsAccuracy.visibility = View.GONE
-                binding.buttonStop.isEnabled = true
-                viewModel.resetWorkout()
-                isStoppingWorkout = false
-                lastAnnouncedGpsStatus = null
-                loadTrackingModes()
+                if (savedOk) {
+                    clearIntervalEngine()
+                    _binding?.textViewGpsAccuracy?.visibility = View.GONE
+                    _binding?.buttonStop?.isEnabled = true
+                    viewModel.resetWorkout()
+                    isStoppingWorkout = false
+                    lastAnnouncedGpsStatus = null
+                    if (_binding != null && isAdded) {
+                        loadTrackingModes()
+                    }
+                } else {
+                    _binding?.buttonStop?.isEnabled = true
+                    isStoppingWorkout = false
+                }
             }
         }
     }
@@ -1109,13 +1128,11 @@ class WorkoutTrackingFragment : Fragment() {
 
         cancelStopHold()
 
-        try {
-            viewModel.cleanup()
-        } catch (e: Exception) {
-            // ViewModel может быть не инициализирован
-        }
+        // Do NOT call viewModel.cleanup() here — activity-scoped ViewModel must stay
+        // bound to WorkoutTrackingService across Fragment view recreation / navigation.
 
         voiceFeedbackManager?.destroy()
+        voiceFeedbackManager = null
         mapManager?.onDetach()
         mapManager = null
         gpsStatusUpdater = null
