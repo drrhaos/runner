@@ -537,6 +537,10 @@
     <string name="voice_interval_start_with_detail">Interval: %1$s. %2$s</string>
     <string name="voice_interval_upcoming">Next interval: %1$s</string>
     <string name="voice_interval_upcoming_with_detail">Next interval: %1$s. %2$s</string>
+    <string name="voice_interval_upcoming_in_30s">In 30 seconds: %1$s</string>
+    <string name="voice_interval_goal_duration">Duration %1$s</string>
+    <string name="voice_interval_goal_distance">Distance %1$s</string>
+    <string name="voice_interval_goal_pace">Pace %1$s</string>
     <string name="chart_interval_n">Int %1$d</string>
 
 </resources>

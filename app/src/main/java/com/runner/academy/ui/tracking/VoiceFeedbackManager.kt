@@ -15,7 +15,7 @@ import com.runner.academy.util.FormatUtils
  * Responsibilities:
  * - Text-to-speech initialization and lifecycle
  * - Distance milestone announcements
- * - Interval start / upcoming announcements and beep
+ * - Interval upcoming announcements and start beep
  * - Voice feedback configuration from UserPreferences
  */
 class VoiceFeedbackManager(
@@ -24,7 +24,8 @@ class VoiceFeedbackManager(
 
     companion object {
         private const val TAG = "VoiceFeedbackManager"
-        private const val BEEP_DURATION_MS = 220
+        private const val INTERVAL_BEEP_DURATION_MS = 900
+        private const val PART_PAUSE_MS = 450L
     }
 
     private var tts: TextToSpeech? = null
@@ -71,21 +72,11 @@ class VoiceFeedbackManager(
             current == com.runner.academy.data.GpsStatus.LOST &&
                 previous != null &&
                 previous != com.runner.academy.data.GpsStatus.LOST -> {
-                tts?.speak(
-                    context.getString(R.string.voice_gps_lost),
-                    TextToSpeech.QUEUE_ADD,
-                    null,
-                    "gps_lost"
-                )
+                speak(context.getString(R.string.voice_gps_lost), "gps_lost")
             }
             current == com.runner.academy.data.GpsStatus.FOUND &&
                 previous == com.runner.academy.data.GpsStatus.LOST -> {
-                tts?.speak(
-                    context.getString(R.string.voice_gps_recovered),
-                    TextToSpeech.QUEUE_ADD,
-                    null,
-                    "gps_recovered"
-                )
+                speak(context.getString(R.string.voice_gps_recovered), "gps_recovered")
             }
         }
     }
@@ -102,34 +93,37 @@ class VoiceFeedbackManager(
         val paceTTS = FormatUtils.formatPaceForTTS(session.avgPace, context)
 
         val notification = context.getString(R.string.voice_notif_text_each_km, distanceTTS, timeTTS, paceTTS)
-        tts?.speak(notification, TextToSpeech.QUEUE_ADD, null, "distance_${completedKm}km")
+        speak(notification, "distance_${completedKm}km")
     }
 
-    fun announceIntervalStart(title: String, detail: String? = null) {
-        val text = if (detail.isNullOrBlank()) {
-            context.getString(R.string.voice_interval_start, title)
-        } else {
-            context.getString(R.string.voice_interval_start_with_detail, title, detail)
+    /**
+     * Upcoming interval: title, then pause, then goal, then pause, then pace.
+     */
+    fun announceIntervalUpcoming(
+        title: String,
+        goalPart: String? = null,
+        pacePart: String? = null
+    ) {
+        val parts = buildList {
+            add(context.getString(R.string.voice_interval_upcoming_in_30s, title))
+            goalPart?.takeIf { it.isNotBlank() }?.let { add(it) }
+            pacePart?.takeIf { it.isNotBlank() }?.let { add(it) }
         }
-        tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "interval_${System.currentTimeMillis()}")
+        speakPartsWithPauses(parts, "interval_upcoming")
     }
 
-    fun announceIntervalUpcoming(title: String, detail: String? = null) {
-        val text = if (detail.isNullOrBlank()) {
-            context.getString(R.string.voice_interval_upcoming, title)
-        } else {
-            context.getString(R.string.voice_interval_upcoming_with_detail, title, detail)
-        }
-        tts?.speak(text, TextToSpeech.QUEUE_ADD, null, "interval_upcoming_${System.currentTimeMillis()}")
-    }
-
-    /** Short beep at the start of each interval (independent of TTS). */
+    /** Long beep at the start of each interval (no speech). */
     fun playIntervalBeep() {
         try {
             ensureToneGenerator()
-            toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, BEEP_DURATION_MS)
+            toneGenerator?.startTone(ToneGenerator.TONE_CDMA_ALERT_CALL_GUARD, INTERVAL_BEEP_DURATION_MS)
         } catch (e: Exception) {
             Log.w(TAG, "Failed to play interval beep", e)
+            try {
+                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, INTERVAL_BEEP_DURATION_MS)
+            } catch (e2: Exception) {
+                Log.w(TAG, "Fallback beep failed", e2)
+            }
         }
     }
 
@@ -140,6 +134,21 @@ class VoiceFeedbackManager(
         } catch (_: Exception) {
         }
         toneGenerator = null
+    }
+
+    private fun speak(text: String, utteranceId: String) {
+        tts?.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
+    }
+
+    private fun speakPartsWithPauses(parts: List<String>, idPrefix: String) {
+        val engine = tts ?: return
+        if (parts.isEmpty()) return
+        parts.forEachIndexed { index, part ->
+            engine.speak(part, TextToSpeech.QUEUE_ADD, null, "${idPrefix}_$index")
+            if (index < parts.lastIndex) {
+                engine.playSilentUtterance(PART_PAUSE_MS, TextToSpeech.QUEUE_ADD, "${idPrefix}_pause_$index")
+            }
+        }
     }
 
     private fun destroyTtsOnly() {
@@ -154,7 +163,7 @@ class VoiceFeedbackManager(
     private fun ensureToneGenerator() {
         if (toneGenerator != null) return
         try {
-            toneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 90)
+            toneGenerator = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100)
         } catch (e: Exception) {
             Log.w(TAG, "ToneGenerator unavailable", e)
             toneGenerator = null

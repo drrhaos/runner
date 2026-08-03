@@ -44,6 +44,17 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
     private val _workoutState = MutableStateFlow(WorkoutState.NOT_STARTED)
     val workoutState: StateFlow<WorkoutState> = _workoutState.asStateFlow()
 
+    /**
+     * null = first open (auto-pick today's plan if any).
+     * Otherwise the user's explicit spinner choice.
+     */
+    private val _modeSelection = MutableStateFlow<TrackingModeSelection?>(null)
+    val modeSelection: StateFlow<TrackingModeSelection?> = _modeSelection.asStateFlow()
+
+    fun setModeSelection(selection: TrackingModeSelection) {
+        _modeSelection.value = selection
+    }
+
     private var fusedLocationClient: FusedLocationProviderClient? = null
     private var locationCallback: LocationCallback? = null
     private var lastLocation: Location? = null
