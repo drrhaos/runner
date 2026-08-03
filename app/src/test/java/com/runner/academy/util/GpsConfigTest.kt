@@ -12,11 +12,19 @@ class GpsConfigTest {
     @Test
     fun constants_should_have_correct_values() {
         // Then
-        assertEquals(5f, GpsConfig.MIN_DISTANCE, 0.01f)
-        assertEquals(1000L, GpsConfig.MIN_UPDATE_INTERVAL)
-        assertEquals(2000L, GpsConfig.HIGH_ACCURACY_INTERVAL)
+        assertEquals(0f, GpsConfig.MIN_DISTANCE, 0.01f)
+        assertEquals(500L, GpsConfig.MIN_UPDATE_INTERVAL)
+        assertEquals(1000L, GpsConfig.HIGH_ACCURACY_INTERVAL)
         assertEquals(5000L, GpsConfig.MEDIUM_ACCURACY_INTERVAL)
         assertEquals(10000L, GpsConfig.LOW_ACCURACY_INTERVAL)
+    }
+
+    @Test
+    fun getAdaptiveInterval_prefers_frequent_updates_while_jogging() {
+        assertEquals(500L, GpsConfig.getAdaptiveInterval(25f))
+        assertEquals(1000L, GpsConfig.getAdaptiveInterval(12f))
+        assertEquals(1000L, GpsConfig.getAdaptiveInterval(6f))
+        assertEquals(1000L, GpsConfig.getAdaptiveInterval(2f))
     }
 
     @Test
@@ -63,7 +71,7 @@ class GpsConfigTest {
     @Test
     fun constants_should_be_accessible() {
         // Then
-        assertTrue(GpsConfig.MIN_DISTANCE > 0)
+        assertTrue(GpsConfig.MIN_DISTANCE >= 0f)
         assertTrue(GpsConfig.MIN_UPDATE_INTERVAL > 0)
         assertTrue(GpsConfig.HIGH_ACCURACY_INTERVAL > 0)
         assertTrue(GpsConfig.MEDIUM_ACCURACY_INTERVAL > 0)
@@ -73,7 +81,7 @@ class GpsConfigTest {
     @Test
     fun constants_should_have_reasonable_values() {
         // Then
-        assertTrue("MIN_DISTANCE should be reasonable", GpsConfig.MIN_DISTANCE >= 1f)
+        assertTrue("MIN_DISTANCE should be non-negative", GpsConfig.MIN_DISTANCE >= 0f)
         assertTrue("MIN_UPDATE_INTERVAL should be reasonable", GpsConfig.MIN_UPDATE_INTERVAL >= 100L)
         assertTrue("HIGH_ACCURACY_INTERVAL should be reasonable", GpsConfig.HIGH_ACCURACY_INTERVAL >= 100L)
         assertTrue("MEDIUM_ACCURACY_INTERVAL should be reasonable", GpsConfig.MEDIUM_ACCURACY_INTERVAL >= 100L)
@@ -92,14 +100,14 @@ class GpsConfigTest {
     @Test
     fun min_update_interval_should_be_reasonable_for_gps() {
         // Then
-        assertTrue("MIN_UPDATE_INTERVAL should be at least 1 second", GpsConfig.MIN_UPDATE_INTERVAL >= 1000L)
+        assertTrue("MIN_UPDATE_INTERVAL should be at least 0.5 second", GpsConfig.MIN_UPDATE_INTERVAL >= 500L)
         assertTrue("MIN_UPDATE_INTERVAL should not be too high", GpsConfig.MIN_UPDATE_INTERVAL <= 10000L)
     }
 
     @Test
     fun min_distance_should_be_reasonable_for_gps() {
-        // Then
-        assertTrue("MIN_DISTANCE should be at least 1 meter", GpsConfig.MIN_DISTANCE >= 1f)
+        // Then — 0 disables Fused distance filter; point spacing is enforced in GpsLocationProcessor
+        assertTrue("MIN_DISTANCE should be non-negative", GpsConfig.MIN_DISTANCE >= 0f)
         assertTrue("MIN_DISTANCE should not be too high", GpsConfig.MIN_DISTANCE <= 50f)
     }
 

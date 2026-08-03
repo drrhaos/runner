@@ -50,7 +50,7 @@ class WorkoutTrackingService : Service() {
         const val ACTION_STOP_WORKOUT = "STOP_WORKOUT"
         const val EXTRA_WORKOUT_TYPE = "WORKOUT_TYPE"
         const val NO_LOCATION_UPDATE_TIMEOUT_MS = 5000L
-        const val PERIODIC_LOCATION_REQUEST_INTERVAL_MS = 2000L
+        const val PERIODIC_LOCATION_REQUEST_INTERVAL_MS = 1000L
         const val WORKOUT_TIMER_INTERVAL_MS = 1000L
     }
 
@@ -191,11 +191,18 @@ class WorkoutTrackingService : Service() {
                 is GpsLocationProcessor.ProcessResult.Rejected -> {
                     if (result.refreshGapClock) {
                         lastLocationTime = System.currentTimeMillis()
+                        // Near-duplicate fix: move map tip / icon without committing a track point
+                        sessionManager.updateLocationOnly(
+                            currentLocation = location,
+                            rawTrackDataPoints = result.rawTrackDataPoints
+                        )
+                    } else {
+                        // Outlier: keep tip on last accepted fix so the line does not jump
+                        sessionManager.updateLocationOnly(
+                            currentLocation = lastLocation ?: location,
+                            rawTrackDataPoints = result.rawTrackDataPoints
+                        )
                     }
-                    sessionManager.updateLocationOnly(
-                        currentLocation = location,
-                        rawTrackDataPoints = result.rawTrackDataPoints
-                    )
                 }
             }
         } else {
@@ -477,19 +484,13 @@ class WorkoutTrackingService : Service() {
             android.util.Log.e("WorkoutTrackingService", "Error updating location request: ${e.message}", e)
         }
 
-        updatePeriodicTimerInterval(currentSpeed)
+        updatePeriodicTimerInterval()
     }
 
-    private fun updatePeriodicTimerInterval(currentSpeed: Float) {
-        val periodicInterval = if (currentSpeed < 1f) {
-            PERIODIC_LOCATION_REQUEST_INTERVAL_MS * 2
-        } else {
-            PERIODIC_LOCATION_REQUEST_INTERVAL_MS
-        }
-
+    private fun updatePeriodicTimerInterval() {
+        // Keep the watchdog on the same cadence as workout GPS — don't slow it when nearly stopped
         if (isCurrentlyTracking && !sessionManager.getSession().isPaused) {
-            // Restart with same loop body (includes resolveGpsStatusDuringWorkout)
-            startPeriodicLocationRequest(periodicInterval)
+            startPeriodicLocationRequest(PERIODIC_LOCATION_REQUEST_INTERVAL_MS)
         }
     }
 
