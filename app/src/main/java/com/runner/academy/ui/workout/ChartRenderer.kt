@@ -47,13 +47,25 @@ class ChartRenderer(
 
     fun updateAllCharts(trackData: TrackData) {
         if (trackData.points.isEmpty()) return
-        updatePaceSpeedHeartChart(trackData)
-        updateElevationChart(trackData)
-        updateSegmentsChart(trackData)
+        try {
+            updatePaceSpeedHeartChart(trackData)
+            updateElevationChart(trackData)
+            updateSegmentsChart(trackData)
+        } catch (e: Exception) {
+            android.util.Log.e("ChartRenderer", "Failed to update charts", e)
+            paceSpeedHeartChart.visibility = android.view.View.GONE
+            elevationChart.visibility = android.view.View.GONE
+            segmentsChart.visibility = android.view.View.GONE
+        }
     }
 
     fun updateSegmentsChartOnly(trackData: TrackData) {
-        updateSegmentsChart(trackData)
+        try {
+            updateSegmentsChart(trackData)
+        } catch (e: Exception) {
+            android.util.Log.e("ChartRenderer", "Failed to update segments chart", e)
+            segmentsChart.visibility = android.view.View.GONE
+        }
     }
 
     private fun updatePaceSpeedHeartChart(trackData: TrackData) {
@@ -419,8 +431,8 @@ class ChartRenderer(
                     val segmentIndex = e.x.toInt()
                     if (segmentIndex >= 0 && segmentIndex < cachedSegments.size) {
                         val seg = cachedSegments[segmentIndex]
-                        val startPoint = points[seg.startIndex]
-                        val endPoint = points[seg.endIndex]
+                        val startPoint = points.getOrNull(seg.startIndex) ?: return
+                        val endPoint = points.getOrNull(seg.endIndex) ?: return
                         onSegmentSelected(startPoint, endPoint)
                     }
                 }
