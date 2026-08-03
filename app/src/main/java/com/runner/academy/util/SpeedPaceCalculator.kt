@@ -26,10 +26,11 @@ object SpeedPaceCalculator {
 
     /**
      * Distance jump treated as a GPS gap when [TrackPoint.afterGap] was not set
-     * (e.g. older tracks or missed gap flags). Prevents one teleported step from
-     * exploding into thousands of km/mile chart bars and OOMing the detail screen.
+     * (e.g. older tracks or missed gap flags). Must stay well above typical sparse
+     * GPX / chart-sample spacing (~100–600 m) so legitimate steps are not dropped.
+     * Prevents one multi-km teleport from exploding into hundreds of chart bars.
      */
-    private const val GAP_DISTANCE_METERS = 500f
+    private const val GAP_DISTANCE_METERS = 2_000f
 
     /** Hard cap on km/mile chart bars for pathological tracks. */
     private const val MAX_DISTANCE_SEGMENTS = 500

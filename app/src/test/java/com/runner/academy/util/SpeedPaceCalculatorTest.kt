@@ -117,12 +117,15 @@ class SpeedPaceCalculatorTest {
 
     @Test
     fun `buildSegments metric creates one km segments with correct pace`() {
-        // ~1 km east at ~55.75 lat: 1 degree lon ≈ 62.6 km, so 0.016 deg lon ≈ 1 km
-        val start = point(55.75, 37.60, 0L)
-        val mid = point(55.75, 37.608, 5 * 60_000L) // ~0.5 km in 5 min
-        val end = point(55.75, 37.616, 10 * 60_000L) // ~1 km total in 10 min
+        // Dense ~100 m steps east at ~55.75 lat (0.0016° lon ≈ 100 m)
+        val points = mutableListOf<TrackPoint>()
+        val baseLat = 55.75
+        val baseLon = 37.60
+        for (i in 0..11) {
+            points.add(point(baseLat, baseLon + i * 0.0016, i * 50_000L))
+        }
 
-        val segments = SpeedPaceCalculator.buildSegments(listOf(start, mid, end), metric = true)
+        val segments = SpeedPaceCalculator.buildSegments(points, metric = true)
         assertTrue(segments.isNotEmpty())
         val first = segments.first()
         assertTrue("pace should be positive", first.paceMinPerUnit > 0f)
