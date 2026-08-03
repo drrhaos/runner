@@ -30,6 +30,8 @@ object TrackDataJson {
         if (json.isNullOrBlank()) return null
         return try {
             gson.fromJson(json, TrackData::class.java)?.let { normalize(it) }
+        } catch (_: OutOfMemoryError) {
+            null
         } catch (_: Exception) {
             null
         }
@@ -47,11 +49,15 @@ object TrackDataJson {
     }
 
     private fun normalize(data: TrackData): TrackData {
-        val points = data.points.map { point ->
-            point.copy(
-                afterGap = point.afterGap,
-                source = point.source.ifBlank { LocationSource.GPS.name }
-            )
+        val points = data.points.mapNotNull { point ->
+            if (!GpsFilter.isValidLatLon(point.latitude, point.longitude)) {
+                null
+            } else {
+                point.copy(
+                    afterGap = point.afterGap,
+                    source = point.source.ifBlank { LocationSource.GPS.name }
+                )
+            }
         }
         return data.copy(points = points)
     }

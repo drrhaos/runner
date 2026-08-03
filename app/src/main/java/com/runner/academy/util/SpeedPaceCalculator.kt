@@ -160,9 +160,9 @@ object SpeedPaceCalculator {
         if (points.size < 2) return 0f
         var maxSpeed = 0f
         for (i in 1 until points.size) {
-            if (points[i].afterGap) continue
+            if (isTrackGapStep(points[i - 1], points[i])) continue
             val speed = derivedSpeedMs(points[i - 1], points[i])
-            if (speed > maxSpeed) maxSpeed = speed
+            if (speed.isFinite() && speed > maxSpeed) maxSpeed = speed
         }
         return maxSpeed
     }
@@ -215,8 +215,8 @@ object SpeedPaceCalculator {
         if (points.size < 2) return 0f
         var total = 0f
         for (i in 1 until points.size) {
-            // Skip phantom distance across GPS gaps
-            if (points[i].afterGap) continue
+            // Skip phantom distance across GPS gaps / teleports
+            if (isTrackGapStep(points[i - 1], points[i])) continue
             total += distanceMeters(points[i - 1], points[i])
         }
         return total
@@ -227,6 +227,11 @@ object SpeedPaceCalculator {
      * Uses Haversine via Android Location API.
      */
     fun distanceMeters(point1: TrackPoint, point2: TrackPoint): Float {
+        if (!GpsFilter.isValidLatLon(point1.latitude, point1.longitude) ||
+            !GpsFilter.isValidLatLon(point2.latitude, point2.longitude)
+        ) {
+            return 0f
+        }
         val loc1 = Location("").apply {
             latitude = point1.latitude
             longitude = point1.longitude
@@ -322,11 +327,12 @@ object SpeedPaceCalculator {
             if (i > 0 && !isTrackGapStep(points[i - 1], points[i])) {
                 cumulativeKm += metersToKm(distanceMeters(points[i - 1], points[i]))
             }
-            val altitude = points[i].altitude ?: 0.0
+            val altitude = points[i].altitude?.toFloat() ?: continue
+            if (!altitude.isFinite() || !cumulativeKm.isFinite()) continue
             result.add(
                 ElevationPoint(
                     distanceKm = cumulativeKm,
-                    altitudeMeters = altitude.toFloat(),
+                    altitudeMeters = altitude,
                     trackPointIndex = i
                 )
             )

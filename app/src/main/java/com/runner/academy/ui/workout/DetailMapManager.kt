@@ -36,8 +36,11 @@ class DetailMapManager(
     private var positionMarker: Marker? = null
     private var positionMarkerEnd: Marker? = null
     private var hasFittedBounds = false
+    private var isDetached = false
+    private var pendingFitRunnable: Runnable? = null
 
     fun initialize() {
+        isDetached = false
         OsmMapConfig.apply(context)
         OsmMapTiles.applyForTheme(context, mapView)
         mapView.setMultiTouchControls(true)
@@ -147,45 +150,50 @@ class DetailMapManager(
     }
 
     private fun fitBoundsOnce(allGeoPoints: List<GeoPoint>) {
-        if (allGeoPoints.isEmpty() || hasFittedBounds) return
+        if (allGeoPoints.isEmpty() || hasFittedBounds || isDetached) return
 
-        lateinit var applyFit: Runnable
-        applyFit = Runnable {
-            if (hasFittedBounds) return@Runnable
-            if (mapView.width <= 0 || mapView.height <= 0) {
-                mapView.post(applyFit)
-                return@Runnable
-            }
+        val applyFit = object : Runnable {
+            override fun run() {
+                if (isDetached || hasFittedBounds) return
+                if (mapView.width <= 0 || mapView.height <= 0) {
+                    pendingFitRunnable = this
+                    mapView.post(this)
+                    return
+                }
+                pendingFitRunnable = null
 
-            try {
-                val bounds = BoundingBox.fromGeoPoints(allGeoPoints)
-                val latSpan = (bounds.latNorth - bounds.latSouth).coerceAtLeast(0.001)
-                val lonSpan = (bounds.lonEast - bounds.lonWest).coerceAtLeast(0.001)
-                val expandedBounds = BoundingBox(
-                    bounds.latNorth + latSpan * 0.1,
-                    bounds.lonEast + lonSpan * 0.1,
-                    bounds.latSouth - latSpan * 0.1,
-                    bounds.lonWest - lonSpan * 0.1
-                )
-                // Non-animated fit avoids flicker when map size/layout settles
-                mapView.zoomToBoundingBox(expandedBounds, false, 100)
-                hasFittedBounds = true
-                mapView.invalidate()
-            } catch (e: Exception) {
-                android.util.Log.e("WorkoutDetail", "Failed to fit track bounds", e)
-                allGeoPoints.firstOrNull()?.let { mapView.controller.setCenter(it) }
-                hasFittedBounds = true
+                try {
+                    val bounds = BoundingBox.fromGeoPoints(allGeoPoints)
+                    val latSpan = (bounds.latNorth - bounds.latSouth).coerceAtLeast(0.001)
+                    val lonSpan = (bounds.lonEast - bounds.lonWest).coerceAtLeast(0.001)
+                    val expandedBounds = BoundingBox(
+                        bounds.latNorth + latSpan * 0.1,
+                        bounds.lonEast + lonSpan * 0.1,
+                        bounds.latSouth - latSpan * 0.1,
+                        bounds.lonWest - lonSpan * 0.1
+                    )
+                    // Non-animated fit avoids flicker when map size/layout settles
+                    mapView.zoomToBoundingBox(expandedBounds, false, 100)
+                    hasFittedBounds = true
+                    mapView.invalidate()
+                } catch (e: Exception) {
+                    android.util.Log.e("WorkoutDetail", "Failed to fit track bounds", e)
+                    allGeoPoints.firstOrNull()?.let { mapView.controller.setCenter(it) }
+                    hasFittedBounds = true
+                }
             }
         }
 
         if (mapView.width > 0 && mapView.height > 0) {
             applyFit.run()
         } else {
+            pendingFitRunnable = applyFit
             mapView.post(applyFit)
         }
     }
 
     fun showPositionOnMap(trackPoint: TrackPoint) {
+        if (isDetached) return
         positionMarker?.let { marker ->
             val geoPoint = GeoPoint(trackPoint.latitude, trackPoint.longitude)
             marker.position = geoPoint
@@ -196,6 +204,7 @@ class DetailMapManager(
     }
 
     fun showSegmentOnMap(startPoint: TrackPoint, endPoint: TrackPoint) {
+        if (isDetached) return
         showPositionOnMap(startPoint)
         showPositionOnMapEnd(endPoint)
 
@@ -206,6 +215,7 @@ class DetailMapManager(
     }
 
     private fun showPositionOnMapEnd(trackPoint: TrackPoint) {
+        if (isDetached) return
         positionMarkerEnd?.let { marker ->
             val geoPoint = GeoPoint(trackPoint.latitude, trackPoint.longitude)
             marker.position = geoPoint
@@ -216,26 +226,33 @@ class DetailMapManager(
     }
 
     fun hidePositionMarkers() {
+        if (isDetached) return
         positionMarker?.setVisible(false)
         positionMarkerEnd?.setVisible(false)
         mapView.invalidate()
     }
 
     fun onResume() {
+        if (isDetached) return
         OsmMapTiles.applyForTheme(context, mapView)
         mapView.onResume()
     }
 
     fun onPause() {
+        if (isDetached) return
         mapView.onPause()
     }
 
     fun onDetach() {
+        isDetached = true
+        pendingFitRunnable?.let { mapView.removeCallbacks(it) }
+        pendingFitRunnable = null
+        clearTrackOverlays()
         mapView.onDetach()
     }
 
     private fun createDefaultMarkerIcon(color: Int = Color.BLUE): android.graphics.drawable.Drawable {
-        val size = (32 * context.resources.displayMetrics.density / 3f).toInt()
+        val size = (32 * context.resources.displayMetrics.density / 3f).toInt().coerceAtLeast(8)
         val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bitmap)
         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {

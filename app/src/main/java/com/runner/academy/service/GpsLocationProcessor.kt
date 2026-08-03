@@ -176,10 +176,25 @@ class GpsLocationProcessor {
         trackPoints: MutableList<GeoPoint>,
         trackDataPoints: MutableList<TrackPoint>
     ) {
-        while (trackPoints.size > MAX_TRACK_POINTS_DISPLAY) {
+        while (trackPoints.size > MAX_TRACK_POINTS_DISPLAY &&
+            trackPoints.size == trackDataPoints.size
+        ) {
             val before = trackPoints.size
-            val newTp = trackPoints.filterIndexed { i, _ -> i % 2 == 0 || i == trackPoints.lastIndex }.toMutableList()
-            val newTd = trackDataPoints.filterIndexed { i, _ -> i % 2 == 0 || i == trackDataPoints.lastIndex }.toMutableList()
+            val last = trackDataPoints.lastIndex
+            val keep = BooleanArray(trackDataPoints.size) { i ->
+                i % 2 == 0 ||
+                    i == last ||
+                    trackDataPoints[i].afterGap ||
+                    (i + 1 <= last && trackDataPoints[i + 1].afterGap)
+            }
+            val newTp = mutableListOf<GeoPoint>()
+            val newTd = mutableListOf<TrackPoint>()
+            for (i in trackDataPoints.indices) {
+                if (keep[i]) {
+                    newTp.add(trackPoints[i])
+                    newTd.add(trackDataPoints[i])
+                }
+            }
             trackPoints.clear()
             trackPoints.addAll(newTp)
             trackDataPoints.clear()
@@ -191,7 +206,13 @@ class GpsLocationProcessor {
     fun decimateRawPointsIfNeeded(raw: MutableList<TrackPoint>) {
         while (raw.size > MAX_RAW_TRACK_POINTS) {
             val before = raw.size
-            val newR = raw.filterIndexed { i, _ -> i % 2 == 0 || i == raw.lastIndex }.toMutableList()
+            val last = raw.lastIndex
+            val newR = raw.filterIndexed { i, point ->
+                i % 2 == 0 ||
+                    i == last ||
+                    point.afterGap ||
+                    (i + 1 <= last && raw[i + 1].afterGap)
+            }.toMutableList()
             raw.clear()
             raw.addAll(newR)
             if (raw.size >= before) break

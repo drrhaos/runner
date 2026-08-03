@@ -247,7 +247,7 @@ class WorkoutListFragment : Fragment() {
                     Toast.LENGTH_LONG
                 ).show()
             } finally {
-                progress.dismiss()
+                dismissProgressSafely(progress)
             }
         }
     }
@@ -288,7 +288,7 @@ class WorkoutListFragment : Fragment() {
                     Toast.LENGTH_LONG
                 ).show()
             } finally {
-                progress.dismiss()
+                dismissProgressSafely(progress)
             }
         }
     }
@@ -342,7 +342,7 @@ class WorkoutListFragment : Fragment() {
                     Toast.LENGTH_LONG
                 ).show()
             } finally {
-                progress.dismiss()
+                dismissProgressSafely(progress)
             }
         }
     }
@@ -376,7 +376,7 @@ class WorkoutListFragment : Fragment() {
                     Toast.LENGTH_LONG
                 ).show()
             } finally {
-                progress.dismiss()
+                dismissProgressSafely(progress)
             }
         }
     }
@@ -423,6 +423,16 @@ class WorkoutListFragment : Fragment() {
             .create()
             .also { it.show() }
 
+    private fun dismissProgressSafely(dialog: android.app.Dialog?) {
+        if (dialog == null) return
+        try {
+            if (isAdded && dialog.isShowing) {
+                dialog.dismiss()
+            }
+        } catch (_: Exception) {
+        }
+    }
+
     private fun showImportResult(imported: Int, failed: Int) {
         val message = when {
             imported == 0 && failed == 0 -> getString(R.string.workout_list_import_empty)
@@ -460,7 +470,7 @@ class WorkoutListFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 viewModel.totalWorkouts.collect { total ->
-                    if (isAdded && !isDetached) {
+                    if (_binding != null && isAdded && !isDetached) {
                         binding.textViewTotalWorkouts.text = total.toString()
                     }
                 }
@@ -472,7 +482,7 @@ class WorkoutListFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 viewModel.totalDistance.collect { distance ->
-                    if (isAdded && !isDetached) {
+                    if (_binding != null && isAdded && !isDetached) {
                         binding.textViewTotalDistance.text = String.format("%.1f км", distance)
                     }
                 }
@@ -484,7 +494,7 @@ class WorkoutListFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 viewModel.averagePace.collect { avgPace ->
-                    if (isAdded && !isDetached) {
+                    if (_binding != null && isAdded && !isDetached) {
                         binding.textViewAvgPace.text = viewModel.formatPace(avgPace)
                     }
                 }
@@ -495,6 +505,7 @@ class WorkoutListFragment : Fragment() {
     }
 
     private fun updateEmptyState(isEmpty: Boolean) {
+        val binding = _binding ?: return
         if (isEmpty) {
             binding.layoutEmptyState.visibility = View.VISIBLE
             binding.recyclerViewWorkouts.visibility = View.GONE
@@ -531,7 +542,9 @@ class WorkoutListFragment : Fragment() {
                 var cleanedCount = 0
                 for (workout in snapshot) {
                     cleanedWorkoutIds.add(workout.id)
-                    val cleanedWorkout = viewModel.cleanWorkoutData(workout)
+                    val cleanedWorkout = withContext(Dispatchers.Default) {
+                        viewModel.cleanWorkoutData(workout)
+                    }
                     if (cleanedWorkout != null && cleanedWorkout != workout) {
                         cleanedCount++
                     }
@@ -539,6 +552,8 @@ class WorkoutListFragment : Fragment() {
                 if (cleanedCount > 0) {
                     android.util.Log.d("WorkoutList", "Cleaned $cleanedCount workouts in background")
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e(
                     "WorkoutList",

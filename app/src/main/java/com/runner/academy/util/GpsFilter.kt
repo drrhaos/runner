@@ -227,8 +227,13 @@ object GpsFilter {
     }
 
     fun createValidGeoPoint(location: Location): GeoPoint? {
+        if (!isValidCoordinate(location.latitude, location.longitude)) return null
         return GeoPoint(location.latitude, location.longitude)
     }
+
+    /** Public coordinate check for track math / cleaner paths. */
+    fun isValidLatLon(latitude: Double, longitude: Double): Boolean =
+        isValidCoordinate(latitude, longitude)
 
     fun createValidGeoPointWithFiltering(
         location: Location,
