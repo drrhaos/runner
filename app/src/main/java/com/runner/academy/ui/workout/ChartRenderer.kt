@@ -47,13 +47,25 @@ class ChartRenderer(
 
     fun updateAllCharts(trackData: TrackData) {
         if (trackData.points.isEmpty()) return
-        updatePaceSpeedHeartChart(trackData)
-        updateElevationChart(trackData)
-        updateSegmentsChart(trackData)
+        try {
+            updatePaceSpeedHeartChart(trackData)
+            updateElevationChart(trackData)
+            updateSegmentsChart(trackData)
+        } catch (e: Throwable) {
+            android.util.Log.e("ChartRenderer", "Failed to update charts", e)
+            paceSpeedHeartChart.visibility = android.view.View.GONE
+            elevationChart.visibility = android.view.View.GONE
+            segmentsChart.visibility = android.view.View.GONE
+        }
     }
 
     fun updateSegmentsChartOnly(trackData: TrackData) {
-        updateSegmentsChart(trackData)
+        try {
+            updateSegmentsChart(trackData)
+        } catch (e: Throwable) {
+            android.util.Log.e("ChartRenderer", "Failed to update segments chart", e)
+            segmentsChart.visibility = android.view.View.GONE
+        }
     }
 
     private fun updatePaceSpeedHeartChart(trackData: TrackData) {
@@ -84,8 +96,12 @@ class ChartRenderer(
             return
         }
 
-        val entriesPace = paceSpeedSeries.map { Entry(it.timeMinutes, it.paceMinPerUnit) }
-        val entriesSpeed = paceSpeedSeries.map { Entry(it.timeMinutes, it.speedDisplay) }
+        val entriesPace = paceSpeedSeries.map {
+            Entry(it.timeMinutes, it.paceMinPerUnit.takeIf { v -> v.isFinite() } ?: 0f)
+        }
+        val entriesSpeed = paceSpeedSeries.map {
+            Entry(it.timeMinutes, it.speedDisplay.takeIf { v -> v.isFinite() } ?: 0f)
+        }
 
         val paceLabel = if (isMetric) {
             context.getString(R.string.chart_pace_label)
@@ -219,7 +235,12 @@ class ChartRenderer(
             return
         }
 
-        val entries = elevationSeries.map { Entry(it.distanceKm, it.altitudeMeters) }
+        val entries = elevationSeries.map {
+            Entry(
+                it.distanceKm.takeIf { v -> v.isFinite() } ?: 0f,
+                it.altitudeMeters.takeIf { v -> v.isFinite() } ?: 0f
+            )
+        }
 
         val dataSet = LineDataSet(entries, context.getString(R.string.chart_elevation_title)).apply {
             color = Color.parseColor("#4CAF50")
@@ -345,7 +366,9 @@ class ChartRenderer(
 
         val dataSet: BarDataSet = when (segmentsDisplayMode) {
             SegmentsDisplayMode.PACE -> {
-                val entriesPace = segments.mapIndexed { index, seg -> BarEntry(index.toFloat(), seg.paceMinPerUnit) }
+                val entriesPace = segments.mapIndexed { index, seg ->
+                    BarEntry(index.toFloat(), seg.paceMinPerUnit.takeIf { it.isFinite() } ?: 0f)
+                }
                 val paceLabel = if (isMetric) context.getString(R.string.chart_pace_label)
                 else "${context.getString(R.string.workout_details_pace)} (мин/$unitLabel)"
                 BarDataSet(entriesPace, paceLabel).apply {
@@ -361,7 +384,9 @@ class ChartRenderer(
                 }
             }
             SegmentsDisplayMode.SPEED -> {
-                val entriesSpeed = segments.mapIndexed { index, seg -> BarEntry(index.toFloat(), seg.speedDisplay) }
+                val entriesSpeed = segments.mapIndexed { index, seg ->
+                    BarEntry(index.toFloat(), seg.speedDisplay.takeIf { it.isFinite() } ?: 0f)
+                }
                 val speedUnit = if (isMetric) context.getString(R.string.unit_kmh) else context.getString(R.string.unit_mph)
                 val speedLabel = if (isMetric) context.getString(R.string.chart_speed_label)
                 else "${context.getString(R.string.workout_details_speed)} ($speedUnit)"
@@ -419,8 +444,8 @@ class ChartRenderer(
                     val segmentIndex = e.x.toInt()
                     if (segmentIndex >= 0 && segmentIndex < cachedSegments.size) {
                         val seg = cachedSegments[segmentIndex]
-                        val startPoint = points[seg.startIndex]
-                        val endPoint = points[seg.endIndex]
+                        val startPoint = points.getOrNull(seg.startIndex) ?: return
+                        val endPoint = points.getOrNull(seg.endIndex) ?: return
                         onSegmentSelected(startPoint, endPoint)
                     }
                 }

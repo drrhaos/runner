@@ -62,8 +62,12 @@ object RouteMapBitmapRenderer {
             memoryCache.get(cacheKey)?.takeIf { !it.isRecycled }?.let { return@withContext it }
         }
 
-        val rendered = render(context.applicationContext, trackData, widthPx, heightPx)
-            ?: return@withContext null
+        val rendered = try {
+            render(context.applicationContext, trackData, widthPx, heightPx)
+        } catch (e: Exception) {
+            android.util.Log.e("RouteMapBitmap", "Preview render failed", e)
+            null
+        } ?: return@withContext null
 
         cacheMutex.withLock {
             memoryCache.put(cacheKey, rendered)

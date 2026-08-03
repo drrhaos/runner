@@ -52,9 +52,7 @@
     <string name="voice_gps_recovered">Сигнал GPS восстановлен</string>
 
     <string name="kilometers_per_hour_float">%.1f км/ч</string>
-    <string name="kilometers_per_hour_float_tts">%.1f километров в час</string>
     <string name="miles_per_hour_float">%.1f миль/ч</string>
-    <string name="miles_per_hour_float_tts">%.1f миль в час</string>
     <string name="per_km">на километр</string>
     <string name="voice_notif_text_each_km">Дистанция: %1$s, время: %2$s, средний темп: %3$s.</string>
 
@@ -538,6 +536,10 @@
     <string name="voice_interval_start_with_detail">Интервал: %1$s. %2$s</string>
     <string name="voice_interval_upcoming">Следующий интервал: %1$s</string>
     <string name="voice_interval_upcoming_with_detail">Следующий интервал: %1$s. %2$s</string>
+    <string name="voice_interval_upcoming_in_30s">Через 30 секунд начнется интервал: %1$s</string>
+    <string name="voice_interval_goal_duration">Время %1$s</string>
+    <string name="voice_interval_goal_distance">Дистанция %1$s</string>
+    <string name="voice_interval_goal_pace">Темп %1$s</string>
     <string name="chart_interval_n">Инт %1$d</string>
 
 </resources>

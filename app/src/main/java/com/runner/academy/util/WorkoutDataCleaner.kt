@@ -4,7 +4,6 @@ import android.location.Location
 import android.util.Log
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
-import org.osmdroid.util.GeoPoint
 
 /**
  * Утилита для очистки данных тренировок от GPS выбросов
@@ -27,8 +26,11 @@ object WorkoutDataCleaner {
         var removedCount = 0
         
         for (trackPoint in trackData.points) {
-            // Создаем Location из TrackPoint для проверки
             val location = createLocationFromTrackPoint(trackPoint)
+            if (location == null) {
+                removedCount++
+                continue
+            }
             val forceGap = GpsFilter.isGapResume(previousLocation, location) || trackPoint.afterGap
 
             // Применяем фильтрацию GPS (с учётом разрывов сигнала)
@@ -67,7 +69,10 @@ object WorkoutDataCleaner {
     /**
      * Создает Location из TrackPoint для проверки
      */
-    private fun createLocationFromTrackPoint(trackPoint: TrackPoint): Location {
+    private fun createLocationFromTrackPoint(trackPoint: TrackPoint): Location? {
+        if (!GpsFilter.isValidLatLon(trackPoint.latitude, trackPoint.longitude)) {
+            return null
+        }
         val location = Location("track_cleaner")
         location.latitude = trackPoint.latitude
         location.longitude = trackPoint.longitude
@@ -89,25 +94,39 @@ object WorkoutDataCleaner {
             return originalTrackData
         }
         
-        // Сортируем точки по времени
+        // Сортируем по времени и заново выставляем afterGap — иначе сортировка
+        // ломает флаги разрывов, проставленные в исходном порядке.
         val sortedPoints = cleanedPoints.sortedBy { it.timestamp }
+        val orderedPoints = sortedPoints.mapIndexed { index, point ->
+            if (index == 0) {
+                point.copy(afterGap = false)
+            } else {
+                val prev = sortedPoints[index - 1]
+                // Recompute gap after sort using geometry/time (ignore stale afterGap from unsorted order)
+                val gap = SpeedPaceCalculator.isTrackGapStep(
+                    prev.copy(afterGap = false),
+                    point.copy(afterGap = false)
+                )
+                point.copy(afterGap = gap)
+            }
+        }
         
         // Вычисляем общее расстояние через SpeedPaceCalculator
-        val totalDistance = SpeedPaceCalculator.totalDistanceMeters(sortedPoints)
+        val totalDistance = SpeedPaceCalculator.totalDistanceMeters(orderedPoints)
         
         // Вычисляем общую продолжительность
-        val startTime = sortedPoints.first().timestamp
-        val endTime = sortedPoints.last().timestamp
-        val totalDuration = endTime - startTime
+        val startTime = orderedPoints.first().timestamp
+        val endTime = orderedPoints.last().timestamp
+        val totalDuration = (endTime - startTime).coerceAtLeast(0L)
         
         // Вычисляем среднюю и максимальную скорость из derived calculations (не сырой GPS speed)
         val avgSpeed = SpeedPaceCalculator.averageSpeedMs(totalDistance, totalDuration)
-        val maxSpeed = SpeedPaceCalculator.maxDerivedSpeedMs(sortedPoints)
+        val maxSpeed = SpeedPaceCalculator.maxDerivedSpeedMs(orderedPoints)
         
         Log.d("WorkoutDataCleaner", "Recalculated stats: distance=${totalDistance}m, duration=${totalDuration}ms, avgSpeed=${avgSpeed}m/s")
         
         return TrackData(
-            points = sortedPoints,
+            points = orderedPoints,
             totalDistance = totalDistance,
             totalDuration = totalDuration,
             avgSpeed = avgSpeed,
@@ -115,22 +134,6 @@ object WorkoutDataCleaner {
             startTime = startTime,
             endTime = endTime
         )
-    }
-    
-    /**
-     * Очищает список GeoPoint от неправильных координат
-     */
-    fun cleanGeoPoints(geoPoints: List<GeoPoint>): List<GeoPoint> {
-        return geoPoints.filter { geoPoint ->
-            val location = Location("geo_cleaner")
-            location.latitude = geoPoint.latitude
-            location.longitude = geoPoint.longitude
-            location.accuracy = 10f // Предполагаем хорошую точность для отображения
-            location.speed = 0f
-            location.time = System.currentTimeMillis()
-            
-            GpsFilter.isValidGpsLocation(location)
-        }
     }
     
     /**
@@ -144,7 +147,11 @@ object WorkoutDataCleaner {
         
         for (trackPoint in trackData.points) {
             val location = createLocationFromTrackPoint(trackPoint)
-            
+            if (location == null) {
+                outlierCount++
+                continue
+            }
+
             if (!GpsFilter.isValidGpsLocation(location)) {
                 outlierCount++
             } else if (previousLocation != null && !trackPoint.afterGap) {
@@ -153,7 +160,7 @@ object WorkoutDataCleaner {
                     outlierCount++
                 }
             }
-            
+
             previousLocation = location
         }
         
