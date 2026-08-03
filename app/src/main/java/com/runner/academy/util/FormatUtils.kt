@@ -70,15 +70,6 @@ object FormatUtils {
         }
     }
 
-    fun formatSpeedForTTS(speedKmh: Float, context: Context, kph: Boolean = true): String {
-        return if (kph) {
-            context.resources.getString(R.string.kilometers_per_hour_float_tts, speedKmh)
-        } else {
-            val speedMph = speedKmh*KPH_TO_MPH_COEF
-            context.resources.getString(R.string.miles_per_hour_float_tts, speedMph)
-        }
-    }
-    
     /**
      * Форматирует темп в минутах на километр
      */

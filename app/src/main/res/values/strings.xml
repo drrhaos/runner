@@ -62,9 +62,7 @@
     <string name="voice_gps_lost">GPS signal lost</string>
     <string name="voice_gps_recovered">GPS signal recovered</string>
     <string name="kilometers_per_hour_float">%.1f km/h</string>
-    <string name="kilometers_per_hour_float_tts">%.1f kilometers per hour</string>
     <string name="miles_per_hour_float">%.1f mi/h</string>
-    <string name="miles_per_hour_float_tts">%.1f miles per hour</string>
     <string name="per_km">per kilometer</string>
     <string name="voice_notif_text_each_km">Distance: %1$s, time: %2$s, average pace: %3$s.</string>
 

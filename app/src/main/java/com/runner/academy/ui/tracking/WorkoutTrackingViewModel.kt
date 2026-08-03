@@ -602,17 +602,6 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         }
     }
 
-    fun getWorkoutSummary(): String {
-        val session = _workoutSession.value
-        return String.format(
-            "Дистанция: %.2f км\nВремя: %s\nСредний темп: %s\nКалории: %d",
-            session.distance,
-            formatTime(session.currentTime),
-            formatPace(session.avgPace),
-            session.calories
-        )
-    }
-
     private fun sanitizeTrackPoints(rawPoints: List<TrackPoint>): List<TrackPoint> {
         if (rawPoints.isEmpty()) return emptyList()
         val result = mutableListOf<TrackPoint>()

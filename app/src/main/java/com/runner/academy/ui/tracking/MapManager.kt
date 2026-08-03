@@ -452,6 +452,4 @@ class MapManager(
 
         return bearing.toFloat()
     }
-
-    fun getLastMapUpdateTime(): Long = lastMapUpdateTime
 }
