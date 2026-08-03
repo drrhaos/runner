@@ -55,6 +55,27 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         _modeSelection.value = selection
     }
 
+    /**
+     * Snapshot of interval segments for the active session. Survives Fragment
+     * recreation (rotation / nav) so the plan is not lost when the spinner
+     * briefly falls back to Easy Run while templates reload.
+     */
+    private val _activeIntervalSegments =
+        MutableStateFlow<List<com.runner.academy.data.WorkoutTemplateSegment>?>(null)
+    val activeIntervalSegments:
+        StateFlow<List<com.runner.academy.data.WorkoutTemplateSegment>?> =
+        _activeIntervalSegments.asStateFlow()
+
+    fun setActiveIntervalSegments(
+        segments: List<com.runner.academy.data.WorkoutTemplateSegment>?
+    ) {
+        _activeIntervalSegments.value = segments?.takeIf { it.isNotEmpty() }
+    }
+
+    fun clearActiveIntervalSegments() {
+        _activeIntervalSegments.value = null
+    }
+
     private var fusedLocationClient: FusedLocationProviderClient? = null
     private var locationCallback: LocationCallback? = null
     private var lastLocation: Location? = null
@@ -377,6 +398,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
         _workoutSession.value = WorkoutSession()
         _workoutState.value = WorkoutState.NOT_STARTED
+        clearActiveIntervalSegments()
     }
 
     private fun updateWorkoutState() {

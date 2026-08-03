@@ -63,6 +63,7 @@ class WorkoutTrackingFragment : Fragment() {
         private const val STOP_HOLD_DURATION_MS = 3000L
         private const val STOP_HOLD_SECONDS = 3
         private const val STATE_MODE_SELECTION = "tracking_mode_selection"
+        private const val STATE_INTERVAL_SEGMENTS_JSON = "tracking_interval_segments_json"
     }
 
     private var _binding: FragmentWorkoutTrackingBinding? = null
@@ -187,6 +188,9 @@ class WorkoutTrackingFragment : Fragment() {
         if (savedInstanceState != null && viewModel.modeSelection.value == null) {
             restoreModeSelectionFromBundle(savedInstanceState)
         }
+        if (savedInstanceState != null && viewModel.activeIntervalSegments.value == null) {
+            restoreIntervalSegmentsFromBundle(savedInstanceState)
+        }
 
         initializeManagers()
         setupWorkoutModeSpinner()
@@ -218,6 +222,13 @@ class WorkoutTrackingFragment : Fragment() {
             is TrackingModeSelection.Template ->
                 outState.putString(STATE_MODE_SELECTION, "template:${selection.templateId}")
         }
+        val intervalJson = (
+            viewModel.activeIntervalSegments.value
+                ?: intervalEngine?.allSegments()
+            )?.let { IntervalSegmentsJson.toJson(it) }
+        if (intervalJson != null) {
+            outState.putString(STATE_INTERVAL_SEGMENTS_JSON, intervalJson)
+        }
     }
 
     private fun restoreModeSelectionFromBundle(state: Bundle) {
@@ -232,6 +243,14 @@ class WorkoutTrackingFragment : Fragment() {
             else -> return
         }
         viewModel.setModeSelection(selection)
+    }
+
+    private fun restoreIntervalSegmentsFromBundle(state: Bundle) {
+        val json = state.getString(STATE_INTERVAL_SEGMENTS_JSON) ?: return
+        val segments = IntervalSegmentsJson.parse(json)
+        if (segments.isNotEmpty()) {
+            viewModel.setActiveIntervalSegments(segments)
+        }
     }
 
     private fun initializeManagers() {
@@ -288,7 +307,9 @@ class WorkoutTrackingFragment : Fragment() {
             ),
             viewModel
         ) {
-            if (!it && intervalEngine == null) {
+            if (!it && intervalEngine == null &&
+                viewModel.activeIntervalSegments.value.isNullOrEmpty()
+            ) {
                 binding.layoutIntervalPanel.visibility = View.GONE
             } else if (it) {
                 updateIntervalPreview()
@@ -486,28 +507,37 @@ class WorkoutTrackingFragment : Fragment() {
         val session = viewModel.workoutSession.value
         if (!(session.isTracking || session.isPaused)) return
         if (intervalEngine != null) return
-        if (!selectedMode.hasIntervals()) return
-        startIntervalEngine()
+        val segments = resolveActiveIntervalSegments() ?: return
+        startIntervalEngine(segments)
         updateIntervals(session, announce = false)
     }
 
-    private fun startIntervalEngine() {
-        val segments = selectedMode.segments()
-        if (segments.isEmpty()) {
+    private fun resolveActiveIntervalSegments(): List<WorkoutTemplateSegment>? {
+        viewModel.activeIntervalSegments.value?.takeIf { it.isNotEmpty() }?.let { return it }
+        return selectedMode.segments().takeIf { selectedMode.hasIntervals() && it.isNotEmpty() }
+    }
+
+    private fun startIntervalEngine(segments: List<WorkoutTemplateSegment>? = null) {
+        val plan = segments?.takeIf { it.isNotEmpty() }
+            ?: selectedMode.segments().takeIf { it.isNotEmpty() }
+        if (plan.isNullOrEmpty()) {
             intervalEngine = null
             activeScheduledId = null
+            viewModel.clearActiveIntervalSegments()
             return
         }
-        intervalEngine = IntervalEngine(segments)
+        viewModel.setActiveIntervalSegments(plan)
+        intervalEngine = IntervalEngine(plan)
         activeScheduledId = selectedMode.scheduledIdOrNull()
         binding.layoutIntervalPanel.visibility = View.VISIBLE
-        binding.progressIntervalSegments.setSegments(segments)
+        binding.progressIntervalSegments.setSegments(plan)
         binding.progressIntervalSegments.setProgress(0, 0f)
     }
 
     private fun clearIntervalEngine() {
         intervalEngine = null
         activeScheduledId = null
+        viewModel.clearActiveIntervalSegments()
         if (!selectedMode.hasIntervals()) {
             binding.layoutIntervalPanel.visibility = View.GONE
         }
@@ -936,8 +966,10 @@ class WorkoutTrackingFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val session = viewModel.workoutSession.value
-                val intervalJson = intervalEngine?.allSegments()
-                    ?.let { IntervalSegmentsJson.toJson(it) }
+                val intervalJson = (
+                    intervalEngine?.allSegments()
+                        ?: viewModel.activeIntervalSegments.value
+                    )?.let { IntervalSegmentsJson.toJson(it) }
                 val workoutId = viewModel.saveWorkoutToDatabase(
                     selectedWorkoutType,
                     manualDistanceKm = manualDistanceKm,

@@ -157,19 +157,25 @@ class DetailMapManager(
                 return@Runnable
             }
 
-            val bounds = BoundingBox.fromGeoPoints(allGeoPoints)
-            val latSpan = (bounds.latNorth - bounds.latSouth).coerceAtLeast(0.001)
-            val lonSpan = (bounds.lonEast - bounds.lonWest).coerceAtLeast(0.001)
-            val expandedBounds = BoundingBox(
-                bounds.latNorth + latSpan * 0.1,
-                bounds.lonEast + lonSpan * 0.1,
-                bounds.latSouth - latSpan * 0.1,
-                bounds.lonWest - lonSpan * 0.1
-            )
-            // Non-animated fit avoids flicker when map size/layout settles
-            mapView.zoomToBoundingBox(expandedBounds, false, 100)
-            hasFittedBounds = true
-            mapView.invalidate()
+            try {
+                val bounds = BoundingBox.fromGeoPoints(allGeoPoints)
+                val latSpan = (bounds.latNorth - bounds.latSouth).coerceAtLeast(0.001)
+                val lonSpan = (bounds.lonEast - bounds.lonWest).coerceAtLeast(0.001)
+                val expandedBounds = BoundingBox(
+                    bounds.latNorth + latSpan * 0.1,
+                    bounds.lonEast + lonSpan * 0.1,
+                    bounds.latSouth - latSpan * 0.1,
+                    bounds.lonWest - lonSpan * 0.1
+                )
+                // Non-animated fit avoids flicker when map size/layout settles
+                mapView.zoomToBoundingBox(expandedBounds, false, 100)
+                hasFittedBounds = true
+                mapView.invalidate()
+            } catch (e: Exception) {
+                android.util.Log.e("WorkoutDetail", "Failed to fit track bounds", e)
+                allGeoPoints.firstOrNull()?.let { mapView.controller.setCenter(it) }
+                hasFittedBounds = true
+            }
         }
 
         if (mapView.width > 0 && mapView.height > 0) {
