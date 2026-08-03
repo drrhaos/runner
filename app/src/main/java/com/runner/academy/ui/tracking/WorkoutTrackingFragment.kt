@@ -22,6 +22,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -61,12 +62,13 @@ class WorkoutTrackingFragment : Fragment() {
         private const val GPS_STATUS_UPDATE_INTERVAL = 2000L
         private const val STOP_HOLD_DURATION_MS = 3000L
         private const val STOP_HOLD_SECONDS = 3
+        private const val STATE_MODE_SELECTION = "tracking_mode_selection"
     }
 
     private var _binding: FragmentWorkoutTrackingBinding? = null
     private val binding get() = _binding!!
 
-    private val viewModel: WorkoutTrackingViewModel by viewModels {
+    private val viewModel: WorkoutTrackingViewModel by activityViewModels {
         val database = WorkoutDatabase.getDatabase(requireContext())
         val repository = com.runner.academy.data.WorkoutRepository(database.workoutDao())
         WorkoutTrackingViewModelFactory(repository, requireContext().applicationContext as android.app.Application)
@@ -182,6 +184,10 @@ class WorkoutTrackingFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        if (savedInstanceState != null && viewModel.modeSelection.value == null) {
+            restoreModeSelectionFromBundle(savedInstanceState)
+        }
+
         initializeManagers()
         setupWorkoutModeSpinner()
         setupClickListeners()
@@ -202,6 +208,30 @@ class WorkoutTrackingFragment : Fragment() {
             viewModel.initializeService()
             maybeStartIntervalEngineForActiveSession()
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        when (val selection = viewModel.modeSelection.value ?: selectedMode.toSelectionKey()) {
+            TrackingModeSelection.EasyRun -> outState.putString(STATE_MODE_SELECTION, "easy")
+            TrackingModeSelection.PlanToday -> outState.putString(STATE_MODE_SELECTION, "plan")
+            is TrackingModeSelection.Template ->
+                outState.putString(STATE_MODE_SELECTION, "template:${selection.templateId}")
+        }
+    }
+
+    private fun restoreModeSelectionFromBundle(state: Bundle) {
+        val raw = state.getString(STATE_MODE_SELECTION) ?: return
+        val selection = when {
+            raw == "easy" -> TrackingModeSelection.EasyRun
+            raw == "plan" -> TrackingModeSelection.PlanToday
+            raw.startsWith("template:") -> {
+                val id = raw.removePrefix("template:").toLongOrNull() ?: return
+                TrackingModeSelection.Template(id)
+            }
+            else -> return
+        }
+        viewModel.setModeSelection(selection)
     }
 
     private fun initializeManagers() {
@@ -363,34 +393,57 @@ class WorkoutTrackingFragment : Fragment() {
         )
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
 
-        val preferred = when {
-            selectedMode is TrackingWorkoutMode.Template -> {
-                val id = (selectedMode as TrackingWorkoutMode.Template).data.template.id
+        val preferred = resolvePreferredModeIndex(options)
+
+        suppressModeSelectionCallback = true
+        binding.spinnerWorkoutType.adapter = adapter
+        binding.spinnerWorkoutType.setSelection(preferred, false)
+        suppressModeSelectionCallback = false
+        applySelectedMode(options[preferred], persistSelection = false)
+    }
+
+    private fun resolvePreferredModeIndex(options: List<TrackingWorkoutMode>): Int {
+        val selection = viewModel.modeSelection.value
+        val index = when (selection) {
+            null -> {
+                // First open: prefer today's plan when available
+                if (hasFollowablePlan()) {
+                    options.indexOfFirst { it is TrackingWorkoutMode.PlanToday }
+                } else {
+                    0
+                }
+            }
+            TrackingModeSelection.EasyRun ->
+                options.indexOfFirst { it is TrackingWorkoutMode.EasyRun }
+            TrackingModeSelection.PlanToday ->
+                options.indexOfFirst { it is TrackingWorkoutMode.PlanToday }
+                    .takeIf { it >= 0 }
+                    ?: 0
+            is TrackingModeSelection.Template ->
                 options.indexOfFirst {
-                    it is TrackingWorkoutMode.Template && it.data.template.id == id
+                    it is TrackingWorkoutMode.Template &&
+                        it.data.template.id == selection.templateId
                 }.takeIf { it >= 0 }
                     ?: if (hasFollowablePlan()) {
                         options.indexOfFirst { it is TrackingWorkoutMode.PlanToday }
                     } else {
                         0
                     }
-            }
-            hasFollowablePlan() ->
-                options.indexOfFirst { it is TrackingWorkoutMode.PlanToday }
-            else -> 0
-        }.coerceAtLeast(0)
-
-        suppressModeSelectionCallback = true
-        binding.spinnerWorkoutType.adapter = adapter
-        binding.spinnerWorkoutType.setSelection(preferred, false)
-        suppressModeSelectionCallback = false
-        applySelectedMode(options[preferred.coerceAtMost(options.lastIndex)])
+        }
+        return index.coerceIn(0, options.lastIndex.coerceAtLeast(0))
     }
 
-    private fun applySelectedMode(mode: TrackingWorkoutMode) {
+    private fun applySelectedMode(mode: TrackingWorkoutMode, persistSelection: Boolean = true) {
         selectedMode = mode
         selectedWorkoutType = mode.workoutType()
+        if (persistSelection) {
+            viewModel.setModeSelection(mode.toSelectionKey())
+        } else if (viewModel.modeSelection.value == null) {
+            // Seed auto-pick so rotation keeps the same mode
+            viewModel.setModeSelection(mode.toSelectionKey())
+        }
         updateIntervalPreview()
+        maybeStartIntervalEngineForActiveSession()
     }
 
     private fun updateIntervalPreview() {
@@ -491,13 +544,8 @@ class WorkoutTrackingFragment : Fragment() {
         }
 
         if (announce && engine.consumeSegmentAnnouncement(state) && segment != null) {
+            // Start of interval: long beep only, no speech
             voiceFeedbackManager?.playIntervalBeep()
-            if (isVoiceEnabled) {
-                voiceFeedbackManager?.announceIntervalStart(
-                    segment.localizedTitle(requireContext()),
-                    formatSegmentVoiceDetail(segment)
-                )
-            }
         }
 
         if (announce && isVoiceEnabled) {
@@ -505,25 +553,37 @@ class WorkoutTrackingFragment : Fragment() {
             val next = engine.peekNextSegment()
             if (next != null && engine.consumeUpcomingWarning(state, remainingMs)) {
                 voiceFeedbackManager?.announceIntervalUpcoming(
-                    next.localizedTitle(requireContext()),
-                    formatSegmentVoiceDetail(next)
+                    title = next.localizedTitle(requireContext()),
+                    goalPart = formatSegmentVoiceGoal(next),
+                    pacePart = formatSegmentVoicePace(next)
                 )
             }
         }
     }
 
-    private fun formatSegmentVoiceDetail(segment: WorkoutTemplateSegment): String {
-        val goal = when (segment.goalType) {
-            SegmentGoalType.DURATION -> segment.durationMs?.let { FormatUtils.formatTime(it) }
-            SegmentGoalType.DISTANCE -> segment.distanceMeters?.let { meters ->
-                FormatUtils.formatDistanceMeters(meters, requireContext())
+    private fun formatSegmentVoiceGoal(segment: WorkoutTemplateSegment): String? {
+        return when (segment.goalType) {
+            SegmentGoalType.DURATION -> segment.durationMs?.takeIf { it > 0 }?.let { ms ->
+                getString(
+                    R.string.voice_interval_goal_duration,
+                    FormatUtils.formatTimeForTTS(ms, requireContext())
+                )
             }
-        }.orEmpty()
-        val pace = segment.targetPaceMinPerKm
-            ?.takeIf { it > 0f }
-            ?.let { FormatUtils.formatPaceForTTS(it, requireContext()) }
-            .orEmpty()
-        return listOf(goal, pace).filter { it.isNotBlank() }.joinToString(", ")
+            SegmentGoalType.DISTANCE -> segment.distanceMeters?.takeIf { it > 0f }?.let { meters ->
+                getString(
+                    R.string.voice_interval_goal_distance,
+                    FormatUtils.formatDistanceMetersForTTS(meters, requireContext())
+                )
+            }
+        }
+    }
+
+    private fun formatSegmentVoicePace(segment: WorkoutTemplateSegment): String? {
+        val pace = segment.targetPaceMinPerKm?.takeIf { it > 0f } ?: return null
+        return getString(
+            R.string.voice_interval_goal_pace,
+            FormatUtils.formatPaceForTTS(pace, requireContext())
+        )
     }
 
     private fun setupClickListeners() {
