@@ -32,11 +32,6 @@ enum class WorkoutType {
     RACE
 }
 
-/** Safely convert a string to WorkoutType, returning null if the string doesn't match any enum value. */
-fun WorkoutType.valueOfOrNull(name: String): WorkoutType? {
-    return WorkoutType.values().find { it.name == name }
-}
-
 fun WorkoutType.displayName(context: Context): String = when (this) {
     WorkoutType.EASY_RUN -> context.getString(R.string.workout_type_easy_run)
     WorkoutType.TEMPO_RUN -> context.getString(R.string.workout_type_tempo_run)

@@ -41,4 +41,20 @@ sealed class TrackingWorkoutMode {
     }
 
     fun hasIntervals(): Boolean = segments().isNotEmpty()
+
+    fun toSelectionKey(): TrackingModeSelection = when (this) {
+        EasyRun -> TrackingModeSelection.EasyRun
+        is PlanToday -> TrackingModeSelection.PlanToday
+        is Template -> TrackingModeSelection.Template(data.template.id)
+    }
+}
+
+/**
+ * Lightweight key for the chosen tracking mode — survives navigation / rotation
+ * when kept in an activity-scoped ViewModel.
+ */
+sealed class TrackingModeSelection {
+    data object EasyRun : TrackingModeSelection()
+    data object PlanToday : TrackingModeSelection()
+    data class Template(val templateId: Long) : TrackingModeSelection()
 }

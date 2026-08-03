@@ -32,22 +32,22 @@ object FormatUtils {
     }
 
     fun formatTimeForTTS(milliseconds: Long, context: Context): String {
-        val totalSeconds = milliseconds / 1000
-        val hours: Int = (totalSeconds / 3600).toInt()
-        val minutes = ((totalSeconds % 3600) / 60).toInt()
-        val seconds = (totalSeconds % 60).toInt()
+        val totalSeconds = (milliseconds / 1000).coerceAtLeast(0L).toInt()
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
 
-        return when {
-            hours > 0 -> String.format("%s %s %s",
-                context.resources.getQuantityString(R.plurals.hours, hours, hours),
-                context.resources.getQuantityString(R.plurals.minutes, minutes, minutes),
-                context.resources.getQuantityString(R.plurals.seconds, seconds, seconds)
-            )
-            else -> String.format("%s %s",
-                context.resources.getQuantityString(R.plurals.minutes, minutes, minutes),
-                context.resources.getQuantityString(R.plurals.seconds, seconds, seconds)
-            )
+        val parts = mutableListOf<String>()
+        if (hours > 0) {
+            parts += context.resources.getQuantityString(R.plurals.hours, hours, hours)
         }
+        if (minutes > 0) {
+            parts += context.resources.getQuantityString(R.plurals.minutes, minutes, minutes)
+        }
+        if (seconds > 0 || parts.isEmpty()) {
+            parts += context.resources.getQuantityString(R.plurals.seconds, seconds, seconds)
+        }
+        return parts.joinToString(" ")
     }
     
     /**
@@ -70,15 +70,6 @@ object FormatUtils {
         }
     }
 
-    fun formatSpeedForTTS(speedKmh: Float, context: Context, kph: Boolean = true): String {
-        return if (kph) {
-            context.resources.getString(R.string.kilometers_per_hour_float_tts, speedKmh)
-        } else {
-            val speedMph = speedKmh*KPH_TO_MPH_COEF
-            context.resources.getString(R.string.miles_per_hour_float_tts, speedMph)
-        }
-    }
-    
     /**
      * Форматирует темп в минутах на километр
      */
@@ -94,15 +85,18 @@ object FormatUtils {
     }
 
     fun formatPaceForTTS(paceMinutesPerKm: Float, context: Context): String {
-        if (paceMinutesPerKm <= 0) return "--:-- /км"
+        if (paceMinutesPerKm <= 0) return ""
 
         val (minutes, seconds) = SpeedPaceCalculator.paceToMinutesSeconds(paceMinutesPerKm)
-
-        return String.format("%s %s %s",
-            context.resources.getQuantityString(R.plurals.minutes, minutes, minutes),
-            context.resources.getQuantityString(R.plurals.seconds, seconds, seconds),
-            context.resources.getString(R.string.per_km)
-        )
+        val parts = mutableListOf<String>()
+        if (minutes > 0) {
+            parts += context.resources.getQuantityString(R.plurals.minutes, minutes, minutes)
+        }
+        if (seconds > 0 || parts.isEmpty()) {
+            parts += context.resources.getQuantityString(R.plurals.seconds, seconds, seconds)
+        }
+        parts += context.getString(R.string.per_km)
+        return parts.joinToString(" ")
     }
     
     /**
@@ -123,6 +117,14 @@ object FormatUtils {
         } else {
             String.format("%.0f %s", meters, context.getString(R.string.unit_m))
         }
+    }
+
+    fun formatDistanceMetersForTTS(meters: Float, context: Context): String {
+        if (meters >= 1000f) {
+            return formatDistanceForTTS(meters / 1000f, context)
+        }
+        val m = meters.toInt().coerceAtLeast(0)
+        return context.resources.getQuantityString(R.plurals.meters, m, m)
     }
 
     fun formatDistanceForTTS(distanceKm: Float, context: Context, kph: Boolean = true): String {

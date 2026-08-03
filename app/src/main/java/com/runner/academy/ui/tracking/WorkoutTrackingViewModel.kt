@@ -44,6 +44,38 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
     private val _workoutState = MutableStateFlow(WorkoutState.NOT_STARTED)
     val workoutState: StateFlow<WorkoutState> = _workoutState.asStateFlow()
 
+    /**
+     * null = first open (auto-pick today's plan if any).
+     * Otherwise the user's explicit spinner choice.
+     */
+    private val _modeSelection = MutableStateFlow<TrackingModeSelection?>(null)
+    val modeSelection: StateFlow<TrackingModeSelection?> = _modeSelection.asStateFlow()
+
+    fun setModeSelection(selection: TrackingModeSelection) {
+        _modeSelection.value = selection
+    }
+
+    /**
+     * Snapshot of interval segments for the active session. Survives Fragment
+     * recreation (rotation / nav) so the plan is not lost when the spinner
+     * briefly falls back to Easy Run while templates reload.
+     */
+    private val _activeIntervalSegments =
+        MutableStateFlow<List<com.runner.academy.data.WorkoutTemplateSegment>?>(null)
+    val activeIntervalSegments:
+        StateFlow<List<com.runner.academy.data.WorkoutTemplateSegment>?> =
+        _activeIntervalSegments.asStateFlow()
+
+    fun setActiveIntervalSegments(
+        segments: List<com.runner.academy.data.WorkoutTemplateSegment>?
+    ) {
+        _activeIntervalSegments.value = segments?.takeIf { it.isNotEmpty() }
+    }
+
+    fun clearActiveIntervalSegments() {
+        _activeIntervalSegments.value = null
+    }
+
     private var fusedLocationClient: FusedLocationProviderClient? = null
     private var locationCallback: LocationCallback? = null
     private var lastLocation: Location? = null
@@ -52,6 +84,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
     private var workoutTimerJob: Job? = null
     private val gson = Gson()
+    private val gpsProcessor = com.runner.academy.service.GpsLocationProcessor()
     
     // Работа с сервисом
     private var trackingService: WorkoutTrackingService? = null
@@ -59,7 +92,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
     
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-            val binder = service as WorkoutTrackingService.WorkoutTrackingBinder
+            val binder = service as? WorkoutTrackingService.WorkoutTrackingBinder ?: return
             trackingService = binder.getService()
             isServiceBound = true
             // Отключаем локальные обновления местоположения, если они были запущены ранее
@@ -75,7 +108,16 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
             // Сразу подтягиваем состояние из сервиса (после пересоздания UI / переподключения)
             trackingService?.let { svc ->
-                _workoutSession.value = svc.getCurrentSession()
+                val serviceSession = svc.getCurrentSession()
+                val local = _workoutSession.value
+                val serviceActive = serviceSession.isTracking || serviceSession.isPaused
+                val localActive = local.isTracking || local.isPaused
+                val serviceHasTrack = serviceSession.trackDataPoints.isNotEmpty()
+                val localHasTrack = local.trackDataPoints.isNotEmpty()
+                // Never replace a richer local in-progress session with an empty service snapshot
+                if (serviceActive || serviceHasTrack || !localActive || !localHasTrack) {
+                    _workoutSession.value = serviceSession
+                }
                 updateWorkoutState()
             }
 
@@ -124,14 +166,18 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         val locationRequest = com.runner.academy.util.GpsConfig.createWorkoutLocationRequest()
 
         try {
+            val callback = locationCallback ?: return
             fusedLocationClient?.requestLocationUpdates(
                 locationRequest,
-                locationCallback!!,
+                callback,
                 android.os.Looper.getMainLooper()
             )
         } catch (e: SecurityException) {
             android.util.Log.w("WorkoutTrackingViewModel", "Location permission denied at runtime", e)
             _workoutSession.value = _workoutSession.value.copy(gpsStatus = GpsStatus.DENIED)
+        } catch (e: Exception) {
+            android.util.Log.e("WorkoutTrackingViewModel", "Failed to start location updates", e)
+            _workoutSession.value = _workoutSession.value.copy(gpsStatus = GpsStatus.LOST)
         }
     }
 
@@ -143,26 +189,58 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
         // Записываем данные только во время активного трекинга (не во время паузы)
         if (isCurrentlyTracking && !currentSession.isPaused) {
-            // Добавляем новую точку к треку для отображения на карте только во время активного трекинга
-            newTrackPoints.add(GeoPoint(location.latitude, location.longitude))
+            val previous = lastLocation
+            val forceGap = previous != null &&
+                (GpsFilter.isGapResume(previous, location) ||
+                    currentSession.gpsStatus == GpsStatus.LOST)
+            val filtered = GpsFilter.filterGpsOutlier(
+                location,
+                previous,
+                forceGapResume = forceGap
+            ) ?: run {
+                _workoutSession.value = currentSession.copy(
+                    currentLocation = location,
+                    gpsStatus = if (forceGap) GpsStatus.SEARCHING else currentSession.gpsStatus
+                )
+                return
+            }
+
+            val afterGap = forceGap
+            if (!afterGap && previous != null) {
+                val stepM = filtered.distanceTo(previous)
+                if (stepM < com.runner.academy.service.GpsLocationProcessor.MIN_POINT_DISTANCE_METERS) {
+                    _workoutSession.value = currentSession.copy(
+                        currentLocation = filtered,
+                        gpsStatus = GpsStatus.FOUND
+                    )
+                    lastLocation = filtered
+                    lastUpdateTime = System.currentTimeMillis()
+                    return
+                }
+            }
+            newTrackPoints.add(GeoPoint(filtered.latitude, filtered.longitude))
 
             val trackPoint = TrackPoint(
-                latitude = location.latitude,
-                longitude = location.longitude,
-                timestamp = System.currentTimeMillis(),
-                accuracy = location.accuracy,
-                speed = location.speed,
-                altitude = location.altitude
+                latitude = filtered.latitude,
+                longitude = filtered.longitude,
+                timestamp = if (filtered.time > 0) filtered.time else System.currentTimeMillis(),
+                accuracy = filtered.accuracy,
+                speed = filtered.speed,
+                altitude = filtered.altitude,
+                afterGap = afterGap
             )
             newTrackDataPoints.add(trackPoint)
             newRawTrackDataPoints.add(trackPoint)
+
+            gpsProcessor.decimateSyncedTrackPoints(newTrackPoints, newTrackDataPoints)
+            gpsProcessor.decimateRawPointsIfNeeded(newRawTrackDataPoints)
 
             // Delegate distance calculation to SpeedPaceCalculator (point-to-point Haversine)
             val totalDistanceMeters = SpeedPaceCalculator.totalDistanceMeters(newTrackDataPoints)
             val newDistance = totalDistanceMeters / 1000f
 
             // Derived speed between consecutive points instead of noisy GPS-reported speed
-            val currentSpeed = if (newTrackDataPoints.size >= 2) {
+            val currentSpeed = if (!afterGap && newTrackDataPoints.size >= 2) {
                 val prevPoint = newTrackDataPoints[newTrackDataPoints.size - 2]
                 val derivedSpeedMs = SpeedPaceCalculator.derivedSpeedMs(prevPoint, trackPoint)
                 SpeedPaceCalculator.speedMsToKmh(derivedSpeedMs)
@@ -185,7 +263,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
             val calories = com.runner.academy.util.FormatUtils.calculateCalories(newDistance, userPrefs.userWeight)
 
             _workoutSession.value = currentSession.copy(
-                currentLocation = location,
+                currentLocation = filtered,
                 trackPoints = newTrackPoints,
                 trackDataPoints = newTrackDataPoints,
                 rawTrackDataPoints = newRawTrackDataPoints,
@@ -198,7 +276,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
                 gpsStatus = GpsStatus.FOUND
             )
 
-            lastLocation = location
+            lastLocation = filtered
             lastUpdateTime = System.currentTimeMillis()
         } else {
             // Во время паузы обновляем только статус GPS и текущее местоположение
@@ -366,6 +444,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
         _workoutSession.value = WorkoutSession()
         _workoutState.value = WorkoutState.NOT_STARTED
+        clearActiveIntervalSegments()
     }
 
     private fun updateWorkoutState() {
@@ -523,17 +602,6 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         }
     }
 
-    fun getWorkoutSummary(): String {
-        val session = _workoutSession.value
-        return String.format(
-            "Дистанция: %.2f км\nВремя: %s\nСредний темп: %s\nКалории: %d",
-            session.distance,
-            formatTime(session.currentTime),
-            formatPace(session.avgPace),
-            session.calories
-        )
-    }
-
     private fun sanitizeTrackPoints(rawPoints: List<TrackPoint>): List<TrackPoint> {
         if (rawPoints.isEmpty()) return emptyList()
         val result = mutableListOf<TrackPoint>()
@@ -591,8 +659,14 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         
         // Отключаемся от сервиса
         if (isServiceBound) {
-            application.unbindService(serviceConnection)
+            try {
+                trackingService?.setSessionUpdateCallback(null)
+            } catch (_: Exception) { }
+            try {
+                application.unbindService(serviceConnection)
+            } catch (_: Exception) { }
             isServiceBound = false
+            trackingService = null
         }
     }
 

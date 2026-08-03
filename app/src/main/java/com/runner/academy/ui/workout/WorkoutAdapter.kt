@@ -1,6 +1,7 @@
 package com.runner.academy.ui.workout
 
 import android.content.Context
+import android.util.LruCache
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,7 +24,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Locale
-import java.util.concurrent.ConcurrentHashMap
 
 class WorkoutAdapter(
     private val context: Context,
@@ -31,7 +31,7 @@ class WorkoutAdapter(
     private val onFavoriteClick: (Workout) -> Unit
 ) : PagingDataAdapter<Workout, WorkoutAdapter.WorkoutViewHolder>(WorkoutDiffCallback()) {
 
-    private val trackCache = ConcurrentHashMap<Long, Pair<String?, TrackData?>>()
+    private val trackCache = object : LruCache<Long, Pair<String?, TrackData?>>(32) {}
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
     private val adapterJob = SupervisorJob()
     private val adapterScope = CoroutineScope(adapterJob + Dispatchers.Main.immediate)
@@ -58,17 +58,22 @@ class WorkoutAdapter(
 
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
         adapterJob.cancelChildren()
+        trackCache.evictAll()
         super.onDetachedFromRecyclerView(recyclerView)
     }
 
     private fun resolveTrack(workout: Workout): TrackData? {
         if (workout.trackData.isNullOrBlank()) return null
-        val cached = trackCache[workout.id]
-        if (cached != null && cached.first == workout.trackData) {
-            return cached.second
+        synchronized(trackCache) {
+            val cached = trackCache.get(workout.id)
+            if (cached != null && cached.first == workout.trackData) {
+                return cached.second
+            }
         }
         val parsed = TrackDataJson.parse(workout.trackData)
-        trackCache[workout.id] = workout.trackData to parsed
+        synchronized(trackCache) {
+            trackCache.put(workout.id, workout.trackData to parsed)
+        }
         return parsed
     }
 
@@ -122,8 +127,7 @@ class WorkoutAdapter(
 
         private fun bindRoutePreview(workout: Workout) {
             previewJob?.cancel()
-            val trackData = resolveTrack(workout)
-            if (trackData == null || trackData.points.size < 2) {
+            if (workout.trackData.isNullOrBlank()) {
                 binding.routePreview.setImageDrawable(null)
                 binding.routePreview.visibility = View.INVISIBLE
                 binding.textViewRoutePreviewEmpty.visibility = View.VISIBLE
@@ -143,6 +147,17 @@ class WorkoutAdapter(
             binding.routePreview.setImageDrawable(null)
             val workoutId = workout.id
             previewJob = adapterScope.launch {
+                val trackData = withContext(Dispatchers.Default) {
+                    resolveTrack(workout)
+                }
+                if (boundWorkoutId != workoutId || trackData == null || trackData.points.size < 2) {
+                    if (boundWorkoutId == workoutId) {
+                        binding.routePreview.setImageDrawable(null)
+                        binding.routePreview.visibility = View.INVISIBLE
+                        binding.textViewRoutePreviewEmpty.visibility = View.VISIBLE
+                    }
+                    return@launch
+                }
                 val bitmap = withContext(Dispatchers.IO) {
                     RouteMapBitmapRenderer.getOrRender(
                         context = context,

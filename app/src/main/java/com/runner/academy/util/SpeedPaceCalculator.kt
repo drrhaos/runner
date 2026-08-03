@@ -24,6 +24,17 @@ object SpeedPaceCalculator {
     const val MS_PER_HOUR = 3_600_000f
     private const val KPH_TO_MPH_COEF = 0.621371
 
+    /**
+     * Distance jump treated as a GPS gap when [TrackPoint.afterGap] was not set
+     * (e.g. older tracks or missed gap flags). Must stay well above typical sparse
+     * GPX / chart-sample spacing (~100–600 m) so legitimate steps are not dropped.
+     * Prevents one multi-km teleport from exploding into hundreds of chart bars.
+     */
+    private const val GAP_DISTANCE_METERS = 2_000f
+
+    /** Hard cap on km/mile chart bars for pathological tracks. */
+    private const val MAX_DISTANCE_SEGMENTS = 500
+
     // ---- Data classes for chart / segment builders -------------------------
 
     /** Single data point for pace/speed chart series. */
@@ -150,9 +161,9 @@ object SpeedPaceCalculator {
         if (points.size < 2) return 0f
         var maxSpeed = 0f
         for (i in 1 until points.size) {
-            if (points[i].afterGap) continue
+            if (isTrackGapStep(points[i - 1], points[i])) continue
             val speed = derivedSpeedMs(points[i - 1], points[i])
-            if (speed > maxSpeed) maxSpeed = speed
+            if (speed.isFinite() && speed > maxSpeed) maxSpeed = speed
         }
         return maxSpeed
     }
@@ -205,8 +216,8 @@ object SpeedPaceCalculator {
         if (points.size < 2) return 0f
         var total = 0f
         for (i in 1 until points.size) {
-            // Skip phantom distance across GPS gaps
-            if (points[i].afterGap) continue
+            // Skip phantom distance across GPS gaps / teleports
+            if (isTrackGapStep(points[i - 1], points[i])) continue
             total += distanceMeters(points[i - 1], points[i])
         }
         return total
@@ -217,6 +228,11 @@ object SpeedPaceCalculator {
      * Uses Haversine via Android Location API.
      */
     fun distanceMeters(point1: TrackPoint, point2: TrackPoint): Float {
+        if (!GpsFilter.isValidLatLon(point1.latitude, point1.longitude) ||
+            !GpsFilter.isValidLatLon(point2.latitude, point2.longitude)
+        ) {
+            return 0f
+        }
         val loc1 = Location("").apply {
             latitude = point1.latitude
             longitude = point1.longitude
@@ -273,7 +289,7 @@ object SpeedPaceCalculator {
         for (i in 1 until points.size) {
             val prev = points[i - 1]
             val point = points[i]
-            if (point.afterGap) continue
+            if (isTrackGapStep(prev, point)) continue
             val speedMs = derivedSpeedMs(prev, point)
             val speedKmh = speedMsToKmh(speedMs)
             val paceMinPerKm = paceMinPerKmFromSpeedMs(speedMs)
@@ -285,6 +301,7 @@ object SpeedPaceCalculator {
             } else {
                 0f
             }
+            if (!timeMinutes.isFinite() || !paceDisplay.isFinite() || !speedDisplay.isFinite()) continue
 
             result.add(
                 PaceSpeedPoint(
@@ -308,14 +325,15 @@ object SpeedPaceCalculator {
         var cumulativeKm = 0f
 
         for (i in points.indices) {
-            if (i > 0 && !points[i].afterGap) {
+            if (i > 0 && !isTrackGapStep(points[i - 1], points[i])) {
                 cumulativeKm += metersToKm(distanceMeters(points[i - 1], points[i]))
             }
-            val altitude = points[i].altitude ?: 0.0
+            val altitude = points[i].altitude?.toFloat() ?: continue
+            if (!altitude.isFinite() || !cumulativeKm.isFinite()) continue
             result.add(
                 ElevationPoint(
                     distanceKm = cumulativeKm,
-                    altitudeMeters = altitude.toFloat(),
+                    altitudeMeters = altitude,
                     trackPointIndex = i
                 )
             )
@@ -324,11 +342,29 @@ object SpeedPaceCalculator {
     }
 
     /**
+     * True when the step from [prev] to [point] should not contribute distance.
+     *
+     * Uses the explicit [TrackPoint.afterGap] flag and large teleports only.
+     * Do **not** treat moderate timestamp gaps (e.g. 30s–few minutes) as gaps:
+     * sparse GPX / decimated tracks commonly have such spacing, and treating them
+     * as gaps emptied km/mile segment charts (and broke [buildSegments] unit tests).
+     * Live phantom-distance prevention belongs in [GpsFilter] / the tracking service.
+     */
+    fun isTrackGapStep(prev: TrackPoint, point: TrackPoint): Boolean {
+        if (point.afterGap) return true
+        val stepM = distanceMeters(prev, point)
+        return stepM >= GAP_DISTANCE_METERS
+    }
+
+    /**
      * Сегменты по 1 км (метрика) или 1 миле (имперская).
      *
      * Важно: при пересечении границы сегмента время интерполируется до ровно
      * [segmentSizeKm], а «лишняя» дистанция переносится в следующий сегмент.
      * Иначе темп занижается (например 5.67 вместо 6.07 при overshoot ~1.07 км).
+     *
+     * GPS gaps / teleports close the current partial bar and restart — they must
+     * never be sliced into hundreds of fake km segments.
      */
     fun buildSegments(
         points: List<TrackPoint>,
@@ -342,23 +378,27 @@ object SpeedPaceCalculator {
         var segmentStartTime = points.first().timestamp
         var segmentStartIndex = 0
 
+        fun closePartial(endIndex: Int, endTime: Long) {
+            if (currentSegmentDistanceKm <= 0f) return
+            if (segments.size >= MAX_DISTANCE_SEGMENTS) return
+            val durationMs = (endTime - segmentStartTime).coerceAtLeast(0L)
+            segments.add(
+                createSegmentStats(
+                    durationMs = durationMs,
+                    distanceKm = currentSegmentDistanceKm,
+                    metric = metric,
+                    startIndex = segmentStartIndex,
+                    endIndex = endIndex.coerceIn(0, points.lastIndex)
+                )
+            )
+        }
+
         for (i in 1 until points.size) {
+            if (segments.size >= MAX_DISTANCE_SEGMENTS) break
             val prev = points[i - 1]
             val point = points[i]
-            if (point.afterGap) {
-                // Close current partial segment, then restart after the gap
-                if (currentSegmentDistanceKm > 0f) {
-                    val durationMs = prev.timestamp - segmentStartTime
-                    segments.add(
-                        createSegmentStats(
-                            durationMs = durationMs,
-                            distanceKm = currentSegmentDistanceKm,
-                            metric = metric,
-                            startIndex = segmentStartIndex,
-                            endIndex = i - 1
-                        )
-                    )
-                }
+            if (isTrackGapStep(prev, point)) {
+                closePartial(i - 1, prev.timestamp)
                 currentSegmentDistanceKm = 0f
                 segmentStartTime = point.timestamp
                 segmentStartIndex = i
@@ -366,17 +406,8 @@ object SpeedPaceCalculator {
             }
             val stepKm = metersToKm(distanceMeters(prev, point))
             if (stepKm <= 0f) {
-                if (i == points.size - 1 && currentSegmentDistanceKm > 0f) {
-                    val durationMs = point.timestamp - segmentStartTime
-                    segments.add(
-                        createSegmentStats(
-                            durationMs = durationMs,
-                            distanceKm = currentSegmentDistanceKm,
-                            metric = metric,
-                            startIndex = segmentStartIndex,
-                            endIndex = i
-                        )
-                    )
+                if (i == points.lastIndex) {
+                    closePartial(i, point.timestamp)
                 }
                 continue
             }
@@ -385,7 +416,10 @@ object SpeedPaceCalculator {
             var consumedKm = 0f
 
             // Один GPS-шаг может пересечь несколько границ сегмента
-            while (currentSegmentDistanceKm + (stepKm - consumedKm) >= segmentSizeKm) {
+            while (
+                segments.size < MAX_DISTANCE_SEGMENTS &&
+                currentSegmentDistanceKm + (stepKm - consumedKm) >= segmentSizeKm
+            ) {
                 val neededKm = segmentSizeKm - currentSegmentDistanceKm
                 val absoluteKmInStep = consumedKm + neededKm
                 val fractionOfStep = (absoluteKmInStep / stepKm).coerceIn(0f, 1f)
@@ -410,17 +444,8 @@ object SpeedPaceCalculator {
 
             currentSegmentDistanceKm += stepKm - consumedKm
 
-            if (i == points.size - 1 && currentSegmentDistanceKm > 0f) {
-                val durationMs = point.timestamp - segmentStartTime
-                segments.add(
-                    createSegmentStats(
-                        durationMs = durationMs,
-                        distanceKm = currentSegmentDistanceKm,
-                        metric = metric,
-                        startIndex = segmentStartIndex,
-                        endIndex = i
-                    )
-                )
+            if (i == points.lastIndex) {
+                closePartial(i, point.timestamp)
             }
         }
         return segments
@@ -428,7 +453,7 @@ object SpeedPaceCalculator {
 
     /**
      * Splits the track by template interval goals (duration / distance), matching
-     * [IntervalEngine] progression. Gap steps ([TrackPoint.afterGap]) do not add
+     * [IntervalEngine] progression. Gap steps ([isTrackGapStep]) do not add
      * distance; their wall-clock delta is excluded from elapsed (pause-like).
      * After the last plan segment starts, remaining track belongs to that segment.
      */
@@ -485,7 +510,7 @@ object SpeedPaceCalculator {
             val prev = points[i - 1]
             val point = points[i]
             val stepMs = (point.timestamp - prev.timestamp).coerceAtLeast(0L)
-            if (!point.afterGap) {
+            if (!isTrackGapStep(prev, point)) {
                 elapsedMs += stepMs
                 distanceM += distanceMeters(prev, point)
             }

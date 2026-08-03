@@ -16,7 +16,9 @@ import com.runner.academy.databinding.FragmentWorkoutDetailBinding
 import com.runner.academy.util.ErrorHandler
 import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.WorkoutDataCleaner
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class WorkoutDetailFragment : Fragment() {
 
@@ -169,7 +171,7 @@ class WorkoutDetailFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 viewModel.getWorkoutById(workoutId).collect { workout ->
-                    if (!isAdded || isDetached) return@collect
+                    if (_binding == null || !isAdded || isDetached) return@collect
 
                     if (workout == null) {
                         android.util.Log.e("WorkoutDetail", "Workout not found with ID: $workoutId")
@@ -194,7 +196,7 @@ class WorkoutDetailFragment : Fragment() {
                         boundTrackDataJson = workout.trackData
                         displayTrackOnMap(workout)
                     } else if (workout.trackData == null) {
-                        binding.progressBarMapLoading.visibility = View.GONE
+                        _binding?.progressBarMapLoading?.visibility = View.GONE
                     } else {
                         currentTrackData?.let { chartRenderer?.updateSegmentsChartOnly(it) }
                     }
@@ -203,55 +205,68 @@ class WorkoutDetailFragment : Fragment() {
                 android.util.Log.d("WorkoutDetail", "Loading cancelled: ${e.message}")
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutDetail", "Error loading workout: ${e.message}", e)
-                if (isAdded && !isDetached) {
+                if (_binding != null && isAdded && !isDetached) {
                     ErrorHandler.handleLoadError(requireContext(), e)
                 }
             } finally {
-                if (isAdded && !isDetached) {
-                    binding.progressBarMapLoading.visibility = View.GONE
-                }
+                _binding?.progressBarMapLoading?.visibility = View.GONE
             }
         }
     }
 
     private fun displayTrackOnMap(workout: com.runner.academy.data.Workout) {
-        binding.progressBarMapLoading.visibility = View.GONE
+        val binding = _binding ?: return
+        val trackDataJson = workout.trackData
+        if (trackDataJson.isNullOrBlank()) {
+            android.util.Log.w("WorkoutDetail", "No track data available for workout ${workout.id}")
+            Toast.makeText(context, getString(R.string.route_not_saved), Toast.LENGTH_SHORT).show()
+            return
+        }
 
-        workout.trackData?.let { trackDataJson ->
+        binding.progressBarMapLoading.visibility = View.VISIBLE
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val trackData = TrackDataJson.parse(trackDataJson) ?: return
-
-                if (trackData.points.isNotEmpty()) {
-                    android.util.Log.d("WorkoutDetail", "Original track data has ${trackData.points.size} points")
-
-                    val needsCleaning = WorkoutDataCleaner.needsCleaning(trackData)
-                    android.util.Log.d("WorkoutDetail", "Track data needs cleaning: $needsCleaning")
-
-                    val cleanedTrackData = if (needsCleaning) {
-                        android.util.Log.d("WorkoutDetail", "Cleaning track data...")
+                val cleanedTrackData = withContext(Dispatchers.Default) {
+                    val trackData = TrackDataJson.parse(trackDataJson) ?: return@withContext null
+                    if (trackData.points.isEmpty()) return@withContext trackData
+                    if (WorkoutDataCleaner.needsCleaning(trackData)) {
                         WorkoutDataCleaner.cleanTrackData(trackData)
                     } else {
                         trackData
                     }
-
-                    android.util.Log.d("WorkoutDetail", "Using ${cleanedTrackData.points.size} points for display")
-
-                    currentTrackData = cleanedTrackData
-                    mapManager?.displayTrack(cleanedTrackData)
-                    chartRenderer?.updateAllCharts(cleanedTrackData)
-
-                    android.util.Log.d("WorkoutDetail", "Successfully loaded track with ${cleanedTrackData.points.size} points")
-                } else {
-                    android.util.Log.w("WorkoutDetail", "Track data is empty")
-                    Toast.makeText(context, getString(R.string.route_empty), Toast.LENGTH_SHORT).show()
                 }
+
+                if (_binding == null || !isAdded || isDetached) return@launch
+                _binding?.progressBarMapLoading?.visibility = View.GONE
+
+                when {
+                    cleanedTrackData == null -> {
+                        Toast.makeText(context, getString(R.string.route_load_error), Toast.LENGTH_SHORT).show()
+                    }
+                    cleanedTrackData.points.isEmpty() -> {
+                        Toast.makeText(context, getString(R.string.route_empty), Toast.LENGTH_SHORT).show()
+                    }
+                    else -> {
+                        currentTrackData = cleanedTrackData
+                        mapManager?.displayTrack(cleanedTrackData)
+                        chartRenderer?.updateAllCharts(cleanedTrackData)
+                    }
+                }
+            } catch (e: OutOfMemoryError) {
+                android.util.Log.e("WorkoutDetail", "OOM loading track", e)
+                _binding?.progressBarMapLoading?.visibility = View.GONE
+                if (isAdded) {
+                    Toast.makeText(context, getString(R.string.route_load_error), Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutDetail", "Error parsing track data: ${e.message}", e)
-                Toast.makeText(context, getString(R.string.route_load_error), Toast.LENGTH_SHORT).show()
+                _binding?.progressBarMapLoading?.visibility = View.GONE
+                if (isAdded) {
+                    Toast.makeText(context, getString(R.string.route_load_error), Toast.LENGTH_SHORT).show()
+                }
             }
-        } ?: run {
-            android.util.Log.w("WorkoutDetail", "No track data available for workout ${workout.id}")
-            Toast.makeText(context, getString(R.string.route_not_saved), Toast.LENGTH_SHORT).show()
         }
     }
 

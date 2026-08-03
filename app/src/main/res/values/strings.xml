@@ -62,9 +62,7 @@
     <string name="voice_gps_lost">GPS signal lost</string>
     <string name="voice_gps_recovered">GPS signal recovered</string>
     <string name="kilometers_per_hour_float">%.1f km/h</string>
-    <string name="kilometers_per_hour_float_tts">%.1f kilometers per hour</string>
     <string name="miles_per_hour_float">%.1f mi/h</string>
-    <string name="miles_per_hour_float_tts">%.1f miles per hour</string>
     <string name="per_km">per kilometer</string>
     <string name="voice_notif_text_each_km">Distance: %1$s, time: %2$s, average pace: %3$s.</string>
 
@@ -537,6 +535,10 @@
     <string name="voice_interval_start_with_detail">Interval: %1$s. %2$s</string>
     <string name="voice_interval_upcoming">Next interval: %1$s</string>
     <string name="voice_interval_upcoming_with_detail">Next interval: %1$s. %2$s</string>
+    <string name="voice_interval_upcoming_in_30s">In 30 seconds: %1$s</string>
+    <string name="voice_interval_goal_duration">Duration %1$s</string>
+    <string name="voice_interval_goal_distance">Distance %1$s</string>
+    <string name="voice_interval_goal_pace">Pace %1$s</string>
     <string name="chart_interval_n">Int %1$d</string>
 
 </resources>

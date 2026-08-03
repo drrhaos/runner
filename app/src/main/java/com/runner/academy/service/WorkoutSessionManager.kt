@@ -120,7 +120,8 @@ class WorkoutSessionManager {
         trackPoints: List<org.osmdroid.util.GeoPoint>,
         trackDataPoints: List<com.runner.academy.data.TrackPoint>,
         rawTrackDataPoints: List<com.runner.academy.data.TrackPoint>,
-        userWeightKg: Float
+        userWeightKg: Float,
+        currentLocation: android.location.Location? = null
     ) {
         val newDistance = session.distance + segmentDistanceMeters / 1000f
         val currentTime = System.currentTimeMillis()
@@ -134,6 +135,7 @@ class WorkoutSessionManager {
         val calories = FormatUtils.calculateCalories(newDistance, userWeightKg)
 
         session = session.copy(
+            currentLocation = currentLocation ?: session.currentLocation,
             trackPoints = trackPoints,
             trackDataPoints = trackDataPoints,
             rawTrackDataPoints = rawTrackDataPoints,

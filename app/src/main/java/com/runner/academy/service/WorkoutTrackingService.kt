@@ -50,7 +50,7 @@ class WorkoutTrackingService : Service() {
         const val ACTION_STOP_WORKOUT = "STOP_WORKOUT"
         const val EXTRA_WORKOUT_TYPE = "WORKOUT_TYPE"
         const val NO_LOCATION_UPDATE_TIMEOUT_MS = 5000L
-        const val PERIODIC_LOCATION_REQUEST_INTERVAL_MS = 2000L
+        const val PERIODIC_LOCATION_REQUEST_INTERVAL_MS = 1000L
         const val WORKOUT_TIMER_INTERVAL_MS = 1000L
     }
 
@@ -175,7 +175,8 @@ class WorkoutTrackingService : Service() {
                         trackPoints = result.trackPoints,
                         trackDataPoints = result.trackDataPoints,
                         rawTrackDataPoints = result.rawTrackDataPoints,
-                        userWeightKg = userPreferences.userWeight
+                        userWeightKg = userPreferences.userWeight,
+                        currentLocation = result.filteredLocation
                     )
 
                     // Update adaptive GPS interval every 10 points
@@ -190,11 +191,18 @@ class WorkoutTrackingService : Service() {
                 is GpsLocationProcessor.ProcessResult.Rejected -> {
                     if (result.refreshGapClock) {
                         lastLocationTime = System.currentTimeMillis()
+                        // Near-duplicate fix: move map tip / icon without committing a track point
+                        sessionManager.updateLocationOnly(
+                            currentLocation = location,
+                            rawTrackDataPoints = result.rawTrackDataPoints
+                        )
+                    } else {
+                        // Outlier: keep tip on last accepted fix so the line does not jump
+                        sessionManager.updateLocationOnly(
+                            currentLocation = lastLocation ?: location,
+                            rawTrackDataPoints = result.rawTrackDataPoints
+                        )
                     }
-                    sessionManager.updateLocationOnly(
-                        currentLocation = location,
-                        rawTrackDataPoints = result.rawTrackDataPoints
-                    )
                 }
             }
         } else {
@@ -299,9 +307,10 @@ class WorkoutTrackingService : Service() {
         currentLocationRequest = locationRequest
 
         try {
+            val callback = locationCallback ?: return
             fusedLocationClient?.requestLocationUpdates(
                 locationRequest,
-                locationCallback!!,
+                callback,
                 mainLooper
             )
             lastAppliedAdaptiveIntervalMs = GpsConfig.HIGH_ACCURACY_INTERVAL
@@ -358,21 +367,21 @@ class WorkoutTrackingService : Service() {
     // Periodic location request (timeout guard)
     // ------------------------------------------------------------------
 
-    private fun startPeriodicLocationRequest() {
+    private fun startPeriodicLocationRequest(intervalMs: Long = PERIODIC_LOCATION_REQUEST_INTERVAL_MS) {
         periodicLocationJob?.cancel()
 
         periodicLocationJob = serviceScope.launch {
             while (isActive && isCurrentlyTracking && !sessionManager.getSession().isPaused) {
-                delay(PERIODIC_LOCATION_REQUEST_INTERVAL_MS)
+                delay(intervalMs)
                 if (!isActive) break
                 val currentTime = System.currentTimeMillis()
                 if (currentTime - lastLocationTime > NO_LOCATION_UPDATE_TIMEOUT_MS) {
+                    // Do NOT stamp lastLocationTime here — only Accepted / refreshGapClock
+                    // updates should. Stale lastKnown would mask GpsStatus.LOST.
                     requestLastKnownLocation { location ->
                         updateLocation(location)
-                        lastLocationTime = currentTime
                     }
                 }
-                // Periodically resolve GPS status during active workout
                 resolveGpsStatusDuringWorkout()
             }
         }
@@ -423,10 +432,12 @@ class WorkoutTrackingService : Service() {
                     sessionManager.updateGpsStatus(GpsStatus.LOST)
                 }
             }
-            currentStatus == GpsStatus.LOST -> {
-                // We have a recent location and were in LOST state - GPS recovered
-                android.util.Log.i("WorkoutTrackingService", "GPS signal recovered during workout")
-                sessionManager.updateGpsStatus(GpsStatus.FOUND)
+            currentStatus == GpsStatus.LOST || currentStatus == GpsStatus.SEARCHING -> {
+                // Recent accepted fix recovered the signal
+                if (elapsedSinceLastLocation <= NO_LOCATION_UPDATE_TIMEOUT_MS) {
+                    android.util.Log.i("WorkoutTrackingService", "GPS signal recovered during workout")
+                    sessionManager.updateGpsStatus(GpsStatus.FOUND)
+                }
             }
         }
     }
@@ -458,9 +469,10 @@ class WorkoutTrackingService : Service() {
             val newLocationRequest = GpsConfig.createAdaptiveLocationRequest(adaptiveInterval)
             currentLocationRequest = newLocationRequest
 
+            val callback = locationCallback ?: return
             fusedLocationClient?.requestLocationUpdates(
                 newLocationRequest,
-                locationCallback!!,
+                callback,
                 mainLooper
             )
 
@@ -472,31 +484,13 @@ class WorkoutTrackingService : Service() {
             android.util.Log.e("WorkoutTrackingService", "Error updating location request: ${e.message}", e)
         }
 
-        updatePeriodicTimerInterval(currentSpeed)
+        updatePeriodicTimerInterval()
     }
 
-    private fun updatePeriodicTimerInterval(currentSpeed: Float) {
-        val periodicInterval = if (currentSpeed < 1f) {
-            PERIODIC_LOCATION_REQUEST_INTERVAL_MS * 2
-        } else {
-            PERIODIC_LOCATION_REQUEST_INTERVAL_MS
-        }
-
-        if (periodicLocationJob != null && isCurrentlyTracking && !sessionManager.getSession().isPaused) {
-            stopPeriodicLocationRequest()
-            periodicLocationJob = serviceScope.launch {
-                while (isActive && isCurrentlyTracking && !sessionManager.getSession().isPaused) {
-                    delay(periodicInterval)
-                    if (!isActive) break
-                    val currentTime = System.currentTimeMillis()
-                    if (currentTime - lastLocationTime > NO_LOCATION_UPDATE_TIMEOUT_MS) {
-                        requestLastKnownLocation { location ->
-                            updateLocation(location)
-                            lastLocationTime = currentTime
-                        }
-                    }
-                }
-            }
+    private fun updatePeriodicTimerInterval() {
+        // Keep the watchdog on the same cadence as workout GPS — don't slow it when nearly stopped
+        if (isCurrentlyTracking && !sessionManager.getSession().isPaused) {
+            startPeriodicLocationRequest(PERIODIC_LOCATION_REQUEST_INTERVAL_MS)
         }
     }
 
@@ -526,7 +520,7 @@ class WorkoutTrackingService : Service() {
 
     private var sessionUpdateCallback: ((WorkoutSession) -> Unit)? = null
 
-    fun setSessionUpdateCallback(callback: (WorkoutSession) -> Unit) {
+    fun setSessionUpdateCallback(callback: ((WorkoutSession) -> Unit)?) {
         sessionUpdateCallback = callback
     }
 
