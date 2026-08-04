@@ -51,7 +51,7 @@ class MapManager(
         private val TRACK_STYLE = TrackPolylineFactory.Style.LIVE
         private const val DIRECTION_WINDOW_SIZE = 10
         private const val TIP_ANIM_MS = 280L
-        private const val TIP_FRAME_MS = 16L
+        private const val TIP_FRAME_MS = 33L
         /**
          * Anchor for [R.drawable.ic_location_no_arrow]: circle center in the 1024 viewport
          * (≈511.9, 574.4) — not the default osmdroid person feet hotspot.
