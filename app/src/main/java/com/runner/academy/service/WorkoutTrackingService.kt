@@ -15,15 +15,26 @@ import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.GpsConfig
 import com.runner.academy.util.GpsFilter
+import com.runner.academy.util.IntervalSegmentsJson
 import com.runner.academy.util.UserPreferences
+import com.runner.academy.ui.tracking.VoiceFeedbackManager
+import com.runner.academy.util.IntervalEngine
+import com.runner.academy.data.SegmentGoalType
+import com.runner.academy.data.WorkoutTemplateSegment
+import com.runner.academy.data.localizedTitle
+import com.runner.academy.util.FormatUtils
 import com.google.android.gms.location.*
+import android.os.Handler
+import android.os.Looper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Foreground service that coordinates workout tracking.
@@ -32,6 +43,7 @@ import kotlinx.coroutines.launch
  *  - [GpsLocationProcessor] for GPS filtering and point processing
  *  - [WorkoutNotificationManager] for foreground notification lifecycle
  *  - [WorkoutSessionManager] for session state, metrics, and timer
+ *  - [VoiceFeedbackManager] for distance / GPS / interval audio (works without UI)
  *
  * The service itself handles:
  *  - Android Service lifecycle (onCreate, onDestroy, onBind)
@@ -63,6 +75,9 @@ class WorkoutTrackingService : Service() {
     private lateinit var notificationManager: WorkoutNotificationManager
     private val sessionManager = WorkoutSessionManager()
     private lateinit var activeWorkoutStore: ActiveWorkoutStore
+    private var voiceFeedback: VoiceFeedbackManager? = null
+    private var lastAnnouncedGpsStatus: GpsStatus? = null
+    private var serviceIntervalEngine: IntervalEngine? = null
 
     // Location provider bindings
     private var fusedLocationClient: FusedLocationProviderClient? = null
@@ -78,14 +93,16 @@ class WorkoutTrackingService : Service() {
     private var intervalCursor: IntervalCursor? = null
     private var lastCheckpointSaveAt: Long = 0L
 
-    // Coroutine management
-    private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
+    // Coroutine management — Default for timers/IO; session mutations hop to Main
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(serviceJob + Dispatchers.Default)
+    private val mainHandler = Handler(Looper.getMainLooper())
     private var periodicLocationJob: Job? = null
     private var lastLocationTime: Long = 0
     private var lastAppliedAdaptiveIntervalMs: Long = -1L
     private var workoutTimerJob: Job? = null
 
-    // User preferences for calorie calculation
+    // User preferences for calorie calculation / voice
     private lateinit var userPreferences: UserPreferences
 
     inner class WorkoutTrackingBinder : Binder() {
@@ -109,6 +126,7 @@ class WorkoutTrackingService : Service() {
         sessionManager.onSessionChanged = { session ->
             sessionUpdateCallback?.invoke(session)
             maybeSaveCheckpoint(session, force = session.isPaused)
+            handleVoiceAndIntervals(session, announceIntervals = true)
         }
     }
 
@@ -154,11 +172,13 @@ class WorkoutTrackingService : Service() {
         if (session.isTracking || session.isPaused) {
             maybeSaveCheckpoint(session, force = true)
         }
+        releaseVoice()
+        serviceIntervalEngine = null
         super.onDestroy()
         stopWorkoutTimer()
         stopLocationUpdates()
         stopPeriodicLocationRequest()
-        serviceScope.cancel()
+        serviceJob.cancel()
     }
 
     // ------------------------------------------------------------------
@@ -176,9 +196,8 @@ class WorkoutTrackingService : Service() {
     }
 
     private fun updateLocation(location: Location) {
-        // Dispatch to main thread if called from background
-        if (Thread.currentThread().name != "main") {
-            serviceScope.launch { updateLocation(location) }
+        if (Looper.myLooper() != Looper.getMainLooper()) {
+            mainHandler.post { updateLocation(location) }
             return
         }
 
@@ -288,6 +307,8 @@ class WorkoutTrackingService : Service() {
         startWorkoutTimer()
         startForeground(NOTIFICATION_ID, notificationManager.buildNotification(sessionManager.getSession()))
         notificationManager.updateNotification(sessionManager.getSession(), force = true)
+        prepareVoiceForWorkout()
+        rebuildIntervalEngineFromMetadata()
     }
 
     fun pauseWorkout() {
@@ -319,6 +340,8 @@ class WorkoutTrackingService : Service() {
         modeSelectionKey = null
         intervalSegmentsJson = null
         intervalCursor = null
+        serviceIntervalEngine = null
+        releaseVoice()
         stopLocationUpdates()
         stopPeriodicLocationRequest()
         stopWorkoutTimer()
@@ -367,6 +390,8 @@ class WorkoutTrackingService : Service() {
             }
         }
         sessionManager.restoreSession(restoredSession, checkpoint.lastUpdateTime)
+        rebuildIntervalEngineFromMetadata()
+        prepareVoiceForWorkout()
         resumeTrackingAfterRestore(restoredSession)
         android.util.Log.i(
             "WorkoutTrackingService",
@@ -420,16 +445,112 @@ class WorkoutTrackingService : Service() {
         val now = System.currentTimeMillis()
         if (!force && now - lastCheckpointSaveAt < CHECKPOINT_SAVE_MIN_INTERVAL_MS) return
         lastCheckpointSaveAt = now
-        activeWorkoutStore.save(
-            ActiveWorkoutCheckpoint.fromSession(
-                session = session,
-                workoutType = selectedWorkoutType,
-                modeSelection = modeSelectionKey,
-                intervalSegmentsJson = intervalSegmentsJson,
-                intervalCursor = intervalCursor,
-                lastLocationTime = lastLocationTime,
-                lastUpdateTime = sessionManager.getLastUpdateTime()
+        val snapshot = ActiveWorkoutCheckpoint.fromSession(
+            session = session,
+            workoutType = selectedWorkoutType,
+            modeSelection = modeSelectionKey,
+            intervalSegmentsJson = intervalSegmentsJson,
+            intervalCursor = intervalCursor ?: serviceIntervalEngine?.snapshot(),
+            lastLocationTime = lastLocationTime,
+            lastUpdateTime = sessionManager.getLastUpdateTime()
+        )
+        serviceScope.launch(Dispatchers.IO) {
+            activeWorkoutStore.save(snapshot)
+        }
+    }
+
+    private fun prepareVoiceForWorkout() {
+        if (!userPreferences.voiceFeedback) {
+            releaseVoice()
+            return
+        }
+        if (voiceFeedback == null) {
+            voiceFeedback = VoiceFeedbackManager(applicationContext).also { it.initTTS() }
+        }
+        voiceFeedback?.resetMilestones()
+        lastAnnouncedGpsStatus = null
+    }
+
+    private fun releaseVoice() {
+        voiceFeedback?.destroy()
+        voiceFeedback = null
+        lastAnnouncedGpsStatus = null
+    }
+
+    private fun rebuildIntervalEngineFromMetadata() {
+        val json = intervalSegmentsJson
+        if (json.isNullOrBlank()) {
+            serviceIntervalEngine = null
+            return
+        }
+        val segments = IntervalSegmentsJson.parse(json)
+        if (segments.isEmpty()) {
+            serviceIntervalEngine = null
+            return
+        }
+        val engine = IntervalEngine(segments)
+        intervalCursor?.let { engine.restore(it) }
+        serviceIntervalEngine = engine
+    }
+
+    private fun handleVoiceAndIntervals(session: WorkoutSession, announceIntervals: Boolean) {
+        if (!(session.isTracking || session.isPaused)) return
+
+        if (userPreferences.voiceFeedback) {
+            if (voiceFeedback == null) prepareVoiceForWorkout()
+            if (session.isTracking && !session.isPaused) {
+                voiceFeedback?.notifyDistance(session)
+            }
+            voiceFeedback?.notifyGpsStatus(session.gpsStatus, lastAnnouncedGpsStatus)
+            lastAnnouncedGpsStatus = session.gpsStatus
+        }
+
+        val engine = serviceIntervalEngine ?: run {
+            rebuildIntervalEngineFromMetadata()
+            serviceIntervalEngine
+        } ?: return
+
+        val state = engine.update(session.currentTime, session.distance * 1000f)
+        intervalCursor = engine.snapshot()
+
+        if (!announceIntervals || !userPreferences.voiceFeedback || session.isPaused) return
+        val segment = state.segment
+        if (engine.consumeSegmentAnnouncement(state) && segment != null) {
+            voiceFeedback?.playIntervalBeep()
+        }
+        val remainingMs = engine.estimateRemainingMs(state, session.avgPace)
+        val next = engine.peekNextSegment()
+        if (next != null && engine.consumeUpcomingWarning(state, remainingMs)) {
+            voiceFeedback?.announceIntervalUpcoming(
+                title = next.localizedTitle(this),
+                goalPart = formatSegmentVoiceGoal(next),
+                pacePart = formatSegmentVoicePace(next)
             )
+        }
+    }
+
+    private fun formatSegmentVoiceGoal(segment: WorkoutTemplateSegment): String? {
+        return when (segment.goalType) {
+            SegmentGoalType.DURATION -> segment.durationMs?.takeIf { it > 0 }?.let { ms ->
+                getString(
+                    com.runner.academy.R.string.voice_interval_goal_duration,
+                    FormatUtils.formatTimeForTTS(ms, this)
+                )
+            }
+            SegmentGoalType.DISTANCE -> segment.distanceMeters?.takeIf { it > 0f }?.let { meters ->
+                getString(
+                    com.runner.academy.R.string.voice_interval_goal_distance,
+                    FormatUtils.formatDistanceMetersForTTS(meters, this)
+                )
+            }
+        }
+    }
+
+    private fun formatSegmentVoicePace(segment: WorkoutTemplateSegment): String? {
+        val pace = segment.targetPaceMinPerKm?.takeIf { it > 0f } ?: return null
+        return getString(
+            com.runner.academy.R.string.voice_interval_goal_pace,
+            FormatUtils.formatPaceForTTS(pace, this)
         )
     }
 
@@ -649,8 +770,10 @@ class WorkoutTrackingService : Service() {
         workoutTimerJob = serviceScope.launch {
             while (isActive && isCurrentlyTracking && !sessionManager.getSession().isPaused) {
                 delay(WORKOUT_TIMER_INTERVAL_MS)
-                sessionManager.tickElapsedTime()
-                notificationManager.updateNotification(sessionManager.getSession())
+                withContext(Dispatchers.Main) {
+                    sessionManager.tickElapsedTime()
+                    notificationManager.updateNotification(sessionManager.getSession())
+                }
             }
         }
     }
@@ -688,8 +811,16 @@ class WorkoutTrackingService : Service() {
         intervalCursor: IntervalCursor?
     ) {
         if (modeSelection != null) modeSelectionKey = modeSelection
+        val segmentsChanged = intervalSegmentsJson != null &&
+            intervalSegmentsJson != this.intervalSegmentsJson
         if (intervalSegmentsJson != null) this.intervalSegmentsJson = intervalSegmentsJson
-        if (intervalCursor != null) this.intervalCursor = intervalCursor
+        if (intervalCursor != null) {
+            this.intervalCursor = intervalCursor
+            serviceIntervalEngine?.restore(intervalCursor)
+        }
+        if (segmentsChanged) {
+            rebuildIntervalEngineFromMetadata()
+        }
         // Cursor-only updates ride the next periodic session checkpoint; metadata changes save now.
         if (modeSelection != null || intervalSegmentsJson != null) {
             val session = sessionManager.getSession()
