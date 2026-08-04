@@ -144,7 +144,6 @@ class WorkoutTrackingFragment : Fragment() {
 
     private fun onLocationPermissionReady() {
         mapManager?.initializeCenter()
-        viewModel.initializeLocationClient(requireContext())
         requestNotificationPermission()
     }
 
@@ -215,12 +214,9 @@ class WorkoutTrackingFragment : Fragment() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        when (val selection = viewModel.modeSelection.value ?: selectedMode.toSelectionKey()) {
-            TrackingModeSelection.EasyRun -> outState.putString(STATE_MODE_SELECTION, "easy")
-            TrackingModeSelection.PlanToday -> outState.putString(STATE_MODE_SELECTION, "plan")
-            is TrackingModeSelection.Template ->
-                outState.putString(STATE_MODE_SELECTION, "template:${selection.templateId}")
-        }
+        TrackingModeSelectionCodec.encode(
+            viewModel.modeSelection.value ?: selectedMode.toSelectionKey()
+        )?.let { outState.putString(STATE_MODE_SELECTION, it) }
         val intervalJson = (
             viewModel.activeIntervalSegments.value
                 ?: intervalEngine?.allSegments()
@@ -231,16 +227,8 @@ class WorkoutTrackingFragment : Fragment() {
     }
 
     private fun restoreModeSelectionFromBundle(state: Bundle) {
-        val raw = state.getString(STATE_MODE_SELECTION) ?: return
-        val selection = when {
-            raw == "easy" -> TrackingModeSelection.EasyRun
-            raw == "plan" -> TrackingModeSelection.PlanToday
-            raw.startsWith("template:") -> {
-                val id = raw.removePrefix("template:").toLongOrNull() ?: return
-                TrackingModeSelection.Template(id)
-            }
-            else -> return
-        }
+        val selection = TrackingModeSelectionCodec.decode(state.getString(STATE_MODE_SELECTION))
+            ?: return
         viewModel.setModeSelection(selection)
     }
 
@@ -518,7 +506,7 @@ class WorkoutTrackingFragment : Fragment() {
         if (!(session.isTracking || session.isPaused)) return
         if (intervalEngine != null) return
         val segments = resolveActiveIntervalSegments() ?: return
-        startIntervalEngine(segments)
+        startIntervalEngine(segments, restoreCursor = true)
         updateIntervals(session, announce = false)
     }
 
@@ -527,7 +515,10 @@ class WorkoutTrackingFragment : Fragment() {
         return selectedMode.segments().takeIf { selectedMode.hasIntervals() && it.isNotEmpty() }
     }
 
-    private fun startIntervalEngine(segments: List<WorkoutTemplateSegment>? = null) {
+    private fun startIntervalEngine(
+        segments: List<WorkoutTemplateSegment>? = null,
+        restoreCursor: Boolean = false
+    ) {
         val plan = segments?.takeIf { it.isNotEmpty() }
             ?: selectedMode.segments().takeIf { it.isNotEmpty() }
         if (plan.isNullOrEmpty()) {
@@ -537,7 +528,11 @@ class WorkoutTrackingFragment : Fragment() {
             return
         }
         viewModel.setActiveIntervalSegments(plan)
-        intervalEngine = IntervalEngine(plan)
+        val engine = IntervalEngine(plan)
+        if (restoreCursor) {
+            viewModel.getIntervalCursor()?.let { engine.restore(it) }
+        }
+        intervalEngine = engine
         activeScheduledId = selectedMode.scheduledIdOrNull()
         binding.layoutIntervalPanel.visibility = View.VISIBLE
         binding.progressIntervalSegments.setSegments(plan)
@@ -557,6 +552,7 @@ class WorkoutTrackingFragment : Fragment() {
         val engine = intervalEngine ?: return
         val distanceMeters = session.distance * 1000f
         val state = engine.update(session.currentTime, distanceMeters)
+        viewModel.updateIntervalCursor(engine.snapshot())
         val segment = state.segment
         binding.layoutIntervalPanel.visibility = View.VISIBLE
         binding.progressIntervalSegments.setProgress(state.segmentIndex, state.segmentProgress)
@@ -933,15 +929,20 @@ class WorkoutTrackingFragment : Fragment() {
         lastAnnouncedGpsStatus = null
         voiceFeedbackManager?.resetMilestones()
         if (selectedMode.hasIntervals()) {
-            startIntervalEngine()
+            startIntervalEngine(restoreCursor = false)
         } else {
             clearIntervalEngine()
         }
         requestBatteryOptimizationExemption()
-        viewModel.initializeService()
         viewLifecycleOwner.lifecycleScope.launch {
-            delay(500)
-            viewModel.startWorkoutWithRetry(selectedWorkoutType)
+            val started = viewModel.startWorkoutWhenReady(selectedWorkoutType)
+            if (!started && isAdded) {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.error_start_workout),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
         binding.textViewGpsAccuracy.visibility = View.GONE
     }

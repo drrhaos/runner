@@ -75,6 +75,7 @@ class WorkoutTrackingService : Service() {
     private var selectedWorkoutType: WorkoutType = WorkoutType.EASY_RUN
     private var modeSelectionKey: String? = null
     private var intervalSegmentsJson: String? = null
+    private var intervalCursor: IntervalCursor? = null
     private var lastCheckpointSaveAt: Long = 0L
 
     // Coroutine management
@@ -316,6 +317,7 @@ class WorkoutTrackingService : Service() {
         activeWorkoutStore.clear()
         modeSelectionKey = null
         intervalSegmentsJson = null
+        intervalCursor = null
         stopLocationUpdates()
         stopPeriodicLocationRequest()
         stopWorkoutTimer()
@@ -349,6 +351,7 @@ class WorkoutTrackingService : Service() {
         selectedWorkoutType = checkpoint.resolvedWorkoutType()
         modeSelectionKey = checkpoint.modeSelection
         intervalSegmentsJson = checkpoint.intervalSegmentsJson
+        intervalCursor = checkpoint.intervalCursor()
         lastLocationTime = checkpoint.lastLocationTime
         lastLocation = checkpoint.toSession().currentLocation
 
@@ -422,6 +425,7 @@ class WorkoutTrackingService : Service() {
                 workoutType = selectedWorkoutType,
                 modeSelection = modeSelectionKey,
                 intervalSegmentsJson = intervalSegmentsJson,
+                intervalCursor = intervalCursor,
                 lastLocationTime = lastLocationTime,
                 lastUpdateTime = sessionManager.getLastUpdateTime()
             )
@@ -675,12 +679,22 @@ class WorkoutTrackingService : Service() {
 
     fun getIntervalSegmentsJson(): String? = intervalSegmentsJson
 
-    fun updateUiMetadata(modeSelection: String?, intervalSegmentsJson: String?) {
+    fun getIntervalCursor(): IntervalCursor? = intervalCursor
+
+    fun updateUiMetadata(
+        modeSelection: String?,
+        intervalSegmentsJson: String?,
+        intervalCursor: IntervalCursor?
+    ) {
         if (modeSelection != null) modeSelectionKey = modeSelection
         if (intervalSegmentsJson != null) this.intervalSegmentsJson = intervalSegmentsJson
-        val session = sessionManager.getSession()
-        if (session.isTracking || session.isPaused) {
-            maybeSaveCheckpoint(session, force = true)
+        if (intervalCursor != null) this.intervalCursor = intervalCursor
+        // Cursor-only updates ride the next periodic session checkpoint; metadata changes save now.
+        if (modeSelection != null || intervalSegmentsJson != null) {
+            val session = sessionManager.getSession()
+            if (session.isTracking || session.isPaused) {
+                maybeSaveCheckpoint(session, force = true)
+            }
         }
     }
 }
