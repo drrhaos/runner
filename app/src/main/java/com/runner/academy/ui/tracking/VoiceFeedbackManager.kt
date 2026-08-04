@@ -10,13 +10,15 @@ import com.runner.academy.data.WorkoutSession
 import com.runner.academy.util.FormatUtils
 
 /**
- * Manages audio/voice feedback for the workout tracking screen.
+ * Manages audio/voice feedback for an active workout.
+ *
+ * Owned by [com.runner.academy.service.WorkoutTrackingService] so announcements
+ * continue when the tracking UI is not visible.
  *
  * Responsibilities:
  * - Text-to-speech initialization and lifecycle
  * - Distance milestone announcements
  * - Interval upcoming announcements and start beep
- * - Voice feedback configuration from UserPreferences
  */
 class VoiceFeedbackManager(
     private val context: Context

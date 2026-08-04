@@ -94,14 +94,6 @@ class WorkoutTrackingViewModel(
         _activeIntervalSegments.value = null
     }
 
-    fun updateIntervalCursor(cursor: IntervalCursor) {
-        trackingService?.updateUiMetadata(
-            modeSelection = null,
-            intervalSegmentsJson = null,
-            intervalCursor = cursor
-        )
-    }
-
     fun getIntervalCursor(): IntervalCursor? = trackingService?.getIntervalCursor()
 
     private var trackingService: WorkoutTrackingService? = null

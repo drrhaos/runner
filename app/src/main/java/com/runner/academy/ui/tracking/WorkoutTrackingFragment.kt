@@ -21,7 +21,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -33,8 +32,6 @@ import com.runner.academy.data.GpsStatus
 import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutState
 import com.runner.academy.data.WorkoutSession
-import com.runner.academy.ui.settings.SettingsViewModel
-import com.runner.academy.ui.settings.SettingsViewModelFactory
 import com.runner.academy.util.IntervalSegmentsJson
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
@@ -64,11 +61,6 @@ class WorkoutTrackingFragment : Fragment() {
         )
     }
 
-    private val settingsViewModel: SettingsViewModel by viewModels {
-        val app = requireContext().appContainer()
-        SettingsViewModelFactory(requireContext(), app.userPreferences)
-    }
-
     private val planRepository: TrainingPlanRepository by lazy {
         requireContext().appContainer().trainingPlanRepository
     }
@@ -76,21 +68,18 @@ class WorkoutTrackingFragment : Fragment() {
     // Managers / controllers
     private var mapManager: MapManager? = null
     private var gpsStatusUpdater: GpsStatusUiUpdater? = null
-    private var voiceFeedbackManager: VoiceFeedbackManager? = null
     private var panelStateManager: PanelStateManager? = null
     private var metricsDisplayManager: MetricsDisplayManager? = null
     private var modeController: TrackingModeController? = null
     private var intervalController: IntervalTrackingController? = null
 
     // State
-    private var isVoiceEnabled = false
     private var lastUIUpdateTime = 0L
     private var lastGpsStatusUpdate = 0L
     private var isStoppingWorkout = false
     private var stopHoldJob: Job? = null
     private var stopHoldStartTime = 0L
     private var countdownJob: Job? = null
-    private var lastAnnouncedGpsStatus: GpsStatus? = null
 
     // Periodic GPS status icon refresh (accuracy comes from session location)
     private val gpsStatusHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -138,8 +127,6 @@ class WorkoutTrackingFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        voiceFeedbackManager = VoiceFeedbackManager(requireContext())
-        voiceFeedbackManager?.initTTS()
         _binding = FragmentWorkoutTrackingBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -216,9 +203,7 @@ class WorkoutTrackingFragment : Fragment() {
             context = requireContext(),
             binding = binding,
             viewModel = viewModel,
-            selectedMode = { modeController?.selectedMode ?: TrackingWorkoutMode.EasyRun },
-            voiceFeedback = { voiceFeedbackManager },
-            isVoiceEnabled = { isVoiceEnabled }
+            selectedMode = { modeController?.selectedMode ?: TrackingWorkoutMode.EasyRun }
         )
 
         mapManager = MapManager(requireContext(), binding.mapView, object : MapManager.Callbacks {
@@ -495,21 +480,6 @@ class WorkoutTrackingFragment : Fragment() {
                 }
             }
         }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                try {
-                    settingsViewModel.settingsState.collect { state ->
-                        if (isAdded && !isDetached) {
-                            isVoiceEnabled = state.voiceFeedback
-                        }
-                    }
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    android.util.Log.d(TAG, "Settings loading cancelled")
-                    throw e
-                }
-            }
-        }
     }
 
     // -- UI updates --
@@ -529,9 +499,6 @@ class WorkoutTrackingFragment : Fragment() {
             || session.gpsStatus == GpsStatus.SEARCHING
 
         if (!forceNumericRefresh && now - lastUIUpdateTime < UI_UPDATE_THROTTLE) {
-            if (isVoiceEnabled) {
-                voiceFeedbackManager?.notifyDistance(session)
-            }
             return
         }
         lastUIUpdateTime = now
@@ -553,12 +520,6 @@ class WorkoutTrackingFragment : Fragment() {
         }
 
         mapManager?.autoCenterIfNeeded(session)
-
-        if (isVoiceEnabled) {
-            voiceFeedbackManager?.notifyDistance(session)
-            voiceFeedbackManager?.notifyGpsStatus(session.gpsStatus, lastAnnouncedGpsStatus)
-            lastAnnouncedGpsStatus = session.gpsStatus
-        }
     }
 
     private fun updateGpsBanner(session: WorkoutSession) {
@@ -598,8 +559,6 @@ class WorkoutTrackingFragment : Fragment() {
 
     private fun beginWorkout() {
         isStoppingWorkout = false
-        lastAnnouncedGpsStatus = null
-        voiceFeedbackManager?.resetMilestones()
         intervalController?.prepareForNewWorkout()
         requestBatteryOptimizationExemption()
         viewLifecycleOwner.lifecycleScope.launch {
@@ -731,7 +690,6 @@ class WorkoutTrackingFragment : Fragment() {
                     _binding?.buttonStop?.isEnabled = true
                     viewModel.resetWorkout()
                     isStoppingWorkout = false
-                    lastAnnouncedGpsStatus = null
                     if (_binding != null && isAdded) {
                         modeController?.loadModes()
                     }
@@ -832,8 +790,6 @@ class WorkoutTrackingFragment : Fragment() {
         // Do NOT call viewModel.cleanup() here — activity-scoped ViewModel must stay
         // bound to WorkoutTrackingService across Fragment view recreation / navigation.
 
-        voiceFeedbackManager?.destroy()
-        voiceFeedbackManager = null
         mapManager?.onDetach()
         mapManager = null
         gpsStatusUpdater = null
