@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.runner.academy.R
+import com.runner.academy.appContainer
 import com.runner.academy.databinding.FragmentSettingsBinding
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.Calendar
@@ -21,7 +22,8 @@ class SettingsFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: SettingsViewModel by viewModels {
-        SettingsViewModelFactory(requireContext())
+        val app = requireContext().appContainer()
+        SettingsViewModelFactory(requireContext(), app.userPreferences)
     }
 
     override fun onCreateView(

@@ -63,6 +63,18 @@ class WorkoutSessionManager {
         notifyChanged()
     }
 
+    /**
+     * Restore an in-progress session after process death / sticky restart.
+     * Does not zero metrics — unlike [startNewSession].
+     */
+    fun restoreSession(restored: WorkoutSession, metricsLastUpdateTime: Long = 0L) {
+        lastUpdateTime = metricsLastUpdateTime
+        session = restored
+        notifyChanged()
+    }
+
+    fun getLastUpdateTime(): Long = lastUpdateTime
+
     fun pause() {
         val currentTime = System.currentTimeMillis()
         session = session.copy(

@@ -1,8 +1,6 @@
 package com.runner.academy.ui.tracking
 
 import android.content.Context
-import android.graphics.Color
-import android.graphics.DashPathEffect
 import android.graphics.Point
 import android.graphics.drawable.Drawable
 import android.location.Location
@@ -24,6 +22,7 @@ import com.runner.academy.data.WorkoutSession
 import com.runner.academy.util.GpsFilter
 import com.runner.academy.util.OsmMapConfig
 import com.runner.academy.util.OsmMapTiles
+import com.runner.academy.util.TrackPolylineFactory
 import org.osmdroid.views.overlay.CopyrightOverlay
 import kotlin.math.hypot
 
@@ -49,11 +48,7 @@ class MapManager(
         private const val TAG = "MapManager"
         private const val AUTO_CENTER_DELAY = 5000L
         private const val DEFAULT_ZOOM_LEVEL = 16.0
-        private const val TRACK_LINE_WIDTH = 8f
-        private const val TRACK_LINE_COLOR = Color.RED
-        private const val GAP_DASH_ON = 24f
-        private const val GAP_DASH_OFF = 16f
-        private const val GAP_LINE_ALPHA = 160
+        private val TRACK_STYLE = TrackPolylineFactory.Style.LIVE
         private const val DIRECTION_WINDOW_SIZE = 10
         private const val TIP_ANIM_MS = 280L
         private const val TIP_FRAME_MS = 16L
@@ -72,6 +67,8 @@ class MapManager(
     interface Callbacks {
         fun onMapCenteredStateChanged(centered: Boolean)
         fun getCurrentWorkoutSession(): WorkoutSession?
+        /** Pre-workout (and any) fix from the location provider — for GPS status UI. */
+        fun onLocationFix(location: Location) {}
     }
 
     private var locationOverlay: MyLocationNewOverlay? = null
@@ -106,8 +103,16 @@ class MapManager(
         autoCenterOnLocation()
     }
 
+    /**
+     * Tip frames only run while the map is resumed. Pausing/detaching cancels the
+     * runnable; osmdroid nulls [Polyline] outline in [MapView.onDetach], so we must
+     * never call [Polyline.setPoints] after that.
+     */
+    private var tipFramesEnabled = false
+
     private val tipAnimRunnable = object : Runnable {
         override fun run() {
+            if (!tipFramesEnabled) return
             val start = tipAnimStart
             val target = tipAnimTarget
             if (start == null || target == null) return
@@ -118,7 +123,7 @@ class MapManager(
             val lon = start.longitude + (target.longitude - start.longitude) * eased
             displayedTip = GeoPoint(lat, lon)
             applyLiveTip(displayedTip!!)
-            if (t < 1f) {
+            if (t < 1f && tipFramesEnabled) {
                 mapView.handler?.postDelayed(this, TIP_FRAME_MS)
             } else {
                 displayedTip = target
@@ -133,6 +138,9 @@ class MapManager(
     fun initialize() {
         OsmMapConfig.apply(context)
         OsmMapTiles.applyForTheme(context, mapView)
+        // Own detach via [onDetach]; default true destroys polylines when the view
+        // leaves the window and races with tip animation / session updates.
+        mapView.setDestroyMode(false)
         mapView.setMultiTouchControls(true)
         mapView.setClickable(true)
         mapView.isHorizontalMapRepetitionEnabled = false
@@ -159,17 +167,23 @@ class MapManager(
 
     fun onResume() {
         OsmMapTiles.applyForTheme(context, mapView)
+        tipFramesEnabled = true
         mapView.onResume()
     }
 
     fun onPause() {
+        tipFramesEnabled = false
+        cancelTipAnimation()
+        cancelAutoCenter()
         mapView.onPause()
     }
 
     fun onDetach() {
+        tipFramesEnabled = false
         cancelAutoCenter()
         cancelTipAnimation()
         clearGapPolylines()
+        tipHostPolyline = null
         sessionLocationProvider.destroy()
         mapView.onDetach()
         locationOverlay = null
@@ -182,6 +196,7 @@ class MapManager(
 
     private fun setupLocationOverlay() {
         sessionLocationProvider.onLocationUpdated = { location ->
+            callbacks.onLocationFix(location)
             // Center as soon as the first real fix arrives (before or during workout)
             if (!hasCenteredOnCurrentFix) {
                 hasCenteredOnCurrentFix = true
@@ -235,10 +250,7 @@ class MapManager(
     }
 
     private fun setupTrackPolyline() {
-        val poly = Polyline().apply {
-            outlinePaint.color = TRACK_LINE_COLOR
-            outlinePaint.strokeWidth = TRACK_LINE_WIDTH
-        }
+        val poly = TrackPolylineFactory.createSolid(style = TRACK_STYLE)
         trackPolyline = poly
         mapView.overlays.add(poly)
     }
@@ -305,10 +317,12 @@ class MapManager(
     }
 
     private fun autoCenterOnLocation() {
-        val session = callbacks.getCurrentWorkoutSession() ?: return
-        session.currentLocation?.let { location ->
-            centerOnLocation(location, session.trackPoints)
-        }
+        val session = callbacks.getCurrentWorkoutSession()
+        val location = session?.currentLocation
+            ?: locationOverlay?.lastFix
+            ?: sessionLocationProvider.getLastKnownLocation()
+            ?: return
+        centerOnLocation(location, session?.trackPoints.orEmpty())
     }
 
     fun centerOnCurrentLocation() {
@@ -317,17 +331,20 @@ class MapManager(
         lastMapUpdateTime = System.currentTimeMillis()
         hasCenteredOnCurrentFix = true
 
-        val session = callbacks.getCurrentWorkoutSession() ?: return
-        session.currentLocation?.let { location ->
-            centerOnLocation(location, session.trackPoints)
-        } ?: run {
-            locationOverlay?.lastFix?.let { location ->
-                centerOnLocation(location, emptyList())
-            }
-        }
+        val session = callbacks.getCurrentWorkoutSession()
+        val location = session?.currentLocation
+            ?: locationOverlay?.lastFix
+            ?: sessionLocationProvider.getLastKnownLocation()
+            ?: return
+        centerOnLocation(location, session?.trackPoints.orEmpty())
     }
 
     private fun centerOnLocation(location: Location, trackPoints: List<GeoPoint>) {
+        if (mapView.width <= 0 || mapView.height <= 0) {
+            mapView.post { centerOnLocation(location, trackPoints) }
+            return
+        }
+
         val geoPoint = GpsFilter.createValidGeoPoint(location)
         if (geoPoint == null) {
             Log.w(TAG, "Invalid GPS coordinates for map center")
@@ -393,6 +410,9 @@ class MapManager(
             rebuildCommittedPolylines()
         }
 
+        // Tip animation only while map is resumed (avoids setPoints after osmdroid detach).
+        if (!tipFramesEnabled) return
+
         if (currentLocation == null) {
             cancelTipAnimation()
             displayedTip = null
@@ -418,11 +438,13 @@ class MapManager(
     }
 
     private fun rebuildCommittedPolylines() {
+        cancelTipAnimation()
         clearGapPolylines()
         tipHostPolyline = trackPolyline
 
         if (committedSegments.isEmpty()) {
             trackPolyline?.setPoints(mutableListOf())
+            tipHostPolyline = trackPolyline
             mapView.invalidate()
             return
         }
@@ -431,11 +453,10 @@ class MapManager(
         tipHostPolyline = trackPolyline
 
         for (i in 1 until committedSegments.size) {
-            val poly = Polyline().apply {
-                outlinePaint.color = TRACK_LINE_COLOR
-                outlinePaint.strokeWidth = TRACK_LINE_WIDTH
-                setPoints(committedSegments[i].toMutableList())
-            }
+            val poly = TrackPolylineFactory.createSolid(
+                points = committedSegments[i],
+                style = TRACK_STYLE
+            )
             tipHostPolyline = poly
             gapTrackPolylines.add(poly)
             mapView.overlays.add(poly)
@@ -444,7 +465,7 @@ class MapManager(
         for (i in 0 until committedSegments.lastIndex) {
             val from = committedSegments[i].lastOrNull() ?: continue
             val to = committedSegments[i + 1].firstOrNull() ?: continue
-            val dashed = createDashedGapPolyline(from, to)
+            val dashed = TrackPolylineFactory.createDashedGap(from, to, TRACK_STYLE)
             gapTrackPolylines.add(dashed)
             mapView.overlays.add(dashed)
         }
@@ -460,6 +481,7 @@ class MapManager(
     }
 
     private fun animateTipToward(target: GeoPoint) {
+        if (!tipFramesEnabled) return
         val current = displayedTip
         if (current == null) {
             displayedTip = target
@@ -489,6 +511,11 @@ class MapManager(
      * follows the runner without rebuilding the whole overlay stack.
      */
     private fun applyLiveTip(tip: GeoPoint?) {
+        if (!tipFramesEnabled) return
+        val host = tipHostPolyline ?: trackPolyline ?: return
+        // After MapView.onDetach, osmdroid nulls LinearRing and clears overlays.
+        if (!mapView.overlays.contains(host)) return
+
         val base = committedSegments.lastOrNull()?.toMutableList()
             ?: mutableListOf()
         if (tip != null) {
@@ -500,7 +527,7 @@ class MapManager(
                 base.add(tip)
             }
         }
-        (tipHostPolyline ?: trackPolyline)?.setPoints(base)
+        host.setPoints(base)
         mapView.invalidate()
     }
 
@@ -527,31 +554,8 @@ class MapManager(
         return projection.fromPixels(edgeX.toInt(), edgeY.toInt()) as GeoPoint
     }
 
-    private fun createDashedGapPolyline(from: GeoPoint, to: GeoPoint): Polyline {
-        return Polyline().apply {
-            outlinePaint.color = TRACK_LINE_COLOR
-            outlinePaint.strokeWidth = TRACK_LINE_WIDTH
-            outlinePaint.alpha = GAP_LINE_ALPHA
-            outlinePaint.pathEffect = DashPathEffect(floatArrayOf(GAP_DASH_ON, GAP_DASH_OFF), 0f)
-            setPoints(mutableListOf(from, to))
-        }
-    }
-
     private fun splitTrackIntoSegments(points: List<TrackPoint>): List<List<GeoPoint>> {
-        if (points.isEmpty()) return emptyList()
-        val segments = mutableListOf<MutableList<GeoPoint>>()
-        var current = mutableListOf<GeoPoint>()
-        for (point in points) {
-            if (point.afterGap && current.isNotEmpty()) {
-                segments.add(current)
-                current = mutableListOf()
-            }
-            current.add(GeoPoint(point.latitude, point.longitude))
-        }
-        if (current.isNotEmpty()) {
-            segments.add(current)
-        }
-        return segments
+        return TrackPolylineFactory.splitIntoSegments(points)
     }
 
     private fun clearGapPolylines() {
@@ -573,6 +577,22 @@ class MapManager(
     }
 
     fun autoCenterIfNeeded(session: WorkoutSession) {
+        val tracking = session.isTracking || session.isPaused
+
+        // Idle screen: session GPS is still the default SEARCHING and has no location.
+        // Use the overlay/fallback fix and never clear the first-center flag.
+        if (!tracking) {
+            val location = session.currentLocation
+                ?: locationOverlay?.lastFix
+                ?: sessionLocationProvider.getLastKnownLocation()
+                ?: return
+            if (!hasCenteredOnCurrentFix) {
+                hasCenteredOnCurrentFix = true
+                centerOnLocation(location, emptyList())
+            }
+            return
+        }
+
         val location = session.currentLocation ?: return
         if (!isGpsUsableForCenter(session.gpsStatus)) {
             // Searching / lost again — allow a fresh snap when signal returns

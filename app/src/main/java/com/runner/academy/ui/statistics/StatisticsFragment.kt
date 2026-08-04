@@ -12,13 +12,16 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.runner.academy.R
-import com.runner.academy.data.WorkoutDatabase
+import com.runner.academy.appContainer
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.FragmentStatisticsBinding
 import com.runner.academy.util.FormatUtils
+import com.runner.academy.util.ShareExports
 import com.google.android.material.color.MaterialColors
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class StatisticsFragment : Fragment() {
 
@@ -26,9 +29,7 @@ class StatisticsFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: StatisticsViewModel by viewModels {
-        val database = WorkoutDatabase.getDatabase(requireContext())
-        val repository = com.runner.academy.data.WorkoutRepository(database.workoutDao())
-        StatisticsViewModelFactory(repository)
+        StatisticsViewModelFactory(requireContext().appContainer().workoutRepository)
     }
 
     override fun onCreateView(
@@ -80,54 +81,27 @@ class StatisticsFragment : Fragment() {
                     context = requireContext()
                 )
                 
-                // Сохраняем и делимся файлом
-                saveAndShareCsvFile(csvContent, com.runner.academy.util.CsvExporter.getStatisticsCsvFileName())
+                val fileName = com.runner.academy.util.CsvExporter.getStatisticsCsvFileName()
+                val file = withContext(Dispatchers.IO) {
+                    ShareExports.writeCacheTemp(
+                        requireContext(),
+                        fileName.replace(".csv", ""),
+                        ".csv",
+                        csvContent
+                    )
+                }
+                ShareExports.shareFile(
+                    context = requireContext(),
+                    file = file,
+                    mimeType = "text/csv",
+                    chooserTitle = getString(R.string.export_csv_title),
+                    readyMessage = getString(R.string.csv_file_ready)
+                )
                 
             } catch (e: Exception) {
                 android.util.Log.e("Statistics", "Error exporting CSV: ${e.message}", e)
                 Toast.makeText(requireContext(), getString(R.string.export_error, e.message), Toast.LENGTH_LONG).show()
             }
-        }
-    }
-    
-    private fun saveAndShareCsvFile(csvContent: String, fileName: String) {
-        try {
-            // Создаем временный файл
-            val file = java.io.File.createTempFile(
-                fileName.replace(".csv", ""),
-                ".csv",
-                requireContext().cacheDir
-            )
-            
-            file.writeText(csvContent, Charsets.UTF_8)
-            
-            // Создаем URI для файла
-            val fileUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                androidx.core.content.FileProvider.getUriForFile(
-                    requireContext(),
-                    "${requireContext().packageName}.fileprovider",
-                    file
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                android.net.Uri.fromFile(file)
-            }
-            
-            // Интент для отправки файла
-            val shareIntent = android.content.Intent().apply {
-                action = android.content.Intent.ACTION_SEND
-                type = "text/csv"
-                putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
-                putExtra(android.content.Intent.EXTRA_SUBJECT, fileName)
-                addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            
-            startActivity(android.content.Intent.createChooser(shareIntent, getString(R.string.export_csv_title)))
-            Toast.makeText(requireContext(), getString(R.string.csv_file_ready), Toast.LENGTH_SHORT).show()
-            
-        } catch (e: Exception) {
-            android.util.Log.e("Statistics", "Error saving CSV file: ${e.message}", e)
-            Toast.makeText(requireContext(), getString(R.string.file_save_error, e.message), Toast.LENGTH_LONG).show()
         }
     }
 

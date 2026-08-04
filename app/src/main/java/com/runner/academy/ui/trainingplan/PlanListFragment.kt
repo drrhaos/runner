@@ -1,6 +1,5 @@
 package com.runner.academy.ui.trainingplan
 
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -8,8 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.FileProvider
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -17,9 +14,9 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
-import com.runner.academy.data.TrainingPlanRepository
-import com.runner.academy.data.WorkoutDatabase
+import com.runner.academy.appContainer
 import com.runner.academy.databinding.FragmentPlanListBinding
+import com.runner.academy.util.ShareExports
 import com.runner.academy.util.TrainingPlanBackupFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,14 +30,7 @@ class PlanListFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: TrainingPlanViewModel by viewModels {
-        val db = WorkoutDatabase.getDatabase(requireContext())
-        TrainingPlanViewModelFactory(
-            TrainingPlanRepository(
-                db.workoutTemplateDao(),
-                db.trainingPlanDao(),
-                db.planScheduleDao()
-            )
-        )
+        TrainingPlanViewModelFactory(requireContext().appContainer().trainingPlanRepository)
     }
 
     private var isSpeedDialOpen = false
@@ -62,7 +52,10 @@ class PlanListFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val adapter = PlanListAdapter { plan ->
-            findNavController().navigate(R.id.nav_plan_edit, bundleOf("planId" to plan.id))
+            findNavController().navigate(
+                R.id.nav_plan_edit,
+                PlanEditFragmentArgs(planId = plan.id).toBundle()
+            )
         }
         binding.recyclerViewPlans.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerViewPlans.adapter = adapter
@@ -78,7 +71,10 @@ class PlanListFragment : Fragment() {
         }
         binding.fabAddPlan.setOnClickListener {
             setSpeedDialExpanded(false)
-            findNavController().navigate(R.id.nav_plan_edit, bundleOf("planId" to -1L))
+            findNavController().navigate(
+                R.id.nav_plan_edit,
+                PlanEditFragmentArgs(planId = -1L).toBundle()
+            )
         }
         binding.fabImportPlans.setOnClickListener {
             setSpeedDialExpanded(false)
@@ -192,19 +188,13 @@ class PlanListFragment : Fragment() {
     }
 
     private fun shareFile(file: File) {
-        val uri = FileProvider.getUriForFile(
-            requireContext(),
-            "${requireContext().packageName}.fileprovider",
-            file
+        ShareExports.shareFile(
+            context = requireContext(),
+            file = file,
+            mimeType = "application/json",
+            chooserTitle = getString(R.string.plans_export_title),
+            readyMessage = getString(R.string.plans_export_ready)
         )
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/json"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, file.name)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        startActivity(Intent.createChooser(shareIntent, getString(R.string.plans_export_title)))
-        Toast.makeText(requireContext(), R.string.plans_export_ready, Toast.LENGTH_SHORT).show()
     }
 
     private fun showProgressDialog(messageRes: Int) =

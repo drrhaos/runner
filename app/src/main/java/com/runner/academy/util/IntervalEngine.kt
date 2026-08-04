@@ -2,6 +2,7 @@ package com.runner.academy.util
 
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.WorkoutTemplateSegment
+import com.runner.academy.service.IntervalCursor
 
 /**
  * Advances through template segments using elapsed workout time (excluding pause)
@@ -32,6 +33,26 @@ class IntervalEngine(
         lastAnnouncedIndex = -1
         lastUpcomingWarnedIndex = -1
     }
+
+    fun restore(cursor: IntervalCursor) {
+        if (segments.isEmpty()) {
+            reset()
+            return
+        }
+        index = cursor.segmentIndex.coerceIn(0, segments.lastIndex)
+        segmentStartElapsedMs = cursor.segmentStartElapsedMs.coerceAtLeast(0L)
+        segmentStartDistanceM = cursor.segmentStartDistanceM.coerceAtLeast(0f)
+        lastAnnouncedIndex = cursor.lastAnnouncedIndex
+        lastUpcomingWarnedIndex = cursor.lastUpcomingWarnedIndex
+    }
+
+    fun snapshot(): IntervalCursor = IntervalCursor(
+        segmentIndex = index,
+        segmentStartElapsedMs = segmentStartElapsedMs,
+        segmentStartDistanceM = segmentStartDistanceM,
+        lastAnnouncedIndex = lastAnnouncedIndex,
+        lastUpcomingWarnedIndex = lastUpcomingWarnedIndex
+    )
 
     fun currentSegment(): WorkoutTemplateSegment? = segments.getOrNull(index)
 
@@ -75,10 +96,22 @@ class IntervalEngine(
                     completed = false
                 )
             }
-            // advance
+            // Advance by goal target so catch-up after restore keeps correct segment clocks
+            when (segment.goalType) {
+                SegmentGoalType.DURATION -> {
+                    val target = segment.durationMs?.takeIf { it > 0 } ?: 0L
+                    segmentStartElapsedMs += target
+                    segmentStartDistanceM =
+                        workoutDistanceMeters.coerceAtLeast(segmentStartDistanceM)
+                }
+                SegmentGoalType.DISTANCE -> {
+                    val target = segment.distanceMeters?.takeIf { it > 0f } ?: 0f
+                    segmentStartDistanceM += target
+                    segmentStartElapsedMs =
+                        workoutElapsedMs.coerceAtLeast(segmentStartElapsedMs)
+                }
+            }
             index++
-            segmentStartElapsedMs = workoutElapsedMs
-            segmentStartDistanceM = workoutDistanceMeters
         }
 
         val last = segments.last()
@@ -86,7 +119,8 @@ class IntervalEngine(
             segmentIndex = segments.lastIndex,
             segment = last,
             segmentElapsedMs = (workoutElapsedMs - segmentStartElapsedMs).coerceAtLeast(0L),
-            segmentDistanceMeters = (workoutDistanceMeters - segmentStartDistanceM).coerceAtLeast(0f),
+            segmentDistanceMeters =
+                (workoutDistanceMeters - segmentStartDistanceM).coerceAtLeast(0f),
             segmentProgress = 1f,
             completed = true
         )

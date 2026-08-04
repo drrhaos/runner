@@ -85,7 +85,12 @@ class StatisticsViewModel(private val repository: WorkoutRepository) : ViewModel
                 )
 
                 // Находим лучшие результаты
-                val bestPace = allWorkouts.minOfOrNull { it.avgPace } ?: 0f
+                val bestPace = allWorkouts
+                    .asSequence()
+                    .map { it.avgPace }
+                    .filter { it > 0f }
+                    .minOrNull()
+                    ?: 0f
                 val longestDistance = allWorkouts.maxOfOrNull { it.distance } ?: 0f
                 val longestDuration = allWorkouts.maxOfOrNull { it.duration } ?: 0L
 

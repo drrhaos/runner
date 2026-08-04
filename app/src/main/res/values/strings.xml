@@ -31,6 +31,7 @@
     <string name="confirm_delete">Are you sure you want to delete this workout?</string>
     <string name="error_save_workout">Error saving workout</string>
     <string name="error_delete_workout">Error deleting workout</string>
+    <string name="error_start_workout">Could not start workout. Please try again.</string>
     <string name="fill_required_fields">Fill required fields</string>
     <string name="save">Save</string>
     <string name="cancel">Cancel</string>

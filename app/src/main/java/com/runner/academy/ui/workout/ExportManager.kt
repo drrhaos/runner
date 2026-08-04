@@ -1,157 +1,106 @@
 package com.runner.academy.ui.workout
 
-import android.content.Intent
-import androidx.core.content.FileProvider
-import androidx.fragment.app.FragmentActivity
+import android.content.Context
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.runner.academy.R
-import com.runner.academy.data.TrackData
 import com.runner.academy.data.Workout
+import com.runner.academy.util.FormatUtils
+import com.runner.academy.util.GpxExporter
+import com.runner.academy.util.ShareExports
+import com.runner.academy.util.TrackDataJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 /**
- * Handles data export operations for workout detail screen.
- * Manages GPX export, CSV export coordination, share intent creation,
- * and file provider URI handling.
+ * Workout detail export / share. File I/O lives in [ShareExports]; this class
+ * only orchestrates GPX generation and UI feedback on a [LifecycleOwner] scope.
  */
 class ExportManager(
-    private val activity: FragmentActivity
+    private val context: Context,
+    private val lifecycleOwner: LifecycleOwner
 ) {
 
     fun exportWorkoutToGpx(workout: Workout) {
-        activity.lifecycleScope.launch {
+        lifecycleOwner.lifecycleScope.launch {
             try {
                 val result = withContext(Dispatchers.Default) {
-                    val trackData = parseTrackData(workout.trackData)
+                    val trackData = TrackDataJson.parse(workout.trackData)
                     if (trackData == null || trackData.points.isEmpty()) {
                         null to true
                     } else {
-                        val gpxContent = com.runner.academy.util.GpxExporter.exportWorkoutToGpx(
-                            workout,
-                            trackData,
-                            activity
-                        )
-                        gpxContent to false
+                        GpxExporter.exportWorkoutToGpx(workout, trackData, context) to false
                     }
                 }
                 val (gpxContent, empty) = result
                 if (empty || gpxContent == null) {
                     android.widget.Toast.makeText(
-                        activity,
-                        activity.getString(R.string.track_no_data_export),
+                        context,
+                        context.getString(R.string.track_no_data_export),
                         android.widget.Toast.LENGTH_SHORT
                     ).show()
                     return@launch
                 }
-                withContext(Dispatchers.IO) {
-                    saveGpxFile(gpxContent, workout)
-                }?.let { (file, fileName) ->
-                    shareGpxFile(file, fileName)
+                val fileName = GpxExporter.getGpxFileName(workout, context)
+                val file = withContext(Dispatchers.IO) {
+                    ShareExports.writeCacheTemp(
+                        context,
+                        fileName.replace(".gpx", ""),
+                        ".gpx",
+                        gpxContent
+                    )
                 }
+                ShareExports.shareFile(
+                    context = context,
+                    file = file,
+                    mimeType = "application/gpx+xml",
+                    chooserTitle = context.getString(R.string.export_gpx_title),
+                    readyMessage = context.getString(R.string.gpx_file_ready)
+                )
             } catch (e: OutOfMemoryError) {
-                android.util.Log.e("ExportManager", "OOM exporting GPX", e)
+                android.util.Log.e(TAG, "OOM exporting GPX", e)
                 android.widget.Toast.makeText(
-                    activity,
-                    activity.getString(R.string.export_error, e.message),
+                    context,
+                    context.getString(R.string.export_error, e.message),
                     android.widget.Toast.LENGTH_LONG
                 ).show()
             } catch (e: Exception) {
-                android.util.Log.e("ExportManager", "Error exporting GPX: ${e.message}", e)
+                android.util.Log.e(TAG, "Error exporting GPX: ${e.message}", e)
                 android.widget.Toast.makeText(
-                    activity,
-                    activity.getString(R.string.export_error, e.message),
+                    context,
+                    context.getString(R.string.export_error, e.message),
                     android.widget.Toast.LENGTH_LONG
                 ).show()
             }
         }
     }
 
-    fun shareWorkout(workout: Workout, formatDuration: (Long) -> String, formatPace: (Float) -> String) {
-        val dateFormat = java.text.SimpleDateFormat("dd.MM.yyyy HH:mm", java.util.Locale.getDefault())
-        val duration = formatDuration(workout.duration)
-        val pace = formatPace(workout.avgPace)
-
-        val dateStr = dateFormat.format(workout.date)
-        val distanceStr = String.format("%.2f", workout.distance)
-        val caloriesStr = if (workout.calories != null) "${workout.calories} ккал" else ""
-        val shareText = String.format(
-            activity.getString(R.string.workout_share_text),
-            dateStr,
-            distanceStr,
-            duration,
-            pace,
-            caloriesStr
+    fun shareWorkout(workout: Workout) {
+        val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+        val caloriesDisplay = workout.calories?.let { calories ->
+            context.getString(R.string.gpx_note_calories, calories)
+                .substringAfter(':')
+                .trim()
+        }.orEmpty()
+        val shareText = context.getString(
+            R.string.workout_share_text,
+            dateFormat.format(workout.date),
+            String.format(Locale.getDefault(), "%.2f", workout.distance),
+            FormatUtils.formatTime(workout.duration),
+            FormatUtils.formatPace(workout.avgPace),
+            caloriesDisplay
         )
-
-        val shareIntent = Intent().apply {
-            action = Intent.ACTION_SEND
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, shareText)
-        }
-
-        activity.startActivity(
-            Intent.createChooser(shareIntent, activity.getString(R.string.share_workout_title))
+        ShareExports.sharePlainText(
+            context,
+            shareText,
+            context.getString(R.string.share_workout_title)
         )
     }
 
-    private fun parseTrackData(trackDataJson: String?): TrackData? {
-        return com.runner.academy.util.TrackDataJson.parse(trackDataJson)
-    }
-
-    private fun saveGpxFile(gpxContent: String, workout: Workout): Pair<java.io.File, String>? {
-        return try {
-            val fileName = com.runner.academy.util.GpxExporter.getGpxFileName(workout, activity)
-            val file = java.io.File.createTempFile(
-                fileName.replace(".gpx", ""),
-                ".gpx",
-                activity.cacheDir
-            )
-            file.writeText(gpxContent, Charsets.UTF_8)
-            file to fileName
-        } catch (e: Exception) {
-            android.util.Log.e("ExportManager", "Error saving GPX file: ${e.message}", e)
-            null
-        }
-    }
-
-    private fun shareGpxFile(file: java.io.File, fileName: String) {
-        try {
-            val fileUri = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                FileProvider.getUriForFile(
-                    activity,
-                    "${activity.packageName}.fileprovider",
-                    file
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                android.net.Uri.fromFile(file)
-            }
-
-            val shareIntent = Intent().apply {
-                action = Intent.ACTION_SEND
-                type = "application/gpx+xml"
-                putExtra(Intent.EXTRA_STREAM, fileUri)
-                putExtra(Intent.EXTRA_SUBJECT, fileName)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-
-            activity.startActivity(
-                Intent.createChooser(shareIntent, activity.getString(R.string.export_gpx_title))
-            )
-            android.widget.Toast.makeText(
-                activity,
-                activity.getString(R.string.gpx_file_ready),
-                android.widget.Toast.LENGTH_SHORT
-            ).show()
-        } catch (e: Exception) {
-            android.util.Log.e("ExportManager", "Error sharing GPX file: ${e.message}", e)
-            android.widget.Toast.makeText(
-                activity,
-                activity.getString(R.string.file_save_error, e.message),
-                android.widget.Toast.LENGTH_LONG
-            ).show()
-        }
+    companion object {
+        private const val TAG = "ExportManager"
     }
 }
