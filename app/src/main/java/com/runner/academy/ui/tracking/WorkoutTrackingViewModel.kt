@@ -53,6 +53,10 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
     fun setModeSelection(selection: TrackingModeSelection) {
         _modeSelection.value = selection
+        trackingService?.updateUiMetadata(
+            modeSelection = modeSelectionKeyOrNull(),
+            intervalSegmentsJson = null
+        )
     }
 
     /**
@@ -70,6 +74,12 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         segments: List<com.runner.academy.data.WorkoutTemplateSegment>?
     ) {
         _activeIntervalSegments.value = segments?.takeIf { it.isNotEmpty() }
+        trackingService?.updateUiMetadata(
+            modeSelection = null,
+            intervalSegmentsJson = _activeIntervalSegments.value?.let {
+                com.runner.academy.util.IntervalSegmentsJson.toJson(it)
+            }
+        )
     }
 
     fun clearActiveIntervalSegments() {
@@ -108,17 +118,7 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
             // Сразу подтягиваем состояние из сервиса (после пересоздания UI / переподключения)
             trackingService?.let { svc ->
-                val serviceSession = svc.getCurrentSession()
-                val local = _workoutSession.value
-                val serviceActive = serviceSession.isTracking || serviceSession.isPaused
-                val localActive = local.isTracking || local.isPaused
-                val serviceHasTrack = serviceSession.trackDataPoints.isNotEmpty()
-                val localHasTrack = local.trackDataPoints.isNotEmpty()
-                // Never replace a richer local in-progress session with an empty service snapshot
-                if (serviceActive || serviceHasTrack || !localActive || !localHasTrack) {
-                    _workoutSession.value = serviceSession
-                }
-                updateWorkoutState()
+                adoptServiceSession(svc)
             }
 
         }
@@ -137,10 +137,95 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
 
     fun initializeService() {
         if (isServiceBound) {
+            trackingService?.let { adoptServiceSession(it) }
             return
         }
         val intent = Intent(application, WorkoutTrackingService::class.java)
         application.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
+    }
+
+    private fun adoptServiceSession(svc: WorkoutTrackingService) {
+        val serviceSession = svc.getCurrentSession()
+        val local = _workoutSession.value
+        val serviceActive = serviceSession.isTracking || serviceSession.isPaused
+        val localActive = local.isTracking || local.isPaused
+        val serviceHasTrack = serviceSession.trackDataPoints.isNotEmpty()
+        val localHasTrack = local.trackDataPoints.isNotEmpty()
+        // Never replace a richer local in-progress session with an empty service snapshot
+        if (serviceActive || serviceHasTrack || !localActive || !localHasTrack) {
+            _workoutSession.value = serviceSession
+        }
+        if (serviceActive) {
+            restoreUiMetadataFromService(svc)
+        } else {
+            // Service empty — try disk checkpoint (process death before sticky restore finished)
+            maybeAdoptCheckpointFromDisk()
+        }
+        updateWorkoutState()
+    }
+
+    private fun restoreUiMetadataFromService(svc: WorkoutTrackingService) {
+        svc.getModeSelectionKey()?.let { key ->
+            parseModeSelectionKey(key)?.let { selection ->
+                if (_modeSelection.value == null) {
+                    _modeSelection.value = selection
+                }
+            }
+        }
+        if (_activeIntervalSegments.value.isNullOrEmpty()) {
+            svc.getIntervalSegmentsJson()?.let { json ->
+                val segments = com.runner.academy.util.IntervalSegmentsJson.parse(json)
+                if (segments.isNotEmpty()) {
+                    _activeIntervalSegments.value = segments
+                }
+            }
+        }
+    }
+
+    private fun maybeAdoptCheckpointFromDisk() {
+        val checkpoint = com.runner.academy.service.ActiveWorkoutStore(application).load() ?: return
+        if (!checkpoint.isTracking && !checkpoint.isPaused) return
+        _workoutSession.value = checkpoint.toSession()
+        if (_modeSelection.value == null) {
+            checkpoint.modeSelection?.let { key ->
+                parseModeSelectionKey(key)?.let { _modeSelection.value = it }
+            }
+        }
+        if (_activeIntervalSegments.value.isNullOrEmpty()) {
+            checkpoint.intervalSegmentsJson?.let { json ->
+                val segments = com.runner.academy.util.IntervalSegmentsJson.parse(json)
+                if (segments.isNotEmpty()) {
+                    _activeIntervalSegments.value = segments
+                }
+            }
+        }
+        // Ask service to fully restore GPS/timer/FGS
+        val intent = Intent(application, WorkoutTrackingService::class.java).apply {
+            action = WorkoutTrackingService.ACTION_RESTORE_WORKOUT
+        }
+        try {
+            application.startForegroundService(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("WorkoutTrackingViewModel", "Failed to request workout restore", e)
+        }
+        updateWorkoutState()
+    }
+
+    private fun parseModeSelectionKey(raw: String): TrackingModeSelection? = when {
+        raw == "easy" -> TrackingModeSelection.EasyRun
+        raw == "plan" -> TrackingModeSelection.PlanToday
+        raw.startsWith("template:") -> {
+            val id = raw.removePrefix("template:").toLongOrNull() ?: return null
+            TrackingModeSelection.Template(id)
+        }
+        else -> null
+    }
+
+    private fun modeSelectionKeyOrNull(): String? = when (val selection = _modeSelection.value) {
+        TrackingModeSelection.EasyRun -> "easy"
+        TrackingModeSelection.PlanToday -> "plan"
+        is TrackingModeSelection.Template -> "template:${selection.templateId}"
+        null -> null
     }
 
     private fun setupLocationCallback() {
@@ -308,9 +393,23 @@ class WorkoutTrackingViewModel(private val repository: WorkoutRepository, privat
         }
 
         if (isServiceBound && trackingService != null) {
+            val existing = trackingService!!.getCurrentSession()
+            if (existing.isTracking || existing.isPaused) {
+                // Reconnect to live session — do not wipe metrics with START_WORKOUT
+                adoptServiceSession(trackingService!!)
+                return
+            }
             val intent = Intent(application, WorkoutTrackingService::class.java).apply {
                 action = WorkoutTrackingService.ACTION_START_WORKOUT
                 putExtra(WorkoutTrackingService.EXTRA_WORKOUT_TYPE, workoutType)
+                modeSelectionKeyOrNull()?.let {
+                    putExtra(WorkoutTrackingService.EXTRA_MODE_SELECTION, it)
+                }
+                _activeIntervalSegments.value?.let { segments ->
+                    com.runner.academy.util.IntervalSegmentsJson.toJson(segments)?.let { json ->
+                        putExtra(WorkoutTrackingService.EXTRA_INTERVAL_SEGMENTS_JSON, json)
+                    }
+                }
             }
             application.startForegroundService(intent)
         } else {

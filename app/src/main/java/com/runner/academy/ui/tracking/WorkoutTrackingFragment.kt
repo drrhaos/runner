@@ -207,12 +207,10 @@ class WorkoutTrackingFragment : Fragment() {
         gpsStatusUpdater?.updateStatusIcon()
         gpsStatusHandler.post(gpsStatusRunnable)
 
-        // If workout already active, reconnect to service
-        val ws = viewModel.workoutSession.value
-        if (ws.isTracking || ws.isPaused) {
-            viewModel.initializeService()
-            maybeStartIntervalEngineForActiveSession()
-        }
+        // Always bind — after process/task death the VM is empty but the service
+        // (or disk checkpoint) may still hold an active workout.
+        viewModel.initializeService()
+        maybeStartIntervalEngineForActiveSession()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -453,6 +451,17 @@ class WorkoutTrackingFragment : Fragment() {
                     }
         }
         return index.coerceIn(0, options.lastIndex.coerceAtLeast(0))
+    }
+
+    private fun syncModeSpinnerFromViewModel() {
+        if (modeOptions.isEmpty()) return
+        val preferred = resolvePreferredModeIndex(modeOptions)
+        val current = binding.spinnerWorkoutType.selectedItemPosition
+        if (preferred == current && selectedMode == modeOptions.getOrNull(preferred)) return
+        suppressModeSelectionCallback = true
+        binding.spinnerWorkoutType.setSelection(preferred, false)
+        suppressModeSelectionCallback = false
+        applySelectedMode(modeOptions[preferred], persistSelection = false)
     }
 
     private fun applySelectedMode(mode: TrackingWorkoutMode, persistSelection: Boolean = true) {
@@ -793,10 +802,30 @@ class WorkoutTrackingFragment : Fragment() {
                     viewModel.workoutState.collect { state ->
                         if (isAdded && !isDetached) {
                             metricsDisplayManager?.updateButtonStates(state)
+                            if (state == WorkoutState.RUNNING || state == WorkoutState.PAUSED) {
+                                syncModeSpinnerFromViewModel()
+                                maybeStartIntervalEngineForActiveSession()
+                            }
                         }
                     }
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     android.util.Log.d(TAG, "State loading cancelled")
+                    throw e
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                try {
+                    viewModel.modeSelection.collect { selection ->
+                        if (isAdded && !isDetached && selection != null) {
+                            syncModeSpinnerFromViewModel()
+                            maybeStartIntervalEngineForActiveSession()
+                        }
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    android.util.Log.d(TAG, "Mode selection cancelled")
                     throw e
                 }
             }
