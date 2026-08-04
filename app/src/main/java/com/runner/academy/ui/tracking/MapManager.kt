@@ -106,8 +106,16 @@ class MapManager(
         autoCenterOnLocation()
     }
 
+    /**
+     * Tip frames only run while the map is resumed. Pausing/detaching cancels the
+     * runnable; osmdroid nulls [Polyline] outline in [MapView.onDetach], so we must
+     * never call [Polyline.setPoints] after that.
+     */
+    private var tipFramesEnabled = false
+
     private val tipAnimRunnable = object : Runnable {
         override fun run() {
+            if (!tipFramesEnabled) return
             val start = tipAnimStart
             val target = tipAnimTarget
             if (start == null || target == null) return
@@ -118,7 +126,7 @@ class MapManager(
             val lon = start.longitude + (target.longitude - start.longitude) * eased
             displayedTip = GeoPoint(lat, lon)
             applyLiveTip(displayedTip!!)
-            if (t < 1f) {
+            if (t < 1f && tipFramesEnabled) {
                 mapView.handler?.postDelayed(this, TIP_FRAME_MS)
             } else {
                 displayedTip = target
@@ -133,6 +141,9 @@ class MapManager(
     fun initialize() {
         OsmMapConfig.apply(context)
         OsmMapTiles.applyForTheme(context, mapView)
+        // Own detach via [onDetach]; default true destroys polylines when the view
+        // leaves the window and races with tip animation / session updates.
+        mapView.setDestroyMode(false)
         mapView.setMultiTouchControls(true)
         mapView.setClickable(true)
         mapView.isHorizontalMapRepetitionEnabled = false
@@ -159,17 +170,23 @@ class MapManager(
 
     fun onResume() {
         OsmMapTiles.applyForTheme(context, mapView)
+        tipFramesEnabled = true
         mapView.onResume()
     }
 
     fun onPause() {
+        tipFramesEnabled = false
+        cancelTipAnimation()
+        cancelAutoCenter()
         mapView.onPause()
     }
 
     fun onDetach() {
+        tipFramesEnabled = false
         cancelAutoCenter()
         cancelTipAnimation()
         clearGapPolylines()
+        tipHostPolyline = null
         sessionLocationProvider.destroy()
         mapView.onDetach()
         locationOverlay = null
@@ -393,6 +410,9 @@ class MapManager(
             rebuildCommittedPolylines()
         }
 
+        // Tip animation only while map is resumed (avoids setPoints after osmdroid detach).
+        if (!tipFramesEnabled) return
+
         if (currentLocation == null) {
             cancelTipAnimation()
             displayedTip = null
@@ -418,11 +438,13 @@ class MapManager(
     }
 
     private fun rebuildCommittedPolylines() {
+        cancelTipAnimation()
         clearGapPolylines()
         tipHostPolyline = trackPolyline
 
         if (committedSegments.isEmpty()) {
             trackPolyline?.setPoints(mutableListOf())
+            tipHostPolyline = trackPolyline
             mapView.invalidate()
             return
         }
@@ -460,6 +482,7 @@ class MapManager(
     }
 
     private fun animateTipToward(target: GeoPoint) {
+        if (!tipFramesEnabled) return
         val current = displayedTip
         if (current == null) {
             displayedTip = target
@@ -489,6 +512,11 @@ class MapManager(
      * follows the runner without rebuilding the whole overlay stack.
      */
     private fun applyLiveTip(tip: GeoPoint?) {
+        if (!tipFramesEnabled) return
+        val host = tipHostPolyline ?: trackPolyline ?: return
+        // After MapView.onDetach, osmdroid nulls LinearRing and clears overlays.
+        if (!mapView.overlays.contains(host)) return
+
         val base = committedSegments.lastOrNull()?.toMutableList()
             ?: mutableListOf()
         if (tip != null) {
@@ -500,7 +528,7 @@ class MapManager(
                 base.add(tip)
             }
         }
-        (tipHostPolyline ?: trackPolyline)?.setPoints(base)
+        host.setPoints(base)
         mapView.invalidate()
     }
 

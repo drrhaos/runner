@@ -24,7 +24,9 @@ import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.databinding.FragmentWorkoutTrackingBinding
@@ -771,38 +773,47 @@ class WorkoutTrackingFragment : Fragment() {
 
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                viewModel.workoutSession.collect { session ->
-                    if (isAdded && !isDetached) {
-                        updateUI(session)
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                try {
+                    viewModel.workoutSession.collect { session ->
+                        if (isAdded && !isDetached) {
+                            updateUI(session)
+                        }
                     }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    android.util.Log.d(TAG, "Session loading cancelled")
+                    throw e
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                android.util.Log.d(TAG, "Session loading cancelled")
             }
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                viewModel.workoutState.collect { state ->
-                    if (isAdded && !isDetached) {
-                        metricsDisplayManager?.updateButtonStates(state)
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                try {
+                    viewModel.workoutState.collect { state ->
+                        if (isAdded && !isDetached) {
+                            metricsDisplayManager?.updateButtonStates(state)
+                        }
                     }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    android.util.Log.d(TAG, "State loading cancelled")
+                    throw e
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                android.util.Log.d(TAG, "State loading cancelled")
             }
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                settingsViewModel.settingsState.collect { state ->
-                    if (isAdded && !isDetached) {
-                        isVoiceEnabled = state.voiceFeedback
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                try {
+                    settingsViewModel.settingsState.collect { state ->
+                        if (isAdded && !isDetached) {
+                            isVoiceEnabled = state.voiceFeedback
+                        }
                     }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    android.util.Log.d(TAG, "Settings loading cancelled")
+                    throw e
                 }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                android.util.Log.d(TAG, "Settings loading cancelled")
             }
         }
     }
