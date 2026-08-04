@@ -85,10 +85,10 @@ class WorkoutListFragment : Fragment() {
         workoutAdapter = WorkoutAdapter(
             context = requireContext(),
             onItemClick = { workout ->
-                val bundle = Bundle().apply {
-                    putLong("workoutId", workout.id)
-                }
-                findNavController().navigate(R.id.nav_workout_detail, bundle)
+                findNavController().navigate(
+                    R.id.nav_workout_detail,
+                    WorkoutDetailFragmentArgs(workoutId = workout.id).toBundle()
+                )
             },
             onFavoriteClick = { workout ->
                 viewModel.toggleFavorite(workout)

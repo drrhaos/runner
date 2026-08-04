@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.data.TrackData
@@ -38,9 +39,9 @@ class AddWorkoutFragment : Fragment() {
         WorkoutViewModelFactory(requireContext().appContainer().workoutRepository)
     }
 
-    private val workoutId: Long by lazy {
-        arguments?.getLong(ARG_WORKOUT_ID, NO_WORKOUT_ID) ?: NO_WORKOUT_ID
-    }
+    private val args: AddWorkoutFragmentArgs by navArgs()
+    private val workoutId: Long
+        get() = args.workoutId
 
     private val isEditMode: Boolean
         get() = workoutId != NO_WORKOUT_ID
@@ -363,7 +364,6 @@ class AddWorkoutFragment : Fragment() {
 
     companion object {
         private const val TAG = "AddWorkoutFragment"
-        const val ARG_WORKOUT_ID = "workoutId"
         const val NO_WORKOUT_ID = -1L
     }
 }

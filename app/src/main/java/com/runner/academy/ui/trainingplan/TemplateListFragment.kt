@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -36,7 +35,7 @@ class TemplateListFragment : Fragment() {
         val adapter = TemplateListAdapter { template ->
             findNavController().navigate(
                 R.id.nav_template_edit,
-                bundleOf("templateId" to template.id)
+                TemplateEditFragmentArgs(templateId = template.id).toBundle()
             )
         }
         binding.recyclerViewTemplates.layoutManager = LinearLayoutManager(requireContext())
@@ -44,7 +43,7 @@ class TemplateListFragment : Fragment() {
         binding.fabAddTemplate.setOnClickListener {
             findNavController().navigate(
                 R.id.nav_template_edit,
-                bundleOf("templateId" to -1L)
+                TemplateEditFragmentArgs(templateId = -1L).toBundle()
             )
         }
         viewLifecycleOwner.lifecycleScope.launch {
