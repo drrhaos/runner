@@ -12,9 +12,9 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
+import com.runner.academy.appContainer
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.Workout
-import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.DialogRoutePickerBinding
@@ -35,9 +35,7 @@ class AddWorkoutFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: WorkoutViewModel by viewModels {
-        val database = WorkoutDatabase.getDatabase(requireContext())
-        val repository = com.runner.academy.data.WorkoutRepository(database.workoutDao())
-        WorkoutViewModelFactory(repository)
+        WorkoutViewModelFactory(requireContext().appContainer().workoutRepository)
     }
 
     private val workoutId: Long by lazy {

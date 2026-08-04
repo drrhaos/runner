@@ -10,8 +10,8 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
+import com.runner.academy.appContainer
 import com.runner.academy.data.TrackData
-import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.databinding.FragmentWorkoutDetailBinding
 import com.runner.academy.util.ErrorHandler
 import com.runner.academy.util.TrackDataJson
@@ -29,9 +29,7 @@ class WorkoutDetailFragment : Fragment() {
         arguments?.getLong("workoutId") ?: -1L
     }
     private val viewModel: WorkoutViewModel by viewModels {
-        val database = WorkoutDatabase.getDatabase(requireContext())
-        val repository = com.runner.academy.data.WorkoutRepository(database.workoutDao())
-        WorkoutViewModelFactory(repository)
+        WorkoutViewModelFactory(requireContext().appContainer().workoutRepository)
     }
 
     private var currentWorkout: com.runner.academy.data.Workout? = null
@@ -57,7 +55,7 @@ class WorkoutDetailFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        userPreferences = com.runner.academy.util.UserPreferences(requireContext())
+        userPreferences = requireContext().appContainer().userPreferences
 
         // Initialize extracted managers
         mapManager = DetailMapManager(binding.mapViewDetail, requireContext()).apply { initialize() }
@@ -73,7 +71,7 @@ class WorkoutDetailFragment : Fragment() {
             onSegmentSelected = { start, end -> mapManager?.showSegmentOnMap(start, end) },
             onNothingSelected = { mapManager?.hidePositionMarkers() }
         )
-        exportManager = ExportManager(requireActivity())
+        exportManager = ExportManager(requireContext(), viewLifecycleOwner)
         statsDisplay = DetailStatsDisplay(binding, requireContext(), viewModel)
 
         setupClickListeners()
@@ -83,11 +81,7 @@ class WorkoutDetailFragment : Fragment() {
     private fun setupClickListeners() {
         binding.buttonShare.setOnClickListener {
             currentWorkout?.let { workout ->
-                exportManager?.shareWorkout(
-                    workout,
-                    formatDuration = viewModel::formatDuration,
-                    formatPace = viewModel::formatPace
-                )
+                exportManager?.shareWorkout(workout)
             }
         }
 

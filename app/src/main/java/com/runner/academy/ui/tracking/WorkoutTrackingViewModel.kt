@@ -354,7 +354,8 @@ class WorkoutTrackingViewModel(
             0f
         }
 
-        val userPrefs = UserPreferences(application)
+        val userPrefs = (application as? com.runner.academy.RunnerApplication)?.container?.userPreferences
+            ?: UserPreferences(application)
         val calories = com.runner.academy.util.FormatUtils.calculateCalories(
             totalDistanceKm,
             userPrefs.userWeight

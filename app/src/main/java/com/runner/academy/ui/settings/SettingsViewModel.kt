@@ -28,9 +28,10 @@ data class SettingsState(
     val startCountdownSeconds: Int = 5
 )
 
-class SettingsViewModel(private val context: Context) : ViewModel() {
-
-    private val userPreferences = UserPreferences(context)
+class SettingsViewModel(
+    private val context: Context,
+    private val userPreferences: UserPreferences
+) : ViewModel() {
     
     private val _settingsState = MutableStateFlow(SettingsState())
     val settingsState: StateFlow<SettingsState> = _settingsState.asStateFlow()
@@ -166,11 +167,14 @@ class SettingsViewModel(private val context: Context) : ViewModel() {
     }
 }
 
-class SettingsViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
+class SettingsViewModelFactory(
+    private val context: Context,
+    private val userPreferences: UserPreferences
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return SettingsViewModel(context) as T
+            return SettingsViewModel(context.applicationContext, userPreferences) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -11,8 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.runner.academy.R
-import com.runner.academy.data.TrainingPlanRepository
-import com.runner.academy.data.WorkoutDatabase
+import com.runner.academy.appContainer
 import com.runner.academy.databinding.FragmentTemplateListBinding
 import kotlinx.coroutines.launch
 
@@ -21,14 +20,7 @@ class TemplateListFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: TrainingPlanViewModel by viewModels {
-        val db = WorkoutDatabase.getDatabase(requireContext())
-        TrainingPlanViewModelFactory(
-            TrainingPlanRepository(
-                db.workoutTemplateDao(),
-                db.trainingPlanDao(),
-                db.planScheduleDao()
-            )
-        )
+        TrainingPlanViewModelFactory(requireContext().appContainer().trainingPlanRepository)
     }
 
     override fun onCreateView(

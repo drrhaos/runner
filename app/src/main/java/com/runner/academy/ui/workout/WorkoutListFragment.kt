@@ -1,6 +1,5 @@
 package com.runner.academy.ui.workout
 
-import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -8,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -18,10 +16,11 @@ import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
+import com.runner.academy.appContainer
 import com.runner.academy.data.Workout
-import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.databinding.FragmentWorkoutListBinding
 import com.runner.academy.util.GpxImporter
+import com.runner.academy.util.ShareExports
 import com.runner.academy.util.WorkoutBackupFormat
 import com.runner.academy.util.WorkoutGpxBulkExporter
 import kotlinx.coroutines.Dispatchers
@@ -39,9 +38,7 @@ class WorkoutListFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: WorkoutViewModel by viewModels {
-        val database = WorkoutDatabase.getDatabase(requireContext())
-        val repository = com.runner.academy.data.WorkoutRepository(database.workoutDao())
-        WorkoutViewModelFactory(repository)
+        WorkoutViewModelFactory(requireContext().appContainer().workoutRepository)
     }
 
     private lateinit var workoutAdapter: WorkoutAdapter
@@ -294,30 +291,17 @@ class WorkoutListFragment : Fragment() {
     }
 
     private fun writeTempTextFile(fileName: String, content: String): File {
-        val safeBase = fileName.substringBeforeLast('.').ifBlank { "export" }
-        val extension = fileName.substringAfterLast('.', "txt")
-        val file = File(requireContext().cacheDir, fileName)
-        // Avoid createTempFile truncating long readable names
-        file.writeText(content, Charsets.UTF_8)
-        return file
+        return ShareExports.writeCacheText(requireContext(), fileName, content)
     }
 
     private fun shareFile(file: File, mimeType: String, showReadyToast: Boolean = true) {
-        val uri = FileProvider.getUriForFile(
-            requireContext(),
-            "${requireContext().packageName}.fileprovider",
-            file
+        ShareExports.shareFile(
+            context = requireContext(),
+            file = file,
+            mimeType = mimeType,
+            chooserTitle = getString(R.string.workout_list_export_title),
+            readyMessage = if (showReadyToast) getString(R.string.workout_list_export_ready) else null
         )
-        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = mimeType
-            putExtra(Intent.EXTRA_STREAM, uri)
-            putExtra(Intent.EXTRA_SUBJECT, file.name)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        startActivity(Intent.createChooser(shareIntent, getString(R.string.workout_list_export_title)))
-        if (showReadyToast) {
-            Toast.makeText(requireContext(), R.string.workout_list_export_ready, Toast.LENGTH_SHORT).show()
-        }
     }
 
     private fun importFromJsonUri(uri: Uri) {
