@@ -101,7 +101,8 @@ class WorkoutTrackingService : Service() {
         super.onCreate()
         notificationManager = WorkoutNotificationManager(this)
         notificationManager.createNotificationChannel()
-        userPreferences = UserPreferences(this)
+        userPreferences = (applicationContext as com.runner.academy.RunnerApplication)
+            .container.userPreferences
         activeWorkoutStore = ActiveWorkoutStore(this)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         setupLocationCallback()

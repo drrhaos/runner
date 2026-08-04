@@ -5,9 +5,11 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import com.runner.academy.util.OsmMapConfig
 import com.runner.academy.util.ThemeUtils
-import com.runner.academy.util.UserPreferences
 
 class RunnerApplication : Application() {
+
+    lateinit var container: AppContainer
+        private set
 
     companion object {
         lateinit var instance: RunnerApplication
@@ -17,10 +19,11 @@ class RunnerApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        container = AppContainer(this)
 
         OsmMapConfig.apply(this)
 
-        val userPreferences = UserPreferences(this)
+        val userPreferences = container.userPreferences
         val localeList = LocaleListCompat.forLanguageTags(userPreferences.appLanguage)
         AppCompatDelegate.setApplicationLocales(localeList)
         ThemeUtils.applyTheme(userPreferences.themeMode)

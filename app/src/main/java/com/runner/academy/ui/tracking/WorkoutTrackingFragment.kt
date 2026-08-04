@@ -29,13 +29,13 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
+import com.runner.academy.appContainer
 import com.runner.academy.databinding.FragmentWorkoutTrackingBinding
 import com.runner.academy.data.GpsStatus
 import com.runner.academy.data.ScheduledWorkoutStatus
 import com.runner.academy.data.ScheduledWorkoutWithTemplate
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.TrainingPlanRepository
-import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.data.WorkoutState
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
@@ -50,7 +50,6 @@ import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.GpsConfig
 import com.runner.academy.util.IntervalEngine
 import com.runner.academy.util.IntervalSegmentsJson
-import com.runner.academy.util.UserPreferences
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -72,22 +71,20 @@ class WorkoutTrackingFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: WorkoutTrackingViewModel by activityViewModels {
-        val database = WorkoutDatabase.getDatabase(requireContext())
-        val repository = com.runner.academy.data.WorkoutRepository(database.workoutDao())
-        WorkoutTrackingViewModelFactory(repository, requireContext().applicationContext as android.app.Application)
+        val app = requireContext().appContainer()
+        WorkoutTrackingViewModelFactory(
+            app.workoutRepository,
+            requireContext().applicationContext as android.app.Application
+        )
     }
 
     private val settingsViewModel: SettingsViewModel by viewModels {
-        SettingsViewModelFactory(requireContext())
+        val app = requireContext().appContainer()
+        SettingsViewModelFactory(requireContext(), app.userPreferences)
     }
 
     private val planRepository: TrainingPlanRepository by lazy {
-        val db = WorkoutDatabase.getDatabase(requireContext())
-        TrainingPlanRepository(
-            db.workoutTemplateDao(),
-            db.trainingPlanDao(),
-            db.planScheduleDao()
-        )
+        requireContext().appContainer().trainingPlanRepository
     }
 
     // Managers
@@ -903,7 +900,7 @@ class WorkoutTrackingFragment : Fragment() {
 
     private fun startCountdown() {
         if (countdownJob != null) return
-        val prefs = UserPreferences(requireContext())
+        val prefs = requireContext().appContainer().userPreferences
         val countdownSeconds = prefs.startCountdownSeconds
         if (countdownSeconds <= 0) {
             beginWorkout()
