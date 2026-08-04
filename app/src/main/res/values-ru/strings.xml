@@ -20,6 +20,7 @@
     <string name="confirm_delete">Вы уверены, что хотите удалить эту тренировку?</string>
     <string name="error_save_workout">Ошибка при сохранении тренировки</string>
     <string name="error_delete_workout">Ошибка при удалении тренировки</string>
+    <string name="error_start_workout">Не удалось запустить тренировку. Попробуйте ещё раз.</string>
     <string name="fill_required_fields">Заполните обязательные поля</string>
     <string name="save">Сохранить</string>
     <string name="cancel">Отмена</string>

@@ -10,6 +10,15 @@ import com.runner.academy.data.WorkoutType
 import org.osmdroid.util.GeoPoint
 import java.io.File
 
+/** Persisted IntervalEngine cursor so mid-workout restore keeps segment progress. */
+data class IntervalCursor(
+    val segmentIndex: Int = 0,
+    val segmentStartElapsedMs: Long = 0L,
+    val segmentStartDistanceM: Float = 0f,
+    val lastAnnouncedIndex: Int = -1,
+    val lastUpcomingWarnedIndex: Int = -1
+)
+
 /**
  * Disk snapshot of an in-progress workout so the session can survive process death
  * (swipe from Recents) and sticky service restart.
@@ -33,10 +42,25 @@ data class ActiveWorkoutCheckpoint(
     val workoutType: String = WorkoutType.EASY_RUN.name,
     val modeSelection: String? = null,
     val intervalSegmentsJson: String? = null,
+    val intervalSegmentIndex: Int = 0,
+    val intervalSegmentStartElapsedMs: Long = 0L,
+    val intervalSegmentStartDistanceM: Float = 0f,
+    val intervalLastAnnouncedIndex: Int = -1,
+    val intervalLastUpcomingWarnedIndex: Int = -1,
     val lastLocationTime: Long = 0L,
     val lastUpdateTime: Long = 0L,
     val savedAt: Long = 0L
 ) {
+    fun intervalCursor(): IntervalCursor? {
+        if (intervalSegmentsJson.isNullOrBlank()) return null
+        return IntervalCursor(
+            segmentIndex = intervalSegmentIndex,
+            segmentStartElapsedMs = intervalSegmentStartElapsedMs,
+            segmentStartDistanceM = intervalSegmentStartDistanceM,
+            lastAnnouncedIndex = intervalLastAnnouncedIndex,
+            lastUpcomingWarnedIndex = intervalLastUpcomingWarnedIndex
+        )
+    }
     fun toSession(): WorkoutSession {
         val points = trackDataPoints.map { GeoPoint(it.latitude, it.longitude) }
         val status = GpsStatus.entries.find { it.name == gpsStatus } ?: GpsStatus.SEARCHING
@@ -81,6 +105,7 @@ data class ActiveWorkoutCheckpoint(
             workoutType: WorkoutType,
             modeSelection: String?,
             intervalSegmentsJson: String?,
+            intervalCursor: IntervalCursor?,
             lastLocationTime: Long,
             lastUpdateTime: Long
         ): ActiveWorkoutCheckpoint = ActiveWorkoutCheckpoint(
@@ -102,6 +127,11 @@ data class ActiveWorkoutCheckpoint(
             workoutType = workoutType.name,
             modeSelection = modeSelection,
             intervalSegmentsJson = intervalSegmentsJson,
+            intervalSegmentIndex = intervalCursor?.segmentIndex ?: 0,
+            intervalSegmentStartElapsedMs = intervalCursor?.segmentStartElapsedMs ?: 0L,
+            intervalSegmentStartDistanceM = intervalCursor?.segmentStartDistanceM ?: 0f,
+            intervalLastAnnouncedIndex = intervalCursor?.lastAnnouncedIndex ?: -1,
+            intervalLastUpcomingWarnedIndex = intervalCursor?.lastUpcomingWarnedIndex ?: -1,
             lastLocationTime = lastLocationTime,
             lastUpdateTime = lastUpdateTime,
             savedAt = System.currentTimeMillis()

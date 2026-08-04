@@ -5,17 +5,31 @@ import android.app.Application
 import android.content.Context
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.test.core.app.ApplicationProvider
-import com.runner.academy.data.*
+import com.runner.academy.data.GpsStatus
+import com.runner.academy.data.TrackData
+import com.runner.academy.data.TrackPoint
+import com.runner.academy.data.Workout
+import com.runner.academy.data.WorkoutDao
+import com.runner.academy.data.WorkoutDatabase
+import com.runner.academy.data.WorkoutRepository
+import com.runner.academy.data.WorkoutSession
+import com.runner.academy.data.WorkoutState
+import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.FormatUtils
+import com.runner.academy.util.TrackDataJson
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.junit.Assert.*
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowApplication
@@ -36,7 +50,6 @@ class WorkoutTrackingViewModelTest {
 
     @Before
     fun setUp() {
-
         context = ApplicationProvider.getApplicationContext()
         ShadowApplication.getInstance().grantPermissions(
             Manifest.permission.ACCESS_FINE_LOCATION,
@@ -60,12 +73,17 @@ class WorkoutTrackingViewModelTest {
         assertFalse(session.isPaused)
         assertEquals(0f, session.distance)
         assertEquals(GpsStatus.SEARCHING, session.gpsStatus)
+        assertEquals(WorkoutState.NOT_STARTED, viewModel.workoutState.value)
     }
 
     @Test
-    fun viewmodel_should_initialize_location_client() {
-        viewModel.initializeLocationClient(context)
-        assertTrue(true)
+    fun viewmodel_should_report_location_permission() {
+        assertTrue(viewModel.hasLocationPermission())
+        ShadowApplication.getInstance().denyPermissions(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        )
+        assertFalse(viewModel.hasLocationPermission())
     }
 
     @Test
@@ -87,17 +105,18 @@ class WorkoutTrackingViewModelTest {
     }
 
     @Test
-    fun `viewModel should start workout without location permission`() {
-        ShadowApplication.getInstance().denyPermissions(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        )
-
+    fun `startWorkout without bound service does not invent local session`() {
         viewModel.startWorkout(WorkoutType.EASY_RUN)
 
-        assertEquals(WorkoutState.RUNNING, viewModel.workoutState.value)
-        assertEquals(GpsStatus.DENIED, viewModel.workoutSession.value.gpsStatus)
-        assertTrue(viewModel.workoutSession.value.isTracking)
+        assertEquals(WorkoutState.NOT_STARTED, viewModel.workoutState.value)
+        assertFalse(viewModel.workoutSession.value.isTracking)
+    }
+
+    @Test
+    fun `pause and resume without service are no-ops`() {
+        viewModel.pauseWorkout()
+        viewModel.resumeWorkout()
+        assertEquals(WorkoutState.NOT_STARTED, viewModel.workoutState.value)
     }
 
     @Test
@@ -118,21 +137,6 @@ class WorkoutTrackingViewModelTest {
         assertEquals(120_000L, saved.duration)
         assertEquals(0f, saved.distance)
         assertNull(saved.trackData)
-    }
-
-    @Test
-    fun `viewModel should handle workout state transitions`() = runTest {
-        viewModel.startWorkout(WorkoutType.EASY_RUN)
-        assertEquals(WorkoutState.RUNNING, viewModel.workoutState.value)
-
-        viewModel.pauseWorkout()
-        assertEquals(WorkoutState.PAUSED, viewModel.workoutState.value)
-
-        viewModel.resumeWorkout()
-        assertEquals(WorkoutState.RUNNING, viewModel.workoutState.value)
-
-        viewModel.stopWorkout()
-        assertEquals(WorkoutState.STOPPED, viewModel.workoutState.value)
     }
 
     @Test
@@ -159,7 +163,7 @@ class WorkoutTrackingViewModelTest {
             calories = 50,
             notes = null,
             type = WorkoutType.EASY_RUN,
-            trackData = com.google.gson.Gson().toJson(trackData)
+            trackData = TrackDataJson.toJson(trackData)
         )
 
         workoutDao.insertWorkout(workout)
@@ -167,5 +171,28 @@ class WorkoutTrackingViewModelTest {
         val saved = workoutDao.getAllWorkouts().first()
         assertEquals(1, saved.size)
         assertNotNull(saved[0].trackData)
+    }
+
+    @Test
+    fun trackingModeSelectionCodec_roundTrips() {
+        assertEquals(
+            TrackingModeSelection.EasyRun,
+            TrackingModeSelectionCodec.decode(
+                TrackingModeSelectionCodec.encode(TrackingModeSelection.EasyRun)
+            )
+        )
+        assertEquals(
+            TrackingModeSelection.PlanToday,
+            TrackingModeSelectionCodec.decode(
+                TrackingModeSelectionCodec.encode(TrackingModeSelection.PlanToday)
+            )
+        )
+        val template = TrackingModeSelection.Template(42L)
+        assertEquals(
+            template,
+            TrackingModeSelectionCodec.decode(TrackingModeSelectionCodec.encode(template))
+        )
+        assertNull(TrackingModeSelectionCodec.decode(null))
+        assertNull(TrackingModeSelectionCodec.decode("bogus"))
     }
 }
