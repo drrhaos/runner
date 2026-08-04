@@ -48,16 +48,21 @@ class WorkoutTrackingService : Service() {
         const val ACTION_PAUSE_WORKOUT = "PAUSE_WORKOUT"
         const val ACTION_RESUME_WORKOUT = "RESUME_WORKOUT"
         const val ACTION_STOP_WORKOUT = "STOP_WORKOUT"
+        const val ACTION_RESTORE_WORKOUT = "RESTORE_WORKOUT"
         const val EXTRA_WORKOUT_TYPE = "WORKOUT_TYPE"
+        const val EXTRA_MODE_SELECTION = "MODE_SELECTION"
+        const val EXTRA_INTERVAL_SEGMENTS_JSON = "INTERVAL_SEGMENTS_JSON"
         const val NO_LOCATION_UPDATE_TIMEOUT_MS = 5000L
         const val PERIODIC_LOCATION_REQUEST_INTERVAL_MS = 1000L
         const val WORKOUT_TIMER_INTERVAL_MS = 1000L
+        private const val CHECKPOINT_SAVE_MIN_INTERVAL_MS = 5_000L
     }
 
     // Extracted component instances
     private val gpsProcessor = GpsLocationProcessor()
     private lateinit var notificationManager: WorkoutNotificationManager
     private val sessionManager = WorkoutSessionManager()
+    private lateinit var activeWorkoutStore: ActiveWorkoutStore
 
     // Location provider bindings
     private var fusedLocationClient: FusedLocationProviderClient? = null
@@ -68,6 +73,9 @@ class WorkoutTrackingService : Service() {
     private var isCurrentlyTracking = false
     private var lastLocation: Location? = null
     private var selectedWorkoutType: WorkoutType = WorkoutType.EASY_RUN
+    private var modeSelectionKey: String? = null
+    private var intervalSegmentsJson: String? = null
+    private var lastCheckpointSaveAt: Long = 0L
 
     // Coroutine management
     private val serviceScope = CoroutineScope(Dispatchers.Main + Job())
@@ -93,11 +101,12 @@ class WorkoutTrackingService : Service() {
         notificationManager = WorkoutNotificationManager(this)
         notificationManager.createNotificationChannel()
         userPreferences = UserPreferences(this)
+        activeWorkoutStore = ActiveWorkoutStore(this)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         setupLocationCallback()
         sessionManager.onSessionChanged = { session ->
-            // Forward session changes to the external callback (ViewModel)
             sessionUpdateCallback?.invoke(session)
+            maybeSaveCheckpoint(session, force = session.isPaused)
         }
     }
 
@@ -110,18 +119,39 @@ class WorkoutTrackingService : Service() {
                     @Suppress("DEPRECATION")
                     intent.getSerializableExtra(EXTRA_WORKOUT_TYPE) as? WorkoutType ?: WorkoutType.EASY_RUN
                 }
+                modeSelectionKey = intent.getStringExtra(EXTRA_MODE_SELECTION)
+                intervalSegmentsJson = intent.getStringExtra(EXTRA_INTERVAL_SEGMENTS_JSON)
                 startWorkout()
             }
             ACTION_PAUSE_WORKOUT -> pauseWorkout()
             ACTION_RESUME_WORKOUT -> resumeWorkout()
             ACTION_STOP_WORKOUT -> stopWorkout()
+            ACTION_RESTORE_WORKOUT, null -> {
+                // Sticky restart (null) or explicit restore after process death
+                if (!restoreFromCheckpoint()) {
+                    stopSelf()
+                }
+            }
         }
         return START_STICKY
     }
 
-    override fun onBind(intent: Intent): IBinder = binder
+    override fun onBind(intent: Intent): IBinder {
+        // Bound after process death without sticky start yet — kick restore if needed
+        requestRestoreIfCheckpointExists()
+        return binder
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        maybeSaveCheckpoint(sessionManager.getSession(), force = true)
+        super.onTaskRemoved(rootIntent)
+    }
 
     override fun onDestroy() {
+        val session = sessionManager.getSession()
+        if (session.isTracking || session.isPaused) {
+            maybeSaveCheckpoint(session, force = true)
+        }
         super.onDestroy()
         stopWorkoutTimer()
         stopLocationUpdates()
@@ -247,6 +277,7 @@ class WorkoutTrackingService : Service() {
 
         val initialGpsStatus = if (hasPermission) GpsStatus.SEARCHING else GpsStatus.DENIED
         sessionManager.startNewSession(initialGpsStatus = initialGpsStatus)
+        maybeSaveCheckpoint(sessionManager.getSession(), force = true)
 
         if (hasPermission) {
             startLocationUpdates()
@@ -263,6 +294,7 @@ class WorkoutTrackingService : Service() {
         stopPeriodicLocationRequest()
         stopWorkoutTimer()
         notificationManager.updateNotification(sessionManager.getSession(), force = true)
+        maybeSaveCheckpoint(sessionManager.getSession(), force = true)
     }
 
     fun resumeWorkout() {
@@ -274,17 +306,126 @@ class WorkoutTrackingService : Service() {
         }
         startWorkoutTimer()
         notificationManager.updateNotification(sessionManager.getSession(), force = true)
+        maybeSaveCheckpoint(sessionManager.getSession(), force = true)
     }
 
     fun stopWorkout() {
         isCurrentlyTracking = false
         lastAppliedAdaptiveIntervalMs = -1L
         sessionManager.stop()
+        activeWorkoutStore.clear()
+        modeSelectionKey = null
+        intervalSegmentsJson = null
         stopLocationUpdates()
         stopPeriodicLocationRequest()
         stopWorkoutTimer()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
+    }
+
+    /**
+     * Restore in-progress session from disk after process death.
+     * @return true if an active session was restored and tracking resumed.
+     */
+    private fun restoreFromCheckpoint(): Boolean {
+        val existing = sessionManager.getSession()
+        if (existing.isTracking || existing.isPaused) {
+            // Already live in this process (e.g. bound UI + sticky race)
+            if (!isCurrentlyTracking && !existing.isPaused) {
+                // Session flags say running but timers not started — re-arm
+                resumeTrackingAfterRestore(existing)
+            } else if (existing.isPaused) {
+                ensureForegroundNotification()
+            }
+            return true
+        }
+
+        val checkpoint = activeWorkoutStore.load() ?: return false
+        if (!checkpoint.isTracking && !checkpoint.isPaused) {
+            activeWorkoutStore.clear()
+            return false
+        }
+
+        selectedWorkoutType = checkpoint.resolvedWorkoutType()
+        modeSelectionKey = checkpoint.modeSelection
+        intervalSegmentsJson = checkpoint.intervalSegmentsJson
+        lastLocationTime = checkpoint.lastLocationTime
+        lastLocation = checkpoint.toSession().currentLocation
+
+        val restoredSession = checkpoint.toSession().let { session ->
+            // Recompute elapsed wall time after gap so the clock doesn't freeze at kill time
+            if (session.isTracking && !session.isPaused && session.startTime > 0L) {
+                val elapsed = (System.currentTimeMillis() - session.startTime - session.totalPauseDuration)
+                    .coerceAtLeast(session.currentTime)
+                session.copy(currentTime = elapsed)
+            } else {
+                session
+            }
+        }
+        sessionManager.restoreSession(restoredSession, checkpoint.lastUpdateTime)
+        resumeTrackingAfterRestore(restoredSession)
+        android.util.Log.i(
+            "WorkoutTrackingService",
+            "Restored workout checkpoint: distance=${restoredSession.distance}, time=${restoredSession.currentTime}"
+        )
+        return true
+    }
+
+    private fun resumeTrackingAfterRestore(session: WorkoutSession) {
+        ensureForegroundNotification()
+        if (session.isPaused) {
+            isCurrentlyTracking = false
+            stopWorkoutTimer()
+            stopPeriodicLocationRequest()
+        } else {
+            isCurrentlyTracking = true
+            if (hasLocationPermission()) {
+                startLocationUpdates()
+                startPeriodicLocationRequest()
+            }
+            startWorkoutTimer()
+        }
+        notificationManager.updateNotification(sessionManager.getSession(), force = true)
+        maybeSaveCheckpoint(sessionManager.getSession(), force = true)
+    }
+
+    private fun ensureForegroundNotification() {
+        startForeground(NOTIFICATION_ID, notificationManager.buildNotification(sessionManager.getSession()))
+    }
+
+    private fun requestRestoreIfCheckpointExists() {
+        val session = sessionManager.getSession()
+        if (session.isTracking || session.isPaused) return
+        val checkpoint = activeWorkoutStore.load() ?: return
+        if (!checkpoint.isTracking && !checkpoint.isPaused) {
+            activeWorkoutStore.clear()
+            return
+        }
+        val intent = Intent(this, WorkoutTrackingService::class.java).apply {
+            action = ACTION_RESTORE_WORKOUT
+        }
+        try {
+            ContextCompat.startForegroundService(this, intent)
+        } catch (e: Exception) {
+            android.util.Log.e("WorkoutTrackingService", "Failed to start restore", e)
+        }
+    }
+
+    private fun maybeSaveCheckpoint(session: WorkoutSession, force: Boolean = false) {
+        if (!session.isTracking && !session.isPaused) return
+        val now = System.currentTimeMillis()
+        if (!force && now - lastCheckpointSaveAt < CHECKPOINT_SAVE_MIN_INTERVAL_MS) return
+        lastCheckpointSaveAt = now
+        activeWorkoutStore.save(
+            ActiveWorkoutCheckpoint.fromSession(
+                session = session,
+                workoutType = selectedWorkoutType,
+                modeSelection = modeSelectionKey,
+                intervalSegmentsJson = intervalSegmentsJson,
+                lastLocationTime = lastLocationTime,
+                lastUpdateTime = sessionManager.getLastUpdateTime()
+            )
+        )
     }
 
     // ------------------------------------------------------------------
@@ -527,4 +668,19 @@ class WorkoutTrackingService : Service() {
     fun getCurrentSession(): WorkoutSession = sessionManager.getSession()
 
     fun isTracking(): Boolean = sessionManager.isTracking()
+
+    fun getSelectedWorkoutType(): WorkoutType = selectedWorkoutType
+
+    fun getModeSelectionKey(): String? = modeSelectionKey
+
+    fun getIntervalSegmentsJson(): String? = intervalSegmentsJson
+
+    fun updateUiMetadata(modeSelection: String?, intervalSegmentsJson: String?) {
+        if (modeSelection != null) modeSelectionKey = modeSelection
+        if (intervalSegmentsJson != null) this.intervalSegmentsJson = intervalSegmentsJson
+        val session = sessionManager.getSession()
+        if (session.isTracking || session.isPaused) {
+            maybeSaveCheckpoint(session, force = true)
+        }
+    }
 }
