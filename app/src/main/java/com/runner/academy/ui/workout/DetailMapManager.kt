@@ -43,6 +43,8 @@ class DetailMapManager(
         isDetached = false
         OsmMapConfig.apply(context)
         OsmMapTiles.applyForTheme(context, mapView)
+        // Detach only via [onDetach]; default true races with late displayTrack callbacks.
+        mapView.setDestroyMode(false)
         mapView.setMultiTouchControls(true)
         mapView.controller.setZoom(15.0)
         mapView.setUseDataConnection(true)
@@ -80,7 +82,7 @@ class DetailMapManager(
     }
 
     fun displayTrack(trackData: TrackData) {
-        if (trackData.points.isEmpty()) return
+        if (isDetached || trackData.points.isEmpty()) return
 
         clearTrackOverlays()
 
