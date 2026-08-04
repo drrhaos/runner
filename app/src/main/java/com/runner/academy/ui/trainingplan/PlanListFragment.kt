@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -53,7 +52,10 @@ class PlanListFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         val adapter = PlanListAdapter { plan ->
-            findNavController().navigate(R.id.nav_plan_edit, bundleOf("planId" to plan.id))
+            findNavController().navigate(
+                R.id.nav_plan_edit,
+                PlanEditFragmentArgs(planId = plan.id).toBundle()
+            )
         }
         binding.recyclerViewPlans.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerViewPlans.adapter = adapter
@@ -69,7 +71,10 @@ class PlanListFragment : Fragment() {
         }
         binding.fabAddPlan.setOnClickListener {
             setSpeedDialExpanded(false)
-            findNavController().navigate(R.id.nav_plan_edit, bundleOf("planId" to -1L))
+            findNavController().navigate(
+                R.id.nav_plan_edit,
+                PlanEditFragmentArgs(planId = -1L).toBundle()
+            )
         }
         binding.fabImportPlans.setOnClickListener {
             setSpeedDialExpanded(false)

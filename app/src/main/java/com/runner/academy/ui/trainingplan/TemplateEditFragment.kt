@@ -10,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -31,9 +32,9 @@ class TemplateEditFragment : Fragment() {
     private var _binding: FragmentTemplateEditBinding? = null
     private val binding get() = _binding!!
 
-    private val templateId: Long by lazy {
-        arguments?.getLong("templateId", -1L) ?: -1L
-    }
+    private val args: TemplateEditFragmentArgs by navArgs()
+    private val templateId: Long
+        get() = args.templateId
 
     private val viewModel: TrainingPlanViewModel by viewModels {
         TrainingPlanViewModelFactory(requireContext().appContainer().trainingPlanRepository)

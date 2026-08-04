@@ -33,6 +33,7 @@ import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutState
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.util.IntervalSegmentsJson
+import com.runner.academy.ui.workout.WorkoutDetailFragmentArgs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -666,10 +667,10 @@ class WorkoutTrackingFragment : Fragment() {
                     }
 
                     if (isAdded && !isDetached) {
-                        val bundle = Bundle().apply {
-                            putLong("workoutId", workoutId)
-                        }
-                        findNavController().navigate(com.runner.academy.R.id.nav_workout_detail, bundle)
+                        findNavController().navigate(
+                            R.id.nav_workout_detail,
+                            WorkoutDetailFragmentArgs(workoutId = workoutId).toBundle()
+                        )
                     }
                 } else if (_binding != null && isAdded) {
                     com.runner.academy.util.ErrorHandler.handleSaveError(

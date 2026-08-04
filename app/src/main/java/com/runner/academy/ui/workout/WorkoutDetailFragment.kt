@@ -9,6 +9,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.data.TrackData
@@ -25,9 +26,9 @@ class WorkoutDetailFragment : Fragment() {
     private var _binding: FragmentWorkoutDetailBinding? = null
     private val binding get() = _binding!!
 
-    private val workoutId: Long by lazy {
-        arguments?.getLong("workoutId") ?: -1L
-    }
+    private val args: WorkoutDetailFragmentArgs by navArgs()
+    private val workoutId: Long
+        get() = args.workoutId
     private val viewModel: WorkoutViewModel by viewModels {
         WorkoutViewModelFactory(requireContext().appContainer().workoutRepository)
     }
@@ -98,10 +99,10 @@ class WorkoutDetailFragment : Fragment() {
         }
 
         binding.buttonEdit.setOnClickListener {
-            val bundle = Bundle().apply {
-                putLong("workoutId", workoutId)
-            }
-            findNavController().navigate(R.id.nav_add_workout, bundle)
+            findNavController().navigate(
+                R.id.nav_add_workout,
+                AddWorkoutFragmentArgs(workoutId = workoutId).toBundle()
+            )
         }
 
         binding.buttonFavorite.setOnClickListener {

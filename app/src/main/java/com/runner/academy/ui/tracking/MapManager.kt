@@ -1,8 +1,6 @@
 package com.runner.academy.ui.tracking
 
 import android.content.Context
-import android.graphics.Color
-import android.graphics.DashPathEffect
 import android.graphics.Point
 import android.graphics.drawable.Drawable
 import android.location.Location
@@ -24,6 +22,7 @@ import com.runner.academy.data.WorkoutSession
 import com.runner.academy.util.GpsFilter
 import com.runner.academy.util.OsmMapConfig
 import com.runner.academy.util.OsmMapTiles
+import com.runner.academy.util.TrackPolylineFactory
 import org.osmdroid.views.overlay.CopyrightOverlay
 import kotlin.math.hypot
 
@@ -49,11 +48,7 @@ class MapManager(
         private const val TAG = "MapManager"
         private const val AUTO_CENTER_DELAY = 5000L
         private const val DEFAULT_ZOOM_LEVEL = 16.0
-        private const val TRACK_LINE_WIDTH = 8f
-        private const val TRACK_LINE_COLOR = Color.RED
-        private const val GAP_DASH_ON = 24f
-        private const val GAP_DASH_OFF = 16f
-        private const val GAP_LINE_ALPHA = 160
+        private val TRACK_STYLE = TrackPolylineFactory.Style.LIVE
         private const val DIRECTION_WINDOW_SIZE = 10
         private const val TIP_ANIM_MS = 280L
         private const val TIP_FRAME_MS = 16L
@@ -252,10 +247,7 @@ class MapManager(
     }
 
     private fun setupTrackPolyline() {
-        val poly = Polyline().apply {
-            outlinePaint.color = TRACK_LINE_COLOR
-            outlinePaint.strokeWidth = TRACK_LINE_WIDTH
-        }
+        val poly = TrackPolylineFactory.createSolid(style = TRACK_STYLE)
         trackPolyline = poly
         mapView.overlays.add(poly)
     }
@@ -453,11 +445,10 @@ class MapManager(
         tipHostPolyline = trackPolyline
 
         for (i in 1 until committedSegments.size) {
-            val poly = Polyline().apply {
-                outlinePaint.color = TRACK_LINE_COLOR
-                outlinePaint.strokeWidth = TRACK_LINE_WIDTH
-                setPoints(committedSegments[i].toMutableList())
-            }
+            val poly = TrackPolylineFactory.createSolid(
+                points = committedSegments[i],
+                style = TRACK_STYLE
+            )
             tipHostPolyline = poly
             gapTrackPolylines.add(poly)
             mapView.overlays.add(poly)
@@ -466,7 +457,7 @@ class MapManager(
         for (i in 0 until committedSegments.lastIndex) {
             val from = committedSegments[i].lastOrNull() ?: continue
             val to = committedSegments[i + 1].firstOrNull() ?: continue
-            val dashed = createDashedGapPolyline(from, to)
+            val dashed = TrackPolylineFactory.createDashedGap(from, to, TRACK_STYLE)
             gapTrackPolylines.add(dashed)
             mapView.overlays.add(dashed)
         }
@@ -555,31 +546,8 @@ class MapManager(
         return projection.fromPixels(edgeX.toInt(), edgeY.toInt()) as GeoPoint
     }
 
-    private fun createDashedGapPolyline(from: GeoPoint, to: GeoPoint): Polyline {
-        return Polyline().apply {
-            outlinePaint.color = TRACK_LINE_COLOR
-            outlinePaint.strokeWidth = TRACK_LINE_WIDTH
-            outlinePaint.alpha = GAP_LINE_ALPHA
-            outlinePaint.pathEffect = DashPathEffect(floatArrayOf(GAP_DASH_ON, GAP_DASH_OFF), 0f)
-            setPoints(mutableListOf(from, to))
-        }
-    }
-
     private fun splitTrackIntoSegments(points: List<TrackPoint>): List<List<GeoPoint>> {
-        if (points.isEmpty()) return emptyList()
-        val segments = mutableListOf<MutableList<GeoPoint>>()
-        var current = mutableListOf<GeoPoint>()
-        for (point in points) {
-            if (point.afterGap && current.isNotEmpty()) {
-                segments.add(current)
-                current = mutableListOf()
-            }
-            current.add(GeoPoint(point.latitude, point.longitude))
-        }
-        if (current.isNotEmpty()) {
-            segments.add(current)
-        }
-        return segments
+        return TrackPolylineFactory.splitIntoSegments(points)
     }
 
     private fun clearGapPolylines() {
