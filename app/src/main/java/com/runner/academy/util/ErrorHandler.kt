@@ -60,7 +60,11 @@ object ErrorHandler {
                 Log.w(TAG, "GPS provider not available")
                 GpsStatus.DENIED
             }
-            currentTime - lastUpdateTime > 30000 -> { // 30 секунд без обновления
+            lastUpdateTime <= 0L -> {
+                // UI has not received a fix yet (do not treat epoch-0 as "lost for 30s")
+                GpsStatus.SEARCHING
+            }
+            currentTime - lastUpdateTime > 30000 -> {
                 Log.w(TAG, "GPS signal lost - no updates for ${currentTime - lastUpdateTime}ms")
                 GpsStatus.LOST
             }

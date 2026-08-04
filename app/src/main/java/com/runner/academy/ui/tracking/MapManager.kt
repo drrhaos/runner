@@ -67,6 +67,8 @@ class MapManager(
     interface Callbacks {
         fun onMapCenteredStateChanged(centered: Boolean)
         fun getCurrentWorkoutSession(): WorkoutSession?
+        /** Pre-workout (and any) fix from the location provider — for GPS status UI. */
+        fun onLocationFix(location: Location) {}
     }
 
     private var locationOverlay: MyLocationNewOverlay? = null
@@ -194,6 +196,7 @@ class MapManager(
 
     private fun setupLocationOverlay() {
         sessionLocationProvider.onLocationUpdated = { location ->
+            callbacks.onLocationFix(location)
             // Center as soon as the first real fix arrives (before or during workout)
             if (!hasCenteredOnCurrentFix) {
                 hasCenteredOnCurrentFix = true
@@ -314,10 +317,12 @@ class MapManager(
     }
 
     private fun autoCenterOnLocation() {
-        val session = callbacks.getCurrentWorkoutSession() ?: return
-        session.currentLocation?.let { location ->
-            centerOnLocation(location, session.trackPoints)
-        }
+        val session = callbacks.getCurrentWorkoutSession()
+        val location = session?.currentLocation
+            ?: locationOverlay?.lastFix
+            ?: sessionLocationProvider.getLastKnownLocation()
+            ?: return
+        centerOnLocation(location, session?.trackPoints.orEmpty())
     }
 
     fun centerOnCurrentLocation() {
@@ -326,17 +331,20 @@ class MapManager(
         lastMapUpdateTime = System.currentTimeMillis()
         hasCenteredOnCurrentFix = true
 
-        val session = callbacks.getCurrentWorkoutSession() ?: return
-        session.currentLocation?.let { location ->
-            centerOnLocation(location, session.trackPoints)
-        } ?: run {
-            locationOverlay?.lastFix?.let { location ->
-                centerOnLocation(location, emptyList())
-            }
-        }
+        val session = callbacks.getCurrentWorkoutSession()
+        val location = session?.currentLocation
+            ?: locationOverlay?.lastFix
+            ?: sessionLocationProvider.getLastKnownLocation()
+            ?: return
+        centerOnLocation(location, session?.trackPoints.orEmpty())
     }
 
     private fun centerOnLocation(location: Location, trackPoints: List<GeoPoint>) {
+        if (mapView.width <= 0 || mapView.height <= 0) {
+            mapView.post { centerOnLocation(location, trackPoints) }
+            return
+        }
+
         val geoPoint = GpsFilter.createValidGeoPoint(location)
         if (geoPoint == null) {
             Log.w(TAG, "Invalid GPS coordinates for map center")
@@ -569,6 +577,22 @@ class MapManager(
     }
 
     fun autoCenterIfNeeded(session: WorkoutSession) {
+        val tracking = session.isTracking || session.isPaused
+
+        // Idle screen: session GPS is still the default SEARCHING and has no location.
+        // Use the overlay/fallback fix and never clear the first-center flag.
+        if (!tracking) {
+            val location = session.currentLocation
+                ?: locationOverlay?.lastFix
+                ?: sessionLocationProvider.getLastKnownLocation()
+                ?: return
+            if (!hasCenteredOnCurrentFix) {
+                hasCenteredOnCurrentFix = true
+                centerOnLocation(location, emptyList())
+            }
+            return
+        }
+
         val location = session.currentLocation ?: return
         if (!isGpsUsableForCenter(session.gpsStatus)) {
             // Searching / lost again — allow a fresh snap when signal returns

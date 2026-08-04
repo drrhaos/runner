@@ -3,6 +3,7 @@ package com.runner.academy.ui.tracking
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Bundle
 import android.os.Build
 import android.os.PowerManager
@@ -207,18 +208,6 @@ class WorkoutTrackingFragment : Fragment() {
             selectedMode = { modeController?.selectedMode ?: TrackingWorkoutMode.EasyRun }
         )
 
-        mapManager = MapManager(requireContext(), binding.mapView, object : MapManager.Callbacks {
-            override fun onMapCenteredStateChanged(centered: Boolean) {
-                updateCenterButtonVisibility(centered)
-            }
-
-            override fun getCurrentWorkoutSession(): WorkoutSession? {
-                return viewModel.workoutSession.value
-            }
-        })
-        mapManager?.initialize()
-        updateCenterButtonVisibility(true)
-
         gpsStatusUpdater = GpsStatusUiUpdater(requireContext(), GpsStatusUiUpdater.Views(
             layoutGpsStatus = binding.layoutGpsStatus,
             textViewGpsAccuracy = binding.textViewGpsAccuracy,
@@ -227,6 +216,26 @@ class WorkoutTrackingFragment : Fragment() {
             viewGpsBar3 = binding.viewGpsBar3,
             viewGpsBar4 = binding.viewGpsBar4,
         ))
+
+        mapManager = MapManager(requireContext(), binding.mapView, object : MapManager.Callbacks {
+            override fun onMapCenteredStateChanged(centered: Boolean) {
+                updateCenterButtonVisibility(centered)
+            }
+
+            override fun getCurrentWorkoutSession(): WorkoutSession? {
+                return viewModel.workoutSession.value
+            }
+
+            override fun onLocationFix(location: Location) {
+                if (_binding == null || !isAdded || isDetached) return
+                val session = viewModel.workoutSession.value
+                if (session.isTracking || session.isPaused) return
+                gpsStatusUpdater?.setGpsData(location.accuracy, System.currentTimeMillis())
+                gpsStatusUpdater?.updateStatusIcon()
+            }
+        })
+        mapManager?.initialize()
+        updateCenterButtonVisibility(true)
 
         panelStateManager = PanelStateManager(PanelStateManager.Views(
             layoutWorkoutPanel = binding.layoutWorkoutPanel,
@@ -505,17 +514,21 @@ class WorkoutTrackingFragment : Fragment() {
         lastUIUpdateTime = now
 
         metricsDisplayManager?.updateMetrics(session)
-        gpsStatusUpdater?.updateGpsSignalIndicator(
-            session.gpsStatus,
-            session.currentLocation?.accuracy ?: gpsStatusUpdater?.getLastGpsAccuracy() ?: 0f
-        )
 
-        session.currentLocation?.let { location ->
-            gpsStatusUpdater?.setGpsData(location.accuracy, System.currentTimeMillis())
+        val tracking = session.isTracking || session.isPaused
+        if (tracking) {
+            gpsStatusUpdater?.updateGpsSignalIndicator(
+                session.gpsStatus,
+                session.currentLocation?.accuracy ?: gpsStatusUpdater?.getLastGpsAccuracy() ?: 0f
+            )
+            session.currentLocation?.let { location ->
+                gpsStatusUpdater?.setGpsData(location.accuracy, System.currentTimeMillis())
+            }
         }
 
         val gpsStatusTime = System.currentTimeMillis()
         if (gpsStatusTime - lastGpsStatusUpdate >= GPS_STATUS_UPDATE_INTERVAL) {
+            // Idle: refresh from last fallback fix. Tracking: keep bars in sync with freshness.
             gpsStatusUpdater?.updateStatusIcon()
             lastGpsStatusUpdate = gpsStatusTime
         }
