@@ -65,9 +65,9 @@ class WorkoutTrackingService : Service() {
         const val EXTRA_MODE_SELECTION = "MODE_SELECTION"
         const val EXTRA_INTERVAL_SEGMENTS_JSON = "INTERVAL_SEGMENTS_JSON"
         const val NO_LOCATION_UPDATE_TIMEOUT_MS = 5000L
-        const val PERIODIC_LOCATION_REQUEST_INTERVAL_MS = 1000L
+        const val PERIODIC_LOCATION_REQUEST_INTERVAL_MS = 2000L
         const val WORKOUT_TIMER_INTERVAL_MS = 1000L
-        private const val CHECKPOINT_SAVE_MIN_INTERVAL_MS = 5_000L
+        private const val CHECKPOINT_SAVE_MIN_INTERVAL_MS = 15_000L
     }
 
     // Extracted component instances
@@ -755,9 +755,10 @@ class WorkoutTrackingService : Service() {
     }
 
     private fun updatePeriodicTimerInterval() {
-        // Keep the watchdog on the same cadence as workout GPS — don't slow it when nearly stopped
         if (isCurrentlyTracking && !sessionManager.getSession().isPaused) {
-            startPeriodicLocationRequest(PERIODIC_LOCATION_REQUEST_INTERVAL_MS)
+            val watchdogMs = lastAppliedAdaptiveIntervalMs
+                .coerceAtLeast(GpsConfig.HIGH_ACCURACY_INTERVAL)
+            startPeriodicLocationRequest(watchdogMs)
         }
     }
 
