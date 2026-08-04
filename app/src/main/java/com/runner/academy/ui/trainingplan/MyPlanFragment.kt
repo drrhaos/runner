@@ -14,12 +14,12 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
+import com.runner.academy.appContainer
 import com.runner.academy.data.ScheduledWorkout
 import com.runner.academy.data.ScheduledWorkoutStatus
 import com.runner.academy.data.ScheduledWorkoutWithTemplate
 import com.runner.academy.data.TrainingIcon
 import com.runner.academy.data.TrainingPlanRepository
-import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.data.WorkoutTemplateSegment
 import com.runner.academy.data.defaultTrainingIcon
 import com.runner.academy.data.displayName
@@ -40,14 +40,7 @@ class MyPlanFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: TrainingPlanViewModel by viewModels {
-        val db = WorkoutDatabase.getDatabase(requireContext())
-        TrainingPlanViewModelFactory(
-            TrainingPlanRepository(
-                db.workoutTemplateDao(),
-                db.trainingPlanDao(),
-                db.planScheduleDao()
-            )
-        )
+        TrainingPlanViewModelFactory(requireContext().appContainer().trainingPlanRepository)
     }
 
     private var selectedDayMillis: Long =

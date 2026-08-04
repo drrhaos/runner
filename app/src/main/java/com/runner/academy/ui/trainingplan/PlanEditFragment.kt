@@ -9,14 +9,14 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
+import com.runner.academy.appContainer
 import com.runner.academy.data.TrainingIcon
 import com.runner.academy.data.TrainingPlanDay
-import com.runner.academy.data.TrainingPlanRepository
-import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.data.WorkoutTemplate
 import com.runner.academy.data.defaultTrainingIcon
 import com.runner.academy.data.displayName
@@ -31,19 +31,14 @@ class PlanEditFragment : Fragment() {
     private var _binding: FragmentPlanEditBinding? = null
     private val binding get() = _binding!!
 
-    private val planIdArg: Long by lazy { arguments?.getLong("planId", -1L) ?: -1L }
+    private val args: PlanEditFragmentArgs by navArgs()
+    private val planIdArg: Long
+        get() = args.planId
     private var planId: Long = -1L
     private var observingDays = false
 
     private val viewModel: TrainingPlanViewModel by viewModels {
-        val db = WorkoutDatabase.getDatabase(requireContext())
-        TrainingPlanViewModelFactory(
-            TrainingPlanRepository(
-                db.workoutTemplateDao(),
-                db.trainingPlanDao(),
-                db.planScheduleDao()
-            )
-        )
+        TrainingPlanViewModelFactory(requireContext().appContainer().trainingPlanRepository)
     }
 
     private val selectedDays = linkedSetOf<Int>()

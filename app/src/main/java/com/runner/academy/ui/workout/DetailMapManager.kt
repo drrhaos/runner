@@ -1,11 +1,11 @@
 package com.runner.academy.ui.workout
 
 import android.graphics.Color
-import android.graphics.DashPathEffect
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.util.OsmMapConfig
 import com.runner.academy.util.OsmMapTiles
+import com.runner.academy.util.TrackPolylineFactory
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -24,11 +24,7 @@ class DetailMapManager(
 ) {
 
     companion object {
-        private const val TRACK_LINE_WIDTH = 10f
-        private const val TRACK_LINE_COLOR = Color.RED
-        private const val GAP_DASH_ON = 24f
-        private const val GAP_DASH_OFF = 16f
-        private const val GAP_LINE_ALPHA = 160
+        private val TRACK_STYLE = TrackPolylineFactory.Style.DETAIL
     }
 
     private var trackPolyline: Polyline? = null
@@ -43,6 +39,8 @@ class DetailMapManager(
         isDetached = false
         OsmMapConfig.apply(context)
         OsmMapTiles.applyForTheme(context, mapView)
+        // Detach only via [onDetach]; default true races with late displayTrack callbacks.
+        mapView.setDestroyMode(false)
         mapView.setMultiTouchControls(true)
         mapView.controller.setZoom(15.0)
         mapView.setUseDataConnection(true)
@@ -54,10 +52,7 @@ class DetailMapManager(
             mapView.overlays.add(CopyrightOverlay(context))
         }
 
-        trackPolyline = Polyline().apply {
-            outlinePaint.color = TRACK_LINE_COLOR
-            outlinePaint.strokeWidth = TRACK_LINE_WIDTH
-        }
+        trackPolyline = TrackPolylineFactory.createSolid(style = TRACK_STYLE)
         mapView.overlays.add(trackPolyline)
 
         positionMarker = Marker(mapView).apply {
@@ -80,41 +75,26 @@ class DetailMapManager(
     }
 
     fun displayTrack(trackData: TrackData) {
-        if (trackData.points.isEmpty()) return
+        if (isDetached || trackData.points.isEmpty()) return
 
         clearTrackOverlays()
 
-        val segments = splitTrackIntoSegments(trackData.points)
+        val segments = TrackPolylineFactory.splitIntoSegments(trackData.points)
         if (segments.isEmpty()) return
 
-        val allGeoPoints = mutableListOf<GeoPoint>()
-        segments.forEachIndexed { index, segment ->
-            allGeoPoints.addAll(segment)
-            val poly = Polyline().apply {
-                outlinePaint.color = TRACK_LINE_COLOR
-                outlinePaint.strokeWidth = TRACK_LINE_WIDTH
-                setPoints(segment)
-            }
+        val (solids, gaps) = TrackPolylineFactory.buildOverlays(segments, TRACK_STYLE)
+        val allGeoPoints = segments.flatten()
+
+        solids.forEachIndexed { index, poly ->
             if (index == 0) {
                 trackPolyline = poly
             } else {
                 gapPolylines.add(poly)
             }
-            // Insert below markers so selection markers stay visible
             val insertAt = mapView.overlays.indexOf(positionMarker).coerceAtLeast(0)
             mapView.overlays.add(insertAt, poly)
         }
-
-        for (i in 0 until segments.lastIndex) {
-            val from = segments[i].lastOrNull() ?: continue
-            val to = segments[i + 1].firstOrNull() ?: continue
-            val dashed = Polyline().apply {
-                outlinePaint.color = TRACK_LINE_COLOR
-                outlinePaint.strokeWidth = TRACK_LINE_WIDTH
-                outlinePaint.alpha = GAP_LINE_ALPHA
-                outlinePaint.pathEffect = DashPathEffect(floatArrayOf(GAP_DASH_ON, GAP_DASH_OFF), 0f)
-                setPoints(mutableListOf(from, to))
-            }
+        gaps.forEach { dashed ->
             gapPolylines.add(dashed)
             val insertAt = mapView.overlays.indexOf(positionMarker).coerceAtLeast(0)
             mapView.overlays.add(insertAt, dashed)
@@ -133,20 +113,6 @@ class DetailMapManager(
         trackPolyline = null
         gapPolylines.forEach { mapView.overlays.remove(it) }
         gapPolylines.clear()
-    }
-
-    private fun splitTrackIntoSegments(points: List<TrackPoint>): List<MutableList<GeoPoint>> {
-        val segments = mutableListOf<MutableList<GeoPoint>>()
-        var current = mutableListOf<GeoPoint>()
-        for (point in points) {
-            if (point.afterGap && current.isNotEmpty()) {
-                segments.add(current)
-                current = mutableListOf()
-            }
-            current.add(GeoPoint(point.latitude, point.longitude))
-        }
-        if (current.isNotEmpty()) segments.add(current)
-        return segments
     }
 
     private fun fitBoundsOnce(allGeoPoints: List<GeoPoint>) {

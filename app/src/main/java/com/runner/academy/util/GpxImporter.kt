@@ -2,7 +2,6 @@ package com.runner.academy.util
 
 import android.location.Location
 import android.util.Xml
-import com.google.gson.Gson
 import com.runner.academy.data.LocationSource
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
@@ -18,8 +17,6 @@ import java.util.Date
  * Imports a single workout from a GPX 1.1 track (trk/trkseg/trkpt).
  */
 object GpxImporter {
-
-    private val gson = Gson()
 
     fun parseGpx(input: InputStream, fileName: String? = null): Workout {
         return parseGpx(input.bufferedReader().use { it.readText() }, fileName)
@@ -59,7 +56,7 @@ object GpxImporter {
             calories = null,
             notes = fileName?.let { "Imported from $it" },
             type = WorkoutType.EASY_RUN,
-            trackData = gson.toJson(trackData),
+            trackData = TrackDataJson.toJson(trackData),
             isFavorite = false
         )
     }
