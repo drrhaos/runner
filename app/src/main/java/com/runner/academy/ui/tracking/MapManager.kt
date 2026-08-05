@@ -197,6 +197,14 @@ class MapManager(
         cancelAutoCenter()
     }
 
+    /** Last pre-workout / session fix for seeding the tracking service on Start. */
+    fun peekLastLocation(): Location? = sessionLocationProvider.peekLastLocation()
+
+    /** After Stop, resume high-accuracy warm-up for the next Start. */
+    fun resumePreWorkoutLocationUpdates() {
+        sessionLocationProvider.resumePreWorkoutUpdates()
+    }
+
     private fun setupLocationOverlay() {
         sessionLocationProvider.onLocationUpdated = { location ->
             callbacks.onLocationFix(location)

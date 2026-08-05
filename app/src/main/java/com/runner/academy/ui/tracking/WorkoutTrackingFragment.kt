@@ -78,6 +78,7 @@ class WorkoutTrackingFragment : Fragment() {
     // State
     private var lastUIUpdateTime = 0L
     private var lastGpsStatusUpdate = 0L
+    private var wasTrackingOrPaused = false
     private var isStoppingWorkout = false
     private var stopHoldJob: Job? = null
     private var stopHoldStartTime = 0L
@@ -153,6 +154,7 @@ class WorkoutTrackingFragment : Fragment() {
         setupWindowInsets()
         gpsStatusUpdater?.updateStatusIcon()
         gpsStatusHandler.post(gpsStatusRunnable)
+        updateIdleGpsBanner()
 
         // Always bind — after process/task death the VM is empty but the service
         // (or disk checkpoint) may still hold an active workout.
@@ -232,6 +234,8 @@ class WorkoutTrackingFragment : Fragment() {
                 if (session.isTracking || session.isPaused) return
                 gpsStatusUpdater?.setGpsData(location.accuracy, System.currentTimeMillis())
                 gpsStatusUpdater?.updateStatusIcon()
+                viewModel.seedPreStartLocation(location)
+                updateIdleGpsBanner()
             }
         })
         mapManager?.initialize()
@@ -516,6 +520,12 @@ class WorkoutTrackingFragment : Fragment() {
         metricsDisplayManager?.updateMetrics(session)
 
         val tracking = session.isTracking || session.isPaused
+        if (wasTrackingOrPaused && !tracking) {
+            mapManager?.resumePreWorkoutLocationUpdates()
+            updateIdleGpsBanner()
+        }
+        wasTrackingOrPaused = tracking
+
         if (tracking) {
             gpsStatusUpdater?.updateGpsSignalIndicator(
                 session.gpsStatus,
@@ -538,18 +548,66 @@ class WorkoutTrackingFragment : Fragment() {
 
     private fun updateGpsBanner(session: WorkoutSession) {
         val banner = binding.textViewGpsBanner
-        if (session.gpsStatus == GpsStatus.LOST && session.isTracking) {
-            banner.visibility = View.VISIBLE
-            banner.text = getString(R.string.gps_lost_banner)
-        } else {
-            banner.visibility = View.GONE
+        when {
+            session.gpsStatus == GpsStatus.LOST && session.isTracking -> {
+                banner.visibility = View.VISIBLE
+                banner.text = getString(R.string.gps_lost_banner)
+            }
+            !session.isTracking && !session.isPaused -> {
+                updateIdleGpsBanner()
+            }
+            else -> banner.visibility = View.GONE
         }
+    }
+
+    private fun updateIdleGpsBanner() {
+        val banner = _binding?.textViewGpsBanner ?: return
+        val session = viewModel.workoutSession.value
+        if (session.isTracking || session.isPaused) return
+        val updater = gpsStatusUpdater ?: return
+        val status = com.runner.academy.util.ErrorHandler.determineGpsStatus(
+            requireContext(),
+            updater.getLastGpsAccuracy(),
+            updater.getLastGpsUpdateTime()
+        )
+        when (status) {
+            GpsStatus.FOUND, GpsStatus.STRONG, GpsStatus.MEDIUM, GpsStatus.WEAK -> {
+                banner.visibility = View.VISIBLE
+                banner.text = getString(R.string.gps_ready_banner)
+            }
+            GpsStatus.SEARCHING, GpsStatus.LOST -> {
+                banner.visibility = View.VISIBLE
+                banner.text = getString(R.string.gps_wait_banner)
+            }
+            GpsStatus.DENIED -> {
+                banner.visibility = View.VISIBLE
+                banner.text = getString(R.string.gps_accuracy_denied)
+            }
+        }
+    }
+
+    private fun isPreStartGpsReady(): Boolean {
+        val updater = gpsStatusUpdater ?: return false
+        val status = com.runner.academy.util.ErrorHandler.determineGpsStatus(
+            requireContext(),
+            updater.getLastGpsAccuracy(),
+            updater.getLastGpsUpdateTime()
+        )
+        return status == GpsStatus.FOUND ||
+            status == GpsStatus.STRONG ||
+            status == GpsStatus.MEDIUM ||
+            status == GpsStatus.WEAK
     }
 
     // -- Workout start/stop flow --
 
     private fun startCountdown() {
         if (countdownJob != null) return
+        if (!isPreStartGpsReady()) {
+            Toast.makeText(requireContext(), R.string.gps_wait_banner, Toast.LENGTH_SHORT).show()
+            // Still allow start — outdoor athletes may know better — but warn clearly
+        }
+        viewModel.seedPreStartLocation(mapManager?.peekLastLocation())
         val prefs = requireContext().appContainer().userPreferences
         val countdownSeconds = prefs.startCountdownSeconds
         if (countdownSeconds <= 0) {
@@ -577,6 +635,7 @@ class WorkoutTrackingFragment : Fragment() {
         isStoppingWorkout = false
         intervalController?.prepareForNewWorkout()
         requestBatteryOptimizationExemption()
+        viewModel.seedPreStartLocation(mapManager?.peekLastLocation())
         viewLifecycleOwner.lifecycleScope.launch {
             val workoutType = modeController?.selectedWorkoutType
                 ?: com.runner.academy.data.WorkoutType.EASY_RUN
@@ -589,7 +648,6 @@ class WorkoutTrackingFragment : Fragment() {
                 ).show()
             }
         }
-        binding.textViewGpsAccuracy.visibility = View.GONE
     }
 
     private fun navigateToWorkoutDetails() {
