@@ -195,6 +195,44 @@ class WorkoutImportTest {
         assertEquals("GPS", track.points[0].source)
     }
 
+    @Test
+    fun parseBackupJson_r8ObfuscatedKeys_fromReleaseBackup() {
+        // Shape from runner_workouts_backup_* produced by release builds before
+        // export switched to explicit JsonObject names (R8 renamed DTO fields).
+        val json = """
+            {
+              "a": "2026-08-04T20:28:40.971813Z",
+              "b": "com.runner.academy",
+              "c": 1,
+              "d": [
+                {
+                  "a": 42,
+                  "b": 1785838265909,
+                  "c": 4.042081,
+                  "d": 1302807,
+                  "e": 5.3718495,
+                  "f": 343,
+                  "h": "EASY_RUN",
+                  "i": "{\"points\":[],\"total_distance\":4042,\"total_duration\":1302807,\"avg_speed\":3.1,\"max_speed\":9.0,\"start_time\":1785838265909,\"end_time\":1785839569592}",
+                  "j": false
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val workouts = WorkoutBackupFormat.parseBackupJson(json)
+        assertEquals(1, workouts.size)
+        val workout = workouts[0]
+        assertEquals(4.042081f, workout.distance, 0.0001f)
+        assertEquals(1_302_807L, workout.duration)
+        assertEquals(5.3718495f, workout.avgPace, 0.0001f)
+        assertEquals(343, workout.calories)
+        assertEquals(WorkoutType.EASY_RUN, workout.type)
+        assertEquals(false, workout.isFavorite)
+        assertNotNull(workout.trackData)
+        assertTrue(workout.trackData!!.contains("total_distance"))
+    }
+
     @Test(expected = IllegalArgumentException::class)
     fun parseBackupJson_emptyWorkoutsThrows() {
         WorkoutBackupFormat.parseBackupJson(
