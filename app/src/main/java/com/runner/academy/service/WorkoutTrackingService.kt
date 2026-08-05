@@ -75,6 +75,9 @@ class WorkoutTrackingService : Service() {
         const val PERIODIC_LOCATION_REQUEST_SCREEN_OFF_MS = 10_000L
         const val WORKOUT_TIMER_INTERVAL_MS = 1000L
         private const val CHECKPOINT_SAVE_MIN_INTERVAL_MS = 15_000L
+        /** Max age for a seeded / lastKnown fix used as the first track anchor. */
+        const val PRE_START_LOCATION_MAX_AGE_MS = 20_000L
+        const val PRE_START_LOCATION_MAX_ACCURACY_M = 80f
     }
 
     // Extracted component instances
@@ -329,13 +332,19 @@ class WorkoutTrackingService : Service() {
             android.util.Log.w("WorkoutTrackingService", "No location permission granted, starting workout without GPS")
         }
 
-        lastLocation = null
         lastAppliedAdaptiveIntervalMs = -1L
         lastAppliedScreenInteractive = null
         lastAcceptedBearingDeg = null
         turningDensifyActive = false
         isCurrentlyTracking = true
-        lastLocationTime = 0L
+        // Drop stale seed; keep a fresh pre-start fix as the first track anchor
+        if (lastLocation == null ||
+            lastLocationTime <= 0L ||
+            System.currentTimeMillis() - lastLocationTime > PRE_START_LOCATION_MAX_AGE_MS
+        ) {
+            lastLocation = null
+            lastLocationTime = 0L
+        }
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
 
@@ -608,6 +617,26 @@ class WorkoutTrackingService : Service() {
     // Location updates
     // ------------------------------------------------------------------
 
+    /**
+     * Seeds a pre-workout fix from the UI so Start does not begin from a cold / stale anchor.
+     * Ignored while a workout is already running.
+     */
+    fun seedPreStartLocation(location: Location) {
+        if (isCurrentlyTracking || sessionManager.getSession().isTracking) return
+        if (!isUsablePreStartLocation(location)) return
+        lastLocation = location
+        lastLocationTime = System.currentTimeMillis()
+    }
+
+    private fun isUsablePreStartLocation(location: Location): Boolean {
+        val ageMs = (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) / 1_000_000L
+        if (ageMs !in 0..PRE_START_LOCATION_MAX_AGE_MS) return false
+        if (location.hasAccuracy() && location.accuracy > PRE_START_LOCATION_MAX_ACCURACY_M) {
+            return false
+        }
+        return GpsFilter.isValidGpsLocation(location)
+    }
+
     private fun hasLocationPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             this,
@@ -639,9 +668,11 @@ class WorkoutTrackingService : Service() {
             )
             lastAppliedScreenInteractive = screenInteractive
 
-            // Fetch last known location
+            // Only use lastKnown when fresh — stale cache causes the first track point to jump
             requestLastKnownLocation { location ->
-                updateLocation(location)
+                if (isUsablePreStartLocation(location)) {
+                    updateLocation(location)
+                }
             }
 
         } catch (e: SecurityException) {

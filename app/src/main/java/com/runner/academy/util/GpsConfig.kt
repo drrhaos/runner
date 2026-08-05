@@ -115,6 +115,20 @@ object GpsConfig {
         return bearingDeltaDegrees(previousBearingDeg, currentBearingDeg) >= TURN_BEARING_DELTA_DEG
     }
 
+    /** Pre-workout map / readiness — high accuracy so the athlete gets a fix before Start. */
+    fun createPreWorkoutLocationRequest(): LocationRequest {
+        return LocationRequest.Builder(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            2000L
+        ).apply {
+            setMinUpdateIntervalMillis(MIN_UPDATE_INTERVAL)
+            setMaxUpdateDelayMillis(2000L)
+            setWaitForAccurateLocation(false)
+            // Standing still must still receive accuracy improvements
+            setMinUpdateDistanceMeters(0f)
+        }.build()
+    }
+
     /** Pre-workout map marker / status — balanced power, not continuous GNSS. */
     fun createStatusLocationRequest(): LocationRequest {
         return LocationRequest.Builder(
