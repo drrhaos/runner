@@ -3,12 +3,16 @@ package com.runner.academy.service
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import androidx.core.content.ContextCompat
 import com.runner.academy.data.GpsStatus
 import com.runner.academy.data.WorkoutSession
@@ -26,6 +30,7 @@ import com.runner.academy.util.FormatUtils
 import com.google.android.gms.location.*
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -65,7 +70,9 @@ class WorkoutTrackingService : Service() {
         const val EXTRA_MODE_SELECTION = "MODE_SELECTION"
         const val EXTRA_INTERVAL_SEGMENTS_JSON = "INTERVAL_SEGMENTS_JSON"
         const val NO_LOCATION_UPDATE_TIMEOUT_MS = 5000L
+        const val NO_LOCATION_UPDATE_TIMEOUT_SCREEN_OFF_MS = 12_000L
         const val PERIODIC_LOCATION_REQUEST_INTERVAL_MS = 2000L
+        const val PERIODIC_LOCATION_REQUEST_SCREEN_OFF_MS = 10_000L
         const val WORKOUT_TIMER_INTERVAL_MS = 1000L
         private const val CHECKPOINT_SAVE_MIN_INTERVAL_MS = 15_000L
     }
@@ -100,7 +107,20 @@ class WorkoutTrackingService : Service() {
     private var periodicLocationJob: Job? = null
     private var lastLocationTime: Long = 0
     private var lastAppliedAdaptiveIntervalMs: Long = -1L
+    private var lastAppliedScreenInteractive: Boolean? = null
     private var workoutTimerJob: Job? = null
+    private var screenInteractive: Boolean = true
+    private var lastAcceptedBearingDeg: Float? = null
+    private var turningDensifyActive: Boolean = false
+
+    private val screenStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_OFF -> applyScreenInteractive(false)
+                Intent.ACTION_SCREEN_ON, Intent.ACTION_USER_PRESENT -> applyScreenInteractive(true)
+            }
+        }
+    }
 
     // User preferences for calorie calculation / voice
     private lateinit var userPreferences: UserPreferences
@@ -123,6 +143,9 @@ class WorkoutTrackingService : Service() {
         activeWorkoutStore = ActiveWorkoutStore(this)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         setupLocationCallback()
+        screenInteractive = isDisplayInteractive()
+        notificationManager.setScreenInteractive(screenInteractive)
+        registerScreenStateReceiver()
         sessionManager.onSessionChanged = { session ->
             sessionUpdateCallback?.invoke(session)
             maybeSaveCheckpoint(session, force = session.isPaused)
@@ -174,6 +197,7 @@ class WorkoutTrackingService : Service() {
         }
         releaseVoice()
         serviceIntervalEngine = null
+        unregisterScreenStateReceiver()
         super.onDestroy()
         stopWorkoutTimer()
         stopLocationUpdates()
@@ -188,7 +212,13 @@ class WorkoutTrackingService : Service() {
     private fun setupLocationCallback() {
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
-                locationResult.lastLocation?.let { location ->
+                // Process full batch (screen-off delivery may contain many fixes)
+                val locations = locationResult.locations
+                if (locations.isEmpty()) {
+                    locationResult.lastLocation?.let { updateLocation(it) }
+                    return
+                }
+                for (location in locations) {
                     updateLocation(location)
                 }
             }
@@ -230,12 +260,20 @@ class WorkoutTrackingService : Service() {
                         currentLocation = result.filteredLocation
                     )
 
-                    // Update adaptive GPS interval every 10 points
-                    if (result.trackPoints.size % 10 == 0) {
+                    val filtered = result.filteredLocation
+                    val turning = if (filtered.hasBearing()) {
+                        val turningNow = GpsConfig.isTurning(lastAcceptedBearingDeg, filtered.bearing)
+                        lastAcceptedBearingDeg = filtered.bearing
+                        turningNow
+                    } else {
+                        false
+                    }
+                    if (turning != turningDensifyActive || result.trackPoints.size % 10 == 0) {
+                        turningDensifyActive = turning
                         updateLocationRequestInterval(sessionManager.getSession().currentSpeed)
                     }
 
-                    lastLocation = result.filteredLocation
+                    lastLocation = filtered
                     lastLocationTime = System.currentTimeMillis()
                 }
 
@@ -293,8 +331,13 @@ class WorkoutTrackingService : Service() {
 
         lastLocation = null
         lastAppliedAdaptiveIntervalMs = -1L
+        lastAppliedScreenInteractive = null
+        lastAcceptedBearingDeg = null
+        turningDensifyActive = false
         isCurrentlyTracking = true
         lastLocationTime = 0L
+        screenInteractive = isDisplayInteractive()
+        notificationManager.setScreenInteractive(screenInteractive)
 
         val initialGpsStatus = if (hasPermission) GpsStatus.SEARCHING else GpsStatus.DENIED
         sessionManager.startNewSession(initialGpsStatus = initialGpsStatus)
@@ -314,6 +357,7 @@ class WorkoutTrackingService : Service() {
     fun pauseWorkout() {
         isCurrentlyTracking = false
         sessionManager.pause()
+        stopLocationUpdates()
         stopPeriodicLocationRequest()
         stopWorkoutTimer()
         notificationManager.updateNotification(sessionManager.getSession(), force = true)
@@ -335,6 +379,9 @@ class WorkoutTrackingService : Service() {
     fun stopWorkout() {
         isCurrentlyTracking = false
         lastAppliedAdaptiveIntervalMs = -1L
+        lastAppliedScreenInteractive = null
+        lastAcceptedBearingDeg = null
+        turningDensifyActive = false
         sessionManager.stop()
         activeWorkoutStore.clear()
         modeSelectionKey = null
@@ -402,10 +449,13 @@ class WorkoutTrackingService : Service() {
 
     private fun resumeTrackingAfterRestore(session: WorkoutSession) {
         ensureForegroundNotification()
+        screenInteractive = isDisplayInteractive()
+        notificationManager.setScreenInteractive(screenInteractive)
         if (session.isPaused) {
             isCurrentlyTracking = false
             stopWorkoutTimer()
             stopPeriodicLocationRequest()
+            stopLocationUpdates()
         } else {
             isCurrentlyTracking = true
             if (hasLocationPermission()) {
@@ -570,17 +620,24 @@ class WorkoutTrackingService : Service() {
     }
 
     private fun startLocationUpdates() {
-        val locationRequest = GpsConfig.createWorkoutLocationRequest()
+        val locationRequest = GpsConfig.createWorkoutLocationRequest(screenInteractive)
         currentLocationRequest = locationRequest
 
         try {
             val callback = locationCallback ?: return
+            // Avoid duplicate registrations (resume / restore / profile switch races)
+            fusedLocationClient?.removeLocationUpdates(callback)
             fusedLocationClient?.requestLocationUpdates(
                 locationRequest,
                 callback,
                 mainLooper
             )
-            lastAppliedAdaptiveIntervalMs = GpsConfig.HIGH_ACCURACY_INTERVAL
+            lastAppliedAdaptiveIntervalMs = GpsConfig.getAdaptiveInterval(
+                currentSpeed = 0f,
+                screenInteractive = screenInteractive,
+                turning = false
+            )
+            lastAppliedScreenInteractive = screenInteractive
 
             // Fetch last known location
             requestLastKnownLocation { location ->
@@ -634,19 +691,26 @@ class WorkoutTrackingService : Service() {
     // Periodic location request (timeout guard)
     // ------------------------------------------------------------------
 
-    private fun startPeriodicLocationRequest(intervalMs: Long = PERIODIC_LOCATION_REQUEST_INTERVAL_MS) {
+    private fun startPeriodicLocationRequest(intervalMs: Long = defaultWatchdogIntervalMs()) {
         periodicLocationJob?.cancel()
+        val lostTimeoutMs = locationLostTimeoutMs()
 
         periodicLocationJob = serviceScope.launch {
             while (isActive && isCurrentlyTracking && !sessionManager.getSession().isPaused) {
                 delay(intervalMs)
                 if (!isActive) break
                 val currentTime = System.currentTimeMillis()
-                if (currentTime - lastLocationTime > NO_LOCATION_UPDATE_TIMEOUT_MS) {
+                if (currentTime - lastLocationTime > lostTimeoutMs) {
                     // Do NOT stamp lastLocationTime here — only Accepted / refreshGapClock
                     // updates should. Stale lastKnown would mask GpsStatus.LOST.
+                    // Prefer a fresh sample over replaying an old lastLocation.
+                    val ageCapMs = lostTimeoutMs
                     requestLastKnownLocation { location ->
-                        updateLocation(location)
+                        val age = (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) /
+                            1_000_000L
+                        if (age in 0..ageCapMs) {
+                            updateLocation(location)
+                        }
                     }
                 }
                 resolveGpsStatusDuringWorkout()
@@ -690,9 +754,10 @@ class WorkoutTrackingService : Service() {
         }
 
         val elapsedSinceLastLocation = System.currentTimeMillis() - lastLocationTime
+        val lostTimeoutMs = locationLostTimeoutMs()
 
         when {
-            elapsedSinceLastLocation > NO_LOCATION_UPDATE_TIMEOUT_MS * 3 -> {
+            elapsedSinceLastLocation > lostTimeoutMs * 3 -> {
                 // No location for an extended period - GPS likely lost
                 if (currentStatus != GpsStatus.LOST) {
                     android.util.Log.w("WorkoutTrackingService", "GPS signal lost during workout (${elapsedSinceLastLocation}ms since last fix)")
@@ -701,7 +766,7 @@ class WorkoutTrackingService : Service() {
             }
             currentStatus == GpsStatus.LOST || currentStatus == GpsStatus.SEARCHING -> {
                 // Recent accepted fix recovered the signal
-                if (elapsedSinceLastLocation <= NO_LOCATION_UPDATE_TIMEOUT_MS) {
+                if (elapsedSinceLastLocation <= lostTimeoutMs) {
                     android.util.Log.i("WorkoutTrackingService", "GPS signal recovered during workout")
                     sessionManager.updateGpsStatus(GpsStatus.FOUND)
                 }
@@ -723,8 +788,14 @@ class WorkoutTrackingService : Service() {
             return
         }
 
-        val adaptiveInterval = GpsConfig.getAdaptiveInterval(currentSpeed)
-        if (adaptiveInterval == lastAppliedAdaptiveIntervalMs) {
+        val adaptiveInterval = GpsConfig.getAdaptiveInterval(
+            currentSpeed = currentSpeed,
+            screenInteractive = screenInteractive,
+            turning = turningDensifyActive
+        )
+        if (adaptiveInterval == lastAppliedAdaptiveIntervalMs &&
+            lastAppliedScreenInteractive == screenInteractive
+        ) {
             return
         }
 
@@ -733,7 +804,10 @@ class WorkoutTrackingService : Service() {
                 fusedLocationClient?.removeLocationUpdates(callback)
             }
 
-            val newLocationRequest = GpsConfig.createAdaptiveLocationRequest(adaptiveInterval)
+            val newLocationRequest = GpsConfig.createAdaptiveLocationRequest(
+                intervalMs = adaptiveInterval,
+                screenInteractive = screenInteractive
+            )
             currentLocationRequest = newLocationRequest
 
             val callback = locationCallback ?: return
@@ -744,6 +818,7 @@ class WorkoutTrackingService : Service() {
             )
 
             lastAppliedAdaptiveIntervalMs = adaptiveInterval
+            lastAppliedScreenInteractive = screenInteractive
 
         } catch (e: SecurityException) {
             android.util.Log.e("WorkoutTrackingService", "SecurityException updating location request: ${e.message}", e)
@@ -756,9 +831,52 @@ class WorkoutTrackingService : Service() {
 
     private fun updatePeriodicTimerInterval() {
         if (isCurrentlyTracking && !sessionManager.getSession().isPaused) {
-            val watchdogMs = lastAppliedAdaptiveIntervalMs
-                .coerceAtLeast(GpsConfig.HIGH_ACCURACY_INTERVAL)
-            startPeriodicLocationRequest(watchdogMs)
+            startPeriodicLocationRequest(defaultWatchdogIntervalMs())
+        }
+    }
+
+    private fun defaultWatchdogIntervalMs(): Long =
+        if (screenInteractive) PERIODIC_LOCATION_REQUEST_INTERVAL_MS
+        else PERIODIC_LOCATION_REQUEST_SCREEN_OFF_MS
+
+    private fun locationLostTimeoutMs(): Long =
+        if (screenInteractive) NO_LOCATION_UPDATE_TIMEOUT_MS
+        else NO_LOCATION_UPDATE_TIMEOUT_SCREEN_OFF_MS
+
+    private fun isDisplayInteractive(): Boolean {
+        val pm = getSystemService(POWER_SERVICE) as? PowerManager ?: return true
+        return pm.isInteractive
+    }
+
+    private fun applyScreenInteractive(interactive: Boolean) {
+        if (screenInteractive == interactive) return
+        screenInteractive = interactive
+        notificationManager.setScreenInteractive(interactive)
+        if (isCurrentlyTracking && !sessionManager.getSession().isPaused) {
+            lastAppliedScreenInteractive = null
+            updateLocationRequestInterval(sessionManager.getSession().currentSpeed)
+        }
+    }
+
+    private fun registerScreenStateReceiver() {
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+            addAction(Intent.ACTION_USER_PRESENT)
+        }
+        ContextCompat.registerReceiver(
+            this,
+            screenStateReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
+    private fun unregisterScreenStateReceiver() {
+        try {
+            unregisterReceiver(screenStateReceiver)
+        } catch (_: IllegalArgumentException) {
+            // Already unregistered
         }
     }
 
@@ -772,8 +890,11 @@ class WorkoutTrackingService : Service() {
             while (isActive && isCurrentlyTracking && !sessionManager.getSession().isPaused) {
                 delay(WORKOUT_TIMER_INTERVAL_MS)
                 withContext(Dispatchers.Main) {
-                    sessionManager.tickElapsedTime()
-                    notificationManager.updateNotification(sessionManager.getSession())
+                    // Advance clock without fan-out to voice/checkpoint; UI + notification only
+                    sessionManager.tickElapsedTime(broadcast = false)
+                    val session = sessionManager.getSession()
+                    sessionUpdateCallback?.invoke(session)
+                    notificationManager.updateNotification(session)
                 }
             }
         }

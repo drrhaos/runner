@@ -168,6 +168,7 @@ class MapManager(
     fun onResume() {
         OsmMapTiles.applyForTheme(context, mapView)
         tipFramesEnabled = true
+        mapView.setUseDataConnection(true)
         mapView.onResume()
     }
 
@@ -175,6 +176,8 @@ class MapManager(
         tipFramesEnabled = false
         cancelTipAnimation()
         cancelAutoCenter()
+        // Stop OSM tile fetches while tracking continues in the pocket
+        mapView.setUseDataConnection(false)
         mapView.onPause()
     }
 
