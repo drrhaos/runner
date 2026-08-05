@@ -1,6 +1,7 @@
 package com.runner.academy.util
 
 import com.google.gson.JsonArray
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.runner.academy.data.Workout
@@ -12,6 +13,10 @@ import java.util.Date
  * including `feature/export-all-workouts-example` (`com.example.runner`):
  * formatVersion=1, no isFavorite, trackData as escaped JSON string without
  * after_gap/source on points.
+ *
+ * Also accepts release backups where R8 obfuscated Gson field names to
+ * single-letter keys (a/b/c/…), produced before export switched to explicit
+ * [JsonObject] property names.
  *
  * Parsing is manual via JsonObject so missing fields don't blow up —
  * Gson + Kotlin non-null defaults are unsafe.
@@ -49,17 +54,13 @@ object WorkoutBackupFormat {
             throw IllegalArgumentException("Invalid workout backup JSON", e)
         }
 
-        val workoutsEl = root.get("workouts")
+        val workoutsEl = root.workoutsArrayOrNull()
             ?: throw IllegalArgumentException("Backup missing workouts array")
-        if (!workoutsEl.isJsonArray) {
-            throw IllegalArgumentException("Backup workouts must be an array")
-        }
-        val array = workoutsEl.asJsonArray
-        if (array.isEmpty) {
+        if (workoutsEl.isEmpty) {
             throw IllegalArgumentException("Backup contains no workouts")
         }
 
-        return array.mapIndexed { index, element ->
+        return workoutsEl.mapIndexed { index, element ->
             if (!element.isJsonObject) {
                 throw IllegalArgumentException("Workout at index $index is not an object")
             }
@@ -102,24 +103,41 @@ object WorkoutBackupFormat {
         return "runner_workouts_backup_$stamp.json"
     }
 
+    /**
+     * Named keys from current export, or R8/Gson single-letter aliases from
+     * older release builds: exportedAt/packageName/workoutCount/workouts → a/b/c/d
+     * (formatVersion was absent in that DTO layout).
+     */
+    private fun JsonObject.workoutsArrayOrNull(): JsonArray? {
+        val named = get("workouts")
+        if (named != null && named.isJsonArray) return named.asJsonArray
+        val obfuscated = get("d")
+        if (obfuscated != null && obfuscated.isJsonArray) return obfuscated.asJsonArray
+        return null
+    }
+
     private fun JsonObject.toDto(): WorkoutBackupDto {
+        // Field order in the obfuscated Gson DTO:
+        // id, dateMillis, distanceKm, durationMs, avgPace, calories, notes,
+        // type, trackData, isFavorite [, intervalSegmentsJson]
+        // → a … j [, k]. Null notes are omitted, so letters after notes still match.
         return WorkoutBackupDto(
-            id = longOr("id", 0L),
-            dateMillis = longOr("dateMillis", System.currentTimeMillis()),
-            distanceKm = floatOr("distanceKm", 0f),
-            durationMs = longOr("durationMs", 0L),
-            avgPace = floatOr("avgPace", 0f),
-            calories = intOrNull("calories"),
-            notes = stringOrNull("notes"),
-            type = stringOr("type", WorkoutType.EASY_RUN.name),
-            trackData = trackDataOrNull(),
-            isFavorite = booleanOr("isFavorite", false),
-            intervalSegmentsJson = stringOrNull("intervalSegmentsJson")
+            id = longOr(listOf("id", "a"), 0L),
+            dateMillis = longOr(listOf("dateMillis", "b"), System.currentTimeMillis()),
+            distanceKm = floatOr(listOf("distanceKm", "c"), 0f),
+            durationMs = longOr(listOf("durationMs", "d"), 0L),
+            avgPace = floatOr(listOf("avgPace", "e"), 0f),
+            calories = intOrNull(listOf("calories", "f")),
+            notes = stringOrNull(listOf("notes", "g")),
+            type = stringOr(listOf("type", "h"), WorkoutType.EASY_RUN.name),
+            trackData = trackDataOrNull(listOf("trackData", "i")),
+            isFavorite = booleanOr(listOf("isFavorite", "j"), false),
+            intervalSegmentsJson = stringOrNull(listOf("intervalSegmentsJson", "k"))
         )
     }
 
-    private fun JsonObject.trackDataOrNull(): String? {
-        val el = get("trackData") ?: return null
+    private fun JsonObject.trackDataOrNull(keys: List<String>): String? {
+        val el = firstPresent(keys) ?: return null
         return when {
             el.isJsonNull -> null
             el.isJsonPrimitive && el.asJsonPrimitive.isString -> el.asString
@@ -129,9 +147,16 @@ object WorkoutBackupFormat {
         }
     }
 
-    private fun JsonObject.longOr(key: String, default: Long): Long {
-        val el = get(key) ?: return default
-        if (el.isJsonNull) return default
+    private fun JsonObject.firstPresent(keys: List<String>): JsonElement? {
+        for (key in keys) {
+            val el = get(key) ?: continue
+            if (!el.isJsonNull) return el
+        }
+        return null
+    }
+
+    private fun JsonObject.longOr(keys: List<String>, default: Long): Long {
+        val el = firstPresent(keys) ?: return default
         return try {
             when {
                 el.isJsonPrimitive && el.asJsonPrimitive.isNumber -> el.asLong
@@ -144,9 +169,8 @@ object WorkoutBackupFormat {
         }
     }
 
-    private fun JsonObject.floatOr(key: String, default: Float): Float {
-        val el = get(key) ?: return default
-        if (el.isJsonNull) return default
+    private fun JsonObject.floatOr(keys: List<String>, default: Float): Float {
+        val el = firstPresent(keys) ?: return default
         return try {
             when {
                 el.isJsonPrimitive && el.asJsonPrimitive.isNumber -> el.asFloat
@@ -159,9 +183,8 @@ object WorkoutBackupFormat {
         }
     }
 
-    private fun JsonObject.intOrNull(key: String): Int? {
-        val el = get(key) ?: return null
-        if (el.isJsonNull) return null
+    private fun JsonObject.intOrNull(keys: List<String>): Int? {
+        val el = firstPresent(keys) ?: return null
         return try {
             when {
                 el.isJsonPrimitive && el.asJsonPrimitive.isNumber -> el.asInt
@@ -173,12 +196,11 @@ object WorkoutBackupFormat {
         }
     }
 
-    private fun JsonObject.stringOr(key: String, default: String): String =
-        stringOrNull(key) ?: default
+    private fun JsonObject.stringOr(keys: List<String>, default: String): String =
+        stringOrNull(keys) ?: default
 
-    private fun JsonObject.stringOrNull(key: String): String? {
-        val el = get(key) ?: return null
-        if (el.isJsonNull) return null
+    private fun JsonObject.stringOrNull(keys: List<String>): String? {
+        val el = firstPresent(keys) ?: return null
         return try {
             if (el.isJsonPrimitive) el.asString else el.toString()
         } catch (_: Exception) {
@@ -186,9 +208,8 @@ object WorkoutBackupFormat {
         }
     }
 
-    private fun JsonObject.booleanOr(key: String, default: Boolean): Boolean {
-        val el = get(key) ?: return default
-        if (el.isJsonNull) return default
+    private fun JsonObject.booleanOr(keys: List<String>, default: Boolean): Boolean {
+        val el = firstPresent(keys) ?: return default
         return try {
             when {
                 el.isJsonPrimitive && el.asJsonPrimitive.isBoolean -> el.asBoolean
