@@ -249,6 +249,7 @@
 
     <string name="workout_list_num_workouts">Тренировок</string>
     <string name="workout_list_average_pace">Средний темп</string>
+    <string name="workout_list_pace_label">Темп</string>
     <string name="workout_list_message_no_workouts">Пока нет тренировок</string>
     <string name="workout_list_message_start_workout">Начните тренировку, чтобы появилась первая запись.</string>
     <string name="workout_list_empty_start">Начать тренировку</string>

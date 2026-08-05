@@ -1,29 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_margin="8dp"
+    android:foreground="?android:attr/selectableItemBackground"
     app:cardCornerRadius="12dp"
-    app:cardElevation="0dp"
-    android:foreground="?android:attr/selectableItemBackground">
+    app:cardElevation="0dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
+        android:gravity="top"
         android:orientation="horizontal"
         android:padding="12dp">
 
-        <!-- Reserved preview slot on the left -->
-        <FrameLayout
+        <com.google.android.material.card.MaterialCardView
             android:id="@+id/layout_route_preview_slot"
-            android:layout_width="96dp"
-            android:layout_height="96dp"
+            android:layout_width="88dp"
+            android:layout_height="88dp"
             android:layout_marginEnd="12dp"
-            android:background="@drawable/bg_route_preview_slot"
-            android:clipToOutline="true">
+            app:cardBackgroundColor="@color/route_preview_background"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp">
 
             <ImageView
                 android:id="@+id/route_preview"
@@ -37,18 +38,19 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="center"
-                android:padding="8dp"
+                android:padding="6dp"
                 android:text="@string/workout_list_no_route_preview"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="11sp"
                 android:visibility="gone"
                 tools:visibility="visible" />
-        </FrameLayout>
+        </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:minWidth="0dp"
             android:orientation="vertical">
 
             <LinearLayout
@@ -62,6 +64,8 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
                     android:textColor="?attr/colorOnSurface"
                     android:textSize="16sp"
                     android:textStyle="bold"
@@ -76,20 +80,23 @@
                     android:padding="8dp"
                     android:src="@drawable/ic_star_border"
                     tools:src="@drawable/ic_star" />
-
-                <TextView
-                    android:id="@+id/textView_workout_type"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/type_chip_background"
-                    android:paddingStart="8dp"
-                    android:paddingTop="4dp"
-                    android:paddingEnd="8dp"
-                    android:paddingBottom="4dp"
-                    android:textColor="?attr/colorOnPrimary"
-                    android:textSize="12sp"
-                    tools:text="Легкий бег" />
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/textView_workout_type"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:background="@drawable/type_chip_background"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:paddingStart="8dp"
+                android:paddingTop="3dp"
+                android:paddingEnd="8dp"
+                android:paddingBottom="3dp"
+                android:textColor="?attr/colorOnPrimary"
+                android:textSize="12sp"
+                tools:text="Легкий бег" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -101,20 +108,25 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:minWidth="0dp"
                     android:orientation="vertical">
 
                     <TextView
                         android:id="@+id/textView_distance"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
                         android:textColor="?attr/colorPrimary"
-                        android:textSize="18sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
                         tools:text="5.0 км" />
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
                         android:text="@string/workout_distance_label"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="@dimen/workout_item_metric_caption" />
@@ -124,20 +136,25 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:minWidth="0dp"
                     android:orientation="vertical">
 
                     <TextView
                         android:id="@+id/textView_duration"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
                         android:textColor="?attr/colorSecondary"
-                        android:textSize="18sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
                         tools:text="25:30" />
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
                         android:text="@string/workout_time_label"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="@dimen/workout_item_metric_caption" />
@@ -147,21 +164,26 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:minWidth="0dp"
                     android:orientation="vertical">
 
                     <TextView
                         android:id="@+id/textView_pace"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
                         android:textColor="?attr/colorTertiary"
-                        android:textSize="18sp"
+                        android:textSize="16sp"
                         android:textStyle="bold"
                         tools:text="5:06" />
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/workout_pace_label_km"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/workout_list_pace_label"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="@dimen/workout_item_metric_caption" />
                 </LinearLayout>
@@ -171,7 +193,7 @@
                 android:id="@+id/layout_calories"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="6dp"
                 android:orientation="horizontal"
                 android:visibility="gone"
                 tools:visibility="visible">
@@ -181,6 +203,9 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:minWidth="0dp"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="12sp"
                     tools:text="300 ккал" />
@@ -192,6 +217,7 @@
                     android:layout_weight="2"
                     android:ellipsize="end"
                     android:maxLines="1"
+                    android:minWidth="0dp"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="12sp"
                     tools:text="@string/workout_summary_good" />
