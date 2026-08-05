@@ -35,7 +35,7 @@ class WorkoutAdapter(
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
     private val adapterJob = SupervisorJob()
     private val adapterScope = CoroutineScope(adapterJob + Dispatchers.Main.immediate)
-    private val previewSizePx = (96f * context.resources.displayMetrics.density).toInt()
+    private val previewSizePx = (88f * context.resources.displayMetrics.density).toInt()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WorkoutViewHolder {
         val binding = ItemWorkoutBinding.inflate(
