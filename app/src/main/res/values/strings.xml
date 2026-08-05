@@ -262,6 +262,7 @@
 
     <string name="workout_list_num_workouts">Training sessions</string>
     <string name="workout_list_average_pace">Average pace</string>
+    <string name="workout_list_pace_label">Pace</string>
     <string name="workout_list_message_no_workouts">No training sessions yet</string>
     <string name="workout_list_message_start_workout">Start training to create a record.</string>
     <string name="workout_list_empty_start">Start workout</string>
