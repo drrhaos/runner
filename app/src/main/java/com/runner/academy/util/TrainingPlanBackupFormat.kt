@@ -1,7 +1,5 @@
 package com.runner.academy.util
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -93,23 +91,79 @@ object TrainingPlanBackupFormat {
         val plansImported: Int
     )
 
-    private val gson: Gson = GsonBuilder().disableHtmlEscaping().create()
-
     fun toBackupJson(
         templates: List<WorkoutTemplateWithSegmentsExport>,
         plans: List<PlanWithDaysExport>,
         packageName: String
     ): String {
-        val payload = TrainingPlansBackupFile(
-            formatVersion = FORMAT_VERSION,
-            exportedAt = java.time.Instant.now().toString(),
-            packageName = packageName,
-            templateCount = templates.size,
-            planCount = plans.size,
-            templates = templates.map { it.toDto() },
-            plans = plans.map { it.toDto() }
-        )
-        return gson.toJson(payload)
+        val templatesArray = JsonArray()
+        templates.forEach { export ->
+            val t = export.template
+            val segmentsArray = JsonArray()
+            export.segments.sortedBy { it.sortOrder }.forEach { seg ->
+                segmentsArray.add(
+                    JsonObject().apply {
+                        addProperty("sortOrder", seg.sortOrder)
+                        addProperty("kind", seg.kind.name)
+                        addProperty("title", seg.title)
+                        addProperty("goalType", seg.goalType.name)
+                        seg.durationMs?.let { addProperty("durationMs", it) }
+                        seg.distanceMeters?.let { addProperty("distanceMeters", it) }
+                        seg.targetPaceMinPerKm?.let { addProperty("targetPaceMinPerKm", it) }
+                    }
+                )
+            }
+            templatesArray.add(
+                JsonObject().apply {
+                    addProperty("id", t.id)
+                    addProperty("name", t.name)
+                    addProperty("workoutType", t.workoutType.name)
+                    addProperty("iconKey", t.iconKey)
+                    t.notes?.let { addProperty("notes", it) }
+                    addProperty("createdAt", t.createdAt)
+                    addProperty("updatedAt", t.updatedAt)
+                    add("segments", segmentsArray)
+                }
+            )
+        }
+        val plansArray = JsonArray()
+        plans.forEach { export ->
+            val p = export.plan
+            val daysArray = JsonArray()
+            export.days.forEach { day ->
+                daysArray.add(
+                    JsonObject().apply {
+                        addProperty("dayIndex", day.dayIndex)
+                        if (day.templateId != null) {
+                            addProperty("templateId", day.templateId)
+                        } else {
+                            add("templateId", null)
+                        }
+                    }
+                )
+            }
+            plansArray.add(
+                JsonObject().apply {
+                    addProperty("id", p.id)
+                    addProperty("name", p.name)
+                    addProperty("durationDays", p.durationDays)
+                    addProperty("iconKey", p.iconKey)
+                    p.notes?.let { addProperty("notes", it) }
+                    addProperty("createdAt", p.createdAt)
+                    addProperty("updatedAt", p.updatedAt)
+                    add("days", daysArray)
+                }
+            )
+        }
+        return JsonObject().apply {
+            addProperty("formatVersion", FORMAT_VERSION)
+            addProperty("exportedAt", java.time.Instant.now().toString())
+            addProperty("packageName", packageName)
+            addProperty("templateCount", templates.size)
+            addProperty("planCount", plans.size)
+            add("templates", templatesArray)
+            add("plans", plansArray)
+        }.toString()
     }
 
     fun getBackupJsonFileName(): String {
@@ -157,38 +211,6 @@ object TrainingPlanBackupFormat {
         }
         return ParsedBackup(templates, plans)
     }
-
-    private fun WorkoutTemplateWithSegmentsExport.toDto() = TemplateDto(
-        id = template.id,
-        name = template.name,
-        workoutType = template.workoutType.name,
-        iconKey = template.iconKey,
-        notes = template.notes,
-        createdAt = template.createdAt,
-        updatedAt = template.updatedAt,
-        segments = segments.sortedBy { it.sortOrder }.map { seg ->
-            SegmentDto(
-                sortOrder = seg.sortOrder,
-                kind = seg.kind.name,
-                title = seg.title,
-                goalType = seg.goalType.name,
-                durationMs = seg.durationMs,
-                distanceMeters = seg.distanceMeters,
-                targetPaceMinPerKm = seg.targetPaceMinPerKm
-            )
-        }
-    )
-
-    private fun PlanWithDaysExport.toDto() = PlanDto(
-        id = plan.id,
-        name = plan.name,
-        durationDays = plan.durationDays,
-        iconKey = plan.iconKey,
-        notes = plan.notes,
-        createdAt = plan.createdAt,
-        updatedAt = plan.updatedAt,
-        days = days
-    )
 
     private fun JsonObject.toTemplateExport(): Pair<Long, WorkoutTemplateWithSegmentsExport> {
         val exportId = longOr("id", 0L)
