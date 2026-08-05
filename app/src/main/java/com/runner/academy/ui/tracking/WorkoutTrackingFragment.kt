@@ -562,10 +562,12 @@ class WorkoutTrackingFragment : Fragment() {
         binding.textViewCountdown.text = countdownSeconds.toString()
         countdownJob = viewLifecycleOwner.lifecycleScope.launch {
             for (i in countdownSeconds downTo 1) {
-                binding.textViewCountdown.text = i.toString()
+                val b = _binding ?: return@launch
+                b.textViewCountdown.text = i.toString()
                 if (i > 1) delay(1000)
             }
-            binding.textViewCountdown.visibility = View.GONE
+            val b = _binding ?: return@launch
+            b.textViewCountdown.visibility = View.GONE
             countdownJob = null
             beginWorkout()
         }
