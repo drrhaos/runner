@@ -107,11 +107,16 @@ class WorkoutSessionManager {
     // Timer tick - called every second while actively tracking
     // ------------------------------------------------------------------
 
-    fun tickElapsedTime() {
+    /**
+     * Advance elapsed workout time.
+     * @param broadcast when false, only updates internal time (no listeners) —
+     * used so the 1 Hz timer does not fan out voice/checkpoint/notification work.
+     */
+    fun tickElapsedTime(broadcast: Boolean = true) {
         val currentTime = System.currentTimeMillis()
         val elapsedTime = currentTime - session.startTime - session.totalPauseDuration
         session = session.copy(currentTime = elapsedTime)
-        notifyChanged()
+        if (broadcast) notifyChanged()
     }
 
     // ------------------------------------------------------------------
