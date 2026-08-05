@@ -1,7 +1,6 @@
 package com.runner.academy.util
 
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.runner.academy.data.Workout
@@ -43,8 +42,6 @@ object WorkoutBackupFormat {
         val workouts: List<WorkoutBackupDto> = emptyList()
     )
 
-    private val gson: Gson = GsonBuilder().disableHtmlEscaping().create()
-
     fun parseBackupJson(json: String): List<Workout> {
         val root = try {
             JsonParser.parseString(json).asJsonObject
@@ -71,14 +68,31 @@ object WorkoutBackupFormat {
     }
 
     fun toBackupJson(workouts: List<Workout>, packageName: String): String {
-        val payload = WorkoutsBackupFile(
-            formatVersion = FORMAT_VERSION,
-            exportedAt = java.time.Instant.now().toString(),
-            packageName = packageName,
-            workoutCount = workouts.size,
-            workouts = workouts.map { it.toDto() }
-        )
-        return gson.toJson(payload)
+        val workoutsArray = JsonArray()
+        workouts.forEach { workout ->
+            workoutsArray.add(
+                JsonObject().apply {
+                    addProperty("id", workout.id)
+                    addProperty("dateMillis", workout.date.time)
+                    addProperty("distanceKm", workout.distance)
+                    addProperty("durationMs", workout.duration)
+                    addProperty("avgPace", workout.avgPace)
+                    workout.calories?.let { addProperty("calories", it) }
+                    workout.notes?.let { addProperty("notes", it) }
+                    addProperty("type", workout.type.name)
+                    workout.trackData?.let { addProperty("trackData", it) }
+                    addProperty("isFavorite", workout.isFavorite)
+                    workout.intervalSegmentsJson?.let { addProperty("intervalSegmentsJson", it) }
+                }
+            )
+        }
+        return JsonObject().apply {
+            addProperty("formatVersion", FORMAT_VERSION)
+            addProperty("exportedAt", java.time.Instant.now().toString())
+            addProperty("packageName", packageName)
+            addProperty("workoutCount", workouts.size)
+            add("workouts", workoutsArray)
+        }.toString()
     }
 
     fun getBackupJsonFileName(): String {
@@ -209,18 +223,4 @@ object WorkoutBackupFormat {
             intervalSegmentsJson = intervalSegmentsJson
         )
     }
-
-    private fun Workout.toDto() = WorkoutBackupDto(
-        id = id,
-        dateMillis = date.time,
-        distanceKm = distance,
-        durationMs = duration,
-        avgPace = avgPace,
-        calories = calories,
-        notes = notes,
-        type = type.name,
-        trackData = trackData,
-        isFavorite = isFavorite,
-        intervalSegmentsJson = intervalSegmentsJson
-    )
 }
