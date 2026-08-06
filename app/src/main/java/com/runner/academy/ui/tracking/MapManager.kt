@@ -168,6 +168,7 @@ class MapManager(
     fun onResume() {
         OsmMapTiles.applyForTheme(context, mapView)
         tipFramesEnabled = true
+        mapView.setUseDataConnection(true)
         mapView.onResume()
     }
 
@@ -175,6 +176,8 @@ class MapManager(
         tipFramesEnabled = false
         cancelTipAnimation()
         cancelAutoCenter()
+        // Stop OSM tile fetches while tracking continues in the pocket
+        mapView.setUseDataConnection(false)
         mapView.onPause()
     }
 
@@ -192,6 +195,14 @@ class MapManager(
 
     fun cleanupAutoCenter() {
         cancelAutoCenter()
+    }
+
+    /** Last pre-workout / session fix for seeding the tracking service on Start. */
+    fun peekLastLocation(): Location? = sessionLocationProvider.peekLastLocation()
+
+    /** After Stop, resume high-accuracy warm-up for the next Start. */
+    fun resumePreWorkoutLocationUpdates() {
+        sessionLocationProvider.resumePreWorkoutUpdates()
     }
 
     private fun setupLocationOverlay() {

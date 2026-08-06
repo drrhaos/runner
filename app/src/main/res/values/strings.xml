@@ -52,10 +52,13 @@
     <string name="gps_signal_lost">Lost</string>
     <string name="gps_signal_denied">No access</string>
     <string name="gps_accuracy_searching">Searching for satellites…</string>
+    <string name="gps_accuracy_ready">Ready · %1$d m</string>
     <string name="gps_accuracy_value">Accuracy: %1$d m</string>
     <string name="gps_accuracy_lost">Lost signal</string>
     <string name="gps_accuracy_denied">No access to GPS</string>
     <string name="gps_lost_banner">GPS lost — time continues, distance pauses until signal returns</string>
+    <string name="gps_ready_banner">GPS ready — you can start</string>
+    <string name="gps_wait_banner">Wait for GPS before starting for a better track</string>
     <string name="save_distance_dialog_title">Enter distance</string>
     <string name="save_distance_dialog_message">No GPS distance recorded. Enter distance in km, or save time only.</string>
     <string name="save_distance_hint">Distance (km)</string>

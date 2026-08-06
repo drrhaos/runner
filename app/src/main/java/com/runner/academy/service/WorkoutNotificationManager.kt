@@ -25,10 +25,20 @@ import com.runner.academy.util.FormatUtils
 class WorkoutNotificationManager(private val service: Service) {
 
     companion object {
-        const val NOTIFICATION_UPDATE_INTERVAL_MS = 5000L
+        const val NOTIFICATION_UPDATE_INTERVAL_MS = 5_000L
+        const val NOTIFICATION_UPDATE_INTERVAL_SCREEN_OFF_MS = 15_000L
     }
 
     private var lastNotificationUpdateTime: Long = 0
+    private var minUpdateIntervalMs: Long = NOTIFICATION_UPDATE_INTERVAL_MS
+
+    fun setScreenInteractive(interactive: Boolean) {
+        minUpdateIntervalMs = if (interactive) {
+            NOTIFICATION_UPDATE_INTERVAL_MS
+        } else {
+            NOTIFICATION_UPDATE_INTERVAL_SCREEN_OFF_MS
+        }
+    }
 
     fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -85,7 +95,7 @@ class WorkoutNotificationManager(private val service: Service) {
     fun updateNotification(session: WorkoutSession, force: Boolean = false) {
         if (!force) {
             val now = System.currentTimeMillis()
-            if (now - lastNotificationUpdateTime < NOTIFICATION_UPDATE_INTERVAL_MS) {
+            if (now - lastNotificationUpdateTime < minUpdateIntervalMs) {
                 return
             }
             lastNotificationUpdateTime = now

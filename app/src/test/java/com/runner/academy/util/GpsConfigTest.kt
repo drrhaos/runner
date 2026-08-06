@@ -1,8 +1,11 @@
 package com.runner.academy.util
 
 import com.google.android.gms.location.LocationRequest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.junit.Assert.*
 
 /**
  * Тесты для GpsConfig
@@ -12,64 +15,59 @@ class GpsConfigTest {
     @Test
     fun constants_should_have_correct_values() {
         assertEquals(2f, GpsConfig.MIN_DISTANCE, 0.01f)
+        assertEquals(3f, GpsConfig.MIN_DISTANCE_SCREEN_OFF, 0.01f)
         assertEquals(1000L, GpsConfig.MIN_UPDATE_INTERVAL)
         assertEquals(1000L, GpsConfig.HIGH_ACCURACY_INTERVAL)
+        assertEquals(2000L, GpsConfig.SCREEN_OFF_INTERVAL)
+        assertEquals(20_000L, GpsConfig.SCREEN_OFF_MAX_UPDATE_DELAY_MS)
         assertEquals(5000L, GpsConfig.MEDIUM_ACCURACY_INTERVAL)
         assertEquals(10000L, GpsConfig.LOW_ACCURACY_INTERVAL)
     }
 
     @Test
-    fun getAdaptiveInterval_backs_off_when_slower() {
-        assertEquals(1000L, GpsConfig.getAdaptiveInterval(25f))
-        assertEquals(1000L, GpsConfig.getAdaptiveInterval(12f))
-        assertEquals(1000L, GpsConfig.getAdaptiveInterval(6f))
-        assertEquals(2000L, GpsConfig.getAdaptiveInterval(2f))
+    fun getAdaptiveInterval_screenOn_backs_off_when_slower() {
+        assertEquals(1000L, GpsConfig.getAdaptiveInterval(25f, screenInteractive = true))
+        assertEquals(1000L, GpsConfig.getAdaptiveInterval(12f, screenInteractive = true))
+        assertEquals(1000L, GpsConfig.getAdaptiveInterval(6f, screenInteractive = true))
+        assertEquals(2000L, GpsConfig.getAdaptiveInterval(2f, screenInteractive = true))
     }
 
     @Test
-    fun createworkoutlocationrequest_should_not_be_null() {
-        // When
-        val request = GpsConfig.createWorkoutLocationRequest()
-
-        // Then
-        assertNotNull(request)
+    fun getAdaptiveInterval_screenOff_uses_two_second_base() {
+        assertEquals(2000L, GpsConfig.getAdaptiveInterval(12f, screenInteractive = false))
+        assertEquals(3000L, GpsConfig.getAdaptiveInterval(2f, screenInteractive = false))
+        assertEquals(1000L, GpsConfig.getAdaptiveInterval(25f, screenInteractive = false))
     }
 
     @Test
-    fun createworkoutlocationrequest_should_be_locationrequest_instance() {
-        // When
-        val request = GpsConfig.createWorkoutLocationRequest()
-
-        // Then
-        assertTrue(request is LocationRequest)
+    fun getAdaptiveInterval_turning_densifies() {
+        assertEquals(
+            1000L,
+            GpsConfig.getAdaptiveInterval(12f, screenInteractive = false, turning = true)
+        )
     }
 
     @Test
-    fun createworkoutlocationrequest_should_be_consistent() {
-        // When
-        val request1 = GpsConfig.createWorkoutLocationRequest()
-        val request2 = GpsConfig.createWorkoutLocationRequest()
-
-        // Then
-        assertNotNull(request1)
-        assertNotNull(request2)
-        // Both requests should be created successfully
+    fun bearingDelta_handles_wraparound() {
+        assertEquals(20f, GpsConfig.bearingDeltaDegrees(10f, 30f), 0.01f)
+        assertEquals(20f, GpsConfig.bearingDeltaDegrees(350f, 10f), 0.01f)
+        assertFalse(GpsConfig.isTurning(0f, 10f))
+        assertTrue(GpsConfig.isTurning(0f, 25f))
     }
 
     @Test
-    fun createworkoutlocationrequest_should_not_throw_exception() {
-        // When & Then
-        try {
-            GpsConfig.createWorkoutLocationRequest()
-            assertTrue(true) // If we get here, no exception was thrown
-        } catch (e: Exception) {
-            fail("createWorkoutLocationRequest should not throw exception: ${e.message}")
-        }
+    fun createWorkoutLocationRequest_should_not_be_null() {
+        assertNotNull(GpsConfig.createWorkoutLocationRequest(screenInteractive = true))
+        assertNotNull(GpsConfig.createWorkoutLocationRequest(screenInteractive = false))
+    }
+
+    @Test
+    fun createWorkoutLocationRequest_should_be_locationrequest_instance() {
+        assertTrue(GpsConfig.createWorkoutLocationRequest() is LocationRequest)
     }
 
     @Test
     fun constants_should_be_accessible() {
-        // Then
         assertTrue(GpsConfig.MIN_DISTANCE >= 0f)
         assertTrue(GpsConfig.MIN_UPDATE_INTERVAL > 0)
         assertTrue(GpsConfig.HIGH_ACCURACY_INTERVAL > 0)
@@ -78,59 +76,22 @@ class GpsConfigTest {
     }
 
     @Test
-    fun constants_should_have_reasonable_values() {
-        // Then
-        assertTrue("MIN_DISTANCE should be non-negative", GpsConfig.MIN_DISTANCE >= 0f)
-        assertTrue("MIN_UPDATE_INTERVAL should be reasonable", GpsConfig.MIN_UPDATE_INTERVAL >= 100L)
-        assertTrue("HIGH_ACCURACY_INTERVAL should be reasonable", GpsConfig.HIGH_ACCURACY_INTERVAL >= 100L)
-        assertTrue("MEDIUM_ACCURACY_INTERVAL should be reasonable", GpsConfig.MEDIUM_ACCURACY_INTERVAL >= 100L)
-        assertTrue("LOW_ACCURACY_INTERVAL should be reasonable", GpsConfig.LOW_ACCURACY_INTERVAL >= 100L)
-    }
-
-    @Test
     fun intervals_should_be_in_ascending_order() {
-        // Then
-        assertTrue("HIGH_ACCURACY_INTERVAL should be <= MEDIUM_ACCURACY_INTERVAL", 
-            GpsConfig.HIGH_ACCURACY_INTERVAL <= GpsConfig.MEDIUM_ACCURACY_INTERVAL)
-        assertTrue("MEDIUM_ACCURACY_INTERVAL should be <= LOW_ACCURACY_INTERVAL", 
-            GpsConfig.MEDIUM_ACCURACY_INTERVAL <= GpsConfig.LOW_ACCURACY_INTERVAL)
+        assertTrue(GpsConfig.HIGH_ACCURACY_INTERVAL <= GpsConfig.SCREEN_OFF_INTERVAL)
+        assertTrue(GpsConfig.HIGH_ACCURACY_INTERVAL <= GpsConfig.MEDIUM_ACCURACY_INTERVAL)
+        assertTrue(GpsConfig.MEDIUM_ACCURACY_INTERVAL <= GpsConfig.LOW_ACCURACY_INTERVAL)
     }
 
     @Test
     fun min_update_interval_should_be_reasonable_for_gps() {
-        assertTrue("MIN_UPDATE_INTERVAL should be at least 1 second", GpsConfig.MIN_UPDATE_INTERVAL >= 1000L)
-        assertTrue("MIN_UPDATE_INTERVAL should not be too high", GpsConfig.MIN_UPDATE_INTERVAL <= 10000L)
+        assertTrue(GpsConfig.MIN_UPDATE_INTERVAL >= 1000L)
+        assertTrue(GpsConfig.MIN_UPDATE_INTERVAL <= 10000L)
     }
 
     @Test
     fun min_distance_should_be_reasonable_for_gps() {
-        assertTrue("MIN_DISTANCE should be positive for battery", GpsConfig.MIN_DISTANCE > 0f)
-        assertTrue("MIN_DISTANCE should not be too high", GpsConfig.MIN_DISTANCE <= 50f)
-    }
-
-    @Test
-    fun createworkoutlocationrequest_should_create_multiple_instances() {
-        // When
-        val requests = (1..5).map { GpsConfig.createWorkoutLocationRequest() }
-
-        // Then
-        assertEquals(5, requests.size)
-        requests.forEach { assertNotNull(it) }
-    }
-
-    @Test
-    fun constants_should_be_final() {
-        // Then - These should compile without issues, indicating they're accessible
-        val minDistance = GpsConfig.MIN_DISTANCE
-        val minUpdateInterval = GpsConfig.MIN_UPDATE_INTERVAL
-        val highAccuracyInterval = GpsConfig.HIGH_ACCURACY_INTERVAL
-        val mediumAccuracyInterval = GpsConfig.MEDIUM_ACCURACY_INTERVAL
-        val lowAccuracyInterval = GpsConfig.LOW_ACCURACY_INTERVAL
-
-        assertNotNull(minDistance)
-        assertNotNull(minUpdateInterval)
-        assertNotNull(highAccuracyInterval)
-        assertNotNull(mediumAccuracyInterval)
-        assertNotNull(lowAccuracyInterval)
+        assertTrue(GpsConfig.MIN_DISTANCE > 0f)
+        assertTrue(GpsConfig.MIN_DISTANCE <= 50f)
+        assertTrue(GpsConfig.MIN_DISTANCE_SCREEN_OFF >= GpsConfig.MIN_DISTANCE)
     }
 }
