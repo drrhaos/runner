@@ -71,7 +71,12 @@ class GpsStatusUiUpdater(
             GpsStatus.STRONG, GpsStatus.FOUND -> {
                 views.layoutGpsStatus.visibility = View.VISIBLE
                 setGpsBarsLevel(4)
-                views.textViewGpsAccuracy.visibility = View.INVISIBLE
+                views.textViewGpsAccuracy.visibility = View.VISIBLE
+                views.textViewGpsAccuracy.text = if (accuracy > 0f) {
+                    context.getString(R.string.gps_accuracy_ready, accuracy.toInt())
+                } else {
+                    context.getString(R.string.gps_signal_strong)
+                }
             }
             GpsStatus.LOST -> {
                 views.layoutGpsStatus.visibility = View.VISIBLE

@@ -90,6 +90,14 @@ class WorkoutTrackingViewModel(
         )
     }
 
+    /** Latest usable pre-start fix from the map; applied when Start binds the service. */
+    private var pendingPreStartLocation: Location? = null
+
+    fun seedPreStartLocation(location: Location?) {
+        pendingPreStartLocation = location
+        location?.let { trackingService?.seedPreStartLocation(it) }
+    }
+
     fun clearActiveIntervalSegments() {
         _activeIntervalSegments.value = null
     }
@@ -200,6 +208,10 @@ class WorkoutTrackingViewModel(
         if (existing.isTracking || existing.isPaused) {
             adoptServiceSession(svc)
             return
+        }
+        pendingPreStartLocation?.let { loc ->
+            svc.seedPreStartLocation(loc)
+            pendingPreStartLocation = null
         }
         val intent = Intent(application, WorkoutTrackingService::class.java).apply {
             action = WorkoutTrackingService.ACTION_START_WORKOUT

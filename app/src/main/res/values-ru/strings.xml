@@ -41,10 +41,13 @@
     <string name="gps_signal_lost">Потерян</string>
     <string name="gps_signal_denied">Нет доступа</string>
     <string name="gps_accuracy_searching">Ищем спутники…</string>
+    <string name="gps_accuracy_ready">Готов · %1$d м</string>
     <string name="gps_accuracy_value">Точность: %1$d м</string>
     <string name="gps_accuracy_lost">Сигнал потерян</string>
     <string name="gps_accuracy_denied">Нет доступа к GPS</string>
     <string name="gps_lost_banner">GPS потерян — время идёт, дистанция паузится до возврата сигнала</string>
+    <string name="gps_ready_banner">GPS готов — можно начинать</string>
+    <string name="gps_wait_banner">Дождитесь GPS — так трек будет точнее</string>
     <string name="save_distance_dialog_title">Укажите дистанцию</string>
     <string name="save_distance_dialog_message">Дистанция по GPS не записана. Введите км или сохраните только время.</string>
     <string name="save_distance_hint">Дистанция (км)</string>
