@@ -45,16 +45,23 @@ object GpsConfig {
     /** Absolute bearing delta (degrees) that counts as a turn. */
     const val TURN_BEARING_DELTA_DEG = 20f
 
+    /** Below this speed GPS bearing is mostly noise and must not trigger turn densify. */
+    const val TURN_MIN_SPEED_MPS = 1.5f
+
+    /** Consecutive straight fixes needed to leave turn densify (hysteresis). */
+    const val TURN_RELEASE_FIXES = 3
+
     /**
      * Adaptive interval from current speed (km/h) and display state.
-     * [turning] forces denser sampling so curves stay smooth when screen-off.
+     * [turning] densifies sampling only with the screen on: screen-off fixes arrive in
+     * batches, so a turn is seen after the fact and re-registering could drop the batch.
      */
     fun getAdaptiveInterval(
         currentSpeed: Float,
         screenInteractive: Boolean,
         turning: Boolean = false
     ): Long {
-        if (turning) return TURN_DENSIFY_INTERVAL
+        if (turning && screenInteractive) return TURN_DENSIFY_INTERVAL
         return if (screenInteractive) {
             when {
                 currentSpeed > 20f -> HIGH_ACCURACY_INTERVAL
@@ -113,6 +120,49 @@ object GpsConfig {
     fun isTurning(previousBearingDeg: Float?, currentBearingDeg: Float): Boolean {
         if (previousBearingDeg == null) return false
         return bearingDeltaDegrees(previousBearingDeg, currentBearingDeg) >= TURN_BEARING_DELTA_DEG
+    }
+
+    /**
+     * Turn state with hysteresis: enters on a sharp bearing change at running speed,
+     * leaves only after [TURN_RELEASE_FIXES] straight fixes — so GPS bearing noise
+     * does not flip the location request on every fix.
+     */
+    class TurnDetector {
+        private var lastBearingDeg: Float? = null
+        private var straightFixes = 0
+        var isTurning: Boolean = false
+            private set
+
+        /** Feeds one accepted fix; returns the (possibly unchanged) turn state. */
+        fun onFix(bearingDeg: Float?, speedMps: Float): Boolean {
+            if (bearingDeg == null || speedMps < TURN_MIN_SPEED_MPS) {
+                // Bearing unreliable: do not compare against it later either
+                lastBearingDeg = null
+                return release()
+            }
+            val sharp = isTurning(lastBearingDeg, bearingDeg)
+            lastBearingDeg = bearingDeg
+            if (sharp) {
+                isTurning = true
+                straightFixes = 0
+                return true
+            }
+            return release()
+        }
+
+        fun reset() {
+            lastBearingDeg = null
+            straightFixes = 0
+            isTurning = false
+        }
+
+        private fun release(): Boolean {
+            if (isTurning && ++straightFixes >= TURN_RELEASE_FIXES) {
+                isTurning = false
+                straightFixes = 0
+            }
+            return isTurning
+        }
     }
 
     /** Pre-workout map / readiness — high accuracy so the athlete gets a fix before Start. */

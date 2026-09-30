@@ -70,14 +70,16 @@ class WorkoutTrackingService : Service() {
         const val EXTRA_MODE_SELECTION = "MODE_SELECTION"
         const val EXTRA_INTERVAL_SEGMENTS_JSON = "INTERVAL_SEGMENTS_JSON"
         const val NO_LOCATION_UPDATE_TIMEOUT_MS = 5000L
-        const val NO_LOCATION_UPDATE_TIMEOUT_SCREEN_OFF_MS = 12_000L
+        /** Must exceed [GpsConfig.SCREEN_OFF_MAX_UPDATE_DELAY_MS]: batched fixes are not a GPS loss. */
+        const val NO_LOCATION_UPDATE_TIMEOUT_SCREEN_OFF_MS = 30_000L
         const val PERIODIC_LOCATION_REQUEST_INTERVAL_MS = 2000L
         const val PERIODIC_LOCATION_REQUEST_SCREEN_OFF_MS = 10_000L
         const val WORKOUT_TIMER_INTERVAL_MS = 1000L
         private const val CHECKPOINT_SAVE_MIN_INTERVAL_MS = 15_000L
         /** Max age for a seeded / lastKnown fix used as the first track anchor. */
-        const val PRE_START_LOCATION_MAX_AGE_MS = 20_000L
-        const val PRE_START_LOCATION_MAX_ACCURACY_M = 80f
+        const val PRE_START_LOCATION_MAX_AGE_MS = 10_000L
+        /** The seed becomes the first track point, so it must be as good as a normal fix. */
+        const val PRE_START_LOCATION_MAX_ACCURACY_M = 20f
     }
 
     // Extracted component instances
@@ -113,7 +115,7 @@ class WorkoutTrackingService : Service() {
     private var lastAppliedScreenInteractive: Boolean? = null
     private var workoutTimerJob: Job? = null
     private var screenInteractive: Boolean = true
-    private var lastAcceptedBearingDeg: Float? = null
+    private val turnDetector = GpsConfig.TurnDetector()
     private var turningDensifyActive: Boolean = false
 
     private val screenStateReceiver = object : BroadcastReceiver() {
@@ -236,9 +238,9 @@ class WorkoutTrackingService : Service() {
 
         if (isCurrentlyTracking && !sessionManager.getSession().isPaused) {
             val session = sessionManager.getSession()
-            val resumeAfterGap = session.gpsStatus == GpsStatus.LOST ||
-                (lastLocationTime > 0L &&
-                    System.currentTimeMillis() - lastLocationTime >= GpsFilter.GAP_RESUME_THRESHOLD_MS)
+            // Time gaps are detected from fix timestamps inside GpsFilter.isGapResume.
+            // Wall-clock age must not be used: screen-off batches arrive ~20 s late by design.
+            val resumeAfterGap = session.gpsStatus == GpsStatus.LOST
 
             val result = gpsProcessor.processLocation(
                 location,
@@ -264,13 +266,10 @@ class WorkoutTrackingService : Service() {
                     )
 
                     val filtered = result.filteredLocation
-                    val turning = if (filtered.hasBearing()) {
-                        val turningNow = GpsConfig.isTurning(lastAcceptedBearingDeg, filtered.bearing)
-                        lastAcceptedBearingDeg = filtered.bearing
-                        turningNow
-                    } else {
-                        false
-                    }
+                    val turning = screenInteractive && turnDetector.onFix(
+                        bearingDeg = if (filtered.hasBearing()) filtered.bearing else null,
+                        speedMps = if (filtered.hasSpeed()) filtered.speed else 0f
+                    )
                     if (turning != turningDensifyActive || result.trackPoints.size % 10 == 0) {
                         turningDensifyActive = turning
                         updateLocationRequestInterval(sessionManager.getSession().currentSpeed)
@@ -334,17 +333,14 @@ class WorkoutTrackingService : Service() {
 
         lastAppliedAdaptiveIntervalMs = -1L
         lastAppliedScreenInteractive = null
-        lastAcceptedBearingDeg = null
+        turnDetector.reset()
         turningDensifyActive = false
         isCurrentlyTracking = true
-        // Drop stale seed; keep a fresh pre-start fix as the first track anchor
-        if (lastLocation == null ||
-            lastLocationTime <= 0L ||
-            System.currentTimeMillis() - lastLocationTime > PRE_START_LOCATION_MAX_AGE_MS
-        ) {
-            lastLocation = null
-            lastLocationTime = 0L
-        }
+        // A fresh, accurate pre-start fix becomes the first track point (distance 0);
+        // it is not kept as a hidden anchor, so track and distance stay consistent.
+        val preStartSeed = lastLocation?.takeIf { isUsablePreStartLocation(it) }
+        lastLocation = null
+        lastLocationTime = 0L
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
 
@@ -353,6 +349,7 @@ class WorkoutTrackingService : Service() {
         maybeSaveCheckpoint(sessionManager.getSession(), force = true)
 
         if (hasPermission) {
+            preStartSeed?.let { updateLocation(it) }
             startLocationUpdates()
             startPeriodicLocationRequest()
         }
@@ -389,7 +386,7 @@ class WorkoutTrackingService : Service() {
         isCurrentlyTracking = false
         lastAppliedAdaptiveIntervalMs = -1L
         lastAppliedScreenInteractive = null
-        lastAcceptedBearingDeg = null
+        turnDetector.reset()
         turningDensifyActive = false
         sessionManager.stop()
         activeWorkoutStore.clear()
@@ -690,6 +687,15 @@ class WorkoutTrackingService : Service() {
         }
     }
 
+    /** Forces delivery of fixes batched while the screen is off (arrive via [locationCallback]). */
+    private fun flushBatchedLocations() {
+        try {
+            fusedLocationClient?.flushLocations()
+        } catch (e: Exception) {
+            android.util.Log.w("WorkoutTrackingService", "flushLocations failed: ${e.message}")
+        }
+    }
+
     /**
      * Fetches last known location only when FINE or COARSE permission is granted.
      * Satisfies MissingPermission lint and handles runtime revocation.
@@ -734,13 +740,19 @@ class WorkoutTrackingService : Service() {
                 if (currentTime - lastLocationTime > lostTimeoutMs) {
                     // Do NOT stamp lastLocationTime here — only Accepted / refreshGapClock
                     // updates should. Stale lastKnown would mask GpsStatus.LOST.
-                    // Prefer a fresh sample over replaying an old lastLocation.
-                    val ageCapMs = lostTimeoutMs
-                    requestLastKnownLocation { location ->
-                        val age = (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) /
-                            1_000_000L
-                        if (age in 0..ageCapMs) {
-                            updateLocation(location)
+                    if (!screenInteractive) {
+                        // Fixes may still sit in the batch: pull them in order instead of
+                        // injecting a newer lastKnown that would make the batch "too old".
+                        flushBatchedLocations()
+                    } else {
+                        val ageCapMs = lostTimeoutMs
+                        requestLastKnownLocation { location ->
+                            val age = (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) /
+                                1_000_000L
+                            val newerThanTrack = location.time > (lastLocation?.time ?: 0L)
+                            if (age in 0..ageCapMs && newerThanTrack) {
+                                updateLocation(location)
+                            }
                         }
                     }
                 }
@@ -831,25 +843,28 @@ class WorkoutTrackingService : Service() {
         }
 
         try {
-            locationCallback?.let { callback ->
-                fusedLocationClient?.removeLocationUpdates(callback)
-            }
-
+            val client = fusedLocationClient ?: return
+            val callback = locationCallback ?: return
             val newLocationRequest = GpsConfig.createAdaptiveLocationRequest(
                 intervalMs = adaptiveInterval,
                 screenInteractive = screenInteractive
             )
             currentLocationRequest = newLocationRequest
-
-            val callback = locationCallback ?: return
-            fusedLocationClient?.requestLocationUpdates(
-                newLocationRequest,
-                callback,
-                mainLooper
-            )
-
             lastAppliedAdaptiveIntervalMs = adaptiveInterval
             lastAppliedScreenInteractive = screenInteractive
+
+            // Deliver pending batched fixes first, then replace the request on the same
+            // callback (no remove: a removed request may discard its undelivered batch).
+            client.flushLocations().addOnCompleteListener {
+                if (!isCurrentlyTracking || sessionManager.getSession().isPaused) return@addOnCompleteListener
+                if (currentLocationRequest !== newLocationRequest) return@addOnCompleteListener
+                try {
+                    client.requestLocationUpdates(newLocationRequest, callback, mainLooper)
+                } catch (e: SecurityException) {
+                    android.util.Log.e("WorkoutTrackingService", "SecurityException updating location request: ${e.message}", e)
+                    sessionManager.updateGpsStatus(GpsStatus.DENIED)
+                }
+            }
 
         } catch (e: SecurityException) {
             android.util.Log.e("WorkoutTrackingService", "SecurityException updating location request: ${e.message}", e)
@@ -883,6 +898,9 @@ class WorkoutTrackingService : Service() {
         if (screenInteractive == interactive) return
         screenInteractive = interactive
         notificationManager.setScreenInteractive(interactive)
+        // Bearings from before the switch (or from a batch) are not comparable
+        turnDetector.reset()
+        turningDensifyActive = false
         if (isCurrentlyTracking && !sessionManager.getSession().isPaused) {
             lastAppliedScreenInteractive = null
             updateLocationRequestInterval(sessionManager.getSession().currentSpeed)

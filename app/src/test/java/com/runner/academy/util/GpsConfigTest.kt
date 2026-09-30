@@ -40,10 +40,42 @@ class GpsConfigTest {
     }
 
     @Test
-    fun getAdaptiveInterval_turning_densifies() {
+    fun getAdaptiveInterval_turning_densifies_only_with_screen_on() {
         assertEquals(
             1000L,
+            GpsConfig.getAdaptiveInterval(2f, screenInteractive = true, turning = true)
+        )
+        // Screen-off fixes are batched: turn seen after the fact, keep the base cadence
+        assertEquals(
+            2000L,
             GpsConfig.getAdaptiveInterval(12f, screenInteractive = false, turning = true)
+        )
+    }
+
+    @Test
+    fun turnDetector_enters_on_sharp_turn_and_releases_after_straight_fixes() {
+        val detector = GpsConfig.TurnDetector()
+        assertFalse(detector.onFix(0f, 3f))
+        assertTrue(detector.onFix(40f, 3f))
+        // Hysteresis: stays in turn for TURN_RELEASE_FIXES - 1 straight fixes
+        repeat(GpsConfig.TURN_RELEASE_FIXES - 1) { assertTrue(detector.onFix(40f, 3f)) }
+        assertFalse(detector.onFix(40f, 3f))
+    }
+
+    @Test
+    fun turnDetector_ignores_bearing_at_low_speed() {
+        val detector = GpsConfig.TurnDetector()
+        assertFalse(detector.onFix(0f, 0.5f))
+        assertFalse(detector.onFix(90f, 0.5f))
+        assertFalse(detector.onFix(180f, 3f)) // no comparable previous bearing
+    }
+
+    @Test
+    fun screenOff_lost_timeout_exceeds_batch_delay() {
+        // Otherwise the watchdog treats a normal pending batch as a GPS outage
+        assertTrue(
+            com.runner.academy.service.WorkoutTrackingService.NO_LOCATION_UPDATE_TIMEOUT_SCREEN_OFF_MS >
+                GpsConfig.SCREEN_OFF_MAX_UPDATE_DELAY_MS
         )
     }
 
