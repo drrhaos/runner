@@ -138,7 +138,8 @@ class WorkoutAdapter(
             binding.textViewRoutePreviewEmpty.visibility = View.GONE
             binding.routePreview.visibility = View.VISIBLE
 
-            val cacheKey = "${workout.id}:${workout.trackData?.length ?: 0}:$previewSizePx"
+            val night = com.runner.academy.util.OsmMapTiles.isNightMode(binding.root.context)
+            val cacheKey = "${workout.id}:${workout.trackData?.length ?: 0}:$previewSizePx:$night"
             val cached = RouteMapBitmapRenderer.peek(cacheKey)
             if (cached != null) {
                 binding.routePreview.setImageBitmap(cached)
