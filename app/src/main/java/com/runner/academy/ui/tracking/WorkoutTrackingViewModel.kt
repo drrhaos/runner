@@ -12,7 +12,6 @@ import android.os.IBinder
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.runner.academy.data.LocationSource
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.Workout
@@ -20,13 +19,12 @@ import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutState
 import com.runner.academy.data.WorkoutType
-import com.runner.academy.service.GpsLocationProcessor
 import com.runner.academy.service.IntervalCursor
 import com.runner.academy.service.WorkoutTrackingService
-import com.runner.academy.util.GpsFilter
 import com.runner.academy.util.IntervalSegmentsJson
 import com.runner.academy.util.SpeedPaceCalculator
 import com.runner.academy.util.TrackDataJson
+import com.runner.academy.util.TrackSanitizer
 import com.runner.academy.util.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -324,7 +322,7 @@ class WorkoutTrackingViewModel(
         } else {
             session.trackDataPoints
         }
-        val sanitizedPoints = sanitizeTrackPoints(sourcePoints)
+        val sanitizedPoints = TrackSanitizer.sanitize(sourcePoints, workoutType)
         val hasTrack = sanitizedPoints.size >= 2
 
         val totalDistanceMeters = when {
@@ -404,55 +402,6 @@ class WorkoutTrackingViewModel(
             android.util.Log.e(TAG, "Error saving workout after retries: ${e.message}", e)
             com.runner.academy.util.ErrorHandler.handleSaveError(application, e, false)
             null
-        }
-    }
-
-    private fun sanitizeTrackPoints(rawPoints: List<TrackPoint>): List<TrackPoint> {
-        if (rawPoints.isEmpty()) return emptyList()
-        val result = mutableListOf<TrackPoint>()
-        var previousLocation: Location? = null
-
-        for (point in rawPoints) {
-            val rawLocation = trackPointToLocation(point)
-            val forceGap = GpsFilter.isGapResume(previousLocation, rawLocation) || point.afterGap
-            val filteredLocation = GpsFilter.filterGpsOutlier(
-                rawLocation,
-                previousLocation,
-                forceGapResume = forceGap
-            ) ?: continue
-
-            val afterGap = forceGap && previousLocation != null
-            if (!afterGap && previousLocation != null) {
-                val segmentDistance = filteredLocation.distanceTo(previousLocation)
-                if (segmentDistance < GpsLocationProcessor.MIN_POINT_DISTANCE_METERS) {
-                    continue
-                }
-            }
-
-            result.add(
-                point.copy(
-                    latitude = filteredLocation.latitude,
-                    longitude = filteredLocation.longitude,
-                    accuracy = filteredLocation.accuracy,
-                    speed = filteredLocation.speed,
-                    altitude = filteredLocation.altitude,
-                    afterGap = afterGap,
-                    source = point.source.ifBlank { LocationSource.GPS.name }
-                )
-            )
-            previousLocation = filteredLocation
-        }
-        return result
-    }
-
-    private fun trackPointToLocation(point: TrackPoint): Location {
-        return Location("track").apply {
-            latitude = point.latitude
-            longitude = point.longitude
-            time = if (point.timestamp > 0) point.timestamp else System.currentTimeMillis()
-            accuracy = point.accuracy ?: 50f
-            speed = point.speed ?: 0f
-            point.altitude?.let { altitude = it }
         }
     }
 

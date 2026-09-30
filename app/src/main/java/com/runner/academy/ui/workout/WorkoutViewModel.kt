@@ -1,5 +1,6 @@
 package com.runner.academy.ui.workout
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -13,6 +14,8 @@ import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.SpeedPaceCalculator
 import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.WorkoutDataCleaner
+import com.runner.academy.util.WorkoutTrackRebuilder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class WorkoutListFilter {
     ALL,
@@ -112,15 +116,34 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         }
     }
 
-    fun deleteWorkout(workout: Workout) {
-        viewModelScope.launch {
-            try {
-                repository.deleteWorkout(workout)
-                loadStatistics()
-            } catch (e: Exception) {
-                android.util.Log.e("WorkoutViewModel", "Error deleting workout: ${e.message}", e)
-            }
+    /**
+     * Сохраняет тренировку из формы добавления/редактирования, пересобирая время трека
+     * (см. [WorkoutTrackRebuilder]). Suspend, чтобы экран закрывался только после записи в БД.
+     */
+    suspend fun saveFromForm(workout: Workout, original: Workout?): WorkoutTrackRebuilder.TimeSource {
+        val rebuilt = withContext(Dispatchers.Default) {
+            WorkoutTrackRebuilder.rebuild(
+                originalTrackJson = original?.trackData,
+                selectedTrackJson = workout.trackData,
+                originalDate = original?.date,
+                newDate = workout.date,
+                durationMs = workout.duration
+            )
         }
+        val toSave = workout.copy(trackData = rebuilt.trackDataJson)
+        if (original != null) {
+            repository.updateWorkout(toSave)
+        } else {
+            repository.insertWorkout(toSave)
+        }
+        loadStatistics()
+        return rebuilt.timeSource
+    }
+
+    /** Suspend so the caller leaves the screen only after the row is actually deleted. */
+    suspend fun deleteWorkout(workout: Workout) {
+        repository.deleteWorkout(workout)
+        loadStatistics()
     }
 
     fun setListFilter(filter: WorkoutListFilter) {
@@ -187,8 +210,8 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         return com.runner.academy.util.FormatUtils.formatTime(durationMs)
     }
 
-    fun formatPace(paceMinutes: Float): String {
-        return com.runner.academy.util.FormatUtils.formatPace(paceMinutes)
+    fun formatPace(paceMinutes: Float, context: Context? = null): String {
+        return com.runner.academy.util.FormatUtils.formatPace(paceMinutes, context)
     }
 
     fun getWorkoutTypes(): List<WorkoutType> {
@@ -227,7 +250,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             )
 
             // Очищаем данные
-            val cleanedTrackData = WorkoutDataCleaner.cleanTrackData(trackData)
+            val cleanedTrackData = WorkoutDataCleaner.cleanTrackData(trackData, workout.type)
             if (
                 cleanedTrackData.points.size == trackData.points.size &&
                 cleanedTrackData.totalDistance == trackData.totalDistance &&

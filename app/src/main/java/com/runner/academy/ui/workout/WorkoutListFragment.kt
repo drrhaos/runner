@@ -19,6 +19,7 @@ import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.data.Workout
 import com.runner.academy.databinding.FragmentWorkoutListBinding
+import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.GpxImporter
 import com.runner.academy.util.ShareExports
 import com.runner.academy.util.WorkoutBackupFormat
@@ -467,7 +468,7 @@ class WorkoutListFragment : Fragment() {
             try {
                 viewModel.totalDistance.collect { distance ->
                     if (_binding != null && isAdded && !isDetached) {
-                        binding.textViewTotalDistance.text = String.format("%.1f км", distance)
+                        binding.textViewTotalDistance.text = FormatUtils.formatDistance(distance, requireContext())
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -479,7 +480,7 @@ class WorkoutListFragment : Fragment() {
             try {
                 viewModel.averagePace.collect { avgPace ->
                     if (_binding != null && isAdded && !isDetached) {
-                        binding.textViewAvgPace.text = viewModel.formatPace(avgPace)
+                        binding.textViewAvgPace.text = viewModel.formatPace(avgPace, requireContext())
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -548,6 +549,12 @@ class WorkoutListFragment : Fragment() {
                 cleaningInProgress = false
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // ViewModel outlives detail/edit screens: totals must be reloaded after edits or deletes there.
+        viewModel.refreshStatistics()
     }
 
     override fun onDestroyView() {
