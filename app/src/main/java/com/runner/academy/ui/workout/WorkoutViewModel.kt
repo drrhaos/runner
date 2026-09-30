@@ -1,5 +1,6 @@
 package com.runner.academy.ui.workout
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -187,8 +188,8 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         return com.runner.academy.util.FormatUtils.formatTime(durationMs)
     }
 
-    fun formatPace(paceMinutes: Float): String {
-        return com.runner.academy.util.FormatUtils.formatPace(paceMinutes)
+    fun formatPace(paceMinutes: Float, context: Context? = null): String {
+        return com.runner.academy.util.FormatUtils.formatPace(paceMinutes, context)
     }
 
     fun getWorkoutTypes(): List<WorkoutType> {
@@ -227,7 +228,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             )
 
             // Очищаем данные
-            val cleanedTrackData = WorkoutDataCleaner.cleanTrackData(trackData)
+            val cleanedTrackData = WorkoutDataCleaner.cleanTrackData(trackData, workout.type)
             if (
                 cleanedTrackData.points.size == trackData.points.size &&
                 cleanedTrackData.totalDistance == trackData.totalDistance &&
