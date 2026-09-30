@@ -94,6 +94,18 @@
     <string name="edit_workout_no_routes">Пока нет сохранённых маршрутов. Запишите тренировку с GPS или добавьте в избранное.</string>
     <string name="edit_workout_route_selected">Маршрут выбран</string>
     <string name="edit_workout_route_cleared">Маршрут очищен</string>
+    <string name="edit_workout_route_time_recorded">Маршрут сохранён, время взято из записанного трека</string>
+    <string name="edit_workout_route_time_uniform">Маршрут сохранён, время распределено равномерно по указанной длительности</string>
+    <string name="edit_workout_track_locked_hint">Берётся из записанного трека. Чтобы изменить, замените или очистите маршрут.</string>
+    <string name="edit_workout_type_locked_hint">Тип тренировки с интервальным планом изменить нельзя.</string>
+    <string name="edit_workout_clear_route_title">Очистить маршрут?</string>
+    <string name="edit_workout_clear_route_message">После сохранения карта, графики и отрезки этой тренировки будут удалены. Записанный трек восстановить не получится.</string>
+    <string name="edit_workout_time_range_error">Минуты и секунды должны быть от 0 до 59</string>
+    <string name="edit_workout_calories_invalid">Некорректное значение калорий</string>
+    <string name="edit_workout_discard_title">Отменить изменения?</string>
+    <string name="edit_workout_discard_message">Внесённые изменения не будут сохранены.</string>
+    <string name="edit_workout_discard_confirm">Не сохранять</string>
+    <string name="edit_workout_keep_editing">Продолжить редактирование</string>
     <string name="edit_workout_route_preview_cd">Превью маршрута</string>
     <string name="edit_workout_route_meta">%1$.1f км · %2$s</string>
     <string name="edit_workout_route_points">%1$d точек</string>
@@ -293,6 +305,7 @@
     <string name="permission_location_denied_can_train">Нет доступа к GPS. Тренировку можно начать, маршрут записываться не будет.</string>
     <string name="permission_notification_needed">Разрешение на уведомления необходимо для фонового трекинга</string>
     <string name="battery_optimization_hint">Для стабильной работы приложения отключите оптимизацию батареи в настройках</string>
+    <string name="battery_optimization_open_settings">Настройки</string>
     <string name="workout_too_short">Тренировка слишком короткая для сохранения</string>
     <string name="no_data_to_save">Нет данных для сохранения</string>
     <string name="workout_saved_format">Тренировка сохранена: %1$.2f км за %2$s</string>

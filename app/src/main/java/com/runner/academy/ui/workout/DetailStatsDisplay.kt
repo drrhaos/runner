@@ -27,7 +27,7 @@ class DetailStatsDisplay(
 
             textViewDetailDistance.text = com.runner.academy.util.FormatUtils.formatDistance(workout.distance, context)
             textViewDetailDuration.text = viewModel.formatDuration(workout.duration)
-            textViewDetailPace.text = viewModel.formatPace(workout.avgPace)
+            textViewDetailPace.text = viewModel.formatPace(workout.avgPace, context)
 
             val avgSpeed = com.runner.academy.util.FormatUtils.calculateAverageSpeed(workout.distance, workout.duration)
             textViewDetailAvgSpeed.text = com.runner.academy.util.FormatUtils.formatSpeed(avgSpeed, true, context)

@@ -104,6 +104,18 @@
     <string name="edit_workout_no_routes">No saved routes yet. Complete a GPS workout or mark one as favorite.</string>
     <string name="edit_workout_route_selected">Route selected</string>
     <string name="edit_workout_route_cleared">Route cleared</string>
+    <string name="edit_workout_route_time_recorded">Route saved, timing taken from the recorded track</string>
+    <string name="edit_workout_route_time_uniform">Route saved, timing spread evenly over the entered duration</string>
+    <string name="edit_workout_track_locked_hint">Taken from the recorded track. Replace or clear the route to change it.</string>
+    <string name="edit_workout_type_locked_hint">Workout type cannot be changed for a workout with an interval plan.</string>
+    <string name="edit_workout_clear_route_title">Clear route?</string>
+    <string name="edit_workout_clear_route_message">After saving, the map, charts and splits of this workout will be removed. The recorded track cannot be restored.</string>
+    <string name="edit_workout_time_range_error">Minutes and seconds must be between 0 and 59</string>
+    <string name="edit_workout_calories_invalid">Invalid calories value</string>
+    <string name="edit_workout_discard_title">Discard changes?</string>
+    <string name="edit_workout_discard_message">Your changes will not be saved.</string>
+    <string name="edit_workout_discard_confirm">Discard</string>
+    <string name="edit_workout_keep_editing">Keep editing</string>
     <string name="edit_workout_route_preview_cd">Route preview</string>
     <string name="edit_workout_route_meta">%1$.1f km · %2$s</string>
     <string name="edit_workout_route_points">%1$d points</string>
@@ -307,6 +319,7 @@
     <string name="permission_location_denied_can_train">No GPS access. You can still start a workout; the route will not be recorded.</string>
     <string name="permission_notification_needed">Notification permission is required for background tracking</string>
     <string name="battery_optimization_hint">For stable operation, disable battery optimization in settings</string>
+    <string name="battery_optimization_open_settings">Settings</string>
     <string name="workout_too_short">Workout too short to save</string>
     <string name="no_data_to_save">No data to save</string>
     <string name="workout_saved_format">Workout saved: %1$.2f km in %2$s</string>

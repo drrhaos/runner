@@ -4,27 +4,30 @@ import android.location.Location
 import android.util.Log
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
+import com.runner.academy.data.WorkoutType
+import com.runner.academy.data.maxReasonableGpsSpeedMps
 
 /**
  * Утилита для очистки данных тренировок от GPS выбросов
  */
 object WorkoutDataCleaner {
-    
+
     /**
      * Очищает TrackData от GPS выбросов и неправильных координат
      */
-    fun cleanTrackData(trackData: TrackData): TrackData {
+    fun cleanTrackData(trackData: TrackData, workoutType: WorkoutType? = null): TrackData {
         if (trackData.points.isEmpty()) {
             Log.d("WorkoutDataCleaner", "TrackData is empty, nothing to clean")
             return trackData
         }
-        
+
         Log.d("WorkoutDataCleaner", "Cleaning TrackData with ${trackData.points.size} points")
-        
+
+        val maxReasonableSpeedMps = workoutType?.maxReasonableGpsSpeedMps()
         val cleanedPoints = mutableListOf<TrackPoint>()
         var previousLocation: Location? = null
         var removedCount = 0
-        
+
         for (trackPoint in trackData.points) {
             val location = createLocationFromTrackPoint(trackPoint)
             if (location == null) {
@@ -34,11 +37,20 @@ object WorkoutDataCleaner {
             val forceGap = GpsFilter.isGapResume(previousLocation, location) || trackPoint.afterGap
 
             // Применяем фильтрацию GPS (с учётом разрывов сигнала)
-            val filteredLocation = GpsFilter.filterGpsOutlier(
-                location,
-                previousLocation,
-                forceGapResume = forceGap
-            )
+            val filteredLocation = if (maxReasonableSpeedMps != null) {
+                GpsFilter.filterGpsOutlier(
+                    location,
+                    previousLocation,
+                    maxReasonableSpeedMps = maxReasonableSpeedMps,
+                    forceGapResume = forceGap
+                )
+            } else {
+                GpsFilter.filterGpsOutlier(
+                    location,
+                    previousLocation,
+                    forceGapResume = forceGap
+                )
+            }
 
             if (filteredLocation != null) {
                 val afterGap = forceGap && previousLocation != null

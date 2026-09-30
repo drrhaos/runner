@@ -35,8 +35,9 @@ class WorkoutDetailFragment : Fragment() {
 
     private var currentWorkout: com.runner.academy.data.Workout? = null
     private var currentTrackData: TrackData? = null
-    private var boundTrackDataJson: String? = null
+    private var boundTrackRenderKey: Pair<com.runner.academy.data.WorkoutType, String>? = null
     private var userPreferences: com.runner.academy.util.UserPreferences? = null
+    private var isDeleting = false
 
     // Extracted manager components
     private var mapManager: DetailMapManager? = null
@@ -169,6 +170,7 @@ class WorkoutDetailFragment : Fragment() {
                     if (_binding == null || !isAdded || isDetached) return@collect
 
                     if (workout == null) {
+                        if (isDeleting) return@collect
                         android.util.Log.e("WorkoutDetail", "Workout not found with ID: $workoutId")
                         ErrorHandler.handleLoadError(requireContext(), Exception("Workout not found"))
                         return@collect
@@ -186,13 +188,19 @@ class WorkoutDetailFragment : Fragment() {
                         com.runner.academy.util.IntervalSegmentsJson.parse(workout.intervalSegmentsJson)
 
                     // Avoid clean→DB update→Flow→redraw loop (map flicker / missing track).
-                    // Track is cleaned locally for display only when track JSON changes.
-                    if (workout.trackData != boundTrackDataJson) {
-                        boundTrackDataJson = workout.trackData
-                        displayTrackOnMap(workout)
-                    } else if (workout.trackData == null) {
-                        _binding?.progressBarMapLoading?.visibility = View.GONE
+                    // Track is re-cleaned and redrawn only when its inputs change:
+                    // the JSON itself or the type (type drives the GPS outlier threshold).
+                    val renderKey = workout.trackData?.let { workout.type to it }
+                    if (renderKey != boundTrackRenderKey) {
+                        boundTrackRenderKey = renderKey
+                        if (workout.trackData == null) {
+                            currentTrackData = null
+                            _binding?.progressBarMapLoading?.visibility = View.GONE
+                        } else {
+                            displayTrackOnMap(workout)
+                        }
                     } else {
+                        _binding?.progressBarMapLoading?.visibility = View.GONE
                         currentTrackData?.let { chartRenderer?.updateSegmentsChartOnly(it) }
                     }
                 }
@@ -225,7 +233,7 @@ class WorkoutDetailFragment : Fragment() {
                     val trackData = TrackDataJson.parse(trackDataJson) ?: return@withContext null
                     if (trackData.points.isEmpty()) return@withContext trackData
                     if (WorkoutDataCleaner.needsCleaning(trackData)) {
-                        WorkoutDataCleaner.cleanTrackData(trackData)
+                        WorkoutDataCleaner.cleanTrackData(trackData, workout.type)
                     } else {
                         trackData
                     }
@@ -278,6 +286,9 @@ class WorkoutDetailFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         mapManager?.onDetach()
+        // Fragment stays in the back stack (e.g. while editing): the new view must redraw from scratch.
+        boundTrackRenderKey = null
+        currentTrackData = null
         chartRenderer = null
         exportManager = null
         statsDisplay = null
@@ -309,13 +320,20 @@ class WorkoutDetailFragment : Fragment() {
 
     private fun deleteWorkout() {
         currentWorkout?.let { workout ->
+            if (isDeleting) return
+            isDeleting = true
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
                     viewModel.deleteWorkout(workout)
+                    requireContext().appContainer().trainingPlanRepository
+                        .unlinkCompletedWorkout(workout.id)
                     Toast.makeText(context, getString(R.string.workout_deleted), Toast.LENGTH_SHORT).show()
                     findNavController().navigateUp()
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     android.util.Log.e("WorkoutDetail", "Error deleting workout: ${e.message}", e)
+                    isDeleting = false
                     ErrorHandler.handleSaveError(requireContext(), e)
                 }
             }

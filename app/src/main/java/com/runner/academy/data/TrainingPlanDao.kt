@@ -151,4 +151,13 @@ interface PlanScheduleDao {
 
     @Query("DELETE FROM scheduled_workouts WHERE scheduleId = :scheduleId")
     suspend fun deleteScheduledForSchedule(scheduleId: Long)
+
+    /** Returns plan days completed by a deleted workout back to PLANNED. */
+    @Query(
+        """
+        UPDATE scheduled_workouts SET status = 'PLANNED', completedWorkoutId = NULL
+        WHERE completedWorkoutId = :workoutId
+        """
+    )
+    suspend fun unlinkCompletedWorkout(workoutId: Long)
 }

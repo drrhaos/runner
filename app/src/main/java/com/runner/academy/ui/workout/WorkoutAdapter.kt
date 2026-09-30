@@ -13,6 +13,7 @@ import com.runner.academy.data.TrackData
 import com.runner.academy.data.Workout
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.ItemWorkoutBinding
+import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.SpeedPaceCalculator
 import com.runner.academy.util.TrackDataJson
 import kotlinx.coroutines.CoroutineScope
@@ -94,7 +95,7 @@ class WorkoutAdapter(
                     workout.distance,
                     context.getString(R.string.unit_km)
                 )
-                textViewDuration.text = formatDuration(workout.duration)
+                textViewDuration.text = FormatUtils.formatTime(workout.duration)
                 textViewPace.text = formatPace(workout.avgPace)
                 updateFavoriteButton(workout)
                 bindRoutePreview(workout)
@@ -137,7 +138,8 @@ class WorkoutAdapter(
             binding.textViewRoutePreviewEmpty.visibility = View.GONE
             binding.routePreview.visibility = View.VISIBLE
 
-            val cacheKey = "${workout.id}:${workout.trackData?.length ?: 0}:$previewSizePx"
+            val night = com.runner.academy.util.OsmMapTiles.isNightMode(binding.root.context)
+            val cacheKey = "${workout.id}:${workout.trackData?.length ?: 0}:$previewSizePx:$night"
             val cached = RouteMapBitmapRenderer.peek(cacheKey)
             if (cached != null) {
                 binding.routePreview.setImageBitmap(cached)
@@ -182,17 +184,6 @@ class WorkoutAdapter(
                 binding.buttonFavorite.setImageResource(R.drawable.ic_star_border)
                 binding.buttonFavorite.contentDescription =
                     context.getString(R.string.workout_favorite_add)
-            }
-        }
-
-        private fun formatDuration(durationMs: Long): String {
-            val totalSeconds = durationMs / 1000
-            val hours = totalSeconds / 3600
-            val minutes = (totalSeconds % 3600) / 60
-            val seconds = totalSeconds % 60
-            return when {
-                hours > 0 -> String.format("%d:%02d:%02d", hours, minutes, seconds)
-                else -> String.format("%d:%02d", minutes, seconds)
             }
         }
 
