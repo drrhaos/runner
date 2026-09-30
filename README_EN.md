@@ -49,7 +49,7 @@ Runner is a full-featured running app that allows you to:
 - Heart rate (bpm) — UI placeholder; sensor integration is planned
 
 ### 🗺️ Map
-- **OpenStreetMap** (Mapnik) in light theme; **CARTO Dark Matter** basemap in dark theme
+- **OpenStreetMap** (Mapnik) in both themes, no API keys; in dark theme tiles are darkened with a colour filter (water and parks keep their colours)
 - Interactive map with zoom and scroll gestures
 - Workout track as a red line; GPS gaps shown as dashed segments
 - Automatic map orientation based on movement direction
@@ -60,7 +60,7 @@ Runner is a full-featured running app that allows you to:
 - Detailed information about each workout (map, charts)
 - Statistics by workout type
 - **Favorite routes** — All / Favorites filter on the list
-- **Edit** a workout and pick a route from saved workouts
+- **Edit** a workout and pick a route from saved workouts: the new route's timing is taken from the recorded track (or spread over the entered duration), charts and metrics are recalculated
 
 ### ⚙️ Settings
 - User weight, height, age
@@ -341,8 +341,7 @@ cd runner
 ### First Launch
 1. On first launch, the app will request permissions:
    - Location access (required)
-   - Notification permission (for background tracking)
-   - Activity recognition permission (optional)
+   - Notification permission (for the workout notification)
 
 2. Fill in profile settings:
    - Weight, height, age, gender
@@ -420,14 +419,14 @@ app/src/main/
 
 ## 🔧 Permissions
 
-The app requires the following permissions:
-- `ACCESS_FINE_LOCATION` - precise location for GPS tracking
-- `ACCESS_COARSE_LOCATION` - approximate location
-- `ACCESS_BACKGROUND_LOCATION` - background location
-- `POST_NOTIFICATIONS` - workout notifications
-- `ACTIVITY_RECOGNITION` - physical activity recognition
-- `FOREGROUND_SERVICE` - background tracking service
-- `INTERNET` - OpenStreetMap map loading
+The app requests only the permissions it needs:
+- `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` — GPS tracking
+- `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION` — tracking service; keeps recording with the screen off, so **background location (`ACCESS_BACKGROUND_LOCATION`) is not required**
+- `POST_NOTIFICATIONS` — workout notification
+- `WAKE_LOCK` — stable recording during a workout
+- `INTERNET`, `ACCESS_NETWORK_STATE` — OpenStreetMap tiles
+
+The app does not request a battery-optimization exemption; instead it shows a one-time hint linking to the system settings.
 
 ## 🧪 Testing
 
@@ -477,6 +476,8 @@ Current release: **`v.0.0.7`**.
 - Changing `applicationId` (`com.example.runner` / `com.drrhaos.runner` → `com.runner.academy`) does not migrate data automatically — use **JSON/GPX export** on the old build and **import** on the new one
 
 ## 🔮 Future Plans
+
+Detailed roadmap (in Russian): [docs/ROADMAP.md](docs/ROADMAP.md).
 
 - [ ] Fitness tracker integration
 - [ ] Social features (share workouts)

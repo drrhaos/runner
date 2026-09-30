@@ -634,7 +634,7 @@ class WorkoutTrackingFragment : Fragment() {
     private fun beginWorkout() {
         isStoppingWorkout = false
         intervalController?.prepareForNewWorkout()
-        requestBatteryOptimizationExemption()
+        showBatteryOptimizationHintOnce()
         viewModel.seedPreStartLocation(mapManager?.peekLastLocation())
         viewLifecycleOwner.lifecycleScope.launch {
             val workoutType = modeController?.selectedWorkoutType
@@ -812,25 +812,28 @@ class WorkoutTrackingFragment : Fragment() {
         }
     }
 
-    private fun requestBatteryOptimizationExemption() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val powerManager = requireContext().getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
-            if (!powerManager.isIgnoringBatteryOptimizations(requireContext().packageName)) {
+    /**
+     * One-time, non-blocking hint. Opens the general battery-optimization list, which does not
+     * need REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (restricted by Google Play policy); the location
+     * foreground service keeps tracking alive in most cases anyway.
+     */
+    private fun showBatteryOptimizationHintOnce() {
+        val context = requireContext()
+        val prefs = context.appContainer().userPreferences
+        if (prefs.batteryOptimizationHintShown) return
+        val powerManager = context.getSystemService(android.content.Context.POWER_SERVICE) as PowerManager
+        if (powerManager.isIgnoringBatteryOptimizations(context.packageName)) return
+        prefs.batteryOptimizationHintShown = true
+        com.google.android.material.snackbar.Snackbar
+            .make(binding.root, R.string.battery_optimization_hint, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+            .setAction(R.string.battery_optimization_open_settings) {
                 try {
-                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                        data = android.net.Uri.parse("package:${requireContext().packageName}")
-                    }
-                    startActivity(intent)
+                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
                 } catch (e: Exception) {
-                    // Если не удается открыть настройки, показываем уведомление
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.battery_optimization_hint),
-                        Toast.LENGTH_LONG
-                    ).show()
+                    android.util.Log.w("WorkoutTracking", "Battery optimization settings unavailable: ${e.message}")
                 }
             }
-        }
+            .show()
     }
 
     // -- Map center button visibility --

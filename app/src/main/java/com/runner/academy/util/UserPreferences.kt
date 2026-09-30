@@ -24,6 +24,7 @@ class UserPreferences(context: Context) {
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_APP_LANGUAGE = "app_language"
         private const val KEY_START_COUNTDOWN = "start_countdown_seconds"
+        private const val KEY_BATTERY_HINT_SHOWN = "battery_optimization_hint_shown"
         
         // Значения по умолчанию
         private const val DEFAULT_WEIGHT = 70f
@@ -38,6 +39,11 @@ class UserPreferences(context: Context) {
         private const val DEFAULT_START_COUNTDOWN = 5
     }
     
+    /** Подсказка про оптимизацию батареи показывается один раз. */
+    var batteryOptimizationHintShown: Boolean
+        get() = prefs.getBoolean(KEY_BATTERY_HINT_SHOWN, false)
+        set(value) = prefs.edit().putBoolean(KEY_BATTERY_HINT_SHOWN, value).apply()
+
     /**
      * Вес пользователя в кг
      */
