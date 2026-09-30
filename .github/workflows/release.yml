@@ -23,12 +23,9 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Accept SDK licenses
-        run: yes | sdkmanager --licenses || true
-
-      - name: Install SDK components
-        run: sdkmanager "platforms;android-36" "build-tools;35.0.0"
+        with:
+          # Default includes the obsolete 'tools' package, which sdkmanager can no longer find
+          packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
 
       - name: Extract version from tag
         id: version
