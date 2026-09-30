@@ -104,6 +104,8 @@
     <string name="edit_workout_no_routes">No saved routes yet. Complete a GPS workout or mark one as favorite.</string>
     <string name="edit_workout_route_selected">Route selected</string>
     <string name="edit_workout_route_cleared">Route cleared</string>
+    <string name="edit_workout_route_time_recorded">Route saved, timing taken from the recorded track</string>
+    <string name="edit_workout_route_time_uniform">Route saved, timing spread evenly over the entered duration</string>
     <string name="edit_workout_route_preview_cd">Route preview</string>
     <string name="edit_workout_route_meta">%1$.1f km · %2$s</string>
     <string name="edit_workout_route_points">%1$d points</string>
