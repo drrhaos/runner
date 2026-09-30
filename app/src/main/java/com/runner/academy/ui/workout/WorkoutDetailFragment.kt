@@ -225,7 +225,7 @@ class WorkoutDetailFragment : Fragment() {
                     val trackData = TrackDataJson.parse(trackDataJson) ?: return@withContext null
                     if (trackData.points.isEmpty()) return@withContext trackData
                     if (WorkoutDataCleaner.needsCleaning(trackData)) {
-                        WorkoutDataCleaner.cleanTrackData(trackData)
+                        WorkoutDataCleaner.cleanTrackData(trackData, workout.type)
                     } else {
                         trackData
                     }

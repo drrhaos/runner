@@ -20,6 +20,7 @@ import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutState
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.data.maxReasonableGpsSpeedMps
 import com.runner.academy.service.GpsLocationProcessor
 import com.runner.academy.service.IntervalCursor
 import com.runner.academy.service.WorkoutTrackingService
@@ -324,7 +325,7 @@ class WorkoutTrackingViewModel(
         } else {
             session.trackDataPoints
         }
-        val sanitizedPoints = sanitizeTrackPoints(sourcePoints)
+        val sanitizedPoints = sanitizeTrackPoints(sourcePoints, workoutType)
         val hasTrack = sanitizedPoints.size >= 2
 
         val totalDistanceMeters = when {
@@ -407,10 +408,14 @@ class WorkoutTrackingViewModel(
         }
     }
 
-    private fun sanitizeTrackPoints(rawPoints: List<TrackPoint>): List<TrackPoint> {
+    private fun sanitizeTrackPoints(
+        rawPoints: List<TrackPoint>,
+        workoutType: WorkoutType
+    ): List<TrackPoint> {
         if (rawPoints.isEmpty()) return emptyList()
         val result = mutableListOf<TrackPoint>()
         var previousLocation: Location? = null
+        val maxReasonableSpeedMps = workoutType.maxReasonableGpsSpeedMps()
 
         for (point in rawPoints) {
             val rawLocation = trackPointToLocation(point)
@@ -418,6 +423,7 @@ class WorkoutTrackingViewModel(
             val filteredLocation = GpsFilter.filterGpsOutlier(
                 rawLocation,
                 previousLocation,
+                maxReasonableSpeedMps = maxReasonableSpeedMps,
                 forceGapResume = forceGap
             ) ?: continue
 
