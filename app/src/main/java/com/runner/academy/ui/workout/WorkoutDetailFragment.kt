@@ -37,6 +37,7 @@ class WorkoutDetailFragment : Fragment() {
     private var currentTrackData: TrackData? = null
     private var boundTrackRenderKey: Pair<com.runner.academy.data.WorkoutType, String>? = null
     private var userPreferences: com.runner.academy.util.UserPreferences? = null
+    private var isDeleting = false
 
     // Extracted manager components
     private var mapManager: DetailMapManager? = null
@@ -169,6 +170,7 @@ class WorkoutDetailFragment : Fragment() {
                     if (_binding == null || !isAdded || isDetached) return@collect
 
                     if (workout == null) {
+                        if (isDeleting) return@collect
                         android.util.Log.e("WorkoutDetail", "Workout not found with ID: $workoutId")
                         ErrorHandler.handleLoadError(requireContext(), Exception("Workout not found"))
                         return@collect
@@ -318,13 +320,20 @@ class WorkoutDetailFragment : Fragment() {
 
     private fun deleteWorkout() {
         currentWorkout?.let { workout ->
+            if (isDeleting) return
+            isDeleting = true
             viewLifecycleOwner.lifecycleScope.launch {
                 try {
                     viewModel.deleteWorkout(workout)
+                    requireContext().appContainer().trainingPlanRepository
+                        .unlinkCompletedWorkout(workout.id)
                     Toast.makeText(context, getString(R.string.workout_deleted), Toast.LENGTH_SHORT).show()
                     findNavController().navigateUp()
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     android.util.Log.e("WorkoutDetail", "Error deleting workout: ${e.message}", e)
+                    isDeleting = false
                     ErrorHandler.handleSaveError(requireContext(), e)
                 }
             }
