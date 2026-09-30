@@ -17,7 +17,7 @@ Workout routes are stored in a local Room database. No account or cloud sync is 
 Runner uses GPS to track workouts. Location access is required for core functionality:
 
 - **Foreground location** — while the tracking screen is open
-- **Background location** — while a workout is active via a foreground service
+- **During an active workout** — via a location foreground service (with a visible notification), including when the screen is off. The app does not request background location permission.
 - Location data is not transmitted to project servers. Export (GPX/CSV) happens only when you explicitly choose to share a file.
 
 ## Network usage
@@ -30,10 +30,10 @@ Google Play Services Location is used for GPS updates. Google's privacy policy a
 
 | Permission | Purpose |
 |------------|---------|
-| Location (fine/coarse/background) | GPS workout tracking |
+| Location (fine/coarse) | GPS workout tracking |
+| Foreground service (location) | Keep recording during a workout, including with the screen off |
 | Notifications | Foreground workout service notification |
-| Activity recognition | Optional activity detection |
-| Internet | Map tiles |
+| Internet, network state | Map tiles |
 | Wake lock | Keep tracking active during workouts |
 
 ## Data export, import, and deletion
