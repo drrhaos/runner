@@ -19,7 +19,9 @@ import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.DialogRoutePickerBinding
 import com.runner.academy.databinding.FragmentAddWorkoutBinding
+import com.runner.academy.util.ErrorHandler
 import com.runner.academy.util.TrackDataJson
+import com.runner.academy.util.WorkoutTrackRebuilder
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -48,9 +50,9 @@ class AddWorkoutFragment : Fragment() {
     private var selectedDate: Date = Date()
     private var selectedWorkoutType: WorkoutType = WorkoutType.EASY_RUN
     private var selectedTrackDataJson: String? = null
-    private var editingIsFavorite: Boolean = false
-    private var editingIntervalSegmentsJson: String? = null
-    private var hasLoadedExistingWorkout: Boolean = false
+    /** Тренировка до редактирования: её трек — источник времени при замене маршрута. */
+    private var originalWorkout: Workout? = null
+    private var isSaving: Boolean = false
 
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
@@ -141,7 +143,7 @@ class AddWorkoutFragment : Fragment() {
                 }
 
                 bindWorkout(workout)
-                hasLoadedExistingWorkout = true
+                originalWorkout = workout
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "Error loading workout for edit: ${e.message}", e)
                 if (isAdded) {
@@ -160,8 +162,6 @@ class AddWorkoutFragment : Fragment() {
         selectedDate = workout.date
         selectedWorkoutType = workout.type
         selectedTrackDataJson = workout.trackData
-        editingIsFavorite = workout.isFavorite
-        editingIntervalSegmentsJson = workout.intervalSegmentsJson
 
         binding.editTextDate.setText(dateFormat.format(selectedDate))
         binding.autoCompleteTextViewType.setText(
@@ -323,9 +323,15 @@ class AddWorkoutFragment : Fragment() {
                 null
             }
 
+            val original = originalWorkout
+            if (isEditMode && original == null) {
+                Toast.makeText(context, getString(R.string.workout_not_loaded), Toast.LENGTH_SHORT).show()
+                return
+            }
+
             val avgPace = viewModel.calculatePace(distance, duration)
             val workout = Workout(
-                id = if (isEditMode) workoutId else 0,
+                id = original?.id ?: 0,
                 date = selectedDate,
                 distance = distance,
                 duration = duration,
@@ -334,25 +340,38 @@ class AddWorkoutFragment : Fragment() {
                 notes = notesText.ifBlank { null },
                 type = selectedWorkoutType,
                 trackData = selectedTrackDataJson,
-                isFavorite = if (isEditMode) editingIsFavorite else false,
-                intervalSegmentsJson = if (isEditMode) editingIntervalSegmentsJson else null
+                isFavorite = original?.isFavorite ?: false,
+                intervalSegmentsJson = original?.intervalSegmentsJson
             )
-
-            if (isEditMode) {
-                if (!hasLoadedExistingWorkout) {
-                    Toast.makeText(context, getString(R.string.workout_not_loaded), Toast.LENGTH_SHORT).show()
-                    return
-                }
-                viewModel.updateWorkout(workout)
-                Toast.makeText(context, getString(R.string.workout_updated), Toast.LENGTH_SHORT).show()
-            } else {
-                viewModel.insertWorkout(workout)
-                Toast.makeText(context, getString(R.string.workout_saved), Toast.LENGTH_SHORT).show()
-            }
-
-            findNavController().navigateUp()
+            persistWorkout(workout, original)
         } catch (e: NumberFormatException) {
             Toast.makeText(context, getString(R.string.check_input_data), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun persistWorkout(workout: Workout, original: Workout?) {
+        if (isSaving) return
+        isSaving = true
+        binding.buttonSave.isEnabled = false
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val timeSource = viewModel.saveFromForm(workout, original)
+                val ctx = context ?: return@launch
+                val message = when (timeSource) {
+                    WorkoutTrackRebuilder.TimeSource.RECORDED -> R.string.edit_workout_route_time_recorded
+                    WorkoutTrackRebuilder.TimeSource.UNIFORM -> R.string.edit_workout_route_time_uniform
+                    else -> if (original != null) R.string.workout_updated else R.string.workout_saved
+                }
+                Toast.makeText(ctx, getString(message), Toast.LENGTH_SHORT).show()
+                findNavController().navigateUp()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error saving workout: ${e.message}", e)
+                isSaving = false
+                _binding?.buttonSave?.isEnabled = true
+                context?.let { ErrorHandler.handleSaveError(it, e) }
+            }
         }
     }
 

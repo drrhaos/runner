@@ -94,6 +94,8 @@
     <string name="edit_workout_no_routes">Пока нет сохранённых маршрутов. Запишите тренировку с GPS или добавьте в избранное.</string>
     <string name="edit_workout_route_selected">Маршрут выбран</string>
     <string name="edit_workout_route_cleared">Маршрут очищен</string>
+    <string name="edit_workout_route_time_recorded">Маршрут сохранён, время взято из записанного трека</string>
+    <string name="edit_workout_route_time_uniform">Маршрут сохранён, время распределено равномерно по указанной длительности</string>
     <string name="edit_workout_route_preview_cd">Превью маршрута</string>
     <string name="edit_workout_route_meta">%1$.1f км · %2$s</string>
     <string name="edit_workout_route_points">%1$d точек</string>

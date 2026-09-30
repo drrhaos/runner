@@ -35,7 +35,7 @@ class WorkoutDetailFragment : Fragment() {
 
     private var currentWorkout: com.runner.academy.data.Workout? = null
     private var currentTrackData: TrackData? = null
-    private var boundTrackDataJson: String? = null
+    private var boundTrackRenderKey: Pair<com.runner.academy.data.WorkoutType, String>? = null
     private var userPreferences: com.runner.academy.util.UserPreferences? = null
 
     // Extracted manager components
@@ -186,13 +186,19 @@ class WorkoutDetailFragment : Fragment() {
                         com.runner.academy.util.IntervalSegmentsJson.parse(workout.intervalSegmentsJson)
 
                     // Avoid clean→DB update→Flow→redraw loop (map flicker / missing track).
-                    // Track is cleaned locally for display only when track JSON changes.
-                    if (workout.trackData != boundTrackDataJson) {
-                        boundTrackDataJson = workout.trackData
-                        displayTrackOnMap(workout)
-                    } else if (workout.trackData == null) {
-                        _binding?.progressBarMapLoading?.visibility = View.GONE
+                    // Track is re-cleaned and redrawn only when its inputs change:
+                    // the JSON itself or the type (type drives the GPS outlier threshold).
+                    val renderKey = workout.trackData?.let { workout.type to it }
+                    if (renderKey != boundTrackRenderKey) {
+                        boundTrackRenderKey = renderKey
+                        if (workout.trackData == null) {
+                            currentTrackData = null
+                            _binding?.progressBarMapLoading?.visibility = View.GONE
+                        } else {
+                            displayTrackOnMap(workout)
+                        }
                     } else {
+                        _binding?.progressBarMapLoading?.visibility = View.GONE
                         currentTrackData?.let { chartRenderer?.updateSegmentsChartOnly(it) }
                     }
                 }
@@ -278,6 +284,9 @@ class WorkoutDetailFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         mapManager?.onDetach()
+        // Fragment stays in the back stack (e.g. while editing): the new view must redraw from scratch.
+        boundTrackRenderKey = null
+        currentTrackData = null
         chartRenderer = null
         exportManager = null
         statsDisplay = null
