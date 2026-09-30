@@ -140,15 +140,10 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         return rebuilt.timeSource
     }
 
-    fun deleteWorkout(workout: Workout) {
-        viewModelScope.launch {
-            try {
-                repository.deleteWorkout(workout)
-                loadStatistics()
-            } catch (e: Exception) {
-                android.util.Log.e("WorkoutViewModel", "Error deleting workout: ${e.message}", e)
-            }
-        }
+    /** Suspend so the caller leaves the screen only after the row is actually deleted. */
+    suspend fun deleteWorkout(workout: Workout) {
+        repository.deleteWorkout(workout)
+        loadStatistics()
     }
 
     fun setListFilter(filter: WorkoutListFilter) {

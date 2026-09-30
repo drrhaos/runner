@@ -323,6 +323,11 @@ class TrainingPlanRepository(
             )
         }
 
+    /** Call after a workout is deleted so its plan day is no longer shown as done. */
+    suspend fun unlinkCompletedWorkout(workoutId: Long) = withContext(Dispatchers.IO) {
+        scheduleDao.unlinkCompletedWorkout(workoutId)
+    }
+
     suspend fun deactivateActiveSchedule() = withContext(Dispatchers.IO) {
         scheduleDao.deactivateAll()
     }

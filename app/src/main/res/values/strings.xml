@@ -106,6 +106,16 @@
     <string name="edit_workout_route_cleared">Route cleared</string>
     <string name="edit_workout_route_time_recorded">Route saved, timing taken from the recorded track</string>
     <string name="edit_workout_route_time_uniform">Route saved, timing spread evenly over the entered duration</string>
+    <string name="edit_workout_track_locked_hint">Taken from the recorded track. Replace or clear the route to change it.</string>
+    <string name="edit_workout_type_locked_hint">Workout type cannot be changed for a workout with an interval plan.</string>
+    <string name="edit_workout_clear_route_title">Clear route?</string>
+    <string name="edit_workout_clear_route_message">After saving, the map, charts and splits of this workout will be removed. The recorded track cannot be restored.</string>
+    <string name="edit_workout_time_range_error">Minutes and seconds must be between 0 and 59</string>
+    <string name="edit_workout_calories_invalid">Invalid calories value</string>
+    <string name="edit_workout_discard_title">Discard changes?</string>
+    <string name="edit_workout_discard_message">Your changes will not be saved.</string>
+    <string name="edit_workout_discard_confirm">Discard</string>
+    <string name="edit_workout_keep_editing">Keep editing</string>
     <string name="edit_workout_route_preview_cd">Route preview</string>
     <string name="edit_workout_route_meta">%1$.1f km · %2$s</string>
     <string name="edit_workout_route_points">%1$d points</string>

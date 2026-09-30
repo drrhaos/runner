@@ -551,6 +551,12 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // ViewModel outlives detail/edit screens: totals must be reloaded after edits or deletes there.
+        viewModel.refreshStatistics()
+    }
+
     override fun onDestroyView() {
         isSpeedDialOpen = false
         super.onDestroyView()
