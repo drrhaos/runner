@@ -141,12 +141,17 @@ object RouteMapBitmapRenderer {
 
         val tileCount = (tileMaxX - tileMinX + 1) * (tileMaxY - tileMinY + 1)
         if (tileCount in 1..MAX_TILES_PER_PREVIEW) {
-            val night = OsmMapTiles.isNightMode(context)
+            // Same OSM tiles for both themes; dark theme is a colour filter (no API key needed).
+            val tilePaint = if (OsmMapTiles.isNightMode(context)) {
+                Paint(Paint.FILTER_BITMAP_FLAG).apply { colorFilter = OsmMapTiles.darkTilesFilter }
+            } else {
+                null
+            }
             coroutineScope {
                 val deferred = mutableListOf<Pair<Pair<Int, Int>, kotlinx.coroutines.Deferred<Bitmap?>>>()
                 for (ty in tileMinY..tileMaxY) {
                     for (tx in tileMinX..tileMaxX) {
-                        deferred.add((tx to ty) to async { loadTile(context, zoom, tx, ty, night) })
+                        deferred.add((tx to ty) to async { loadTile(context, zoom, tx, ty) })
                     }
                 }
                 deferred.forEach { (xy, job) ->
@@ -165,7 +170,7 @@ object RouteMapBitmapRenderer {
                             tileRight.toFloat(),
                             tileBottom.toFloat()
                         ),
-                        null
+                        tilePaint
                     )
                 }
             }
@@ -245,14 +250,13 @@ object RouteMapBitmapRenderer {
         context: Context,
         zoom: Int,
         x: Int,
-        y: Int,
-        night: Boolean
+        y: Int
     ): Bitmap? {
-        val cacheFile = tileCacheFile(context, zoom, x, y, night)
+        val cacheFile = tileCacheFile(context, zoom, x, y)
         if (cacheFile.exists() && cacheFile.length() > 0L) {
             return BitmapFactory.decodeFile(cacheFile.absolutePath)
         }
-        val urls = tileUrls(zoom, x, y, night)
+        val urls = tileUrls(zoom, x, y)
         for (url in urls) {
             val bytes = downloadBytes(url) ?: continue
             cacheFile.parentFile?.mkdirs()
@@ -269,24 +273,15 @@ object RouteMapBitmapRenderer {
         context: Context,
         zoom: Int,
         x: Int,
-        y: Int,
-        night: Boolean
+        y: Int
     ): File {
         val root = File(context.cacheDir, "osmdroid/preview_tiles")
-        val theme = if (night) "dark" else "light"
-        return File(root, "$theme/$zoom/$x/$y.png")
+        return File(root, "light/$zoom/$x/$y.png")
     }
 
-    private fun tileUrls(zoom: Int, x: Int, y: Int, night: Boolean): List<String> {
-        return if (night) {
-            listOf(
-                "https://a.basemaps.cartocdn.com/dark_all/$zoom/$x/$y.png",
-                "https://b.basemaps.cartocdn.com/dark_all/$zoom/$x/$y.png"
-            )
-        } else {
-            val s = arrayOf("a", "b", "c")[(x + y) % 3]
-            listOf("https://$s.tile.openstreetmap.org/$zoom/$x/$y.png")
-        }
+    private fun tileUrls(zoom: Int, x: Int, y: Int): List<String> {
+        val s = arrayOf("a", "b", "c")[(x + y) % 3]
+        return listOf("https://$s.tile.openstreetmap.org/$zoom/$x/$y.png")
     }
 
     private suspend fun downloadBytes(urlSpec: String): ByteArray? {

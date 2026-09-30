@@ -31,6 +31,10 @@ class RouteTimeAlignerTest {
         altitude = null
     )
 
+    private fun assertNear(expected: Long, actual: Long, toleranceMs: Long) {
+        assertTrue("expected $expected ± $toleranceMs, got $actual", kotlin.math.abs(actual - expected) <= toleranceMs)
+    }
+
     private fun track(points: List<TrackPoint>) = RouteTimeAligner.buildTrackData(points)
 
     /** 1 km east at 3 s / 10 m, then back at 5 s / 10 m. */
@@ -50,9 +54,9 @@ class RouteTimeAlignerTest {
         val points = aligned!!.points
 
         // x = 500 m outbound → 150 s; x = 500 m on return → 300 s + 250 s.
-        assertEquals(start + 150_000L, points[10].timestamp.toDouble(), 2_000.0)
-        assertEquals(start + 550_000L, points[30].timestamp.toDouble(), 2_000.0)
-        assertEquals(800_000L, aligned.totalDuration.toDouble(), 3_000.0)
+        assertNear(start + 150_000L, points[10].timestamp, 2_000L)
+        assertNear(start + 550_000L, points[30].timestamp, 2_000L)
+        assertNear(800_000L, aligned.totalDuration, 3_000L)
         for (i in 1 until points.size) {
             assertTrue("timestamps must increase", points[i].timestamp >= points[i - 1].timestamp)
         }
@@ -72,8 +76,8 @@ class RouteTimeAlignerTest {
         )
         val aligned = RouteTimeAligner.alignToRecorded(track(routePoints), recorded)!!
         val t = aligned.points.map { it.timestamp }
-        assertEquals(start + 120_000L, t[2].toDouble(), 1_000.0)
-        assertEquals(start + 180_000L, t[6].toDouble(), 1_000.0)
+        assertNear(start + 120_000L, t[2], 1_000L)
+        assertNear(start + 180_000L, t[6], 1_000L)
         assertTrue(t[3] in t[2]..t[4] && t[4] in t[3]..t[5] && t[5] in t[4]..t[6])
     }
 
@@ -89,14 +93,14 @@ class RouteTimeAlignerTest {
         val recorded = track((0..100).map { point(it * 10.0, time = start + it * 3_000L) })
         val route = track((0..12).map { point(it * 100.0) }) // 1.2 km, last 200 m unrecorded
         val aligned = RouteTimeAligner.alignToRecorded(route, recorded)!!
-        assertEquals(start + 360_000L, aligned.points.last().timestamp.toDouble(), 3_000.0)
+        assertNear(start + 360_000L, aligned.points.last().timestamp, 3_000L)
     }
 
     @Test
     fun `distributeByDistance spreads duration proportionally`() {
         val route = track(listOf(point(0.0), point(100.0), point(400.0)))
         val result = RouteTimeAligner.distributeByDistance(route, start, 400_000L)!!
-        assertEquals(start + 100_000L, result.points[1].timestamp.toDouble(), 2_000.0)
+        assertNear(start + 100_000L, result.points[1].timestamp, 2_000L)
         assertEquals(400_000L, result.totalDuration)
     }
 
@@ -109,7 +113,7 @@ class RouteTimeAlignerTest {
         val result = WorkoutTrackRebuilder.rebuild(recordedJson, routeJson, Date(start), Date(start), 1L)
         assertEquals(WorkoutTrackRebuilder.TimeSource.RECORDED, result.timeSource)
         val rebuilt = TrackDataJson.parse(result.trackDataJson)!!
-        assertEquals(start.toDouble(), rebuilt.startTime.toDouble(), 2_000.0)
+        assertNear(start, rebuilt.startTime, 2_000L)
     }
 
     @Test
