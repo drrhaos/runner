@@ -4,16 +4,21 @@
 
 Change history for Runner. Version numbers match git tags `v.X.Y.Z` (release `versionName` = `X.Y.Z`).
 
-Current release: **`v.0.1.4`**.
+Current release: **`v.0.1.5`**.
 
 ## Unreleased
+
+## 0.1.5 — `v.0.1.5`
 
 - Location without Google Play Services: phone GPS only (`LocationManager`), no network location
 - Tracking requires precise location; approximate-only gets a clear message
 - Live GPS while the screen is on (fixes the "signal lost / ready" flicker)
 - Updates install over the previous version: `versionCode` now grows with the version (all release APKs used to have code 1)
-- No Google-encrypted dependency block in the APK (needed for F-Droid / IzzyOnDroid)
-- Tests: golden backup of the current format and the full DB migration chain
+- No Google-encrypted dependency block in the APK
+- GPS diagnostics (in settings, off by default): raw points and per-system satellites are written to the workout's file; share it from the workout details
+- The back gesture no longer stops a workout — only holding Stop does
+- The workout list, statistics and route picker no longer load every workout at once: paging that drops pages scrolled past
+- Tests: golden backup of the current format, the full DB migration chain, launchable instrumented tests
 
 ## 0.1.4 — `v.0.1.4`
 
