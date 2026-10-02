@@ -27,5 +27,10 @@ class RunnerApplication : Application() {
         val localeList = LocaleListCompat.forLanguageTags(userPreferences.appLanguage)
         AppCompatDelegate.setApplicationLocales(localeList)
         ThemeUtils.applyTheme(userPreferences.themeMode)
+
+        // Unsaved GPS diagnostics recordings (workout discarded) are dropped after a day
+        Thread {
+            container.gpsDiagnosticsStore.cleanupOrphans(System.currentTimeMillis())
+        }.start()
     }
 }

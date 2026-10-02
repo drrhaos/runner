@@ -19,6 +19,7 @@ Runner uses GPS to track workouts. Location access is required for core function
 - **Foreground location** — while the tracking screen is open
 - **During an active workout** — via a location foreground service (with a visible notification), including when the screen is off. The app does not request background location permission.
 - Location data is not transmitted to project servers. Export (GPX/CSV) happens only when you explicitly choose to share a file.
+- **GPS diagnostics** (off by default, Settings → "Record GPS diagnostics"): for each new workout the app keeps a file with raw GPS points and satellite signal summaries in its private storage. It is not part of app backups, is deleted together with the workout (recordings of unsaved workouts after a week), and leaves the phone only if you tap "Share GPS diagnostics" in the workout details. The file contains exact coordinates, including where the run started and ended.
 
 ## Network usage
 

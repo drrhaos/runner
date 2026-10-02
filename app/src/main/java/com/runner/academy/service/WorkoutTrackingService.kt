@@ -16,6 +16,8 @@ import com.runner.academy.data.GpsStatus
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.GpsConfig
+import com.runner.academy.util.GpsDiagnostics.FixResult
+import com.runner.academy.util.GpsDiagnostics.Event as DiagEvent
 import com.runner.academy.util.GpsFilter
 import com.runner.academy.util.GpsLocationClient
 import com.runner.academy.util.IntervalSegmentsJson
@@ -95,6 +97,7 @@ class WorkoutTrackingService : Service() {
 
     // Location provider bindings
     private var gpsClient: GpsLocationClient? = null
+    private lateinit var diagnostics: GpsDiagnosticsRecorder
     private var currentLocationRequest: LocationRequestCompat? = null
     /** Runs once the provider reports [FLUSH_REQUEST_CODE] complete (see [flushThen]). */
     private var afterFlush: (() -> Unit)? = null
@@ -175,6 +178,10 @@ class WorkoutTrackingService : Service() {
             .container.userPreferences
         activeWorkoutStore = ActiveWorkoutStore(this)
         gpsClient = GpsLocationClient(this)
+        diagnostics = GpsDiagnosticsRecorder(
+            this,
+            (applicationContext as com.runner.academy.RunnerApplication).container.gpsDiagnosticsStore
+        )
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
         registerScreenStateReceiver()
@@ -234,6 +241,8 @@ class WorkoutTrackingService : Service() {
         stopWorkoutTimer()
         stopLocationUpdates()
         stopPeriodicLocationRequest()
+        // Mid-workout destroy: the checkpoint resumes later and the recording continues
+        diagnostics.release()
         serviceJob.cancel()
     }
 
@@ -262,6 +271,8 @@ class WorkoutTrackingService : Service() {
                 session.rawTrackDataPoints.toMutableList(),
                 resumeAfterGap = resumeAfterGap
             )
+
+            diagnostics.recordFix(location, result.toFixResult())
 
             when (result) {
                 null -> { /* point filtered out entirely */ }
@@ -308,6 +319,7 @@ class WorkoutTrackingService : Service() {
                 }
             }
         } else {
+            diagnostics.recordFix(location, FixResult.NOT_PROCESSED)
             val (rawPoints, currentLoc) = gpsProcessor.processLocationWhenNotTracking(
                 location,
                 sessionManager.getSession().rawTrackDataPoints,
@@ -358,6 +370,9 @@ class WorkoutTrackingService : Service() {
         val initialGpsStatus = if (hasPermission) GpsStatus.SEARCHING else GpsStatus.DENIED
         sessionManager.startNewSession(initialGpsStatus = initialGpsStatus)
         maybeSaveCheckpoint(sessionManager.getSession(), force = true)
+        if (userPreferences.gpsDiagnostics) {
+            diagnostics.start(sessionManager.getSession().startTime, resume = false)
+        }
 
         if (hasPermission) {
             preStartSeed?.let { updateLocation(it) }
@@ -372,6 +387,7 @@ class WorkoutTrackingService : Service() {
     }
 
     fun pauseWorkout() {
+        diagnostics.recordEvent(DiagEvent.PAUSE)
         isCurrentlyTracking = false
         sessionManager.pause()
         stopLocationUpdates()
@@ -382,6 +398,7 @@ class WorkoutTrackingService : Service() {
     }
 
     fun resumeWorkout() {
+        diagnostics.recordEvent(DiagEvent.RESUME)
         isCurrentlyTracking = true
         sessionManager.resume()
         if (hasLocationPermission()) {
@@ -409,6 +426,7 @@ class WorkoutTrackingService : Service() {
         stopLocationUpdates()
         stopPeriodicLocationRequest()
         stopWorkoutTimer()
+        diagnostics.stop()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -466,6 +484,9 @@ class WorkoutTrackingService : Service() {
 
     private fun resumeTrackingAfterRestore(session: WorkoutSession) {
         ensureForegroundNotification()
+        if (userPreferences.gpsDiagnostics && session.startTime > 0L) {
+            diagnostics.start(session.startTime, resume = true)
+        }
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
         if (session.isPaused) {
@@ -897,6 +918,7 @@ class WorkoutTrackingService : Service() {
         if (screenInteractive == interactive) return
         screenInteractive = interactive
         notificationManager.setScreenInteractive(interactive)
+        diagnostics.recordEvent(if (interactive) DiagEvent.SCREEN_ON else DiagEvent.SCREEN_OFF)
         // Bearings from before the switch (or from a batch) are not comparable
         turnDetector.reset()
         turningDensifyActive = false
@@ -999,4 +1021,12 @@ class WorkoutTrackingService : Service() {
             }
         }
     }
+}
+
+/** The live filter's verdict as recorded in GPS diagnostics. */
+private fun GpsLocationProcessor.ProcessResult?.toFixResult(): FixResult = when (this) {
+    null -> FixResult.REJECTED
+    is GpsLocationProcessor.ProcessResult.Accepted -> FixResult.ACCEPTED
+    is GpsLocationProcessor.ProcessResult.Rejected ->
+        if (refreshGapClock) FixResult.NEAR_DUPLICATE else FixResult.REJECTED
 }

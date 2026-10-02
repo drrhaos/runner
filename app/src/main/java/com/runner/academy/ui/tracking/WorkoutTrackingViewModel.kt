@@ -381,12 +381,15 @@ class WorkoutTrackingViewModel(
         )
 
         return try {
-            com.runner.academy.util.ErrorHandler.retryWithBackoff(
+            val id = com.runner.academy.util.ErrorHandler.retryWithBackoff(
                 maxRetries = 3,
                 initialDelay = 1000L
             ) {
                 repository.insertWorkout(workout)
             }
+            // A rename is safe while the service still flushes: the open handle follows the file
+            repository.attachGpsDiagnostics(session.startTime, id)
+            id
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error saving workout after retries: ${e.message}", e)
             com.runner.academy.util.ErrorHandler.handleSaveError(application, e, false)

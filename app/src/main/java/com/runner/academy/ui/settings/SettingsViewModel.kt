@@ -22,6 +22,7 @@ data class SettingsState(
     val userAge: Int = 0,
     val unitSystem: String = "metric",
     val voiceFeedback: Boolean = false,
+    val gpsDiagnostics: Boolean = false,
     val themeMode: String = ThemeUtils.THEME_SYSTEM,
     val appLanguage: String = "en",
     val isFirstLaunch: Boolean = true,
@@ -50,6 +51,7 @@ class SettingsViewModel(
                 userAge = userPreferences.userAge,
                 unitSystem = userPreferences.unitSystem,
                 voiceFeedback = userPreferences.voiceFeedback,
+                gpsDiagnostics = userPreferences.gpsDiagnostics,
                 themeMode = userPreferences.themeMode,
                 appLanguage = userPreferences.appLanguage,
                 isFirstLaunch = userPreferences.isFirstLaunch,
@@ -86,6 +88,11 @@ class SettingsViewModel(
     fun updateUnitSystem(unitSystem: String) {
         userPreferences.unitSystem = unitSystem
         _settingsState.value = _settingsState.value.copy(unitSystem = unitSystem)
+    }
+
+    fun updateGpsDiagnostics(enabled: Boolean) {
+        userPreferences.gpsDiagnostics = enabled
+        _settingsState.value = _settingsState.value.copy(gpsDiagnostics = enabled)
     }
 
     fun updateVoiceFeedback(voiceFeedback: Boolean) {
