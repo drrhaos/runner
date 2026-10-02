@@ -296,7 +296,7 @@ Workout {
 - **Архитектура**: MVVM (Model-View-ViewModel)
 - **База данных**: Room Database 2.7 + Room Gradle Plugin, кодоген через **KSP**
 - **Карты**: OSMDroid (OpenStreetMap)
-- **Локация**: Google Play Services Location API
+- **Локация**: платформенный `LocationManager` (только GPS, без Google Play Services)
 - **Асинхронность**: Kotlin Coroutines
 - **Навигация**: Android Navigation Component
 - **UI**: Material Design Components, ViewBinding
@@ -307,7 +307,6 @@ Workout {
 - `androidx.room:room-*:2.7.0` - база данных (compiler через KSP)
 - `com.google.devtools.ksp` / Kotlin 2.0.21 - аннотации Room
 - `org.osmdroid:osmdroid-android:6.1.18` - карты
-- `com.google.android.gms:play-services-location:21.0.1` - GPS
 - `org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3` - корутины
 - `com.google.code.gson:gson:2.10.1` - JSON сериализация
 - `androidx.documentfile:documentfile` - импорт из папки (SAF)

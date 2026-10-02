@@ -29,10 +29,6 @@
 # MPAndroidChart
 -keep class com.github.mikephil.charting.** { *; }
 
-# Google Play Services Location
--keep class com.google.android.gms.** { *; }
--dontwarn com.google.android.gms.**
-
 # Keep line numbers for crash reports
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
