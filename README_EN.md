@@ -296,7 +296,7 @@ Each track point contains:
 - **Architecture**: MVVM (Model-View-ViewModel)
 - **Database**: Room Database 2.7 + Room Gradle Plugin, codegen via **KSP**
 - **Maps**: OSMDroid (OpenStreetMap)
-- **Location**: Google Play Services Location API
+- **Location**: platform `LocationManager` (GPS only, no Google Play Services)
 - **Asynchrony**: Kotlin Coroutines
 - **Navigation**: Android Navigation Component
 - **UI**: Material Design Components, ViewBinding
@@ -307,7 +307,6 @@ Main libraries:
 - `androidx.room:room-*:2.7.0` - database (compiler via KSP)
 - `com.google.devtools.ksp` / Kotlin 2.0.21 - Room annotations
 - `org.osmdroid:osmdroid-android:6.1.18` - maps
-- `com.google.android.gms:play-services-location:21.0.1` - GPS
 - `org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3` - coroutines
 - `com.google.code.gson:gson:2.10.1` - JSON serialization
 - `androidx.documentfile:documentfile` - folder import (SAF)

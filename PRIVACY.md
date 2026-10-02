@@ -24,7 +24,7 @@ Runner uses GPS to track workouts. Location access is required for core function
 
 The app downloads map tiles from [OpenStreetMap](https://www.openstreetmap.org/) via OSMDroid. Tile requests include a User-Agent identifying the app. No personal workout data is sent with map requests.
 
-Google Play Services Location is used for GPS updates. Google's privacy policy applies to that component.
+GPS updates come from the device's own GPS receiver through the Android `LocationManager`. The app does not use Google Play Services or network-based location.
 
 ## Permissions
 
@@ -53,7 +53,7 @@ Android backup may include app preferences. Workout database backup behavior fol
 
 ## Third parties
 
-This app does not include analytics SDKs or advertising. Third-party libraries (OSMDroid, Google Play Services Location) operate under their own terms.
+This app does not include analytics SDKs or advertising. Third-party libraries (OSMDroid) operate under their own terms.
 
 ## Open source
 

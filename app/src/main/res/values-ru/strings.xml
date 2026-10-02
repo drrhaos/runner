@@ -302,6 +302,7 @@
     <string name="avg_pace_label">Средний темп</string>
 
     <string name="permission_location_needed">Разрешение на местоположение необходимо для трекинга</string>
+    <string name="permission_precise_location_needed">Нужно точное местоположение: с приблизительным GPS-трек не записывается</string>
     <string name="permission_location_denied_can_train">Нет доступа к GPS. Тренировку можно начать, маршрут записываться не будет.</string>
     <string name="permission_notification_needed">Разрешение на уведомления необходимо для фонового трекинга</string>
     <string name="battery_optimization_hint">Для стабильной работы приложения отключите оптимизацию батареи в настройках</string>
