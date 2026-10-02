@@ -91,6 +91,13 @@ android {
         viewBinding = true
     }
 
+    // AGP embeds a dependency list encrypted with a Google key into APK/AAB; it is only
+    // readable by Google Play and breaks F-Droid / IzzyOnDroid reproducible-build checks.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     sourceSets {
         getByName("androidTest").assets.srcDir("$projectDir/schemas")
     }
