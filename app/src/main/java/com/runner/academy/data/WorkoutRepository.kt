@@ -20,22 +20,25 @@ class WorkoutRepository(
      */
     fun getAllWorkouts(): Flow<List<Workout>> = workoutDao.getAllWorkouts()
 
-    fun getFavoriteWorkouts(): Flow<List<Workout>> = workoutDao.getFavoriteWorkouts()
-
     fun pagingSourceAll(): PagingSource<Int, Workout> = workoutDao.pagingSourceAll()
 
     fun pagingSourceFavorites(): PagingSource<Int, Workout> = workoutDao.pagingSourceFavorites()
+
+    fun pagingSourceRoutes(excludeId: Long): PagingSource<Int, Workout> =
+        workoutDao.pagingSourceRoutes(excludeId)
+
+    suspend fun countRoutes(excludeId: Long): Int = withContext(Dispatchers.IO) {
+        workoutDao.countRoutes(excludeId)
+    }
+
+    suspend fun getStatsRows(): List<WorkoutStatsRow> = withContext(Dispatchers.IO) {
+        workoutDao.getStatsRows()
+    }
 
     /**
      * Get a single workout by ID as a Flow.
      */
     fun getWorkoutById(id: Long): Flow<Workout?> = workoutDao.getWorkoutById(id)
-
-    /**
-     * Get workouts within a date range ordered by date descending as a Flow.
-     */
-    fun getWorkoutsByDateRange(startDate: Long, endDate: Long): Flow<List<Workout>> =
-        workoutDao.getWorkoutsByDateRange(startDate, endDate)
 
     /**
      * Insert a new workout and return the generated row ID.

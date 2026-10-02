@@ -4,7 +4,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.runner.academy.R
 import com.runner.academy.data.TrackData
@@ -17,7 +17,7 @@ import java.util.Locale
 
 class RoutePickerAdapter(
     private val onRouteClick: (Workout) -> Unit
-) : ListAdapter<Workout, RoutePickerAdapter.RouteViewHolder>(DiffCallback) {
+) : PagingDataAdapter<Workout, RoutePickerAdapter.RouteViewHolder>(DiffCallback) {
 
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
@@ -31,7 +31,8 @@ class RoutePickerAdapter(
     }
 
     override fun onBindViewHolder(holder: RouteViewHolder, position: Int) {
-        holder.bind(getItem(position))
+        // Placeholders are off, so every bound position has a loaded item
+        getItem(position)?.let(holder::bind)
     }
 
     inner class RouteViewHolder(

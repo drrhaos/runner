@@ -30,6 +30,7 @@ import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.WorkoutTrackRebuilder
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -311,16 +312,12 @@ class AddWorkoutFragment : Fragment() {
     private fun showRoutePicker() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val workouts = viewModel.allWorkouts.first()
-                    .filter { !it.trackData.isNullOrBlank() && it.id != workoutId }
-                    .sortedWith(
-                        compareByDescending<Workout> { it.isFavorite }
-                            .thenByDescending { it.date }
-                    )
+                // Counted first; routes themselves are paged (hundreds of tracks must not load at once)
+                val routeCount = viewModel.countRoutes(excludeId = workoutId)
 
                 if (!isAdded || isDetached) return@launch
 
-                if (workouts.isEmpty()) {
+                if (routeCount == 0) {
                     MaterialAlertDialogBuilder(requireContext())
                         .setTitle(R.string.edit_workout_pick_route_title)
                         .setMessage(R.string.edit_workout_no_routes)
@@ -343,7 +340,10 @@ class AddWorkoutFragment : Fragment() {
                 dialogBinding.recyclerViewRoutes.layoutManager =
                     LinearLayoutManager(requireContext())
                 dialogBinding.recyclerViewRoutes.adapter = adapter
-                adapter.submitList(workouts)
+                val pagingJob = viewLifecycleOwner.lifecycleScope.launch {
+                    viewModel.routePages(excludeId = workoutId).collectLatest(adapter::submitData)
+                }
+                dialog.setOnDismissListener { pagingJob.cancel() }
 
                 dialog.show()
             } catch (e: kotlinx.coroutines.CancellationException) {

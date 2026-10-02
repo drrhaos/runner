@@ -26,7 +26,6 @@ import com.runner.academy.util.WorkoutBackupFormat
 import com.runner.academy.util.WorkoutGpxBulkExporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.BufferedReader
@@ -224,7 +223,7 @@ class WorkoutListFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val progress = showProgressDialog(R.string.workout_list_export_progress)
             try {
-                val workouts = viewModel.allWorkouts.first()
+                val workouts = viewModel.loadAllForExport()
                 if (workouts.isEmpty()) {
                     Toast.makeText(requireContext(), R.string.no_data_export, Toast.LENGTH_SHORT).show()
                     return@launch
@@ -254,7 +253,7 @@ class WorkoutListFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val progress = showProgressDialog(R.string.workout_list_export_progress)
             try {
-                val workouts = viewModel.allWorkouts.first()
+                val workouts = viewModel.loadAllForExport()
                 if (workouts.isEmpty()) {
                     Toast.makeText(requireContext(), R.string.no_data_export, Toast.LENGTH_SHORT).show()
                     return@launch
