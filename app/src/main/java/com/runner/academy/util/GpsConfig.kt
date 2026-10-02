@@ -42,8 +42,12 @@ object GpsConfig {
      */
     const val SCREEN_OFF_MAX_UPDATE_DELAY_MS = 20_000L
 
-    /** Short delay while display is on so the map stays live. */
-    const val SCREEN_ON_MAX_UPDATE_DELAY_MS = 2_000L
+    /**
+     * Display on: no batching (live map). On API 31+ the platform GNSS provider switches the
+     * chip to hardware batching once maxUpdateDelay >= 2 * interval, and the chip may then hold
+     * fixes long enough for the watchdog to flag GPS as lost.
+     */
+    const val SCREEN_ON_MAX_UPDATE_DELAY_MS = 0L
 
     /** Absolute bearing delta (degrees) that counts as a turn. */
     const val TURN_BEARING_DELTA_DEG = 20f
@@ -98,7 +102,7 @@ object GpsConfig {
         val interval = intervalMs.coerceAtLeast(MIN_UPDATE_INTERVAL)
         val minDistance = if (screenInteractive) MIN_DISTANCE else MIN_DISTANCE_SCREEN_OFF
         val maxDelay = if (screenInteractive) {
-            SCREEN_ON_MAX_UPDATE_DELAY_MS.coerceAtLeast(interval)
+            SCREEN_ON_MAX_UPDATE_DELAY_MS
         } else {
             SCREEN_OFF_MAX_UPDATE_DELAY_MS.coerceAtLeast(interval * 2)
         }
@@ -170,7 +174,7 @@ object GpsConfig {
         return LocationRequestCompat.Builder(2000L)
             .setQuality(LocationRequestCompat.QUALITY_HIGH_ACCURACY)
             .setMinUpdateIntervalMillis(MIN_UPDATE_INTERVAL)
-            .setMaxUpdateDelayMillis(2000L)
+            .setMaxUpdateDelayMillis(SCREEN_ON_MAX_UPDATE_DELAY_MS)
             // Standing still must still receive accuracy improvements
             .setMinUpdateDistanceMeters(0f)
             .build()
