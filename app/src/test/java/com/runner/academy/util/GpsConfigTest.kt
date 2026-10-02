@@ -94,12 +94,14 @@ class GpsConfigTest {
     }
 
     @Test
-    fun createWorkoutLocationRequest_screenOn_is_dense_with_short_batch() {
+    fun createWorkoutLocationRequest_screenOn_is_dense_and_live() {
         val request = GpsConfig.createWorkoutLocationRequest(screenInteractive = true)
         assertEquals(LocationRequestCompat.QUALITY_HIGH_ACCURACY, request.quality)
         assertEquals(GpsConfig.HIGH_ACCURACY_INTERVAL, request.intervalMillis)
         assertEquals(GpsConfig.MIN_DISTANCE, request.minUpdateDistanceMeters, 0.01f)
-        assertEquals(GpsConfig.SCREEN_ON_MAX_UPDATE_DELAY_MS, request.maxUpdateDelayMillis)
+        // No batching: on API 31+ the GNSS HAL batches when maxUpdateDelay >= 2 * interval
+        // and then holds fixes long enough for the watchdog to report GPS as lost.
+        assertEquals(0L, request.maxUpdateDelayMillis)
     }
 
     @Test
@@ -109,6 +111,14 @@ class GpsConfigTest {
         assertEquals(GpsConfig.SCREEN_OFF_INTERVAL, request.intervalMillis)
         assertEquals(GpsConfig.MIN_DISTANCE_SCREEN_OFF, request.minUpdateDistanceMeters, 0.01f)
         assertEquals(GpsConfig.SCREEN_OFF_MAX_UPDATE_DELAY_MS, request.maxUpdateDelayMillis)
+    }
+
+    @Test
+    fun createAdaptiveLocationRequest_screenOn_never_batches_at_any_interval() {
+        for (interval in listOf(1000L, 2000L, 3000L)) {
+            val request = GpsConfig.createAdaptiveLocationRequest(interval, screenInteractive = true)
+            assertEquals(0L, request.maxUpdateDelayMillis)
+        }
     }
 
     @Test
@@ -123,6 +133,7 @@ class GpsConfigTest {
         val request = GpsConfig.createPreWorkoutLocationRequest()
         assertEquals(LocationRequestCompat.QUALITY_HIGH_ACCURACY, request.quality)
         assertEquals(0f, request.minUpdateDistanceMeters, 0.01f)
+        assertEquals(0L, request.maxUpdateDelayMillis)
     }
 
     @Test
