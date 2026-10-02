@@ -1,0 +1,30 @@
+{
+  "formatVersion": 1,
+  "exportedAt": "2026-10-02T12:00:00Z",
+  "packageName": "com.runner.academy",
+  "workoutCount": 2,
+  "workouts": [
+    {
+      "id": 7,
+      "dateMillis": 1760000000000,
+      "distanceKm": 0.4125,
+      "durationMs": 120000,
+      "avgPace": 4.85,
+      "calories": 31,
+      "notes": "Интервалы у реки",
+      "type": "INTERVAL_TRAINING",
+      "trackData": "{\"points\":[{\"latitude\":55.7558,\"longitude\":37.6173,\"timestamp\":1760000000000,\"accuracy\":4.5,\"speed\":2.9,\"altitude\":152.0,\"after_gap\":false,\"source\":\"GPS\"},{\"latitude\":55.756,\"longitude\":37.6178,\"timestamp\":1760000002000,\"accuracy\":5.0,\"speed\":3.1,\"altitude\":152.5,\"after_gap\":false,\"source\":\"GPS\"},{\"latitude\":55.759,\"longitude\":37.6201,\"timestamp\":1760000120000,\"accuracy\":8.0,\"speed\":3.0,\"after_gap\":true,\"source\":\"GPS\"}],\"total_distance\":412.5,\"total_duration\":120000,\"avg_speed\":3.44,\"max_speed\":3.1,\"start_time\":1760000000000,\"end_time\":1760000120000}",
+      "isFavorite": true,
+      "intervalSegmentsJson": "[{\"sortOrder\":0,\"kind\":\"WARMUP\",\"title\":\"Разминка\",\"goalType\":\"DURATION\",\"durationMs\":600000},{\"sortOrder\":1,\"kind\":\"WORK\",\"title\":\"Быстро\",\"goalType\":\"DISTANCE\",\"distanceMeters\":400.0,\"targetPaceMinPerKm\":4.5}]"
+    },
+    {
+      "id": 8,
+      "dateMillis": 1760100000000,
+      "distanceKm": 5.0,
+      "durationMs": 1500000,
+      "avgPace": 5.0,
+      "type": "RACE",
+      "isFavorite": false
+    }
+  ]
+}
