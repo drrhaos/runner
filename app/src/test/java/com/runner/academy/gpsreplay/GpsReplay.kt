@@ -8,6 +8,7 @@ import com.runner.academy.util.TrackGeometry
 import com.runner.academy.util.TrackSanitizer
 import kotlin.math.cos
 import kotlin.math.hypot
+import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -89,11 +90,50 @@ data class SyntheticRun(
     /** Seconds at which a single fix jumps [outlierOffsetM] off the route. */
     val outlierAtSec: Set<Int> = emptySet(),
     val outlierOffsetM: Double = 300.0,
+    /** False-signal episode (spoofing / jamming), see [Spoof]. */
+    val spoof: Spoof? = null,
     val seed: Long = 42L
 ) {
+    /**
+     * A false-signal episode over [seconds] (from start). Fixes keep coming with good reported
+     * accuracy, but their position is wrong; the true run continues underneath.
+     */
+    sealed class Spoof(val seconds: IntRange, val noisy: Boolean) {
+        /**
+         * Position jumps [eastM]/[northM] away (by default ~17 km, like a spoofer's airport
+         * point) and stays there with exact coordinates.
+         */
+        class Teleport(seconds: IntRange, val eastM: Double = 15_000.0, val northM: Double = 8_000.0) :
+            Spoof(seconds, noisy = false)
+
+        /** Receiver repeats, exactly, the position it had when the episode began. */
+        class Frozen(seconds: IntRange) : Spoof(seconds, noisy = false)
+
+        /** Position drifts away at [rateMps] towards [headingDeg] (0 = north), then snaps back. */
+        class Drift(seconds: IntRange, val rateMps: Double, val headingDeg: Double = 90.0) :
+            Spoof(seconds, noisy = true)
+    }
+
     val routeLengthM: Double = route.zipWithNext { a, b -> hypot(b.first - a.first, b.second - a.second) }.sum()
 
     val durationSec: Int get() = standStillSec + (routeLengthM / speedMps).toInt()
+
+    /**
+     * Expected distance when the spoofed stretch is dropped and, without a step sensor,
+     * bridged by the straight line between the last good fix before it and the first good fix
+     * after it. An episode at the very start is simply not counted: the track begins with the
+     * first good fix. Assumes 1 Hz fixes (the bracketing seconds are fix times).
+     */
+    val expectedDistanceWithoutStepsM: Double
+        get() {
+            val range = spoof?.seconds ?: return routeLengthM
+            val after = movedAt(range.last + 1)
+            if (range.first <= 0) return routeLengthM - after
+            val before = movedAt(range.first - 1)
+            val (x1, y1) = positionAt(before)
+            val (x2, y2) = positionAt(after)
+            return routeLengthM - (after - before) + hypot(x2 - x1, y2 - y1)
+        }
 
     /** Metres actually covered while no fixes arrive (not counted: the track restarts after a gap). */
     val gapDistanceM: Double
@@ -115,19 +155,37 @@ data class SyntheticRun(
             errY = noiseDecay * errY + gaussian(random) * noiseInnovationM
             val second = t.toInt()
             if (gapSec == null || second !in gapSec) {
-                val (x, y) = positionAt(movedAt(t))
+                val spoofed = spoofedPosition(t)
+                val (x, y) = spoofed ?: positionAt(movedAt(t))
+                val noisy = spoofed == null || spoof?.noisy == true
                 val outlier = if (second in outlierAtSec && t - second < stepSec) outlierOffsetM else 0.0
                 val moving = t >= standStillSec
                 points += point(
-                    x + errX + outlier,
-                    y + errY,
+                    x + (if (noisy) errX else 0.0) + outlier,
+                    y + (if (noisy) errY else 0.0),
                     timeMs = START_TIME + (t * 1000).toLong(),
-                    speed = if (moving) speedMps.toFloat() else 0f
+                    speed = if (moving && noisy) speedMps.toFloat() else 0f
                 )
             }
             t += stepSec
         }
         return points
+    }
+
+    private fun spoofedPosition(t: Double): Pair<Double, Double>? {
+        val episode = spoof ?: return null
+        if (t.toInt() !in episode.seconds) return null
+        val begin = episode.seconds.first.toDouble()
+        return when (episode) {
+            is Spoof.Teleport -> episode.eastM to episode.northM
+            is Spoof.Frozen -> positionAt(movedAt(begin))
+            is Spoof.Drift -> {
+                val (x, y) = positionAt(movedAt(t))
+                val pulled = episode.rateMps * (t - begin)
+                val heading = Math.toRadians(episode.headingDeg)
+                x + pulled * sin(heading) to y + pulled * cos(heading)
+            }
+        }
     }
 
     /** Distance from a track point to the true route, in metres. */
