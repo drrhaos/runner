@@ -141,6 +141,11 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     }
 
     /** Suspend so the caller leaves the screen only after the row is actually deleted. */
+    suspend fun hasGpsDiagnostics(workoutId: Long): Boolean = repository.hasGpsDiagnostics(workoutId)
+
+    suspend fun copyGpsDiagnosticsForSharing(workoutId: Long): java.io.File? =
+        repository.copyGpsDiagnosticsForSharing(workoutId)
+
     suspend fun deleteWorkout(workout: Workout) {
         repository.deleteWorkout(workout)
         loadStatistics()

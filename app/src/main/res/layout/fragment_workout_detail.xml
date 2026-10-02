@@ -334,6 +334,17 @@
                 </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_share_diagnostics"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/workout_details_btn_share_diagnostics"
+                    android:drawableStart="@android:drawable/ic_menu_share"
+                    android:visibility="gone"
+                    tools:visibility="visible"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_edit"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

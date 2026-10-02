@@ -59,7 +59,7 @@ class GpsDiagnosticsFormatTest {
             GpsDiagnostics.fixLine(fix, FixResult.ACCEPTED),
             GpsDiagnostics.fixLine(fix.copy(accuracy = null, speed = null, bearing = null, altitude = null), FixResult.REJECTED),
             GpsDiagnostics.gnssLine(elapsedMs = 12_400L, summary = summary),
-            GpsDiagnostics.eventLine(elapsedMs = 13_000L, name = "pause")
+            GpsDiagnostics.eventLine(elapsedMs = 13_000L, event = GpsDiagnostics.Event.PAUSE)
         )
 
         val records = GpsDiagnostics.parse(lines)
@@ -86,7 +86,7 @@ class GpsDiagnosticsFormatTest {
     @Test
     fun parse_skipsBlankAndCorruptLines() {
         // A crash can leave a half-written last line; the rest of the file must stay readable
-        val good = GpsDiagnostics.eventLine(1L, "start")
+        val good = GpsDiagnostics.eventLine(1L, GpsDiagnostics.Event.START)
         val records = GpsDiagnostics.parse(listOf(good, "", "{\"type\":\"fix\",\"lat\":5", "not json"))
         assertEquals(listOf(DiagRecord.Event(1L, "start")), records)
     }

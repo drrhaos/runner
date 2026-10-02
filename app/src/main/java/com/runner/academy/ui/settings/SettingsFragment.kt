@@ -88,6 +88,11 @@ class SettingsFragment : Fragment() {
             viewModel.updateVoiceFeedback(isChecked)
         }
 
+        // Диагностика GPS
+        binding.switchGpsDiagnostics.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.updateGpsDiagnostics(isChecked)
+        }
+
         // Сброс настроек
         binding.buttonResetSettings.setOnClickListener {
             showResetConfirmationDialog()
@@ -115,6 +120,7 @@ class SettingsFragment : Fragment() {
         binding.textViewLanguageValue.text = viewModel.getLanguageDisplayName(settings.appLanguage)
         binding.textViewStartCountdownValue.text = "${settings.startCountdownSeconds} s"
         binding.switchVoiceFeedback.isChecked = settings.voiceFeedback
+        binding.switchGpsDiagnostics.isChecked = settings.gpsDiagnostics
     }
 
     private fun showWeightDialog() {
