@@ -152,9 +152,6 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     androidTestImplementation("androidx.fragment:fragment-testing:1.6.2")
 
-    // Location services
-    implementation("com.google.android.gms:play-services-location:21.0.1")
-
     // Permissions / SAF
     implementation("androidx.activity:activity-ktx:1.8.2")
     implementation("androidx.documentfile:documentfile:1.0.1")

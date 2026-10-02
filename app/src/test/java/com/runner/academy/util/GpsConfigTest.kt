@@ -1,6 +1,6 @@
 package com.runner.academy.util
 
-import com.google.android.gms.location.LocationRequest
+import androidx.core.location.LocationRequestCompat
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -94,8 +94,35 @@ class GpsConfigTest {
     }
 
     @Test
-    fun createWorkoutLocationRequest_should_be_locationrequest_instance() {
-        assertTrue(GpsConfig.createWorkoutLocationRequest() is LocationRequest)
+    fun createWorkoutLocationRequest_screenOn_is_dense_with_short_batch() {
+        val request = GpsConfig.createWorkoutLocationRequest(screenInteractive = true)
+        assertEquals(LocationRequestCompat.QUALITY_HIGH_ACCURACY, request.quality)
+        assertEquals(GpsConfig.HIGH_ACCURACY_INTERVAL, request.intervalMillis)
+        assertEquals(GpsConfig.MIN_DISTANCE, request.minUpdateDistanceMeters, 0.01f)
+        assertEquals(GpsConfig.SCREEN_ON_MAX_UPDATE_DELAY_MS, request.maxUpdateDelayMillis)
+    }
+
+    @Test
+    fun createWorkoutLocationRequest_screenOff_batches_for_battery() {
+        val request = GpsConfig.createWorkoutLocationRequest(screenInteractive = false)
+        assertEquals(LocationRequestCompat.QUALITY_HIGH_ACCURACY, request.quality)
+        assertEquals(GpsConfig.SCREEN_OFF_INTERVAL, request.intervalMillis)
+        assertEquals(GpsConfig.MIN_DISTANCE_SCREEN_OFF, request.minUpdateDistanceMeters, 0.01f)
+        assertEquals(GpsConfig.SCREEN_OFF_MAX_UPDATE_DELAY_MS, request.maxUpdateDelayMillis)
+    }
+
+    @Test
+    fun createAdaptiveLocationRequest_never_goes_below_min_interval() {
+        val request = GpsConfig.createAdaptiveLocationRequest(intervalMs = 200L)
+        assertEquals(GpsConfig.MIN_UPDATE_INTERVAL, request.intervalMillis)
+        assertEquals(GpsConfig.MIN_UPDATE_INTERVAL, request.minUpdateIntervalMillis)
+    }
+
+    @Test
+    fun createPreWorkoutLocationRequest_keeps_updating_while_standing() {
+        val request = GpsConfig.createPreWorkoutLocationRequest()
+        assertEquals(LocationRequestCompat.QUALITY_HIGH_ACCURACY, request.quality)
+        assertEquals(0f, request.minUpdateDistanceMeters, 0.01f)
     }
 
     @Test

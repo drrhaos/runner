@@ -26,6 +26,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import com.runner.academy.util.GpsLocationClient
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.databinding.FragmentWorkoutTrackingBinding
@@ -107,9 +108,15 @@ class WorkoutTrackingFragment : Fragment() {
         val coarseGranted = permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false)
 
         when {
-            fineGranted || coarseGranted -> onLocationPermissionReady()
+            fineGranted -> onLocationPermissionReady()
             else -> {
-                Toast.makeText(context, getString(R.string.permission_location_needed), Toast.LENGTH_LONG).show()
+                // GPS tracking needs precise location; "approximate" alone gives no fixes
+                val message = if (coarseGranted) {
+                    R.string.permission_precise_location_needed
+                } else {
+                    R.string.permission_location_needed
+                }
+                Toast.makeText(context, getString(message), Toast.LENGTH_LONG).show()
                 findNavController().navigateUp()
             }
         }
@@ -778,17 +785,8 @@ class WorkoutTrackingFragment : Fragment() {
     // -- Permissions & system requests --
 
     private fun requestLocationPermission() {
-        val fineGranted = ContextCompat.checkSelfPermission(
-            requireContext(),
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        val coarseGranted = ContextCompat.checkSelfPermission(
-            requireContext(),
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-
         when {
-            fineGranted || coarseGranted -> onLocationPermissionReady()
+            GpsLocationClient.hasPrecisePermission(requireContext()) -> onLocationPermissionReady()
             else -> {
                 locationPermissionRequest.launch(
                     arrayOf(
