@@ -1,7 +1,6 @@
 package com.runner.academy.util
 
-import com.google.android.gms.location.LocationRequest
-import com.google.android.gms.location.Priority
+import androidx.core.location.LocationRequestCompat
 import kotlin.math.abs
 
 /**
@@ -26,7 +25,7 @@ object GpsConfig {
     /** Temporary cadence when heading changes sharply. */
     const val TURN_DENSIFY_INTERVAL = 1000L
 
-    /** Do not request sub-1 Hz bursts from Fused. */
+    /** Do not request sub-1 Hz bursts from the GNSS chip. */
     const val MIN_UPDATE_INTERVAL = 1000L
 
     /**
@@ -36,7 +35,11 @@ object GpsConfig {
     const val MIN_DISTANCE = 2f
     const val MIN_DISTANCE_SCREEN_OFF = 3f
 
-    /** Batch delivery window while display is off (reduces app wakeups). */
+    /**
+     * Batch delivery window while display is off (reduces app wakeups).
+     * Honoured by LocationManager only on API 31+ with GNSS HAL batching; older
+     * devices ignore it and deliver every fix live.
+     */
     const val SCREEN_OFF_MAX_UPDATE_DELAY_MS = 20_000L
 
     /** Short delay while display is on so the map stays live. */
@@ -81,7 +84,7 @@ object GpsConfig {
     fun getAdaptiveInterval(currentSpeed: Float): Long =
         getAdaptiveInterval(currentSpeed, screenInteractive = true, turning = false)
 
-    fun createWorkoutLocationRequest(screenInteractive: Boolean = true): LocationRequest {
+    fun createWorkoutLocationRequest(screenInteractive: Boolean = true): LocationRequestCompat {
         return createAdaptiveLocationRequest(
             intervalMs = if (screenInteractive) HIGH_ACCURACY_INTERVAL else SCREEN_OFF_INTERVAL,
             screenInteractive = screenInteractive
@@ -91,7 +94,7 @@ object GpsConfig {
     fun createAdaptiveLocationRequest(
         intervalMs: Long,
         screenInteractive: Boolean = true
-    ): LocationRequest {
+    ): LocationRequestCompat {
         val interval = intervalMs.coerceAtLeast(MIN_UPDATE_INTERVAL)
         val minDistance = if (screenInteractive) MIN_DISTANCE else MIN_DISTANCE_SCREEN_OFF
         val maxDelay = if (screenInteractive) {
@@ -99,15 +102,12 @@ object GpsConfig {
         } else {
             SCREEN_OFF_MAX_UPDATE_DELAY_MS.coerceAtLeast(interval * 2)
         }
-        return LocationRequest.Builder(
-            Priority.PRIORITY_HIGH_ACCURACY,
-            interval
-        ).apply {
-            setMinUpdateIntervalMillis(minOf(MIN_UPDATE_INTERVAL, interval))
-            setMaxUpdateDelayMillis(maxDelay)
-            setWaitForAccurateLocation(false)
-            setMinUpdateDistanceMeters(minDistance)
-        }.build()
+        return LocationRequestCompat.Builder(interval)
+            .setQuality(LocationRequestCompat.QUALITY_HIGH_ACCURACY)
+            .setMinUpdateIntervalMillis(minOf(MIN_UPDATE_INTERVAL, interval))
+            .setMaxUpdateDelayMillis(maxDelay)
+            .setMinUpdateDistanceMeters(minDistance)
+            .build()
     }
 
     /** Absolute smallest angle between two bearings in degrees [0, 180]. */
@@ -166,29 +166,13 @@ object GpsConfig {
     }
 
     /** Pre-workout map / readiness — high accuracy so the athlete gets a fix before Start. */
-    fun createPreWorkoutLocationRequest(): LocationRequest {
-        return LocationRequest.Builder(
-            Priority.PRIORITY_HIGH_ACCURACY,
-            2000L
-        ).apply {
-            setMinUpdateIntervalMillis(MIN_UPDATE_INTERVAL)
-            setMaxUpdateDelayMillis(2000L)
-            setWaitForAccurateLocation(false)
+    fun createPreWorkoutLocationRequest(): LocationRequestCompat {
+        return LocationRequestCompat.Builder(2000L)
+            .setQuality(LocationRequestCompat.QUALITY_HIGH_ACCURACY)
+            .setMinUpdateIntervalMillis(MIN_UPDATE_INTERVAL)
+            .setMaxUpdateDelayMillis(2000L)
             // Standing still must still receive accuracy improvements
-            setMinUpdateDistanceMeters(0f)
-        }.build()
-    }
-
-    /** Pre-workout map marker / status — balanced power, not continuous GNSS. */
-    fun createStatusLocationRequest(): LocationRequest {
-        return LocationRequest.Builder(
-            Priority.PRIORITY_BALANCED_POWER_ACCURACY,
-            MEDIUM_ACCURACY_INTERVAL
-        ).apply {
-            setMinUpdateIntervalMillis(MEDIUM_ACCURACY_INTERVAL)
-            setMaxUpdateDelayMillis(MEDIUM_ACCURACY_INTERVAL * 2)
-            setWaitForAccurateLocation(false)
-            setMinUpdateDistanceMeters(10f)
-        }.build()
+            .setMinUpdateDistanceMeters(0f)
+            .build()
     }
 }

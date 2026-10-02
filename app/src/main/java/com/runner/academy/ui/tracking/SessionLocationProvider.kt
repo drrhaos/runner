@@ -1,17 +1,11 @@
 package com.runner.academy.ui.tracking
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Looper
-import androidx.core.content.ContextCompat
-import com.google.android.gms.location.LocationCallback
-import com.google.android.gms.location.LocationResult
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import com.google.android.gms.tasks.CancellationTokenSource
+import androidx.core.location.LocationListenerCompat
+import com.runner.academy.util.GpsLocationClient
 import com.runner.academy.util.GpsConfig
 import org.osmdroid.views.overlay.mylocation.IMyLocationConsumer
 import org.osmdroid.views.overlay.mylocation.IMyLocationProvider
@@ -21,15 +15,16 @@ import android.os.SystemClock
  * Feeds [org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay] from the workout
  * session location stream so the person icon and track tip stay aligned.
  *
- * Before the session publishes fixes, uses Fused [GpsConfig.createPreWorkoutLocationRequest]
- * (high accuracy) so the map centers and Start readiness is clear.
+ * Before the session publishes fixes, requests GPS with [GpsConfig.createPreWorkoutLocationRequest]
+ * so the map centers and Start readiness is clear. GPS only — no network location, which is
+ * backed by Google on stock phones; until the first fix the map shows a fresh cached GPS fix.
  */
 class SessionLocationProvider(
     context: Context
 ) : IMyLocationProvider {
 
     private val appContext = context.applicationContext
-    private val fusedClient = LocationServices.getFusedLocationProviderClient(appContext)
+    private val gpsClient = GpsLocationClient(appContext)
     private var consumer: IMyLocationConsumer? = null
     private var lastLocation: Location? = null
     private var sessionDriven = false
@@ -41,16 +36,16 @@ class SessionLocationProvider(
     /** Last fix from fallback or session (may be null). */
     fun peekLastLocation(): Location? = lastLocation
 
-    private val fallbackCallback = object : LocationCallback() {
-        override fun onLocationResult(result: LocationResult) {
+    private val fallbackListener = object : LocationListenerCompat {
+        override fun onLocationChanged(location: Location) {
+            if (!sessionDriven) dispatch(location)
+        }
+
+        override fun onLocationChanged(locations: MutableList<Location>) {
             if (sessionDriven) return
-            // Prefer freshest in batch for accuracy convergence
-            val locations = result.locations
-            val best = locations.maxByOrNull { loc ->
-                val accScore = if (loc.hasAccuracy()) (1000f - loc.accuracy) else 0f
-                accScore
-            } ?: result.lastLocation
-            best?.let { dispatch(it) }
+            // Prefer the most accurate fix in a batch for accuracy convergence
+            locations.maxByOrNull { loc -> if (loc.hasAccuracy()) 1000f - loc.accuracy else 0f }
+                ?.let { dispatch(it) }
         }
     }
 
@@ -95,27 +90,20 @@ class SessionLocationProvider(
         if (fallbackActive || sessionDriven) return
         if (!hasLocationPermission()) return
         try {
-            fusedClient.requestLocationUpdates(
+            gpsClient.requestUpdates(
                 GpsConfig.createPreWorkoutLocationRequest(),
-                fallbackCallback,
+                fallbackListener,
                 Looper.getMainLooper()
             )
             fallbackActive = true
-            fusedClient.lastLocation.addOnSuccessListener { location ->
-                if (!sessionDriven && location != null && isFreshEnough(location)) {
-                    dispatch(location)
-                }
-            }
-            fusedClient.getCurrentLocation(
-                Priority.PRIORITY_HIGH_ACCURACY,
-                CancellationTokenSource().token
-            ).addOnSuccessListener { location ->
-                if (!sessionDriven && location != null) {
-                    dispatch(location)
-                }
+            gpsClient.lastKnownLocation()?.let { location ->
+                if (isFreshEnough(location)) dispatch(location)
             }
         } catch (e: SecurityException) {
             android.util.Log.w(TAG, "Fallback location denied", e)
+        } catch (e: IllegalArgumentException) {
+            // Device without a GPS provider
+            android.util.Log.w(TAG, "GPS provider unavailable", e)
         }
     }
 
@@ -128,7 +116,7 @@ class SessionLocationProvider(
     private fun stopFallbackUpdates() {
         if (!fallbackActive) return
         try {
-            fusedClient.removeLocationUpdates(fallbackCallback)
+            gpsClient.removeUpdates(fallbackListener)
         } catch (_: Exception) {
             // ignore
         }
@@ -141,17 +129,7 @@ class SessionLocationProvider(
         onLocationUpdated?.invoke(location)
     }
 
-    private fun hasLocationPermission(): Boolean {
-        val fine = ContextCompat.checkSelfPermission(
-            appContext,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        val coarse = ContextCompat.checkSelfPermission(
-            appContext,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        return fine || coarse
-    }
+    private fun hasLocationPermission(): Boolean = GpsLocationClient.hasPrecisePermission(appContext)
 
     companion object {
         private const val TAG = "SessionLocationProvider"

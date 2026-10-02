@@ -316,6 +316,7 @@
     <string name="avg_pace_label">Average pace</string>
 
     <string name="permission_location_needed">Location permission is required for tracking</string>
+    <string name="permission_precise_location_needed">Precise location is required: GPS tracking does not work with approximate location</string>
     <string name="permission_location_denied_can_train">No GPS access. You can still start a workout; the route will not be recorded.</string>
     <string name="permission_notification_needed">Notification permission is required for background tracking</string>
     <string name="battery_optimization_hint">For stable operation, disable battery optimization in settings</string>

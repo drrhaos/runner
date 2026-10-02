@@ -1,13 +1,11 @@
 package com.runner.academy.service
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Binder
 import android.os.Build
@@ -19,6 +17,7 @@ import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.GpsConfig
 import com.runner.academy.util.GpsFilter
+import com.runner.academy.util.GpsLocationClient
 import com.runner.academy.util.IntervalSegmentsJson
 import com.runner.academy.util.UserPreferences
 import com.runner.academy.ui.tracking.VoiceFeedbackManager
@@ -27,7 +26,8 @@ import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.WorkoutTemplateSegment
 import com.runner.academy.data.localizedTitle
 import com.runner.academy.util.FormatUtils
-import com.google.android.gms.location.*
+import androidx.core.location.LocationListenerCompat
+import androidx.core.location.LocationRequestCompat
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -52,7 +52,7 @@ import kotlinx.coroutines.withContext
  *
  * The service itself handles:
  *  - Android Service lifecycle (onCreate, onDestroy, onBind)
- *  - Binding with LocationManager / FusedLocationProvider
+ *  - Binding with the platform GPS provider ([GpsLocationClient])
  *  - Coroutine scope and periodic job management
  *  - Adaptive GPS interval updates
  */
@@ -80,6 +80,8 @@ class WorkoutTrackingService : Service() {
         const val PRE_START_LOCATION_MAX_AGE_MS = 10_000L
         /** The seed becomes the first track point, so it must be as good as a normal fix. */
         const val PRE_START_LOCATION_MAX_ACCURACY_M = 20f
+        private const val FLUSH_REQUEST_CODE = 1
+        private const val FLUSH_TIMEOUT_MS = 3_000L
     }
 
     // Extracted component instances
@@ -92,9 +94,35 @@ class WorkoutTrackingService : Service() {
     private var serviceIntervalEngine: IntervalEngine? = null
 
     // Location provider bindings
-    private var fusedLocationClient: FusedLocationProviderClient? = null
-    private var locationCallback: LocationCallback? = null
-    private var currentLocationRequest: LocationRequest? = null
+    private var gpsClient: GpsLocationClient? = null
+    private var currentLocationRequest: LocationRequestCompat? = null
+    /** Runs once the provider reports [FLUSH_REQUEST_CODE] complete (see [flushThen]). */
+    private var afterFlush: (() -> Unit)? = null
+
+    /** Batched screen-off fixes arrive here one by one, oldest first. */
+    private val locationListener = object : LocationListenerCompat {
+        override fun onLocationChanged(location: Location) {
+            updateLocation(location)
+        }
+
+        override fun onFlushComplete(requestCode: Int) {
+            if (requestCode == FLUSH_REQUEST_CODE) mainHandler.post { runAfterFlush() }
+        }
+    }
+
+    private fun runAfterFlush() {
+        val continuation = afterFlush
+        cancelPendingFlush()
+        continuation?.invoke()
+    }
+
+    private fun cancelPendingFlush() {
+        afterFlush = null
+        mainHandler.removeCallbacks(flushTimeout)
+    }
+
+    /** Never leave a request change hanging if the provider does not report completion. */
+    private val flushTimeout = Runnable { runAfterFlush() }
 
     // Tracking state
     private var isCurrentlyTracking = false
@@ -146,8 +174,7 @@ class WorkoutTrackingService : Service() {
         userPreferences = (applicationContext as com.runner.academy.RunnerApplication)
             .container.userPreferences
         activeWorkoutStore = ActiveWorkoutStore(this)
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        setupLocationCallback()
+        gpsClient = GpsLocationClient(this)
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
         registerScreenStateReceiver()
@@ -213,22 +240,6 @@ class WorkoutTrackingService : Service() {
     // ------------------------------------------------------------------
     // Location callback & processing
     // ------------------------------------------------------------------
-
-    private fun setupLocationCallback() {
-        locationCallback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                // Process full batch (screen-off delivery may contain many fixes)
-                val locations = locationResult.locations
-                if (locations.isEmpty()) {
-                    locationResult.lastLocation?.let { updateLocation(it) }
-                    return
-                }
-                for (location in locations) {
-                    updateLocation(location)
-                }
-            }
-        }
-    }
 
     private fun updateLocation(location: Location) {
         if (Looper.myLooper() != Looper.getMainLooper()) {
@@ -634,30 +645,18 @@ class WorkoutTrackingService : Service() {
         return GpsFilter.isValidGpsLocation(location)
     }
 
-    private fun hasLocationPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-    }
+    private fun hasLocationPermission(): Boolean = GpsLocationClient.hasPrecisePermission(this)
 
     private fun startLocationUpdates() {
         val locationRequest = GpsConfig.createWorkoutLocationRequest(screenInteractive)
         currentLocationRequest = locationRequest
 
         try {
-            val callback = locationCallback ?: return
+            val client = gpsClient ?: return
             // Avoid duplicate registrations (resume / restore / profile switch races)
-            fusedLocationClient?.removeLocationUpdates(callback)
-            fusedLocationClient?.requestLocationUpdates(
-                locationRequest,
-                callback,
-                mainLooper
-            )
+            cancelPendingFlush()
+            client.removeUpdates(locationListener)
+            client.requestUpdates(locationRequest, locationListener, mainLooper)
             lastAppliedAdaptiveIntervalMs = GpsConfig.getAdaptiveInterval(
                 currentSpeed = 0f,
                 screenInteractive = screenInteractive,
@@ -682,44 +681,51 @@ class WorkoutTrackingService : Service() {
     }
 
     private fun stopLocationUpdates() {
-        locationCallback?.let { callback ->
-            fusedLocationClient?.removeLocationUpdates(callback)
-        }
+        cancelPendingFlush()
+        gpsClient?.removeUpdates(locationListener)
     }
 
-    /** Forces delivery of fixes batched while the screen is off (arrive via [locationCallback]). */
-    private fun flushBatchedLocations() {
-        try {
-            fusedLocationClient?.flushLocations()
+    /**
+     * Forces delivery of fixes batched while the screen is off (they arrive via
+     * [locationListener]), then runs [onFlushed]. Without batching support it runs at once.
+     */
+    private fun flushThen(onFlushed: () -> Unit = {}) {
+        check(Looper.myLooper() == Looper.getMainLooper())
+        val flushing = try {
+            gpsClient?.flush(locationListener, FLUSH_REQUEST_CODE) == true
         } catch (e: Exception) {
-            android.util.Log.w("WorkoutTrackingService", "flushLocations failed: ${e.message}")
+            android.util.Log.w("WorkoutTrackingService", "GPS flush failed: ${e.message}")
+            false
+        }
+        if (!flushing) {
+            onFlushed()
+            return
+        }
+        // A flush may already be pending (watchdog vs. request change): run both after it
+        val pending = afterFlush
+        if (pending == null) {
+            afterFlush = onFlushed
+            // Armed once per chain so overlapping flushes cannot postpone it forever
+            mainHandler.postDelayed(flushTimeout, FLUSH_TIMEOUT_MS)
+        } else {
+            afterFlush = { pending(); onFlushed() }
         }
     }
 
     /**
-     * Fetches last known location only when FINE or COARSE permission is granted.
+     * Fetches the cached GPS fix only when precise location permission is granted.
      * Satisfies MissingPermission lint and handles runtime revocation.
      */
     @SuppressLint("MissingPermission")
     private fun requestLastKnownLocation(onLocation: (Location) -> Unit) {
-        val fineGranted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        val coarseGranted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED
-        if (!fineGranted && !coarseGranted) {
+        if (!hasLocationPermission()) {
             sessionManager.updateGpsStatus(GpsStatus.DENIED)
             return
         }
         try {
-            fusedLocationClient?.lastLocation?.addOnSuccessListener { location ->
-                location?.let(onLocation)
-            }
+            gpsClient?.lastKnownLocation()?.let(onLocation)
         } catch (e: SecurityException) {
-            android.util.Log.w("WorkoutTrackingService", "lastLocation denied", e)
+            android.util.Log.w("WorkoutTrackingService", "lastKnownLocation denied", e)
             sessionManager.updateGpsStatus(GpsStatus.DENIED)
         }
     }
@@ -743,15 +749,18 @@ class WorkoutTrackingService : Service() {
                     if (!screenInteractive) {
                         // Fixes may still sit in the batch: pull them in order instead of
                         // injecting a newer lastKnown that would make the batch "too old".
-                        flushBatchedLocations()
+                        mainHandler.post { flushThen() }
                     } else {
                         val ageCapMs = lostTimeoutMs
-                        requestLastKnownLocation { location ->
-                            val age = (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) /
-                                1_000_000L
-                            val newerThanTrack = location.time > (lastLocation?.time ?: 0L)
-                            if (age in 0..ageCapMs && newerThanTrack) {
-                                updateLocation(location)
+                        // Reads main-thread state (lastLocation, session): hop like the flush branch
+                        mainHandler.post {
+                            requestLastKnownLocation { location ->
+                                val age = (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) /
+                                    1_000_000L
+                                val newerThanTrack = location.time > (lastLocation?.time ?: 0L)
+                                if (age in 0..ageCapMs && newerThanTrack) {
+                                    updateLocation(location)
+                                }
                             }
                         }
                     }
@@ -771,17 +780,8 @@ class WorkoutTrackingService : Service() {
      *  - Location permissions being revoked while workout is running
      */
     private fun resolveGpsStatusDuringWorkout() {
-        val hasFineLocation = ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        val hasCoarseLocation = ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-
-        if (!hasFineLocation && !hasCoarseLocation) {
-            // Permissions revoked during workout
+        if (!hasLocationPermission()) {
+            // Permissions revoked (or downgraded to approximate) during workout
             sessionManager.updateGpsStatus(GpsStatus.DENIED)
             return
         }
@@ -843,8 +843,7 @@ class WorkoutTrackingService : Service() {
         }
 
         try {
-            val client = fusedLocationClient ?: return
-            val callback = locationCallback ?: return
+            val client = gpsClient ?: return
             val newLocationRequest = GpsConfig.createAdaptiveLocationRequest(
                 intervalMs = adaptiveInterval,
                 screenInteractive = screenInteractive
@@ -854,12 +853,12 @@ class WorkoutTrackingService : Service() {
             lastAppliedScreenInteractive = screenInteractive
 
             // Deliver pending batched fixes first, then replace the request on the same
-            // callback (no remove: a removed request may discard its undelivered batch).
-            client.flushLocations().addOnCompleteListener {
-                if (!isCurrentlyTracking || sessionManager.getSession().isPaused) return@addOnCompleteListener
-                if (currentLocationRequest !== newLocationRequest) return@addOnCompleteListener
+            // listener (no remove: a removed request may discard its undelivered batch).
+            flushThen {
+                if (!isCurrentlyTracking || sessionManager.getSession().isPaused) return@flushThen
+                if (currentLocationRequest !== newLocationRequest) return@flushThen
                 try {
-                    client.requestLocationUpdates(newLocationRequest, callback, mainLooper)
+                    client.requestUpdates(newLocationRequest, locationListener, mainLooper)
                 } catch (e: SecurityException) {
                     android.util.Log.e("WorkoutTrackingService", "SecurityException updating location request: ${e.message}", e)
                     sessionManager.updateGpsStatus(GpsStatus.DENIED)
