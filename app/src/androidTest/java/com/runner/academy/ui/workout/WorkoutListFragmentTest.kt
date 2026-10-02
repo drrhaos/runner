@@ -18,7 +18,7 @@ class WorkoutListFragmentTest {
     @Test
     fun workout_list_fragment_should_display_correctly() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutListFragment>()
+        val scenario = launchFragmentInContainer<WorkoutListFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.recyclerView_workouts))
@@ -40,7 +40,7 @@ class WorkoutListFragmentTest {
     @Test
     fun add_workout_fab_should_be_clickable() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutListFragment>()
+        val scenario = launchFragmentInContainer<WorkoutListFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.fab_add_workout))
@@ -51,7 +51,7 @@ class WorkoutListFragmentTest {
     @Test
     fun recycler_view_should_be_displayed() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutListFragment>()
+        val scenario = launchFragmentInContainer<WorkoutListFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.recyclerView_workouts))
@@ -61,7 +61,7 @@ class WorkoutListFragmentTest {
     @Test
     fun statistics_should_be_displayed() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutListFragment>()
+        val scenario = launchFragmentInContainer<WorkoutListFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.textView_total_workouts))
@@ -77,7 +77,7 @@ class WorkoutListFragmentTest {
     @Test
     fun empty_state_should_be_displayed_when_no_workouts() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutListFragment>()
+        val scenario = launchFragmentInContainer<WorkoutListFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.layout_empty_state))
