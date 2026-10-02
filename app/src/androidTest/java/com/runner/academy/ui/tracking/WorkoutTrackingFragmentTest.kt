@@ -8,6 +8,8 @@ import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.runner.academy.R
 import org.hamcrest.Matchers.not
+import com.runner.academy.grantTrackingPermissions
+import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -17,10 +19,13 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class WorkoutTrackingFragmentTest {
 
+    @get:Rule
+    val permissionRule = grantTrackingPermissions()
+
     @Test
     fun workout_tracking_fragment_should_display_correctly() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>()
+        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.button_start))
@@ -54,7 +59,7 @@ class WorkoutTrackingFragmentTest {
     @Test
     fun start_button_should_be_clickable() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>()
+        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.button_start))
@@ -65,7 +70,7 @@ class WorkoutTrackingFragmentTest {
     @Test
     fun pause_button_should_be_clickable_when_visible() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>()
+        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>(themeResId = R.style.Theme_Runner)
 
         // When
         onView(withId(R.id.button_start)).perform(click())
@@ -79,7 +84,7 @@ class WorkoutTrackingFragmentTest {
     @Test
     fun stop_button_should_be_clickable_when_visible() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>()
+        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>(themeResId = R.style.Theme_Runner)
 
         // When
         onView(withId(R.id.button_start)).perform(click())
@@ -93,7 +98,7 @@ class WorkoutTrackingFragmentTest {
     @Test
     fun gps_status_should_be_displayed() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>()
+        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.layout_gps_status))
@@ -104,7 +109,7 @@ class WorkoutTrackingFragmentTest {
     @Test
     fun map_view_should_be_displayed() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>()
+        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.mapView))
@@ -114,7 +119,7 @@ class WorkoutTrackingFragmentTest {
     @Test
     fun workout_statistics_should_be_displayed() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>()
+        val scenario = launchFragmentInContainer<WorkoutTrackingFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.textView_workout_distance))

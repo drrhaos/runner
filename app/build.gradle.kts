@@ -158,6 +158,9 @@ dependencies {
     implementation("org.osmdroid:osmdroid-android:6.1.18")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     androidTestImplementation("androidx.fragment:fragment-testing:1.6.2")
+    // Since fragment 1.6 the EmptyFragmentActivity used by launchFragmentInContainer lives in a
+    // separate artifact that must be merged into the app under test
+    debugImplementation("androidx.fragment:fragment-testing-manifest:1.6.2")
 
     // Permissions / SAF
     implementation("androidx.activity:activity-ktx:1.8.2")
