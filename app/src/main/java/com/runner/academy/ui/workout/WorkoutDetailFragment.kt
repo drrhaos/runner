@@ -14,6 +14,7 @@ import com.runner.academy.appContainer
 import com.runner.academy.data.TrackData
 import com.runner.academy.databinding.FragmentWorkoutDetailBinding
 import com.runner.academy.util.ErrorHandler
+import com.runner.academy.util.ShareExports
 import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.WorkoutDataCleaner
 import kotlinx.coroutines.Dispatchers
@@ -97,6 +98,10 @@ class WorkoutDetailFragment : Fragment() {
 
         binding.buttonDelete.setOnClickListener {
             showDeleteConfirmationDialog()
+        }
+
+        binding.buttonShareDiagnostics.setOnClickListener {
+            showShareDiagnosticsDialog()
         }
 
         binding.buttonEdit.setOnClickListener {
@@ -183,6 +188,9 @@ class WorkoutDetailFragment : Fragment() {
 
                     currentWorkout = workout
                     updateFavoriteButton(workout.isFavorite)
+                    val hasDiagnostics = viewModel.hasGpsDiagnostics(workoutId)
+                    _binding?.buttonShareDiagnostics?.visibility =
+                        if (hasDiagnostics) View.VISIBLE else View.GONE
                     statsDisplay?.displayWorkout(workout)
                     chartRenderer?.intervalPlanSegments =
                         com.runner.academy.util.IntervalSegmentsJson.parse(workout.intervalSegmentsJson)
@@ -303,6 +311,38 @@ class WorkoutDetailFragment : Fragment() {
         } else {
             binding.buttonFavorite.setImageResource(R.drawable.ic_star_border)
             binding.buttonFavorite.contentDescription = getString(R.string.workout_favorite_add)
+        }
+    }
+
+    /** The file holds exact coordinates (usually including home), so warn before it leaves the phone. */
+    private fun showShareDiagnosticsDialog() {
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.share_diagnostics_title))
+            .setMessage(getString(R.string.share_diagnostics_message))
+            .setPositiveButton(getString(R.string.share_diagnostics_confirm)) { _, _ ->
+                shareDiagnostics()
+            }
+            .setNegativeButton(getString(R.string.cancel), null)
+            .show()
+    }
+
+    private fun shareDiagnostics() {
+        val context = requireContext()
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val copy = viewModel.copyGpsDiagnosticsForSharing(workoutId) ?: return@launch
+                ShareExports.shareFile(
+                    context,
+                    copy,
+                    "text/plain",
+                    getString(R.string.share_diagnostics_chooser)
+                )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.e("WorkoutDetail", "Share diagnostics failed", e)
+                Toast.makeText(context, getString(R.string.share_diagnostics_failed), Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

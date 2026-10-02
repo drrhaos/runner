@@ -141,6 +141,8 @@
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
     <string name="settings_label_voice_notifications">Voice notifications</string>
+    <string name="settings_label_gps_diagnostics">Record GPS diagnostics</string>
+    <string name="settings_hint_gps_diagnostics">Raw GPS points and satellites for each new workout, kept on this phone. Helps fix GPS problems; share from the workout details.</string>
     <string name="settings_btn_reset">Reset settings</string>
     <string name="settings_weight_saved">Weight saved</string>
     <string name="settings_height_saved">Height saved</string>
@@ -197,6 +199,12 @@
     <string name="workout_details_calories">Calories</string>
     <string name="workout_details_btn_share">Share</string>
     <string name="workout_details_btn_export_gpx">GPX export</string>
+    <string name="workout_details_btn_share_diagnostics">Share GPS diagnostics</string>
+    <string name="share_diagnostics_title">Share GPS diagnostics?</string>
+    <string name="share_diagnostics_message">The file contains the exact coordinates of this run, usually including where it started and ended (often your home). Anyone who gets it can see them. Share it only where you are comfortable, for example in a GitHub issue about a GPS problem.</string>
+    <string name="share_diagnostics_confirm">Share</string>
+    <string name="share_diagnostics_chooser">Share GPS diagnostics</string>
+    <string name="share_diagnostics_failed">Could not prepare the diagnostics file</string>
     <string name="workout_details_btn_delete">Delete</string>
     <string name="workout_favorite_add">Add to favorites</string>
     <string name="workout_favorite_remove">Remove from favorites</string>

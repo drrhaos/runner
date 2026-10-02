@@ -131,6 +131,8 @@
     <string name="settings_theme_light">Светлая</string>
     <string name="settings_theme_dark">Темная</string>
     <string name="settings_label_voice_notifications">Голосовые уведомления</string>
+    <string name="settings_label_gps_diagnostics">Записывать диагностику GPS</string>
+    <string name="settings_hint_gps_diagnostics">Сырые точки GPS и спутники для каждой новой тренировки, хранятся только на телефоне. Помогает разбирать проблемы с GPS; отправить можно из деталей тренировки.</string>
     <string name="settings_btn_reset">Сбросить настройки</string>
     <string name="settings_weight_saved">Вес сохранен</string>
     <string name="settings_height_saved">Рост сохранен</string>
@@ -185,6 +187,12 @@
     <string name="workout_details_calories">Калории</string>
     <string name="workout_details_btn_share">Поделиться</string>
     <string name="workout_details_btn_export_gpx">Экспорт GPX</string>
+    <string name="workout_details_btn_share_diagnostics">Отправить диагностику GPS</string>
+    <string name="share_diagnostics_title">Отправить диагностику GPS?</string>
+    <string name="share_diagnostics_message">В файле точные координаты этой пробежки, обычно вместе с местом старта и финиша (часто это ваш дом). Их увидит любой, кто получит файл. Отправляйте только туда, где это допустимо, например в issue на GitHub о проблеме с GPS.</string>
+    <string name="share_diagnostics_confirm">Отправить</string>
+    <string name="share_diagnostics_chooser">Отправить диагностику GPS</string>
+    <string name="share_diagnostics_failed">Не удалось подготовить файл диагностики</string>
     <string name="workout_details_btn_delete">Удалить</string>
     <string name="workout_favorite_add">Добавить в избранное</string>
     <string name="workout_favorite_remove">Убрать из избранного</string>
