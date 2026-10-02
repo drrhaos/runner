@@ -9,20 +9,25 @@ interface WorkoutDao {
     @Query("SELECT * FROM workouts ORDER BY date DESC")
     fun getAllWorkouts(): Flow<List<Workout>>
 
-    @Query("SELECT * FROM workouts WHERE isFavorite = 1 ORDER BY date DESC")
-    fun getFavoriteWorkouts(): Flow<List<Workout>>
-
     @Query("SELECT * FROM workouts ORDER BY date DESC")
     fun pagingSourceAll(): PagingSource<Int, Workout>
 
     @Query("SELECT * FROM workouts WHERE isFavorite = 1 ORDER BY date DESC")
     fun pagingSourceFavorites(): PagingSource<Int, Workout>
 
+    /** Route picker: workouts with a track, favorites first; excludes the one being edited. */
+    @Query("SELECT * FROM workouts WHERE $ROUTE_FILTER ORDER BY isFavorite DESC, date DESC")
+    fun pagingSourceRoutes(excludeId: Long): PagingSource<Int, Workout>
+
+    @Query("SELECT COUNT(*) FROM workouts WHERE $ROUTE_FILTER")
+    suspend fun countRoutes(excludeId: Long): Int
+
+    /** Statistics need only these columns; tracks stay on disk. */
+    @Query("SELECT date, distance, duration, avgPace, calories, type FROM workouts")
+    suspend fun getStatsRows(): List<WorkoutStatsRow>
+
     @Query("SELECT * FROM workouts WHERE id = :id")
     fun getWorkoutById(id: Long): Flow<Workout?>
-
-    @Query("SELECT * FROM workouts WHERE date BETWEEN :startDate AND :endDate ORDER BY date DESC")
-    fun getWorkoutsByDateRange(startDate: Long, endDate: Long): Flow<List<Workout>>
 
     @Insert
     suspend fun insertWorkout(workout: Workout): Long
@@ -53,4 +58,10 @@ interface WorkoutDao {
 
     @Query("SELECT SUM(duration) FROM workouts")
     suspend fun getTotalDuration(): Long?
+
+    companion object {
+        /** A workout usable as a route: it has a track and is not the one being edited. */
+        private const val ROUTE_FILTER =
+            "trackData IS NOT NULL AND TRIM(trackData) != '' AND id != :excludeId"
+    }
 }

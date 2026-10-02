@@ -3,7 +3,7 @@ package com.runner.academy.ui.statistics
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.runner.academy.data.Workout
+import com.runner.academy.data.WorkoutStatsRow
 import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.SpeedPaceCalculator
@@ -63,8 +63,8 @@ class StatisticsViewModel(private val repository: WorkoutRepository) : ViewModel
             try {
                 _isLoading.value = true
 
-                // Загружаем все тренировки
-                val allWorkouts = repository.getAllWorkouts().first()
+                // Только скалярные поля: сотни тренировок не должны тянуть в память свои треки
+                val allWorkouts = repository.getStatsRows()
                 
                 if (allWorkouts.isEmpty()) {
                     _statisticsData.value = StatisticsData()
@@ -144,7 +144,7 @@ class StatisticsViewModel(private val repository: WorkoutRepository) : ViewModel
         }
     }
 
-    private fun generateWeeklyData(workouts: List<Workout>): List<WeeklyData> {
+    private fun generateWeeklyData(workouts: List<WorkoutStatsRow>): List<WeeklyData> {
         val calendar = Calendar.getInstance()
         val weeklyData = mutableListOf<WeeklyData>()
         
@@ -176,7 +176,7 @@ class StatisticsViewModel(private val repository: WorkoutRepository) : ViewModel
         return weeklyData.reversed() // От старых к новым
     }
 
-    private fun generateMonthlyData(workouts: List<Workout>): List<MonthlyData> {
+    private fun generateMonthlyData(workouts: List<WorkoutStatsRow>): List<MonthlyData> {
         val calendar = Calendar.getInstance()
         val monthlyData = mutableListOf<MonthlyData>()
         
