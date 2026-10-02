@@ -286,26 +286,15 @@ class WorkoutTrackingFragment : Fragment() {
         val callback = object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 val currentState = viewModel.workoutState.value
-                val session = viewModel.workoutSession.value
 
-                // Если тренировка активна (запущена или на паузе), останавливаем её
+                // «Назад» (и свайп от края экрана) не завершает тренировку: остановка только
+                // удержанием «Стоп», чтобы случайный жест не оборвал пробежку.
                 if (currentState == WorkoutState.RUNNING || currentState == WorkoutState.PAUSED) {
-                    if (isStoppingWorkout) return
-                    isStoppingWorkout = true
-
-                    // Отменяем удержание кнопки остановки, если оно активно
-                    cancelStopHold()
-
-                    // Останавливаем тренировку
-                    viewModel.stopWorkout()
-
-                    // Если есть данные для сохранения, сохраняем и переходим к деталям
-                    if (session.currentTime > 0) {
-                        navigateToWorkoutDetails()
-                    } else {
-                        // Если данных нет, просто возвращаемся назад
-                        findNavController().navigateUp()
-                    }
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.back_ignored_during_workout, STOP_HOLD_SECONDS),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 } else {
                     // Если тренировка не активна, просто возвращаемся назад
                     findNavController().navigateUp()
