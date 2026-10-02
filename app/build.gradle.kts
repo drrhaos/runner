@@ -13,6 +13,23 @@ plugins {
     id("jacoco")
 }
 
+/**
+ * Monotonic versionCode from a release versionName MAJOR.MINOR.PATCH[aN]
+ * (CI strips the tag prefix: v.0.1.2a1 → 0.1.2a1). The aN suffix is a fix released
+ * after the base version, so it sorts above it: 0.1.2 → 10200, 0.1.2a1 → 10201.
+ * Fails the build on any other shape so a release can never ship with versionCode 1.
+ */
+fun versionCodeFromName(name: String): Int {
+    val match = requireNotNull(Regex("""^(\d+)\.(\d+)\.(\d+)(?:a(\d+))?$""").matchEntire(name)) {
+        "versionName '$name' must look like MAJOR.MINOR.PATCH or MAJOR.MINOR.PATCHaN"
+    }
+    val (major, minor, patch, fix) = match.destructured.toList().map { it.toIntOrNull() ?: 0 }
+    require(minor < 100 && patch < 100 && fix < 100) {
+        "versionName '$name': minor, patch and fix number must be < 100"
+    }
+    return major * 1_000_000 + minor * 10_000 + patch * 100 + fix
+}
+
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 val hasReleaseKeystore = keystorePropertiesFile.exists().also { exists ->
@@ -29,8 +46,12 @@ android {
         applicationId = "com.runner.academy"
         minSdk = 26
         targetSdk = 36
-        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 1
-        versionName = project.findProperty("versionName") as String? ?: "1.0"
+        // Local builds pass neither property and keep 1 / "1.0".
+        val releaseVersionName = project.findProperty("versionName") as String?
+        versionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull()
+            ?: releaseVersionName?.let(::versionCodeFromName)
+            ?: 1
+        versionName = releaseVersionName ?: "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
