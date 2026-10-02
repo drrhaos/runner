@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -33,7 +34,11 @@ enum class WorkoutListFilter {
 @OptIn(ExperimentalCoroutinesApi::class)
 class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() {
 
-    val allWorkouts: Flow<List<Workout>> = repository.getAllWorkouts()
+    /**
+     * Every workout with its track — only for explicit "export all" actions. Screens page
+     * through [pagedWorkouts] / [routePages] instead.
+     */
+    suspend fun loadAllForExport(): List<Workout> = repository.getAllWorkouts().first()
 
     private val _listFilter = MutableStateFlow(WorkoutListFilter.ALL)
     val listFilter: StateFlow<WorkoutListFilter> = _listFilter.asStateFlow()
@@ -41,12 +46,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     val pagedWorkouts: Flow<PagingData<Workout>> = _listFilter
         .flatMapLatest { filter ->
             Pager(
-                config = PagingConfig(
-                    pageSize = PAGE_SIZE,
-                    prefetchDistance = PREFETCH_DISTANCE,
-                    initialLoadSize = PAGE_SIZE,
-                    enablePlaceholders = false
-                ),
+                config = PAGING_CONFIG,
                 pagingSourceFactory = {
                     when (filter) {
                         WorkoutListFilter.ALL -> repository.pagingSourceAll()
@@ -56,6 +56,12 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             ).flow
         }
         .cachedIn(viewModelScope)
+
+    suspend fun countRoutes(excludeId: Long): Int = repository.countRoutes(excludeId)
+
+    /** Route picker pages (workouts with a track, favorites first), same bounded window. */
+    fun routePages(excludeId: Long): Flow<PagingData<Workout>> =
+        Pager(PAGING_CONFIG) { repository.pagingSourceRoutes(excludeId) }.flow
 
     private val _totalDistance = MutableStateFlow(0f)
     val totalDistance: StateFlow<Float> = _totalDistance.asStateFlow()
@@ -288,8 +294,23 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     }
 
     companion object {
-        const val PAGE_SIZE = 20
-        const val PREFETCH_DISTANCE = 5
+        private const val PAGE_SIZE = 20
+        private const val PREFETCH_DISTANCE = 5
+
+        /**
+         * Pages hold whole rows including track JSON (for route previews), so only a window of
+         * [MAX_LOADED_ITEMS] stays in memory; pages scrolled past are dropped and reloaded on
+         * the way back. A year of running is hundreds of workouts.
+         */
+        private const val MAX_LOADED_ITEMS = 60
+
+        val PAGING_CONFIG = PagingConfig(
+            pageSize = PAGE_SIZE,
+            prefetchDistance = PREFETCH_DISTANCE,
+            initialLoadSize = PAGE_SIZE,
+            enablePlaceholders = false,
+            maxSize = MAX_LOADED_ITEMS
+        )
     }
 }
 
