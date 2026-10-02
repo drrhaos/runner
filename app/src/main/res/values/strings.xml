@@ -45,6 +45,7 @@
     <string name="btn_my_location_description">My location</string>
     <string name="stop_hold_hint_initial">To stop, hold for 3 sec.</string>
     <string name="stop_hold_hint">To stop, hold for %1$d sec.</string>
+    <string name="back_ignored_during_workout">Workout continues. To finish, hold Stop for %1$d sec.</string>
     <string name="gps_signal_searching">Searching</string>
     <string name="gps_signal_weak">Weak</string>
     <string name="gps_signal_medium">Medium</string>

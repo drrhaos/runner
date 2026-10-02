@@ -34,6 +34,7 @@
     <string name="btn_my_location_description">Мое местоположение</string>
     <string name="stop_hold_hint_initial">Удерживайте 3 сек. для остановки</string>
     <string name="stop_hold_hint">Удерживайте %1$d сек. для остановки</string>
+    <string name="back_ignored_during_workout">Тренировка продолжается. Чтобы завершить, удерживайте «Стоп» %1$d сек.</string>
     <string name="gps_signal_searching">Поиск</string>
     <string name="gps_signal_weak">Слабый</string>
     <string name="gps_signal_medium">Средний</string>
