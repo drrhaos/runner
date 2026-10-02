@@ -4,6 +4,7 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -174,6 +175,69 @@ class WorkoutDatabaseMigrationTest {
             query("SELECT iconKey FROM training_plans").use { cursor ->
                 assertTrue(cursor.moveToFirst())
                 assertTrue(cursor.getString(0) == "PLAN")
+            }
+            close()
+        }
+    }
+
+    @Test
+    @Throws(IOException::class)
+    fun migrate5To6_addsIntervalSegmentsJsonColumn_keepsWorkout() {
+        helper.createDatabase(testDb, 5).apply {
+            execSQL(
+                """
+                INSERT INTO workouts (date, distance, duration, avgPace, calories, notes, type, trackData, isFavorite)
+                VALUES (1700000000000, 5.0, 1800000, 6.0, 350, 'note', 'EASY_RUN', '{"points":[]}', 1)
+                """.trimIndent()
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            testDb,
+            6,
+            true,
+            WorkoutDatabase.MIGRATION_5_6
+        ).apply {
+            query("SELECT notes, trackData, isFavorite, intervalSegmentsJson FROM workouts").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals("note", cursor.getString(0))
+                assertEquals("{\"points\":[]}", cursor.getString(1))
+                assertEquals(1, cursor.getInt(2))
+                assertTrue(cursor.isNull(3))
+            }
+            close()
+        }
+    }
+
+    /** Oldest schema → current: the whole chain must land exactly on the latest schema. */
+    @Test
+    @Throws(IOException::class)
+    fun migrateAll1ToLatest_keepsWorkoutAndMatchesSchema() {
+        helper.createDatabase(testDb, 1).apply {
+            execSQL(
+                """
+                INSERT INTO workouts (date, distance, duration, avgPace, calories, notes, type)
+                VALUES (1700000000000, 10.0, 3600000, 6.0, NULL, NULL, 'LONG_RUN')
+                """.trimIndent()
+            )
+            close()
+        }
+
+        val latestVersion = WorkoutDatabase.ALL_MIGRATIONS.last().endVersion
+        helper.runMigrationsAndValidate(
+            testDb,
+            latestVersion,
+            true,
+            *WorkoutDatabase.ALL_MIGRATIONS
+        ).apply {
+            query("SELECT distance, type, trackData, isFavorite, intervalSegmentsJson FROM workouts").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(10.0, cursor.getDouble(0), 0.001)
+                assertEquals("LONG_RUN", cursor.getString(1))
+                assertTrue(cursor.isNull(2))
+                assertEquals(0, cursor.getInt(3))
+                assertTrue(cursor.isNull(4))
             }
             close()
         }
