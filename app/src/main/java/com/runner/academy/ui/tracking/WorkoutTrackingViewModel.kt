@@ -1,17 +1,15 @@
 package com.runner.academy.ui.tracking
 
-import android.Manifest
 import android.app.Application
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.content.pm.PackageManager
 import android.location.Location
 import android.os.IBinder
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import com.runner.academy.util.GpsLocationClient
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.Workout
@@ -185,16 +183,7 @@ class WorkoutTrackingViewModel(
         }
     }
 
-    fun hasLocationPermission(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            application,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) == PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(
-                application,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-    }
+    fun hasLocationPermission(): Boolean = GpsLocationClient.hasPrecisePermission(application)
 
     fun startWorkout(workoutType: WorkoutType = WorkoutType.EASY_RUN) {
         val svc = trackingService
