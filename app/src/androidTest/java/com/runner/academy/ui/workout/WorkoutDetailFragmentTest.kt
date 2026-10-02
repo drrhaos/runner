@@ -1,5 +1,6 @@
 package com.runner.academy.ui.workout
 
+import androidx.core.os.bundleOf
 import androidx.fragment.app.testing.launchFragmentInContainer
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.assertion.ViewAssertions.matches
@@ -15,10 +16,20 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class WorkoutDetailFragmentTest {
 
+    /**
+     * Without a workoutId the screen navigates up at once, which needs a NavHost. An id that
+     * does not exist keeps the layout on screen (only a "not found" toast) and writes nothing
+     * to the app database on the device.
+     */
+    private fun launchDetail() = launchFragmentInContainer<WorkoutDetailFragment>(
+        fragmentArgs = bundleOf("workoutId" to Long.MAX_VALUE),
+        themeResId = R.style.Theme_Runner
+    )
+
     @Test
     fun workout_detail_fragment_should_display_correctly() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutDetailFragment>()
+        val scenario = launchDetail()
 
         // When & Then
         onView(withId(R.id.mapView_detail))
@@ -52,7 +63,7 @@ class WorkoutDetailFragmentTest {
     @Test
     fun share_button_should_be_clickable() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutDetailFragment>()
+        val scenario = launchDetail()
 
         // When & Then
         onView(withId(R.id.button_share))
@@ -63,7 +74,7 @@ class WorkoutDetailFragmentTest {
     @Test
     fun delete_button_should_be_clickable() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutDetailFragment>()
+        val scenario = launchDetail()
 
         // When & Then
         onView(withId(R.id.button_delete))
@@ -74,7 +85,7 @@ class WorkoutDetailFragmentTest {
     @Test
     fun map_view_should_be_displayed() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutDetailFragment>()
+        val scenario = launchDetail()
 
         // When & Then
         onView(withId(R.id.mapView_detail))
@@ -84,7 +95,7 @@ class WorkoutDetailFragmentTest {
     @Test
     fun progress_bar_should_be_displayed() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutDetailFragment>()
+        val scenario = launchDetail()
 
         // When & Then
         onView(withId(R.id.progressBar_map_loading))
@@ -94,7 +105,7 @@ class WorkoutDetailFragmentTest {
     @Test
     fun workout_details_should_be_displayed() {
         // Given
-        val scenario = launchFragmentInContainer<WorkoutDetailFragment>()
+        val scenario = launchDetail()
 
         // When & Then
         onView(withId(R.id.textView_detail_date))

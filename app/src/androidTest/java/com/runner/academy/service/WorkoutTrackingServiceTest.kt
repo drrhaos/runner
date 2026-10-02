@@ -5,6 +5,7 @@ import android.content.Intent
 import android.location.Location
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.runner.academy.grantTrackingPermissions
 import androidx.test.rule.ServiceTestRule
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.GpsStatus
@@ -26,6 +27,9 @@ class WorkoutTrackingServiceTest {
 
     @get:Rule
     val serviceRule = ServiceTestRule()
+
+    @get:Rule
+    val permissionRule = grantTrackingPermissions()
 
     private lateinit var context: Context
     private var service: WorkoutTrackingService? = null
