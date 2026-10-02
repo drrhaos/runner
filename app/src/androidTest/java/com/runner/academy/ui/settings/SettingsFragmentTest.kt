@@ -19,7 +19,7 @@ class SettingsFragmentTest {
     @Test
     fun settings_fragment_should_display_correctly() {
         // Given
-        val scenario = launchFragmentInContainer<SettingsFragment>()
+        val scenario = launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.textView_weight_value))
@@ -47,7 +47,7 @@ class SettingsFragmentTest {
     @Test
     fun weight_row_should_be_clickable() {
         // Given
-        val scenario = launchFragmentInContainer<SettingsFragment>()
+        val scenario = launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.row_weight))
@@ -58,7 +58,7 @@ class SettingsFragmentTest {
     @Test
     fun height_row_should_be_clickable() {
         // Given
-        val scenario = launchFragmentInContainer<SettingsFragment>()
+        val scenario = launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.row_height))
@@ -69,7 +69,7 @@ class SettingsFragmentTest {
     @Test
     fun birth_date_row_should_be_clickable() {
         // Given
-        val scenario = launchFragmentInContainer<SettingsFragment>()
+        val scenario = launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.row_age))
@@ -80,7 +80,7 @@ class SettingsFragmentTest {
     @Test
     fun gender_row_should_be_clickable() {
         // Given
-        val scenario = launchFragmentInContainer<SettingsFragment>()
+        val scenario = launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.row_gender))
@@ -91,7 +91,7 @@ class SettingsFragmentTest {
     @Test
     fun unit_system_row_should_be_clickable() {
         // Given
-        val scenario = launchFragmentInContainer<SettingsFragment>()
+        val scenario = launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.row_unit_system))
@@ -102,7 +102,7 @@ class SettingsFragmentTest {
     @Test
     fun reset_settings_button_should_be_clickable() {
         // Given
-        val scenario = launchFragmentInContainer<SettingsFragment>()
+        val scenario = launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.button_reset_settings))
@@ -113,7 +113,7 @@ class SettingsFragmentTest {
     @Test
     fun voice_feedback_switch_should_be_clickable() {
         // Given
-        val scenario = launchFragmentInContainer<SettingsFragment>()
+        val scenario = launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
         onView(withId(R.id.switch_voice_feedback))
