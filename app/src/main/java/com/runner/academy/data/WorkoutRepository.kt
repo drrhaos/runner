@@ -10,7 +10,10 @@ import kotlinx.coroutines.withContext
  * Provides a single source of truth for workout data and decouples
  * ViewModels from the underlying data source implementation.
  */
-class WorkoutRepository(private val workoutDao: WorkoutDao) {
+class WorkoutRepository(
+    private val workoutDao: WorkoutDao,
+    private val diagnosticsStore: GpsDiagnosticsStore? = null
+) {
 
     /**
      * Get all workouts ordered by date descending as a Flow.
@@ -64,6 +67,21 @@ class WorkoutRepository(private val workoutDao: WorkoutDao) {
      */
     suspend fun deleteWorkout(workout: Workout) = withContext(Dispatchers.IO) {
         workoutDao.deleteWorkout(workout)
+        diagnosticsStore?.delete(workout.id)
+    }
+
+    /** Keeps the GPS diagnostics recording of the session started at [startTimeMs] with the saved workout. */
+    suspend fun attachGpsDiagnostics(startTimeMs: Long, workoutId: Long) = withContext(Dispatchers.IO) {
+        diagnosticsStore?.attachToWorkout(startTimeMs, workoutId)
+    }
+
+    suspend fun hasGpsDiagnostics(workoutId: Long): Boolean = withContext(Dispatchers.IO) {
+        diagnosticsStore?.workoutFile(workoutId) != null
+    }
+
+    /** A copy for the share sheet, or null when the workout has no recording. */
+    suspend fun copyGpsDiagnosticsForSharing(workoutId: Long): java.io.File? = withContext(Dispatchers.IO) {
+        diagnosticsStore?.copyForSharing(workoutId)
     }
 
     /**

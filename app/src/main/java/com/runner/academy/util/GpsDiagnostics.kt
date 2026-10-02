@@ -51,6 +51,21 @@ object GpsDiagnostics {
         val isMock: Boolean
     )
 
+    /** Session events; [wire] is the name stored in the file. */
+    enum class Event(val wire: String) {
+        START("start"),
+        /** Recording continued after the process was killed and the workout restored. */
+        RESTORED("restored"),
+        PAUSE("pause"),
+        RESUME("resume"),
+        SCREEN_ON("screen_on"),
+        SCREEN_OFF("screen_off"),
+        STOP("stop"),
+        /** The system destroyed the service mid-workout; a RESTORED usually follows. */
+        SERVICE_DESTROYED("service_destroyed"),
+        SIZE_LIMIT("size_limit")
+    }
+
     /** What the live filter did with a fix (or that nothing processed it, e.g. while paused). */
     enum class FixResult { ACCEPTED, NEAR_DUPLICATE, REJECTED, NOT_PROCESSED }
 
@@ -88,6 +103,7 @@ object GpsDiagnostics {
 
         data class Fix(val fix: DiagFix, val result: FixResult) : DiagRecord()
         data class Gnss(val elapsedMs: Long, val summary: GnssSummary) : DiagRecord()
+        /** [name] stays a string so files with newer event names still parse. */
         data class Event(val elapsedMs: Long, val name: String) : DiagRecord()
     }
 
@@ -129,10 +145,10 @@ object GpsDiagnostics {
         })
     }.toString()
 
-    fun eventLine(elapsedMs: Long, name: String): String = JsonObject().apply {
+    fun eventLine(elapsedMs: Long, event: Event): String = JsonObject().apply {
         addProperty("type", "event")
         addProperty("t", elapsedMs)
-        addProperty("name", name)
+        addProperty("name", event.wire)
     }.toString()
 
     /** Reads a diagnostics file back (e.g. to turn a shared file into a replay fixture). */

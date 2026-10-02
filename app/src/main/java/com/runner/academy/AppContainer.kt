@@ -4,6 +4,7 @@ import android.content.Context
 import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.data.WorkoutRepository
+import com.runner.academy.data.GpsDiagnosticsStore
 import com.runner.academy.util.UserPreferences
 
 /**
@@ -15,7 +16,7 @@ class AppContainer(context: Context) {
     val database: WorkoutDatabase by lazy { WorkoutDatabase.getDatabase(appContext) }
 
     val workoutRepository: WorkoutRepository by lazy {
-        WorkoutRepository(database.workoutDao())
+        WorkoutRepository(database.workoutDao(), gpsDiagnosticsStore)
     }
 
     val trainingPlanRepository: TrainingPlanRepository by lazy {
@@ -27,6 +28,13 @@ class AppContainer(context: Context) {
     }
 
     val userPreferences: UserPreferences by lazy { UserPreferences(appContext) }
+
+    val gpsDiagnosticsStore: GpsDiagnosticsStore by lazy {
+        GpsDiagnosticsStore(
+            dir = java.io.File(appContext.filesDir, GpsDiagnosticsStore.DIRECTORY),
+            shareDir = java.io.File(appContext.cacheDir, GpsDiagnosticsStore.SHARE_DIRECTORY)
+        )
+    }
 }
 
 fun Context.appContainer(): AppContainer =

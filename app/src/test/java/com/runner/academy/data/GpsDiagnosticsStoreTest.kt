@@ -1,4 +1,4 @@
-package com.runner.academy.util
+package com.runner.academy.data
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -15,7 +15,10 @@ class GpsDiagnosticsStoreTest {
 
     private val dayMs = 24 * 60 * 60 * 1000L
 
-    private fun store() = GpsDiagnosticsStore(tmp.root.resolve("gps-diagnostics"))
+    private fun store() = GpsDiagnosticsStore(
+        dir = tmp.root.resolve("gps-diagnostics"),
+        shareDir = tmp.root.resolve("cache/gps-diagnostics-share")
+    )
 
     @Test
     fun attachToWorkout_movesSessionFileUnderWorkoutId() {
@@ -46,11 +49,32 @@ class GpsDiagnosticsStoreTest {
     }
 
     @Test
+    fun copyForSharing_copiesIntoShareDirAndDeleteRemovesBoth() {
+        val store = store()
+        store.sessionFile(1000L).apply { parentFile!!.mkdirs(); writeText("fix\n") }
+        store.attachToWorkout(1000L, 5L)
+
+        val copy = store.copyForSharing(5L)!!
+
+        assertEquals("fix\n", copy.readText())
+        assertEquals(tmp.root.resolve("cache/gps-diagnostics-share"), copy.parentFile)
+        store.delete(5L)
+        assertNull(store.workoutFile(5L))
+        assertFalse(copy.exists()) // exact coordinates must not outlive the workout in the cache
+    }
+
+    @Test
+    fun copyForSharing_withoutRecordingIsNull() {
+        assertNull(store().copyForSharing(5L))
+    }
+
+    @Test
     fun cleanupOrphans_dropsOldUnsavedSessionsOnly() {
         val store = store()
         val now = 100 * dayMs
-        val old = store.sessionFile(1L).apply { parentFile!!.mkdirs(); writeText("old"); setLastModified(now - 2 * dayMs) }
-        val fresh = store.sessionFile(2L).apply { writeText("fresh"); setLastModified(now - 60_000L) }
+        val old = store.sessionFile(1L).apply { parentFile!!.mkdirs(); writeText("old"); setLastModified(now - 8 * dayMs) }
+        // A workout left paused for days writes nothing, but must keep its recording
+        val fresh = store.sessionFile(2L).apply { writeText("fresh"); setLastModified(now - 3 * dayMs) }
         store.sessionFile(3L).apply { writeText("saved") }
         store.attachToWorkout(3L, 9L)
         store.workoutFile(9L)!!.setLastModified(now - 30 * dayMs)
