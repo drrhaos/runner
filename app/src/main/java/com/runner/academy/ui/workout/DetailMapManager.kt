@@ -85,7 +85,7 @@ class DetailMapManager(
         val runs = TrackRuns.split(trackData.points)
         if (runs.isEmpty()) return
 
-        val (solids, bridges) = TrackPolylineFactory.buildOverlays(runs, TRACK_STYLE)
+        val (solids, gaps, bridges) = TrackPolylineFactory.buildOverlays(runs, TRACK_STYLE)
         val allGeoPoints = runs.allPoints().map(TrackPolylineFactory::toGeoPoint)
 
         solids.forEachIndexed { index, poly ->
@@ -97,7 +97,7 @@ class DetailMapManager(
             val insertAt = mapView.overlays.indexOf(positionMarker).coerceAtLeast(0)
             mapView.overlays.add(insertAt, poly)
         }
-        bridges.forEach { dashed ->
+        (gaps + bridges).forEach { dashed ->
             gapPolylines.add(dashed)
             val insertAt = mapView.overlays.indexOf(positionMarker).coerceAtLeast(0)
             mapView.overlays.add(insertAt, dashed)
