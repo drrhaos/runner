@@ -10,20 +10,33 @@ import com.runner.academy.data.WorkoutType
  * stored in the database (outliers dropped, near-duplicates merged, GPS gaps flagged), with the
  * same per-run [TrackFilter] the live path uses.
  *
+ * Steps and cadence come from the raw points; with the run's [StepDistanceEstimator] (the
+ * same frozen one the live path used) dropped stretches are bridged by steps exactly as live.
+ *
  * Shared by [com.runner.academy.ui.tracking.WorkoutTrackingViewModel] and the GPS replay tests.
  */
 object TrackSanitizer {
 
-    fun sanitize(rawPoints: List<TrackPoint>, workoutType: WorkoutType): List<TrackPoint> {
+    fun sanitize(
+        rawPoints: List<TrackPoint>,
+        workoutType: WorkoutType,
+        stepDistance: StepDistanceEstimator? = null
+    ): List<TrackPoint> {
         if (rawPoints.isEmpty()) return emptyList()
         val result = mutableListOf<TrackPoint>()
-        val filter = TrackFilter(workoutType)
+        val filter = TrackFilter(workoutType, stepDistance)
 
         for (point in rawPoints) {
-            val verdict = filter.process(toLocation(point), forceGapResume = point.afterGap)
+            val verdict = filter.process(
+                toLocation(point),
+                forceGapResume = point.afterGap,
+                steps = point.steps,
+                cadence = point.cadence
+            )
             if (verdict is TrackFilter.Verdict.Rejected && verdict.retractStart) result.clear()
             if (verdict !is TrackFilter.Verdict.Accepted) continue
             val filteredLocation = verdict.location
+            val first = result.isEmpty()
             result.add(
                 point.copy(
                     latitude = filteredLocation.latitude,
@@ -32,9 +45,17 @@ object TrackSanitizer {
                     speed = filteredLocation.speed,
                     altitude = filteredLocation.altitude,
                     afterGap = verdict.afterGap,
-                    // A stored bridge (e.g. from steps) survives a re-sanitize of track points
-                    bridgeMeters = if (verdict.afterGap) verdict.bridgeMeters ?: point.bridgeMeters else null,
-                    source = point.source.ifBlank { LocationSource.GPS.name }
+                    // A stored bridge or lead-in survives a re-sanitize of track points
+                    bridgeMeters = when {
+                        verdict.afterGap -> verdict.bridgeMeters ?: point.bridgeMeters
+                        first -> verdict.leadInMeters ?: point.bridgeMeters
+                        else -> null
+                    },
+                    source = if (verdict.bridgeFromSteps) {
+                        LocationSource.PEDOMETER.name
+                    } else {
+                        point.source.ifBlank { LocationSource.GPS.name }
+                    }
                 )
             )
         }

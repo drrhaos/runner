@@ -5,6 +5,7 @@ import com.runner.academy.data.LocationSource
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.GpsFilter
+import com.runner.academy.util.StepDistanceEstimator
 import com.runner.academy.util.TrackFilter
 import org.osmdroid.util.GeoPoint
 
@@ -12,7 +13,9 @@ import org.osmdroid.util.GeoPoint
  * Processes raw GPS locations for workout tracking.
  *
  * Responsibilities:
- *  - Decide per fix via a per-run [TrackFilter] (outliers, gap resume, near-duplicates)
+ *  - Decide per fix via a per-run [TrackFilter] (outliers, gap resume, near-duplicates,
+ *    false signal, bridges by steps)
+ *  - Report the distance to show as a delta of [TrackFilter.countedMeters]
  *  - Build [TrackPoint] and [GeoPoint] instances from accepted locations
  *  - Decimate track collections when they exceed memory limits
  *
@@ -31,8 +34,26 @@ class GpsLocationProcessor {
     /** Last accepted fix of the current run, null before the first one. */
     val anchor: Location? get() = filter.anchor
 
-    /** Starts a new run; [anchor] continues an interrupted one (see [TrackFilter.reset]). */
-    fun reset(anchor: Location? = null) = filter.reset(anchor)
+    private var reportedMeters = 0f
+
+    /**
+     * Starts a new run; [anchor] continues an interrupted one (see [TrackFilter.reset]).
+     * [stepDistance] (null without steps) bridges dropped stretches by steps for this run.
+     */
+    fun reset(
+        anchor: Location? = null,
+        anchorSteps: Int? = null,
+        pendingMeters: Float = 0f,
+        stepDistance: StepDistanceEstimator? = null
+    ) {
+        filter.stepDistance = stepDistance
+        filter.reset(anchor, anchorSteps, pendingMeters)
+        // What was counted before an interruption is already in the session distance
+        reportedMeters = filter.countedMeters
+    }
+
+    /** Step distance of the open false-signal episode, already in the reported distance. */
+    val pendingStepMeters: Float get() = filter.pendingMeters
 
     /**
      * True while fixes keep coming but are dropped as a false signal (spoofing / jamming), see
@@ -52,7 +73,9 @@ class GpsLocationProcessor {
         existingTrackPoints: MutableList<GeoPoint>,
         existingTrackDataPoints: MutableList<TrackPoint>,
         existingRawTrackDataPoints: MutableList<TrackPoint>,
-        resumeAfterGap: Boolean = false
+        resumeAfterGap: Boolean = false,
+        steps: Int? = null,
+        cadence: Float? = null
     ): ProcessResult {
         val newTrackPoints = existingTrackPoints.toMutableList()
         val newTrackDataPoints = existingTrackDataPoints.toMutableList()
@@ -67,13 +90,17 @@ class GpsLocationProcessor {
             speed = location.speed,
             altitude = location.altitude,
             afterGap = false,
-            source = LocationSource.GPS.name
+            source = LocationSource.GPS.name,
+            steps = steps,
+            cadence = cadence
         )
         newRawTrackDataPoints.add(rawTrackPoint)
         decimateRawPointsIfNeeded(newRawTrackDataPoints)
 
         filter.workoutType = workoutType
-        val verdict = filter.process(location, forceGapResume = resumeAfterGap)
+        val verdict = filter.process(location, forceGapResume = resumeAfterGap, steps = steps, cadence = cadence)
+        val distanceDelta = (filter.countedMeters - reportedMeters).coerceAtLeast(0f)
+        reportedMeters = maxOf(reportedMeters, filter.countedMeters)
         if (verdict !is TrackFilter.Verdict.Accepted) {
             val retractStart = verdict is TrackFilter.Verdict.Rejected && verdict.retractStart
             if (verdict is TrackFilter.Verdict.Rejected) {
@@ -92,7 +119,9 @@ class GpsLocationProcessor {
                 trackDataPoints = newTrackDataPoints,
                 rawTrackDataPoints = newRawTrackDataPoints,
                 refreshGapClock = verdict is TrackFilter.Verdict.NearDuplicate,
-                retractedStart = retractStart
+                retractedStart = retractStart,
+                reason = (verdict as? TrackFilter.Verdict.Rejected)?.reason,
+                distanceDeltaMeters = distanceDelta
             )
         }
 
@@ -113,8 +142,11 @@ class GpsLocationProcessor {
             speed = filteredLocation.speed,
             altitude = filteredLocation.altitude,
             afterGap = verdict.afterGap,
-            source = LocationSource.GPS.name,
-            bridgeMeters = verdict.bridgeMeters
+            source = if (verdict.bridgeFromSteps) LocationSource.PEDOMETER.name else LocationSource.GPS.name,
+            // A lead-in rides on the first point (see TrackGeometry.leadInMeters)
+            bridgeMeters = verdict.bridgeMeters ?: verdict.leadInMeters,
+            steps = steps,
+            cadence = cadence
         )
         newTrackDataPoints.add(trackPoint)
 
@@ -128,6 +160,7 @@ class GpsLocationProcessor {
             segmentDistanceMeters = verdict.segmentDistanceMeters,
             afterGap = verdict.afterGap,
             bridgeMeters = verdict.bridgeMeters,
+            distanceDeltaMeters = distanceDelta,
             trackPoints = newTrackPoints,
             trackDataPoints = newTrackDataPoints,
             rawTrackDataPoints = newRawTrackDataPoints
@@ -218,6 +251,12 @@ class GpsLocationProcessor {
     // ------------------------------------------------------------------
 
     sealed interface ProcessResult {
+        /**
+         * Distance to add to the shown total for this fix: the segment (or the rest of a bridge
+         * / lead-in beyond the step distance already shown), or step distance counted live
+         * during a false-signal episode. Never negative, never counts a stretch twice.
+         */
+        val distanceDeltaMeters: Float
         val trackPoints: MutableList<GeoPoint>
         val trackDataPoints: MutableList<TrackPoint>
         val rawTrackDataPoints: MutableList<TrackPoint>
@@ -229,6 +268,7 @@ class GpsLocationProcessor {
             val afterGap: Boolean = false,
             /** Straight line over a dropped (false-signal) stretch, see [TrackPoint.bridgeMeters]. */
             val bridgeMeters: Float? = null,
+            override val distanceDeltaMeters: Float = segmentDistanceMeters,
             override val trackPoints: MutableList<GeoPoint>,
             override val trackDataPoints: MutableList<TrackPoint>,
             override val rawTrackDataPoints: MutableList<TrackPoint>
@@ -244,7 +284,10 @@ class GpsLocationProcessor {
              * The start point was part of a false signal and was removed: [trackPoints] and
              * [trackDataPoints] are now empty and replace the session's (distance was 0).
              */
-            val retractedStart: Boolean = false
+            val retractedStart: Boolean = false,
+            /** Why the filter dropped the fix; null for a near-duplicate. */
+            val reason: TrackFilter.Reason? = null,
+            override val distanceDeltaMeters: Float = 0f
         ) : ProcessResult
     }
 }
