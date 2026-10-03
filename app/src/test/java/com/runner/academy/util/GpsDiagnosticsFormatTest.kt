@@ -6,6 +6,7 @@ import com.runner.academy.util.GpsDiagnostics.DiagSatellite
 import com.runner.academy.util.GpsDiagnostics.FixResult
 import com.runner.academy.util.GpsDiagnostics.GnssSummary
 import com.runner.academy.util.GpsDiagnostics.SystemStats
+import com.runner.academy.util.PowerSaveCheck.Status
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -74,6 +75,34 @@ class GpsDiagnosticsFormatTest {
             ),
             records
         )
+    }
+
+    @Test
+    fun powerLine_roundTripsThroughParse() {
+        val lines = listOf(
+            GpsDiagnostics.powerLine(
+                elapsedMs = 14_000L,
+                status = Status(powerSaveMode = true, locationMode = PowerSaveCheck.LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF)
+            ),
+            GpsDiagnostics.powerLine(elapsedMs = 15_000L, status = Status(powerSaveMode = false, locationMode = null))
+        )
+
+        assertEquals(
+            listOf(
+                DiagRecord.Power(14_000L, powerSaveMode = true, locationMode = "gps_disabled_when_screen_off"),
+                DiagRecord.Power(15_000L, powerSaveMode = false, locationMode = "unknown")
+            ),
+            GpsDiagnostics.parse(lines)
+        )
+    }
+
+    @Test
+    fun powerLine_wireFormat() {
+        val line = GpsDiagnostics.powerLine(
+            elapsedMs = 14_000L,
+            status = Status(powerSaveMode = true, locationMode = PowerSaveCheck.LOCATION_MODE_FOREGROUND_ONLY)
+        )
+        assertEquals("""{"type":"power","t":14000,"saver":true,"location":"foreground_only"}""", line)
     }
 
     @Test
