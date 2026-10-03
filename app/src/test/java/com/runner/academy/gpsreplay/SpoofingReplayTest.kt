@@ -54,10 +54,6 @@ class SpoofingReplayTest {
     fun `run that starts at the airport begins at the first real fix`() =
         assertHandled(lapWith(Spoof.Teleport(seconds = 0..60)))
 
-    @Ignore(
-        "Not handled yet: frozen fixes count as near-duplicates and the episode splits the track " +
-            "into 6 gap segments (the distance itself ends up close to the straight line)"
-    )
     @Test
     fun `frozen coordinates are bridged by a straight line`() =
         assertHandled(lapWith(Spoof.Frozen(seconds = 100..220)))

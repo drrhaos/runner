@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import com.runner.academy.MainActivity
 import com.runner.academy.R
 import com.runner.academy.data.WorkoutSession
@@ -21,12 +22,17 @@ import com.runner.academy.util.FormatUtils
  *  - Create and manage the notification channel
  *  - Build notification with current workout stats (time, distance)
  *  - Throttle notification updates to save battery
+ *  - Alert the user when a restore after process death could not resume tracking
  */
 class WorkoutNotificationManager(private val service: Service) {
 
     companion object {
         const val NOTIFICATION_UPDATE_INTERVAL_MS = 5_000L
         const val NOTIFICATION_UPDATE_INTERVAL_SCREEN_OFF_MS = 15_000L
+        /** Separate from the quiet tracking channel: this alert must be noticed. */
+        const val INTERRUPTED_CHANNEL_ID = "WorkoutInterruptedChannel"
+        const val INTERRUPTED_NOTIFICATION_ID = 2
+        private const val TAG = "WorkoutNotificationMgr"
     }
 
     private var lastNotificationUpdateTime: Long = 0
@@ -51,24 +57,36 @@ class WorkoutNotificationManager(private val service: Service) {
                 setShowBadge(false)
             }
 
+            val interruptedChannel = NotificationChannel(
+                INTERRUPTED_CHANNEL_ID,
+                service.getString(R.string.notification_interrupted_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = service.getString(R.string.notification_interrupted_channel_description)
+            }
+
             val notificationManager = service.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
+            notificationManager.createNotificationChannel(interruptedChannel)
         }
+    }
+
+    /** Opens the tracking screen; binding to the service there restores the workout. */
+    private fun openTrackingIntent(): PendingIntent {
+        val intent = Intent(service, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(MainActivity.EXTRA_OPEN_TRACKING, true)
+        }
+        return PendingIntent.getActivity(
+            service, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
     }
 
     /**
      * Build a notification with the current workout statistics.
      */
     fun buildNotification(session: WorkoutSession): Notification {
-        val intent = Intent(service, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra(MainActivity.EXTRA_OPEN_TRACKING, true)
-        }
-        val pendingIntent = PendingIntent.getActivity(
-            service, 0, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
         val timeText = FormatUtils.formatTime(session.currentTime)
         val distanceText = String.format("%.2f %s", session.distance, service.getString(R.string.unit_km))
 
@@ -76,7 +94,7 @@ class WorkoutNotificationManager(private val service: Service) {
             .setContentTitle(service.getString(R.string.app_name))
             .setContentText(service.getString(R.string.notification_workout_format, timeText, distanceText))
             .setSmallIcon(R.drawable.ic_menu_run)
-            .setContentIntent(pendingIntent)
+            .setContentIntent(openTrackingIntent())
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -106,4 +124,43 @@ class WorkoutNotificationManager(private val service: Service) {
         val notificationManager = service.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.notify(WorkoutTrackingService.NOTIFICATION_ID, notification)
     }
+
+    /**
+     * Tells the user that tracking stopped after a failed restore (the workout itself is kept
+     * on disk) and that opening the app continues it. Only logs if notifications are off.
+     */
+    fun showInterruptedNotification() {
+        val notificationManager = service.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (!NotificationManagerCompat.from(service).areNotificationsEnabled() ||
+            isInterruptedChannelBlocked(notificationManager)
+        ) {
+            android.util.Log.w(TAG, "Notifications disabled: cannot tell the user the workout was interrupted")
+            return
+        }
+        val notification = NotificationCompat.Builder(service, INTERRUPTED_CHANNEL_ID)
+            .setContentTitle(service.getString(R.string.notification_interrupted_title))
+            .setContentText(service.getString(R.string.notification_interrupted_text))
+            .setSmallIcon(R.drawable.ic_menu_run)
+            .setContentIntent(openTrackingIntent())
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setAutoCancel(true)
+            .build()
+        try {
+            notificationManager.notify(INTERRUPTED_NOTIFICATION_ID, notification)
+        } catch (e: SecurityException) {
+            android.util.Log.w(TAG, "Cannot post interrupted-workout notification", e)
+        }
+    }
+
+    /** The workout runs in the foreground again: the "interrupted" alert is stale. */
+    fun cancelInterruptedNotification() {
+        val notificationManager = service.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.cancel(INTERRUPTED_NOTIFICATION_ID)
+    }
+
+    private fun isInterruptedChannelBlocked(notificationManager: NotificationManager): Boolean =
+        notificationManager.getNotificationChannel(INTERRUPTED_CHANNEL_ID)?.importance ==
+            NotificationManager.IMPORTANCE_NONE
 }

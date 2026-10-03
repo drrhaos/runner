@@ -31,6 +31,9 @@ class GpsLocationProcessor {
      *
      * @param resumeAfterGap When true (e.g. session was [com.runner.academy.data.GpsStatus.LOST]),
      *   the first valid fix re-anchors the track with zero segment distance.
+     * @param lastValidFixTimeMs Fix time of the last [ProcessResult.Accepted] fix or
+     *   [ProcessResult.Rejected] fix with `refreshGapClock`; the time gap is measured from it,
+     *   so standing still with near-duplicate fixes is not a GPS gap. Null: from [previousLocation].
      */
     fun processLocation(
         location: Location,
@@ -39,7 +42,8 @@ class GpsLocationProcessor {
         existingTrackPoints: MutableList<GeoPoint>,
         existingTrackDataPoints: MutableList<TrackPoint>,
         existingRawTrackDataPoints: MutableList<TrackPoint>,
-        resumeAfterGap: Boolean = false
+        resumeAfterGap: Boolean = false,
+        lastValidFixTimeMs: Long? = null
     ): ProcessResult? {
         val newTrackPoints = existingTrackPoints.toMutableList()
         val newTrackDataPoints = existingTrackDataPoints.toMutableList()
@@ -58,14 +62,15 @@ class GpsLocationProcessor {
         )
         newRawTrackDataPoints.add(rawTrackPoint)
 
-        val gapResume = GpsFilter.isGapResume(previousLocation, location, resumeAfterGap)
+        val gapResume = GpsFilter.isGapResume(previousLocation, location, resumeAfterGap, lastValidFixTimeMs)
 
         // Filter GPS outlier (gap-aware)
         val filteredLocation = GpsFilter.filterGpsOutlier(
             location,
             previousLocation,
             workoutType.maxReasonableGpsSpeedMps(),
-            forceGapResume = gapResume
+            forceGapResume = gapResume,
+            lastValidFixTimeMs = lastValidFixTimeMs
         )
         if (filteredLocation == null) {
             android.util.Log.w(
