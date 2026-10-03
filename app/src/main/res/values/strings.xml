@@ -353,6 +353,10 @@
     <string name="notification_channel_name">Workout tracking</string>
     <string name="notification_channel_description">Active workout notifications</string>
     <string name="notification_workout_format">%1$s • %2$s</string>
+    <string name="notification_interrupted_channel_name">Workout alerts</string>
+    <string name="notification_interrupted_channel_description">Alerts when workout tracking stops unexpectedly</string>
+    <string name="notification_interrupted_title">Workout interrupted</string>
+    <string name="notification_interrupted_text">Open the app to continue</string>
 
     <string name="csv_header">Date,Time,Workout type,Distance (km),Duration (min),Pace (min/km),Calories,Notes\n</string>
     <string name="csv_statistics_header">Workout statistics\n\nCategory,Value\n</string>

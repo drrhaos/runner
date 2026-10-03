@@ -339,6 +339,10 @@
     <string name="notification_channel_name">Трекинг тренировок</string>
     <string name="notification_channel_description">Уведомления о активной тренировке</string>
     <string name="notification_workout_format">%1$s • %2$s</string>
+    <string name="notification_interrupted_channel_name">Оповещения о тренировке</string>
+    <string name="notification_interrupted_channel_description">Оповещения, когда запись тренировки неожиданно останавливается</string>
+    <string name="notification_interrupted_title">Тренировка прервана</string>
+    <string name="notification_interrupted_text">Откройте приложение, чтобы продолжить</string>
 
     <string name="csv_header">Дата,Время,Тип тренировки,Дистанция (км),Длительность (мин),Темп (мин/км),Калории,Заметки\n</string>
     <string name="csv_statistics_header">Статистика тренировок\n\nКатегория,Значение\n</string>

@@ -67,6 +67,11 @@ object GpsDiagnostics {
         STOP("stop"),
         /** The system destroyed the service mid-workout; a RESTORED usually follows. */
         SERVICE_DESTROYED("service_destroyed"),
+        /**
+         * A restore could not bring the service back to the foreground (refused from the
+         * background); tracking stopped until the user opens the app.
+         */
+        RESTORE_FAILED("restore_failed"),
         SIZE_LIMIT("size_limit")
     }
 
