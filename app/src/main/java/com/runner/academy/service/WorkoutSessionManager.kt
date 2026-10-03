@@ -170,15 +170,20 @@ class WorkoutSessionManager {
 
     /**
      * Update session when a location is received but filtered out during active tracking.
-     * Does NOT change gpsStatus (preserves existing status).
+     * Does NOT change gpsStatus (preserves existing status). [trackPoints] / [trackDataPoints]
+     * replace the track when the filter retracted it (a false-signal start).
      */
     fun updateLocationOnly(
         currentLocation: android.location.Location,
-        rawTrackDataPoints: List<com.runner.academy.data.TrackPoint>
+        rawTrackDataPoints: List<com.runner.academy.data.TrackPoint>,
+        trackPoints: List<org.osmdroid.util.GeoPoint>? = null,
+        trackDataPoints: List<com.runner.academy.data.TrackPoint>? = null
     ) {
         session = session.copy(
             currentLocation = currentLocation,
-            rawTrackDataPoints = rawTrackDataPoints
+            rawTrackDataPoints = rawTrackDataPoints,
+            trackPoints = trackPoints ?: session.trackPoints,
+            trackDataPoints = trackDataPoints ?: session.trackDataPoints
         )
         notifyChanged()
     }

@@ -32,31 +32,28 @@ class GpsLocationProcessorTest {
         this.speed = speed
     }
 
+    private fun process(
+        location: Location,
+        previous: GpsLocationProcessor.ProcessResult? = null,
+        resumeAfterGap: Boolean = false
+    ) = processor.processLocation(
+        location,
+        WorkoutType.EASY_RUN,
+        previous?.trackPoints ?: mutableListOf(),
+        previous?.trackDataPoints ?: mutableListOf(),
+        previous?.rawTrackDataPoints ?: mutableListOf(),
+        resumeAfterGap = resumeAfterGap
+    )
+
     @Test
     fun processLocation_afterGap_acceptsAnchorWithZeroSegmentDistance() {
         val first = location(55.7558, 37.6173, time = 1_000_000L)
-        val afterGap = location(55.7640, 37.6200, time = 1_000_000L + GpsFilter.GAP_RESUME_THRESHOLD_MS)
+        // ~45 m after 20 s without fixes; the LOST flag forces the resume
+        val afterGap = location(55.7559, 37.6180, time = 1_000_000L + GpsFilter.GAP_RESUME_THRESHOLD_MS)
 
-        val firstResult = processor.processLocation(
-            first,
-            null,
-            WorkoutType.EASY_RUN,
-            mutableListOf(),
-            mutableListOf(),
-            mutableListOf()
-        ) as GpsLocationProcessor.ProcessResult.Accepted
+        val firstResult = process(first) as GpsLocationProcessor.ProcessResult.Accepted
+        val gapResult = process(afterGap, firstResult, resumeAfterGap = true)
 
-        val gapResult = processor.processLocation(
-            afterGap,
-            firstResult.filteredLocation,
-            WorkoutType.EASY_RUN,
-            firstResult.trackPoints,
-            firstResult.trackDataPoints,
-            firstResult.rawTrackDataPoints,
-            resumeAfterGap = true
-        )
-
-        assertNotNull(gapResult)
         assertTrue(gapResult is GpsLocationProcessor.ProcessResult.Accepted)
         val accepted = gapResult as GpsLocationProcessor.ProcessResult.Accepted
         assertEquals(0f, accepted.segmentDistanceMeters, 0.01f)
@@ -71,23 +68,8 @@ class GpsLocationProcessorTest {
         // ~11m north in 2s — should be accepted
         val second = location(55.7559, 37.6173, time = 1_002_000L)
 
-        val firstResult = processor.processLocation(
-            first,
-            null,
-            WorkoutType.EASY_RUN,
-            mutableListOf(),
-            mutableListOf(),
-            mutableListOf()
-        ) as GpsLocationProcessor.ProcessResult.Accepted
-
-        val secondResult = processor.processLocation(
-            second,
-            firstResult.filteredLocation,
-            WorkoutType.EASY_RUN,
-            firstResult.trackPoints,
-            firstResult.trackDataPoints,
-            firstResult.rawTrackDataPoints
-        ) as GpsLocationProcessor.ProcessResult.Accepted
+        val firstResult = process(first)
+        val secondResult = process(second, firstResult) as GpsLocationProcessor.ProcessResult.Accepted
 
         assertFalse(secondResult.afterGap)
         assertTrue(secondResult.segmentDistanceMeters > 2f)
@@ -96,27 +78,17 @@ class GpsLocationProcessorTest {
     @Test
     fun processLocation_afterLongStandWithNearDuplicates_addsDistanceWithoutGap() {
         val first = location(55.7558, 37.6173, time = 1_000_000L, speed = 0f)
-        // ~11 m north, 60 s after the last accepted fix; near-duplicates arrived until 1 s ago
+        var last = process(first)
+        // Standing for a minute: near-duplicates keep the gap clock moving
+        for (second in 1..59) {
+            val jitter = if (second % 2 == 0) 0.000001 else -0.000001
+            last = process(location(55.7558 + jitter, 37.6173, time = 1_000_000L + second * 1_000L, speed = 0f), last)
+            assertTrue(last is GpsLocationProcessor.ProcessResult.Rejected)
+            assertTrue((last as GpsLocationProcessor.ProcessResult.Rejected).refreshGapClock)
+        }
+        // ~11 m north, 60 s after the last accepted fix
         val moving = location(55.7559, 37.6173, time = 1_060_000L)
-
-        val firstResult = processor.processLocation(
-            first,
-            null,
-            WorkoutType.EASY_RUN,
-            mutableListOf(),
-            mutableListOf(),
-            mutableListOf()
-        ) as GpsLocationProcessor.ProcessResult.Accepted
-
-        val movingResult = processor.processLocation(
-            moving,
-            firstResult.filteredLocation,
-            WorkoutType.EASY_RUN,
-            firstResult.trackPoints,
-            firstResult.trackDataPoints,
-            firstResult.rawTrackDataPoints,
-            lastValidFixTimeMs = moving.time - 1_000L
-        ) as GpsLocationProcessor.ProcessResult.Accepted
+        val movingResult = process(moving, last) as GpsLocationProcessor.ProcessResult.Accepted
 
         assertFalse(movingResult.afterGap)
         assertFalse(movingResult.trackDataPoints.last().afterGap)
@@ -124,30 +96,27 @@ class GpsLocationProcessorTest {
     }
 
     @Test
-    fun processLocation_withoutLastValidFix_treatsLongStandAsGap() {
+    fun processLocation_afterSilence_treatsLongStandAsGap() {
         val first = location(55.7558, 37.6173, time = 1_000_000L, speed = 0f)
         val moving = location(55.7559, 37.6173, time = 1_060_000L)
 
-        val firstResult = processor.processLocation(
-            first,
-            null,
-            WorkoutType.EASY_RUN,
-            mutableListOf(),
-            mutableListOf(),
-            mutableListOf()
-        ) as GpsLocationProcessor.ProcessResult.Accepted
+        val firstResult = process(first)
+        val movingResult = process(moving, firstResult) as GpsLocationProcessor.ProcessResult.Accepted
 
-        val movingResult = processor.processLocation(
-            moving,
-            firstResult.filteredLocation,
-            WorkoutType.EASY_RUN,
-            firstResult.trackPoints,
-            firstResult.trackDataPoints,
-            firstResult.rawTrackDataPoints
-        ) as GpsLocationProcessor.ProcessResult.Accepted
-
-        // Default keeps the old behaviour: gap measured from the last accepted fix
+        // No fixes for a minute: a GPS gap, no distance across it
         assertTrue(movingResult.afterGap)
         assertEquals(0f, movingResult.segmentDistanceMeters, 0.01f)
+    }
+
+    @Test
+    fun reset_startsANewRunWithoutAnchor() {
+        process(location(55.7558, 37.6173, time = 1_000_000L))
+        assertNotNull(processor.anchor)
+
+        processor.reset()
+
+        val next = process(location(55.7600, 37.6173, time = 1_001_000L)) as GpsLocationProcessor.ProcessResult.Accepted
+        assertFalse(next.afterGap)
+        assertEquals(0f, next.segmentDistanceMeters, 0.01f)
     }
 }
