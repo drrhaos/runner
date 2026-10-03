@@ -23,6 +23,9 @@ import com.runner.academy.util.GpsFilter
 import com.runner.academy.util.OsmMapConfig
 import com.runner.academy.util.OsmMapTiles
 import com.runner.academy.util.TrackPolylineFactory
+import com.runner.academy.util.TrackRuns
+import com.runner.academy.util.bridges
+import com.runner.academy.util.solids
 import org.osmdroid.views.overlay.CopyrightOverlay
 import kotlin.math.hypot
 
@@ -78,8 +81,10 @@ class MapManager(
     /** Solid polyline that receives the animated live tip (last committed segment). */
     private var tipHostPolyline: Polyline? = null
 
-    /** Committed track geometry (no live tip); rebuilt only when trackDataPoints change. */
+    /** Committed solid runs (no live tip); rebuilt only when trackDataPoints change. */
     private var committedSegments: List<List<GeoPoint>> = emptyList()
+    /** Dashed bridges over dropped false-signal stretches (see [TrackRuns]). */
+    private var committedBridges: List<Pair<GeoPoint, GeoPoint>> = emptyList()
     private var lastTrackSignature: String? = null
     private var displayedTip: GeoPoint? = null
     private var tipAnimStart: GeoPoint? = null
@@ -408,8 +413,9 @@ class MapManager(
     }
 
     /**
-     * Draws committed track segments (solid / dashed across gaps) and a live tip that
-     * smoothly stretches to the person-icon rim at [currentLocation].
+     * Draws committed track runs (solid, dashed across bridged stretches, nothing across
+     * plain gaps) and a live tip that smoothly stretches to the person-icon rim at
+     * [currentLocation].
      */
     fun updateTrackFromDataPoints(trackDataPoints: List<TrackPoint>, currentLocation: Location?) {
         currentLocation?.let { sessionLocationProvider.publish(it) }
@@ -417,7 +423,11 @@ class MapManager(
         val signature = trackSignature(trackDataPoints)
         if (signature != lastTrackSignature) {
             lastTrackSignature = signature
-            committedSegments = splitTrackIntoSegments(trackDataPoints)
+            val runs = TrackRuns.split(trackDataPoints)
+            committedSegments = runs.solids().map { run -> run.points.map(TrackPolylineFactory::toGeoPoint) }
+            committedBridges = runs.bridges().map {
+                TrackPolylineFactory.toGeoPoint(it.from) to TrackPolylineFactory.toGeoPoint(it.to)
+            }
             rebuildCommittedPolylines()
         }
 
@@ -445,7 +455,7 @@ class MapManager(
     private fun trackSignature(points: List<TrackPoint>): String {
         if (points.isEmpty()) return "0"
         val last = points.last()
-        return "${points.size}:${last.timestamp}:${last.latitude}:${last.longitude}:${last.afterGap}"
+        return "${points.size}:${last.timestamp}:${last.latitude}:${last.longitude}:${last.afterGap}:${last.bridgeMeters}"
     }
 
     private fun rebuildCommittedPolylines() {
@@ -473,10 +483,8 @@ class MapManager(
             mapView.overlays.add(poly)
         }
 
-        for (i in 0 until committedSegments.lastIndex) {
-            val from = committedSegments[i].lastOrNull() ?: continue
-            val to = committedSegments[i + 1].firstOrNull() ?: continue
-            val dashed = TrackPolylineFactory.createDashedGap(from, to, TRACK_STYLE)
+        for ((from, to) in committedBridges) {
+            val dashed = TrackPolylineFactory.createDashedBridge(from, to, TRACK_STYLE)
             gapTrackPolylines.add(dashed)
             mapView.overlays.add(dashed)
         }
@@ -563,10 +571,6 @@ class MapManager(
         val edgeX = startPx.x + dx * ratio
         val edgeY = startPx.y + dy * ratio
         return projection.fromPixels(edgeX.toInt(), edgeY.toInt()) as GeoPoint
-    }
-
-    private fun splitTrackIntoSegments(points: List<TrackPoint>): List<List<GeoPoint>> {
-        return TrackPolylineFactory.splitIntoSegments(points)
     }
 
     private fun clearGapPolylines() {
