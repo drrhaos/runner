@@ -363,5 +363,63 @@ class GpsFilterTest {
 
         assertNull("Invalid accuracy should still be rejected on gap resume", result)
     }
+
+    @Test
+    fun isgapresume_measures_gap_from_last_valid_fix_when_given() {
+        val previousLocation = createLocation(55.7558, 37.6173, time = 1_000_000L)
+        val newLocation = createLocation(55.7559, 37.6173,
+            time = previousLocation.time + GpsFilter.GAP_RESUME_THRESHOLD_MS + 40_000L)
+
+        // Near-duplicate fixes kept arriving while standing: the last one 1 s ago
+        val lastValidFixTimeMs = newLocation.time - 1_000L
+
+        assertTrue(GpsFilter.isGapResume(previousLocation, newLocation))
+        assertFalse(GpsFilter.isGapResume(previousLocation, newLocation, lastValidFixTimeMs = lastValidFixTimeMs))
+    }
+
+    @Test
+    fun isgapresume_still_detects_gap_after_last_valid_fix() {
+        val previousLocation = createLocation(55.7558, 37.6173, time = 1_000_000L)
+        val lastValidFixTimeMs = previousLocation.time + 5_000L
+        val newLocation = createLocation(55.7559, 37.6173,
+            time = lastValidFixTimeMs + GpsFilter.GAP_RESUME_THRESHOLD_MS)
+
+        assertTrue(GpsFilter.isGapResume(previousLocation, newLocation, lastValidFixTimeMs = lastValidFixTimeMs))
+    }
+
+    @Test
+    fun isgapresume_ignores_last_valid_fix_older_than_previous_location() {
+        val previousLocation = createLocation(55.7558, 37.6173, time = 1_000_000L)
+        val newLocation = createLocation(55.7559, 37.6173, time = previousLocation.time + 2_000L)
+
+        // Stale clock (e.g. not reset): the accepted fix is the newer reference
+        assertFalse(GpsFilter.isGapResume(previousLocation, newLocation, lastValidFixTimeMs = 0L))
+    }
+
+    @Test
+    fun isgapresume_force_wins_over_last_valid_fix() {
+        val previousLocation = createLocation(55.7558, 37.6173, time = 1_000_000L)
+        val newLocation = createLocation(55.7559, 37.6173, time = previousLocation.time + 2_000L)
+
+        assertTrue(
+            GpsFilter.isGapResume(
+                previousLocation, newLocation, forceGapResume = true, lastValidFixTimeMs = newLocation.time
+            )
+        )
+    }
+
+    @Test
+    fun filtergpsoutlier_with_recent_valid_fix_keeps_outlier_checks_after_long_stand() {
+        val previousLocation = createLocation(55.7558, 37.6173, speed = 0f, time = 1_000_000L)
+        // ~900 m away, 60 s after the last accepted fix but 1 s after the last valid one
+        val newLocation = createLocation(55.7639, 37.6173,
+            time = previousLocation.time + 60_000L)
+
+        assertNotNull(GpsFilter.filterGpsOutlier(newLocation, previousLocation))
+        assertNull(
+            "Jump right after near-duplicate fixes is an outlier, not a gap resume",
+            GpsFilter.filterGpsOutlier(newLocation, previousLocation, lastValidFixTimeMs = newLocation.time - 1_000L)
+        )
+    }
 }
 

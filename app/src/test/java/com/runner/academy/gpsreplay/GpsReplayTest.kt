@@ -85,6 +85,16 @@ class GpsReplayTest {
     }
 
     @Test
+    fun `standing at a traffic light mid-run is not a GPS gap`() {
+        // Fixes keep coming while standing (min update distance 0), but all are near-duplicates
+        val run = SyntheticRun(SyntheticRun.blockLoop(), standStillSec = 60, standStillAtM = 600.0)
+        for ((name, result) in bothPipelines(run)) {
+            assertEquals("$name gaps", 0, result.gapCount)
+            assertDistance(name, run.routeLengthM, result.distanceMeters, DISTANCE_TOLERANCE_PERCENT)
+        }
+    }
+
+    @Test
     fun `live and saved pipelines agree`() {
         val run = SyntheticRun(SyntheticRun.blockLoop(laps = 3), gapSec = 300..330, outlierAtSec = setOf(100, 500))
         val raw = run.rawPoints()

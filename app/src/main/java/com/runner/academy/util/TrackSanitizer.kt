@@ -19,17 +19,25 @@ object TrackSanitizer {
         if (rawPoints.isEmpty()) return emptyList()
         val result = mutableListOf<TrackPoint>()
         var previousLocation: Location? = null
+        // Near-duplicates move the gap clock too: standing at a light is not a GPS gap
+        var lastValidFixTimeMs: Long? = null
         val maxReasonableSpeedMps = workoutType.maxReasonableGpsSpeedMps()
 
         for (point in rawPoints) {
             val rawLocation = toLocation(point)
-            val forceGap = GpsFilter.isGapResume(previousLocation, rawLocation) || point.afterGap
+            val forceGap = GpsFilter.isGapResume(
+                previousLocation,
+                rawLocation,
+                lastValidFixTimeMs = lastValidFixTimeMs
+            ) || point.afterGap
             val filteredLocation = GpsFilter.filterGpsOutlier(
                 rawLocation,
                 previousLocation,
                 maxReasonableSpeedMps = maxReasonableSpeedMps,
-                forceGapResume = forceGap
+                forceGapResume = forceGap,
+                lastValidFixTimeMs = lastValidFixTimeMs
             ) ?: continue
+            lastValidFixTimeMs = filteredLocation.time
 
             val afterGap = forceGap && previousLocation != null
             if (!afterGap && previousLocation != null) {
