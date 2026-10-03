@@ -2,13 +2,15 @@ package com.runner.academy.util
 
 import android.graphics.Color
 import android.graphics.DashPathEffect
-import com.runner.academy.data.TrackPoint
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.overlay.Polyline
+import com.runner.academy.data.TrackPoint
 
 /**
- * Shared OSM track geometry for live tracking and workout detail maps:
- * solid segments split on [TrackPoint.afterGap], dashed connectors across gaps.
+ * Shared OSM track geometry for live tracking and workout detail maps, built from
+ * [TrackRuns]: solid lines for runs of fixes, the long translucent dashes of a plain GPS
+ * gap (unchanged from before bridges existed) and short opaque dashes for a bridged,
+ * counted stretch.
  */
 object TrackPolylineFactory {
 
@@ -17,7 +19,10 @@ object TrackPolylineFactory {
         val strokeWidth: Float,
         val gapDashOn: Float = 24f,
         val gapDashOff: Float = 16f,
-        val gapAlpha: Int = 160
+        val gapAlpha: Int = 160,
+        val bridgeDashOn: Float = BRIDGE_DASH_ON_PER_STROKE * strokeWidth,
+        val bridgeDashOff: Float = BRIDGE_DASH_OFF_PER_STROKE * strokeWidth,
+        val bridgeAlpha: Int = 255
     ) {
         companion object {
             val LIVE = Style(strokeWidth = 8f)
@@ -25,22 +30,19 @@ object TrackPolylineFactory {
         }
     }
 
-    fun splitIntoSegments(points: List<TrackPoint>): List<List<GeoPoint>> {
-        if (points.isEmpty()) return emptyList()
-        val segments = mutableListOf<MutableList<GeoPoint>>()
-        var current = mutableListOf<GeoPoint>()
-        for (point in points) {
-            if (point.afterGap && current.isNotEmpty()) {
-                segments.add(current)
-                current = mutableListOf()
-            }
-            current.add(GeoPoint(point.latitude, point.longitude))
-        }
-        if (current.isNotEmpty()) {
-            segments.add(current)
-        }
-        return segments
-    }
+    /**
+     * Bridge dash lengths relative to the stroke width, shared with the list previews so a
+     * bridge looks the same everywhere: short dashes, about one stroke width apart.
+     */
+    const val BRIDGE_DASH_ON_PER_STROKE = 1.25f
+    const val BRIDGE_DASH_OFF_PER_STROKE = 1f
+
+    /** Lines a renderer adds to the map, bottom to top. */
+    data class Overlays(
+        val solids: List<Polyline>,
+        val gaps: List<Polyline>,
+        val bridges: List<Polyline>
+    )
 
     fun createSolid(points: List<GeoPoint> = emptyList(), style: Style): Polyline {
         return Polyline().apply {
@@ -51,15 +53,28 @@ object TrackPolylineFactory {
         }
     }
 
-    fun createDashedGap(from: GeoPoint, to: GeoPoint, style: Style): Polyline {
+    /** Connector across a plain GPS gap — the pre-bridge look, kept for every track. */
+    fun createDashedGap(from: GeoPoint, to: GeoPoint, style: Style): Polyline =
+        createDashed(from, to, style.strokeWidth, style.color, style.gapAlpha, style.gapDashOn, style.gapDashOff)
+
+    /** Bridged (counted) stretch: opaque short dashes, unlike the translucent gap connector. */
+    fun createDashedBridge(from: GeoPoint, to: GeoPoint, style: Style): Polyline =
+        createDashed(from, to, style.strokeWidth, style.color, style.bridgeAlpha, style.bridgeDashOn, style.bridgeDashOff)
+
+    private fun createDashed(
+        from: GeoPoint,
+        to: GeoPoint,
+        strokeWidth: Float,
+        color: Int,
+        alpha: Int,
+        dashOn: Float,
+        dashOff: Float
+    ): Polyline {
         return Polyline().apply {
-            outlinePaint.color = style.color
-            outlinePaint.strokeWidth = style.strokeWidth
-            outlinePaint.alpha = style.gapAlpha
-            outlinePaint.pathEffect = DashPathEffect(
-                floatArrayOf(style.gapDashOn, style.gapDashOff),
-                0f
-            )
+            outlinePaint.color = color
+            outlinePaint.strokeWidth = strokeWidth
+            outlinePaint.alpha = alpha
+            outlinePaint.pathEffect = DashPathEffect(floatArrayOf(dashOn, dashOff), 0f)
             setPoints(mutableListOf(from, to))
         }
     }
@@ -71,23 +86,12 @@ object TrackPolylineFactory {
         polyline.outlinePaint.pathEffect = null
     }
 
-    /**
-     * One solid polyline per contiguous segment, plus a dashed connector between
-     * each consecutive pair of segments.
-     */
-    fun buildOverlays(
-        segments: List<List<GeoPoint>>,
-        style: Style
-    ): Pair<List<Polyline>, List<Polyline>> {
-        if (segments.isEmpty()) return emptyList<Polyline>() to emptyList()
+    /** One solid per [TrackRun.Solid], one gap connector per [TrackRun.Gap], one bridge per [TrackRun.Bridge]. */
+    fun buildOverlays(runs: List<TrackRun>, style: Style): Overlays = Overlays(
+        solids = runs.solids().map { createSolid(it.points.map(::toGeoPoint), style) },
+        gaps = runs.gaps().map { createDashedGap(toGeoPoint(it.from), toGeoPoint(it.to), style) },
+        bridges = runs.bridges().map { createDashedBridge(toGeoPoint(it.from), toGeoPoint(it.to), style) }
+    )
 
-        val solids = segments.map { createSolid(it, style) }
-        val gaps = mutableListOf<Polyline>()
-        for (i in 0 until segments.lastIndex) {
-            val from = segments[i].lastOrNull() ?: continue
-            val to = segments[i + 1].firstOrNull() ?: continue
-            gaps.add(createDashedGap(from, to, style))
-        }
-        return solids to gaps
-    }
+    fun toGeoPoint(point: TrackPoint): GeoPoint = GeoPoint(point.latitude, point.longitude)
 }

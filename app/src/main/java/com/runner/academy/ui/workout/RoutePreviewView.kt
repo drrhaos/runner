@@ -11,6 +11,8 @@ import androidx.core.content.ContextCompat
 import com.runner.academy.R
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
+import com.runner.academy.util.TrackRuns
+import com.runner.academy.util.allPoints
 import kotlin.math.max
 import kotlin.math.min
 
@@ -31,6 +33,7 @@ class RoutePreviewView @JvmOverloads constructor(
     }
 
     private val trackPath = Path()
+    private val bridgePath = Path()
     private val density = resources.displayMetrics.density
 
     private val backgroundPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -45,6 +48,8 @@ class RoutePreviewView @JvmOverloads constructor(
         strokeWidth = TRACK_STROKE_DP * density
         color = ContextCompat.getColor(context, R.color.route_preview_track)
     }
+
+    private val bridgePaint = TrackRunPaths.bridgePaint(trackPaint)
 
     private val startPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
@@ -99,6 +104,7 @@ class RoutePreviewView @JvmOverloads constructor(
         val save = canvas.save()
         canvas.clipPath(clipPath)
         canvas.drawPath(trackPath, trackPaint)
+        canvas.drawPath(bridgePath, bridgePaint)
         val markerR = START_RADIUS_DP * density
         canvas.drawCircle(startX, startY, markerR, startPaint)
         canvas.drawCircle(endX, endY, markerR, endPaint)
@@ -123,10 +129,12 @@ class RoutePreviewView @JvmOverloads constructor(
 
     private fun rebuildPath(viewWidth: Int, viewHeight: Int) {
         trackPath.reset()
+        bridgePath.reset()
         hasGeometry = false
         if (viewWidth <= 0 || viewHeight <= 0 || points.size < 2) return
 
-        val sampled = downsample(points, MAX_DRAW_POINTS)
+        val runs = TrackRuns.downsample(TrackRuns.split(points), MAX_DRAW_POINTS)
+        val sampled = runs.allPoints()
         var minLat = Double.POSITIVE_INFINITY
         var maxLat = Double.NEGATIVE_INFINITY
         var minLon = Double.POSITIVE_INFINITY
@@ -155,39 +163,19 @@ class RoutePreviewView @JvmOverloads constructor(
         fun mapX(lon: Double): Float = offsetX + ((lon - minLon) / lonSpan).toFloat() * drawW
         fun mapY(lat: Double): Float = offsetY + ((maxLat - lat) / latSpan).toFloat() * drawH
 
-        var started = false
-        for (point in sampled) {
-            val x = mapX(point.longitude)
-            val y = mapY(point.latitude)
-            if (!started) {
-                trackPath.moveTo(x, y)
-                startX = x
-                startY = y
-                started = true
-            } else if (point.afterGap) {
-                trackPath.moveTo(x, y)
-            } else {
-                trackPath.lineTo(x, y)
-            }
-            endX = x
-            endY = y
+        val ends = TrackRunPaths.build(
+            runs,
+            trackPath,
+            bridgePath,
+            x = { mapX(it.longitude) },
+            y = { mapY(it.latitude) }
+        )
+        if (ends != null) {
+            startX = ends.first[0]
+            startY = ends.first[1]
+            endX = ends.second[0]
+            endY = ends.second[1]
         }
-        hasGeometry = started
-    }
-
-    private fun downsample(source: List<TrackPoint>, maxPoints: Int): List<TrackPoint> {
-        if (source.size <= maxPoints) return source
-        val result = ArrayList<TrackPoint>(maxPoints)
-        val step = (source.size - 1).toFloat() / (maxPoints - 1)
-        var i = 0
-        while (i < maxPoints) {
-            val index = (i * step).toInt().coerceIn(0, source.lastIndex)
-            result.add(source[index])
-            i++
-        }
-        if (result.last() != source.last()) {
-            result[result.lastIndex] = source.last()
-        }
-        return result
+        hasGeometry = ends != null
     }
 }

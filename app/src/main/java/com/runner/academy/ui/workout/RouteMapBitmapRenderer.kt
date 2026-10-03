@@ -9,9 +9,10 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.util.LruCache
 import com.runner.academy.data.TrackData
-import com.runner.academy.data.TrackPoint
 import com.runner.academy.util.OsmMapConfig
 import com.runner.academy.util.OsmMapTiles
+import com.runner.academy.util.TrackRuns
+import com.runner.academy.util.allPoints
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -85,7 +86,8 @@ object RouteMapBitmapRenderer {
         heightPx: Int
     ): Bitmap? {
         OsmMapConfig.apply(context)
-        val points = downsample(trackData.points, MAX_DRAW_POINTS)
+        val runs = TrackRuns.downsample(TrackRuns.split(trackData.points), MAX_DRAW_POINTS)
+        val points = runs.allPoints()
         if (points.size < 2) return null
 
         var minLat = Double.POSITIVE_INFINITY
@@ -193,32 +195,20 @@ object RouteMapBitmapRenderer {
         }
 
         val path = Path()
-        var started = false
-        var startXf = 0f
-        var startYf = 0f
-        var endXf = 0f
-        var endYf = 0f
-        for (point in points) {
-            val x = mapX(point.longitude)
-            val y = mapY(point.latitude)
-            if (!started) {
-                path.moveTo(x, y)
-                startXf = x
-                startYf = y
-                started = true
-            } else if (point.afterGap) {
-                path.moveTo(x, y)
-            } else {
-                path.lineTo(x, y)
-            }
-            endXf = x
-            endYf = y
-        }
-        if (started) {
+        val bridgePath = Path()
+        val ends = TrackRunPaths.build(
+            runs,
+            path,
+            bridgePath,
+            x = { mapX(it.longitude) },
+            y = { mapY(it.latitude) }
+        )
+        if (ends != null) {
             canvas.drawPath(path, trackPaint)
+            canvas.drawPath(bridgePath, TrackRunPaths.bridgePaint(trackPaint))
             val r = max(3f, widthPx / 28f)
-            canvas.drawCircle(startXf, startYf, r, startPaint)
-            canvas.drawCircle(endXf, endYf, r, endPaint)
+            canvas.drawCircle(ends.first[0], ends.first[1], r, startPaint)
+            canvas.drawCircle(ends.second[0], ends.second[1], r, endPaint)
         }
         return bitmap
     }
@@ -317,21 +307,5 @@ object RouteMapBitmapRenderer {
         val latRad = clamped * PI / 180.0
         val n = 1 shl zoom
         return (1.0 - ln(tan(latRad) + 1.0 / cos(latRad)) / PI) / 2.0 * n * TILE_SIZE
-    }
-
-    private fun downsample(source: List<TrackPoint>, maxPoints: Int): List<TrackPoint> {
-        if (source.size <= maxPoints) return source
-        val result = ArrayList<TrackPoint>(maxPoints)
-        val step = (source.size - 1).toFloat() / (maxPoints - 1)
-        var i = 0
-        while (i < maxPoints) {
-            val index = (i * step).toInt().coerceIn(0, source.lastIndex)
-            result.add(source[index])
-            i++
-        }
-        if (result.last() != source.last()) {
-            result[result.lastIndex] = source.last()
-        }
-        return result
     }
 }
