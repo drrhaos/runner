@@ -21,7 +21,13 @@ data class WorkoutSession(
     val trackPoints: List<GeoPoint> = emptyList(), // для отображения на карте
     val trackDataPoints: List<TrackPoint> = emptyList(), // для сохранения в JSON
     val rawTrackDataPoints: List<TrackPoint> = emptyList(), // все точки без фильтрации для последующей проверки
-    val currentLocation: Location? = null
+    val currentLocation: Location? = null,
+    /**
+     * The run's frozen stride model ([com.runner.academy.util.StrideModel.serialize]) that bridges
+     * dropped stretches by steps; the save path rebuilds the same estimator from it so the saved
+     * distance matches the live one. Null when steps are not used in this run.
+     */
+    val strideModelState: String? = null
 )
 
 enum class GpsStatus {
