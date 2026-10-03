@@ -575,7 +575,12 @@ class WorkoutTrackingService : Service() {
         unreliableLatch.reset()
         // Steps continue from the checkpoint; bridges keep the run's frozen stride
         val savedSteps = maxOf(checkpoint.steps ?: 0, checkpoint.rawTrackDataPoints.lastOrNull()?.steps ?: 0)
+        // Without steps now (setting or permission changed) the points before keep theirs: the
+        // run's stride still bridges those, so live and saved stay equal
         val runStride = startSteps(initialSteps = savedSteps, frozenState = checkpoint.strideModelState)
+            ?: checkpoint.strideModelState?.let { state ->
+                RunStride(StrideModel.deserialize(state, userPreferences.userHeight).frozenEstimator(), state)
+            }
         // The gap clock is not checkpointed: it falls back to the anchor's own time
         gpsProcessor.reset(
             anchor = lastLocation,
