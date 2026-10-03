@@ -106,6 +106,12 @@ class GpsDiagnosticsFormatTest {
     }
 
     @Test
+    fun restoreFailedEvent_wireFormat() {
+        val line = GpsDiagnostics.eventLine(elapsedMs = 16_000L, event = GpsDiagnostics.Event.RESTORE_FAILED)
+        assertEquals("""{"type":"event","t":16000,"name":"restore_failed"}""", line)
+    }
+
+    @Test
     fun each_record_is_a_single_json_line() {
         val line = GpsDiagnostics.fixLine(fix, FixResult.NEAR_DUPLICATE)
         assertTrue(!line.contains('\n'))

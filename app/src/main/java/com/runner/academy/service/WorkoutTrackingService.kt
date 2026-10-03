@@ -409,6 +409,7 @@ class WorkoutTrackingService : Service() {
         }
         startWorkoutTimer()
         startForeground(NOTIFICATION_ID, notificationManager.buildNotification(sessionManager.getSession()))
+        notificationManager.cancelInterruptedNotification()
         notificationManager.updateNotification(sessionManager.getSession(), force = true)
         prepareVoiceForWorkout()
         rebuildIntervalEngineFromMetadata()
@@ -464,7 +465,8 @@ class WorkoutTrackingService : Service() {
 
     /**
      * Restore in-progress session from disk after process death.
-     * @return true if an active session was restored and tracking resumed.
+     * @return true if an active session was restored and tracking resumed; false also when the
+     *   system refused the foreground start (the checkpoint is kept, see [abandonRestore]).
      */
     private fun restoreFromCheckpoint(): Boolean {
         val existing = sessionManager.getSession()
@@ -472,9 +474,9 @@ class WorkoutTrackingService : Service() {
             // Already live in this process (e.g. bound UI + sticky race)
             if (!isCurrentlyTracking && !existing.isPaused) {
                 // Session flags say running but timers not started — re-arm
-                resumeTrackingAfterRestore(existing)
+                return resumeTrackingAfterRestore(existing)
             } else if (existing.isPaused) {
-                ensureForegroundNotification()
+                return ensureForegroundNotification()
             }
             return true
         }
@@ -507,7 +509,7 @@ class WorkoutTrackingService : Service() {
         sessionManager.restoreSession(restoredSession, checkpoint.lastUpdateTime)
         rebuildIntervalEngineFromMetadata()
         prepareVoiceForWorkout()
-        resumeTrackingAfterRestore(restoredSession)
+        if (!resumeTrackingAfterRestore(restoredSession)) return false
         android.util.Log.i(
             "WorkoutTrackingService",
             "Restored workout checkpoint: distance=${restoredSession.distance}, time=${restoredSession.currentTime}"
@@ -515,11 +517,13 @@ class WorkoutTrackingService : Service() {
         return true
     }
 
-    private fun resumeTrackingAfterRestore(session: WorkoutSession) {
-        ensureForegroundNotification()
+    /** @return false if the foreground start was refused and the restore abandoned. */
+    private fun resumeTrackingAfterRestore(session: WorkoutSession): Boolean {
+        // Before the foreground start, so a refused restore is recorded too
         if (userPreferences.gpsDiagnostics && session.startTime > 0L) {
             diagnostics.start(session.startTime, resume = true)
         }
+        if (!ensureForegroundNotification()) return false
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
         if (session.isPaused) {
@@ -537,10 +541,41 @@ class WorkoutTrackingService : Service() {
         }
         notificationManager.updateNotification(sessionManager.getSession(), force = true)
         maybeSaveCheckpoint(sessionManager.getSession(), force = true)
+        return true
     }
 
-    private fun ensureForegroundNotification() {
-        startForeground(NOTIFICATION_ID, notificationManager.buildNotification(sessionManager.getSession()))
+    /**
+     * Restores run from the background (sticky restart), where the system may refuse the
+     * foreground start; without this the service crashed and the track silently stopped.
+     * @return false if refused — the restore is then abandoned, see [abandonRestore].
+     */
+    private fun ensureForegroundNotification(): Boolean {
+        // Built outside: only the start itself may be refused
+        val notification = notificationManager.buildNotification(sessionManager.getSession())
+        val refusal = tryStartForeground { startForeground(NOTIFICATION_ID, notification) }
+        if (refusal != null) {
+            abandonRestore(refusal)
+            return false
+        }
+        notificationManager.cancelInterruptedNotification()
+        return true
+    }
+
+    /**
+     * Stops tracking without a foreground service but keeps [activeWorkoutStore]: the user is
+     * asked to open the app, and binding from the UI restores the workout from the foreground
+     * (see [onBind]). The caller stops the service.
+     */
+    private fun abandonRestore(refusal: RuntimeException) {
+        android.util.Log.e("WorkoutTrackingService", "Foreground start refused, workout restore abandoned", refusal)
+        isCurrentlyTracking = false
+        stopWorkoutTimer()
+        stopLocationUpdates()
+        stopPeriodicLocationRequest()
+        releaseVoice()
+        maybeSaveCheckpoint(sessionManager.getSession(), force = true)
+        diagnostics.stop(DiagEvent.RESTORE_FAILED)
+        notificationManager.showInterruptedNotification()
     }
 
     private fun requestRestoreIfCheckpointExists() {
