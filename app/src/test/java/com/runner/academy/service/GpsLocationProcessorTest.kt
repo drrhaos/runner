@@ -92,4 +92,62 @@ class GpsLocationProcessorTest {
         assertFalse(secondResult.afterGap)
         assertTrue(secondResult.segmentDistanceMeters > 2f)
     }
+
+    @Test
+    fun processLocation_afterLongStandWithNearDuplicates_addsDistanceWithoutGap() {
+        val first = location(55.7558, 37.6173, time = 1_000_000L, speed = 0f)
+        // ~11 m north, 60 s after the last accepted fix; near-duplicates arrived until 1 s ago
+        val moving = location(55.7559, 37.6173, time = 1_060_000L)
+
+        val firstResult = processor.processLocation(
+            first,
+            null,
+            WorkoutType.EASY_RUN,
+            mutableListOf(),
+            mutableListOf(),
+            mutableListOf()
+        ) as GpsLocationProcessor.ProcessResult.Accepted
+
+        val movingResult = processor.processLocation(
+            moving,
+            firstResult.filteredLocation,
+            WorkoutType.EASY_RUN,
+            firstResult.trackPoints,
+            firstResult.trackDataPoints,
+            firstResult.rawTrackDataPoints,
+            lastValidFixTimeMs = moving.time - 1_000L
+        ) as GpsLocationProcessor.ProcessResult.Accepted
+
+        assertFalse(movingResult.afterGap)
+        assertFalse(movingResult.trackDataPoints.last().afterGap)
+        assertTrue(movingResult.segmentDistanceMeters > 2f)
+    }
+
+    @Test
+    fun processLocation_withoutLastValidFix_treatsLongStandAsGap() {
+        val first = location(55.7558, 37.6173, time = 1_000_000L, speed = 0f)
+        val moving = location(55.7559, 37.6173, time = 1_060_000L)
+
+        val firstResult = processor.processLocation(
+            first,
+            null,
+            WorkoutType.EASY_RUN,
+            mutableListOf(),
+            mutableListOf(),
+            mutableListOf()
+        ) as GpsLocationProcessor.ProcessResult.Accepted
+
+        val movingResult = processor.processLocation(
+            moving,
+            firstResult.filteredLocation,
+            WorkoutType.EASY_RUN,
+            firstResult.trackPoints,
+            firstResult.trackDataPoints,
+            firstResult.rawTrackDataPoints
+        ) as GpsLocationProcessor.ProcessResult.Accepted
+
+        // Default keeps the old behaviour: gap measured from the last accepted fix
+        assertTrue(movingResult.afterGap)
+        assertEquals(0f, movingResult.segmentDistanceMeters, 0.01f)
+    }
 }

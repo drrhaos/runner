@@ -149,6 +149,11 @@ class WorkoutTrackingService : Service() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var periodicLocationJob: Job? = null
     private var lastLocationTime: Long = 0
+    /**
+     * Fix time of the last valid fix, accepted or near-duplicate: standing still keeps it
+     * moving, so a stop at a traffic light is not a time gap (see [GpsFilter.isGapResume]).
+     */
+    private var lastValidFixTimeMs: Long? = null
     private var lastAppliedAdaptiveIntervalMs: Long = -1L
     private var lastAppliedScreenInteractive: Boolean? = null
     private var workoutTimerJob: Job? = null
@@ -276,7 +281,8 @@ class WorkoutTrackingService : Service() {
 
         if (isCurrentlyTracking && !sessionManager.getSession().isPaused) {
             val session = sessionManager.getSession()
-            // Time gaps are detected from fix timestamps inside GpsFilter.isGapResume.
+            // Time gaps are detected from fix timestamps inside GpsFilter.isGapResume,
+            // counted from the last valid fix (near-duplicates included).
             // Wall-clock age must not be used: flushed or delayed fixes arrive late.
             val resumeAfterGap = session.gpsStatus == GpsStatus.LOST
 
@@ -287,7 +293,8 @@ class WorkoutTrackingService : Service() {
                 session.trackPoints.toMutableList(),
                 session.trackDataPoints.toMutableList(),
                 session.rawTrackDataPoints.toMutableList(),
-                resumeAfterGap = resumeAfterGap
+                resumeAfterGap = resumeAfterGap,
+                lastValidFixTimeMs = lastValidFixTimeMs
             )
 
             diagnostics.recordFix(location, result.toFixResult())
@@ -317,11 +324,13 @@ class WorkoutTrackingService : Service() {
 
                     lastLocation = filtered
                     lastLocationTime = System.currentTimeMillis()
+                    lastValidFixTimeMs = location.time
                 }
 
                 is GpsLocationProcessor.ProcessResult.Rejected -> {
                     if (result.refreshGapClock) {
                         lastLocationTime = System.currentTimeMillis()
+                        lastValidFixTimeMs = location.time
                         // Near-duplicate fix: move map tip / icon without committing a track point
                         sessionManager.updateLocationOnly(
                             currentLocation = location,
@@ -382,6 +391,7 @@ class WorkoutTrackingService : Service() {
         val preStartSeed = lastLocation?.takeIf { isUsablePreStartLocation(it) }
         lastLocation = null
         lastLocationTime = 0L
+        lastValidFixTimeMs = null
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
 
@@ -419,6 +429,9 @@ class WorkoutTrackingService : Service() {
         diagnostics.recordEvent(DiagEvent.RESUME)
         isCurrentlyTracking = true
         sessionManager.resume()
+        // Grace after the pause: no fixes were processed, so the watchdog must not flag the
+        // whole pause as a GPS loss before the first fix arrives
+        if (lastLocationTime != 0L) lastLocationTime = System.currentTimeMillis()
         if (hasLocationPermission()) {
             startLocationUpdates()
             startPeriodicLocationRequest()
@@ -478,6 +491,8 @@ class WorkoutTrackingService : Service() {
         intervalCursor = checkpoint.intervalCursor()
         lastLocationTime = checkpoint.lastLocationTime
         lastLocation = checkpoint.toSession().currentLocation
+        // Not checkpointed: null falls back to the anchor's own time
+        lastValidFixTimeMs = null
 
         val restoredSession = checkpoint.toSession().let { session ->
             // Recompute elapsed wall time after gap so the clock doesn't freeze at kill time
@@ -883,10 +898,7 @@ class WorkoutTrackingService : Service() {
 
         try {
             val client = gpsClient ?: return
-            val newLocationRequest = GpsConfig.createAdaptiveLocationRequest(
-                intervalMs = adaptiveInterval,
-                screenInteractive = screenInteractive
-            )
+            val newLocationRequest = GpsConfig.createAdaptiveLocationRequest(adaptiveInterval)
             currentLocationRequest = newLocationRequest
             lastAppliedAdaptiveIntervalMs = adaptiveInterval
             lastAppliedScreenInteractive = screenInteractive

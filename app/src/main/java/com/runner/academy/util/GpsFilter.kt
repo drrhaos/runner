@@ -43,15 +43,21 @@ object GpsFilter {
     /**
      * True when the new fix should re-anchor the track after a GPS outage
      * (long time gap and/or explicit [forceGapResume] from LOST status).
+     *
+     * @param lastValidFixTimeMs Fix time of the last valid fix, including near-duplicates that
+     *   did not become [previousLocation] (standing at a traffic light). When given, the gap is
+     *   measured from the later of it and [previousLocation]; otherwise from [previousLocation].
      */
     fun isGapResume(
         previousLocation: Location?,
         newLocation: Location,
-        forceGapResume: Boolean = false
+        forceGapResume: Boolean = false,
+        lastValidFixTimeMs: Long? = null
     ): Boolean {
         if (forceGapResume && previousLocation != null) return true
         if (previousLocation == null) return false
-        val timeDiff = newLocation.time - previousLocation.time
+        val referenceTime = max(previousLocation.time, lastValidFixTimeMs ?: previousLocation.time)
+        val timeDiff = newLocation.time - referenceTime
         return timeDiff >= GAP_RESUME_THRESHOLD_MS
     }
 
@@ -108,12 +114,15 @@ object GpsFilter {
      * [GAP_RESUME_THRESHOLD_MS], speed/distance outlier checks against the previous
      * point are skipped so the first fix after a tunnel/indoor gap is accepted as
      * a new anchor (caller must not add segment distance across the gap).
+     * [lastValidFixTimeMs] only moves the gap clock, see [isGapResume]; the outlier checks
+     * still compare against [previousLocation].
      */
     fun filterGpsOutlier(
         newLocation: Location,
         previousLocation: Location?,
         maxReasonableSpeedMps: Float = DEFAULT_MAX_REASONABLE_SPEED_MPS.toFloat(),
-        forceGapResume: Boolean = false
+        forceGapResume: Boolean = false,
+        lastValidFixTimeMs: Long? = null
     ): Location? {
         if (previousLocation == null) {
             return if (isValidGpsLocation(newLocation)) {
@@ -135,10 +144,11 @@ object GpsFilter {
             return null
         }
 
-        if (isGapResume(previousLocation, newLocation, forceGapResume)) {
+        if (isGapResume(previousLocation, newLocation, forceGapResume, lastValidFixTimeMs)) {
             Log.d(
                 "GpsFilter",
-                "Gap resume accepted: dt=${newLocation.time - previousLocation.time}ms, force=$forceGapResume"
+                "Gap resume accepted: dt=${newLocation.time - max(previousLocation.time, lastValidFixTimeMs ?: 0L)}ms, " +
+                    "force=$forceGapResume"
             )
             return newLocation
         }
