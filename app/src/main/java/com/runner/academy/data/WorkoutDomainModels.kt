@@ -31,7 +31,12 @@ enum class GpsStatus {
     STRONG,
     FOUND,
     LOST,
-    DENIED
+    DENIED,
+    /**
+     * Fixes arrive but are false (spoofing / jamming): the position is not shown and the
+     * distance is counted from steps until a good fix returns.
+     */
+    UNRELIABLE
 }
 
 enum class WorkoutState {

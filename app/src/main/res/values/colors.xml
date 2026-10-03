@@ -57,6 +57,8 @@
     <color name="gps_signal_level_4">#B3000000</color>
     <color name="gps_signal_active">#B3000000</color>
     <color name="gps_signal_inactive">#33000000</color>
+    <!-- Signal present but false (spoofing / jamming): all bars, distinct hue -->
+    <color name="gps_signal_unreliable">#B3AF52DE</color>
     <color name="map_control_surface">#B3FFFFFF</color>
     <color name="map_control_icon">#99000000</color>
     <color name="map_navigation_circle_fill">#33FF9500</color>
