@@ -35,6 +35,12 @@ class GpsLocationProcessor {
     fun reset(anchor: Location? = null) = filter.reset(anchor)
 
     /**
+     * True while fixes keep coming but are dropped as a false signal (spoofing / jamming), see
+     * [TrackFilter.inFalseSignal].
+     */
+    val inFalseSignal: Boolean get() = filter.inFalseSignal
+
+    /**
      * Process a single raw [Location] for an active workout.
      *
      * @param resumeAfterGap When true (e.g. session was [com.runner.academy.data.GpsStatus.LOST]),
@@ -69,17 +75,24 @@ class GpsLocationProcessor {
         filter.workoutType = workoutType
         val verdict = filter.process(location, forceGapResume = resumeAfterGap)
         if (verdict !is TrackFilter.Verdict.Accepted) {
+            val retractStart = verdict is TrackFilter.Verdict.Rejected && verdict.retractStart
             if (verdict is TrackFilter.Verdict.Rejected) {
                 android.util.Log.w(
                     "GpsLocationProcessor",
-                    "GPS point filtered as outlier/invalid: lat=${location.latitude}, lon=${location.longitude}, acc=${location.accuracy}m"
+                    "GPS point dropped (${verdict.reason}): lat=${location.latitude}, lon=${location.longitude}, acc=${location.accuracy}m"
                 )
+            }
+            if (retractStart) {
+                // The start was the false signal: the track begins at the first good fix
+                newTrackPoints.clear()
+                newTrackDataPoints.clear()
             }
             return ProcessResult.Rejected(
                 trackPoints = newTrackPoints,
                 trackDataPoints = newTrackDataPoints,
                 rawTrackDataPoints = newRawTrackDataPoints,
-                refreshGapClock = verdict is TrackFilter.Verdict.NearDuplicate
+                refreshGapClock = verdict is TrackFilter.Verdict.NearDuplicate,
+                retractedStart = retractStart
             )
         }
 
@@ -100,7 +113,8 @@ class GpsLocationProcessor {
             speed = filteredLocation.speed,
             altitude = filteredLocation.altitude,
             afterGap = verdict.afterGap,
-            source = LocationSource.GPS.name
+            source = LocationSource.GPS.name,
+            bridgeMeters = verdict.bridgeMeters
         )
         newTrackDataPoints.add(trackPoint)
 
@@ -113,6 +127,7 @@ class GpsLocationProcessor {
             filteredLocation = filteredLocation,
             segmentDistanceMeters = verdict.segmentDistanceMeters,
             afterGap = verdict.afterGap,
+            bridgeMeters = verdict.bridgeMeters,
             trackPoints = newTrackPoints,
             trackDataPoints = newTrackDataPoints,
             rawTrackDataPoints = newRawTrackDataPoints
@@ -209,8 +224,11 @@ class GpsLocationProcessor {
 
         data class Accepted(
             val filteredLocation: Location,
+            /** Includes [bridgeMeters] when the fix closes a dropped stretch. */
             val segmentDistanceMeters: Float,
             val afterGap: Boolean = false,
+            /** Straight line over a dropped (false-signal) stretch, see [TrackPoint.bridgeMeters]. */
+            val bridgeMeters: Float? = null,
             override val trackPoints: MutableList<GeoPoint>,
             override val trackDataPoints: MutableList<TrackPoint>,
             override val rawTrackDataPoints: MutableList<TrackPoint>
@@ -221,7 +239,12 @@ class GpsLocationProcessor {
             override val trackDataPoints: MutableList<TrackPoint>,
             override val rawTrackDataPoints: MutableList<TrackPoint>,
             /** True when the fix was valid but too close — keep gap timer alive. */
-            val refreshGapClock: Boolean = false
+            val refreshGapClock: Boolean = false,
+            /**
+             * The start point was part of a false signal and was removed: [trackPoints] and
+             * [trackDataPoints] are now empty and replace the session's (distance was 0).
+             */
+            val retractedStart: Boolean = false
         ) : ProcessResult
     }
 }

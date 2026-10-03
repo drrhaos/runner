@@ -21,6 +21,7 @@ object TrackSanitizer {
 
         for (point in rawPoints) {
             val verdict = filter.process(toLocation(point), forceGapResume = point.afterGap)
+            if (verdict is TrackFilter.Verdict.Rejected && verdict.retractStart) result.clear()
             if (verdict !is TrackFilter.Verdict.Accepted) continue
             val filteredLocation = verdict.location
             result.add(
@@ -31,6 +32,8 @@ object TrackSanitizer {
                     speed = filteredLocation.speed,
                     altitude = filteredLocation.altitude,
                     afterGap = verdict.afterGap,
+                    // A stored bridge (e.g. from steps) survives a re-sanitize of track points
+                    bridgeMeters = if (verdict.afterGap) verdict.bridgeMeters ?: point.bridgeMeters else null,
                     source = point.source.ifBlank { LocationSource.GPS.name }
                 )
             )

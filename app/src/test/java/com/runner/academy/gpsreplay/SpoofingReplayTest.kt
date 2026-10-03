@@ -34,6 +34,10 @@ class SpoofingReplayTest {
             assertNoTeleport(name, run, result)
             assertDistance(name, run.expectedDistanceWithoutStepsM, result.distanceMeters, TOLERANCE_PERCENT)
             assertTrue("$name: ${result.gapCount} gaps for one episode", result.gapCount <= 1)
+            assertTrue(
+                "$name: the dropped stretch is a plain gap, not a bridge",
+                result.points.filter { it.afterGap }.all { it.bridgeMeters != null }
+            )
         }
     }
 
@@ -41,15 +45,10 @@ class SpoofingReplayTest {
     fun `short jump to the airport and back is dropped`() =
         assertHandled(lapWith(Spoof.Teleport(seconds = 200..210)))
 
-    @Ignore(
-        "Not handled yet: after 20 s without an accepted fix (GpsFilter.GAP_RESUME_THRESHOLD_MS) " +
-            "the spoofed fix is taken as a gap resume and anchors the track ~16.5 km off the route"
-    )
     @Test
     fun `long stay at the airport is dropped and bridged`() =
         assertHandled(lapWith(Spoof.Teleport(seconds = 100..220)))
 
-    @Ignore("Not handled yet: the first fix is accepted unchecked, so a spoofed start anchors the track")
     @Test
     fun `run that starts at the airport begins at the first real fix`() =
         assertHandled(lapWith(Spoof.Teleport(seconds = 0..60)))
@@ -58,17 +57,14 @@ class SpoofingReplayTest {
     fun `frozen coordinates are bridged by a straight line`() =
         assertHandled(lapWith(Spoof.Frozen(seconds = 100..220)))
 
-    @Ignore(
-        "Not handled yet: the drifted fixes exceed the speed cap and are rejected, but once 20 s " +
-            "pass without an accepted fix the next drifted fix is taken as a gap resume (~800 m off)"
-    )
     @Test
     fun `drift at an impossible speed is dropped and bridged`() =
         assertHandled(lapWith(Spoof.Drift(seconds = 100..130, rateMps = 40.0)))
 
     @Ignore(
-        "Not handled yet: a drift at running pace is plausible by coordinates alone and is " +
-            "accepted (~190 m off); needs satellite (GnssStatus) features from real diagnostics files"
+        "Not handled: a drift at running pace is plausible by coordinates alone (no jump, no " +
+            "impossible speed, no frozen fixes) and is accepted (~190 m off); needs satellite " +
+            "(GnssStatus) features calibrated on real diagnostics files"
     )
     @Test
     fun `drift at a running pace is dropped and bridged`() =

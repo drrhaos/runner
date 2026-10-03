@@ -72,18 +72,7 @@ object GpsFilter {
                 "speed=${if (location.hasSpeed()) location.speed else "N/A"}m/s"
         )
 
-        if (!isValidCoordinate(location.latitude, location.longitude)) {
-            Log.w("GpsFilter", "Invalid coordinates: lat=${location.latitude}, lon=${location.longitude}")
-            return false
-        }
-
-        if (location.hasAccuracy() && location.accuracy > MAX_ACCEPTABLE_ACCURACY) {
-            Log.w(
-                "GpsFilter",
-                "GPS accuracy too poor: ${location.accuracy}m > ${MAX_ACCEPTABLE_ACCURACY}m"
-            )
-            return false
-        }
+        if (!isUsableFix(location)) return false
 
         // Ignore mild reported-speed spikes; only drop absurd values
         if (location.hasSpeed() && location.speed > MAX_REPORTED_SPEED_MPS) {
@@ -97,6 +86,40 @@ object GpsFilter {
         Log.d("GpsFilter", "GPS location validation passed")
         return true
     }
+
+    /**
+     * Valid coordinates and usable accuracy, regardless of the reported speed: the receiver has a
+     * position fix. A fix failing this is no signal (weak / indoor), not a false signal.
+     */
+    fun isUsableFix(location: Location): Boolean {
+        if (!isValidCoordinate(location.latitude, location.longitude)) {
+            Log.w("GpsFilter", "Invalid coordinates: lat=${location.latitude}, lon=${location.longitude}")
+            return false
+        }
+        if (location.hasAccuracy() && location.accuracy > MAX_ACCEPTABLE_ACCURACY) {
+            Log.w(
+                "GpsFilter",
+                "GPS accuracy too poor: ${location.accuracy}m > ${MAX_ACCEPTABLE_ACCURACY}m"
+            )
+            return false
+        }
+        return true
+    }
+
+    /**
+     * Farthest [newLocation] can plausibly be from [previousLocation]: the workout's max speed
+     * (with margin) over the time between them, plus accuracy and jitter slack.
+     */
+    fun maxPlausibleDistanceMeters(
+        previousLocation: Location,
+        newLocation: Location,
+        maxReasonableSpeedMps: Float
+    ): Double = calculateExpectedMaxDistance(
+        previousLocation,
+        newLocation,
+        newLocation.time - previousLocation.time,
+        maxReasonableSpeedMps
+    )
 
     private fun isValidCoordinate(latitude: Double, longitude: Double): Boolean {
         return latitude in -90.0..90.0 &&
