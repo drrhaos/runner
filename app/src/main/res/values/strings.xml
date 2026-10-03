@@ -52,12 +52,15 @@
     <string name="gps_signal_strong">Strong</string>
     <string name="gps_signal_lost">Lost</string>
     <string name="gps_signal_denied">No access</string>
+    <string name="gps_signal_unreliable">Unreliable</string>
     <string name="gps_accuracy_searching">Searching for satellites…</string>
     <string name="gps_accuracy_ready">Ready · %1$d m</string>
     <string name="gps_accuracy_value">Accuracy: %1$d m</string>
     <string name="gps_accuracy_lost">Lost signal</string>
     <string name="gps_accuracy_denied">No access to GPS</string>
+    <string name="gps_accuracy_unreliable">Unreliable signal</string>
     <string name="gps_lost_banner">GPS lost — time continues, distance pauses until signal returns</string>
+    <string name="gps_unreliable_banner">GPS signal unreliable — position hidden, distance from steps</string>
     <string name="gps_ready_banner">GPS ready — you can start</string>
     <string name="gps_wait_banner">Wait for GPS before starting for a better track</string>
     <string name="save_distance_dialog_title">Enter distance</string>
@@ -66,6 +69,7 @@
     <string name="save_without_distance">Save without distance</string>
     <string name="voice_gps_lost">GPS signal lost</string>
     <string name="voice_gps_recovered">GPS signal recovered</string>
+    <string name="voice_gps_unreliable">GPS signal unreliable</string>
     <string name="kilometers_per_hour_float">%.1f km/h</string>
     <string name="miles_per_hour_float">%.1f mi/h</string>
     <string name="per_km">per kilometer</string>
@@ -384,6 +388,7 @@
     <string name="gps_weak_message">GPS signal is weak. Accuracy may be low.</string>
     <string name="gps_medium_message">GPS signal is medium.</string>
     <string name="gps_strong_message">GPS signal is strong.</string>
+    <string name="gps_unreliable_message">GPS signal is unreliable. Your position is hidden; distance is counted from steps.</string>
 
 
     <plurals name="hours">

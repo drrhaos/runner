@@ -498,6 +498,9 @@ class WorkoutTrackingFragment : Fragment() {
         if (_binding == null || !isAdded || isDetached) return
         val now = System.currentTimeMillis()
 
+        val tracking = session.isTracking || session.isPaused
+        gpsStatusUpdater?.sessionStatus = if (tracking) session.gpsStatus else null
+
         // Map updates always run to keep track current (respect GPS gaps)
         mapManager?.updateTrackFromDataPoints(session.trackDataPoints, session.currentLocation)
         mapManager?.updateMapOrientation(session)
@@ -515,7 +518,6 @@ class WorkoutTrackingFragment : Fragment() {
 
         metricsDisplayManager?.updateMetrics(session)
 
-        val tracking = session.isTracking || session.isPaused
         if (wasTrackingOrPaused && !tracking) {
             mapManager?.resumePreWorkoutLocationUpdates()
             updateIdleGpsBanner()
@@ -549,6 +551,10 @@ class WorkoutTrackingFragment : Fragment() {
                 banner.visibility = View.VISIBLE
                 banner.text = getString(R.string.gps_lost_banner)
             }
+            session.gpsStatus == GpsStatus.UNRELIABLE && session.isTracking -> {
+                banner.visibility = View.VISIBLE
+                banner.text = getString(R.string.gps_unreliable_banner)
+            }
             !session.isTracking && !session.isPaused -> {
                 updateIdleGpsBanner()
             }
@@ -571,7 +577,8 @@ class WorkoutTrackingFragment : Fragment() {
                 banner.visibility = View.VISIBLE
                 banner.text = getString(R.string.gps_ready_banner)
             }
-            GpsStatus.SEARCHING, GpsStatus.LOST -> {
+            // Accuracy alone never yields UNRELIABLE; listed for exhaustiveness.
+            GpsStatus.SEARCHING, GpsStatus.LOST, GpsStatus.UNRELIABLE -> {
                 banner.visibility = View.VISIBLE
                 banner.text = getString(R.string.gps_wait_banner)
             }
