@@ -326,6 +326,15 @@ class WorkoutTrackingService : Service() {
                             currentLocation = location,
                             rawTrackDataPoints = result.rawTrackDataPoints
                         )
+                    } else if (result.retractedStart) {
+                        // The start fix was a false signal: the track restarts at the next good fix
+                        lastLocation = null
+                        sessionManager.updateLocationOnly(
+                            currentLocation = sessionManager.getSession().currentLocation ?: location,
+                            rawTrackDataPoints = result.rawTrackDataPoints,
+                            trackPoints = result.trackPoints,
+                            trackDataPoints = result.trackDataPoints
+                        )
                     } else {
                         // Outlier: keep tip on last accepted fix so the line does not jump
                         sessionManager.updateLocationOnly(
