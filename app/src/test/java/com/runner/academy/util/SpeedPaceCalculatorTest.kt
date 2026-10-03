@@ -1,6 +1,8 @@
 package com.runner.academy.util
 
+import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.TrackPoint
+import com.runner.academy.data.WorkoutTemplateSegment
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -255,5 +257,58 @@ class SpeedPaceCalculatorTest {
         val p1 = point(55.75, 37.60, 0L, altitude = null)
         val p2 = point(55.75, 37.6016, 10_000L, altitude = null)
         assertTrue(SpeedPaceCalculator.buildElevationSeries(listOf(p1, p2)).isEmpty())
+    }
+
+    /** 100 m steps east every 50 s; the step into [bridgeAt] is a bridge of [bridgeM] instead. */
+    private fun trackWithBridge(count: Int, bridgeAt: Int, bridgeM: Float): List<TrackPoint> =
+        (0 until count).map { i ->
+            val p = point(55.75, 37.60 + i * 0.0016, i * 50_000L, altitude = 100.0)
+            if (i == bridgeAt) p.copy(afterGap = true, bridgeMeters = bridgeM) else p
+        }
+
+    @Test
+    fun `buildSegments counts a bridge and does not split the km there`() {
+        val points = trackWithBridge(count = 12, bridgeAt = 6, bridgeM = 100f)
+
+        val segments = SpeedPaceCalculator.buildSegments(points, metric = true)
+
+        assertEquals("full km across the bridge", 1.0f, segments.first().distanceKm, 0.001f)
+        val total = segments.sumOf { it.distanceKm.toDouble() }
+        assertEquals(SpeedPaceCalculator.totalDistanceMeters(points) / 1000.0, total, 0.005)
+    }
+
+    @Test
+    fun `buildSegments still restarts after a plain gap`() {
+        val points = trackWithBridge(count = 12, bridgeAt = 6, bridgeM = 100f)
+            .mapIndexed { i, p -> if (i == 6) p.copy(bridgeMeters = null) else p }
+
+        val segments = SpeedPaceCalculator.buildSegments(points, metric = true)
+
+        assertTrue("partial km before the gap", segments.first().distanceKm < 0.6f)
+    }
+
+    @Test
+    fun `buildElevationSeries counts a bridge`() {
+        val points = trackWithBridge(count = 3, bridgeAt = 1, bridgeM = 500f)
+
+        val series = SpeedPaceCalculator.buildElevationSeries(points)
+
+        assertEquals(0.5f, series[1].distanceKm, 0.001f)
+        assertEquals(SpeedPaceCalculator.totalDistanceMeters(points) / 1000f, series[2].distanceKm, 0.001f)
+    }
+
+    @Test
+    fun `buildSegmentsFromPlan counts a bridge towards a distance goal`() {
+        val points = trackWithBridge(count = 12, bridgeAt = 3, bridgeM = 100f)
+        val plan = listOf(
+            WorkoutTemplateSegment(templateId = 1, sortOrder = 0, title = "1 km", goalType = SegmentGoalType.DISTANCE, distanceMeters = 500f),
+            WorkoutTemplateSegment(templateId = 1, sortOrder = 1, title = "rest", goalType = SegmentGoalType.DISTANCE, distanceMeters = 600f)
+        )
+
+        val segments = SpeedPaceCalculator.buildSegmentsFromPlan(points, plan, metric = true)
+
+        // The 500 m goal is reached 500 m into the track, bridge included (point 5)
+        assertEquals(5, segments.first().endIndex)
+        assertEquals(250_000L, segments.first().durationMs)
     }
 }

@@ -54,15 +54,15 @@ object WorkoutDataCleaner {
 
             if (filteredLocation != null) {
                 val afterGap = forceGap && previousLocation != null
-                val cleanedTrackPoint = TrackPoint(
+                // copy: bridge, steps and cadence survive cleaning
+                val cleanedTrackPoint = trackPoint.copy(
                     latitude = filteredLocation.latitude,
                     longitude = filteredLocation.longitude,
                     timestamp = filteredLocation.time,
                     accuracy = filteredLocation.accuracy,
                     speed = filteredLocation.speed,
                     altitude = filteredLocation.altitude,
-                    afterGap = afterGap,
-                    source = trackPoint.source
+                    afterGap = afterGap
                 )
                 cleanedPoints.add(cleanedTrackPoint)
                 previousLocation = filteredLocation
@@ -119,7 +119,8 @@ object WorkoutDataCleaner {
                     prev.copy(afterGap = false),
                     point.copy(afterGap = false)
                 )
-                point.copy(afterGap = gap)
+                // A bridge over a dropped stretch stays one: its distance is not in the geometry
+                if (point.bridgeMeters != null) point.copy(afterGap = true) else point.copy(afterGap = gap)
             }
         }
         

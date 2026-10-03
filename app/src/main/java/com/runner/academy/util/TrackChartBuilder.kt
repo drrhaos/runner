@@ -87,9 +87,10 @@ object TrackChartBuilder {
         var cumulativeKm = 0f
 
         for (i in points.indices) {
-            if (i > 0 && !TrackGeometry.isTrackGapStep(points[i - 1], points[i])) {
+            if (i > 0) {
+                // Bridges over a dropped stretch count, plain gaps add nothing
                 cumulativeKm += SpeedPaceUnits.metersToKm(
-                    TrackGeometry.distanceMeters(points[i - 1], points[i])
+                    TrackGeometry.stepDistanceMeters(points[i - 1], points[i])
                 )
             }
             val altitude = points[i].altitude?.toFloat() ?: continue
@@ -142,14 +143,15 @@ object TrackChartBuilder {
             if (segments.size >= MAX_DISTANCE_SEGMENTS) break
             val prev = points[i - 1]
             val point = points[i]
-            if (TrackGeometry.isTrackGapStep(prev, point)) {
+            // A bridge over a dropped stretch keeps the split running; a plain gap restarts it
+            if (TrackGeometry.isTrackGapStep(prev, point) && !TrackGeometry.isBridgeStep(point)) {
                 closePartial(i - 1, prev.timestamp)
                 currentSegmentDistanceKm = 0f
                 segmentStartTime = point.timestamp
                 segmentStartIndex = i
                 continue
             }
-            val stepKm = SpeedPaceUnits.metersToKm(TrackGeometry.distanceMeters(prev, point))
+            val stepKm = SpeedPaceUnits.metersToKm(TrackGeometry.stepDistanceMeters(prev, point))
             if (stepKm <= 0f) {
                 if (i == points.lastIndex) {
                     closePartial(i, point.timestamp)
@@ -198,6 +200,7 @@ object TrackChartBuilder {
     /**
      * Splits the track by template interval goals, matching [IntervalEngine].
      * Gap steps do not add distance; their wall-clock delta is excluded from elapsed.
+     * Bridges over a dropped stretch count both (the runner kept going).
      */
     fun buildSegmentsFromPlan(
         points: List<TrackPoint>,
@@ -254,9 +257,9 @@ object TrackChartBuilder {
             val prev = points[i - 1]
             val point = points[i]
             val stepMs = (point.timestamp - prev.timestamp).coerceAtLeast(0L)
-            if (!TrackGeometry.isTrackGapStep(prev, point)) {
+            if (!TrackGeometry.isTrackGapStep(prev, point) || TrackGeometry.isBridgeStep(point)) {
                 elapsedMs += stepMs
-                distanceM += TrackGeometry.distanceMeters(prev, point)
+                distanceM += TrackGeometry.stepDistanceMeters(prev, point)
             }
 
             while (planIndex < planSegments.lastIndex) {
