@@ -3,6 +3,7 @@ package com.runner.academy.gpsreplay
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.service.GpsLocationProcessor
+import com.runner.academy.util.StepDistanceEstimator
 import com.runner.academy.util.TrackGeometry
 import com.runner.academy.util.TrackSanitizer
 import kotlin.math.cos
@@ -27,14 +28,20 @@ object GpsReplay {
 
     /**
      * Mirrors the per-fix loop of `WorkoutTrackingService.updateLocation`: one
-     * [GpsLocationProcessor] per run, reset at the start, fed every fix; the service's session
-     * takes the returned lists (on accepted fixes and on a retracted false-signal start) and adds
-     * the segment distance of accepted fixes, bridges included.
+     * [GpsLocationProcessor] per run, reset at the start with the run's frozen [stepDistance],
+     * fed every fix with the steps and cadence of that moment; the service's session takes the
+     * returned lists (on accepted fixes and on a retracted false-signal start) and adds
+     * [GpsLocationProcessor.ProcessResult.distanceDeltaMeters] of every fix (segments, the rest
+     * of bridges and lead-ins, step distance counted during an episode).
      * Keep in sync with the service when that loop changes.
      */
-    fun live(raw: List<TrackPoint>, type: WorkoutType = WorkoutType.EASY_RUN): ReplayResult {
+    fun live(
+        raw: List<TrackPoint>,
+        type: WorkoutType = WorkoutType.EASY_RUN,
+        stepDistance: StepDistanceEstimator? = null
+    ): ReplayResult {
         val processor = GpsLocationProcessor()
-        processor.reset()
+        processor.reset(stepDistance = stepDistance)
         var distance = 0.0
         var gaps = 0
         var trackPoints = mutableListOf<org.osmdroid.util.GeoPoint>()
@@ -43,20 +50,26 @@ object GpsReplay {
 
         for (point in raw) {
             val location = TrackSanitizer.toLocation(point)
-            val result = processor.processLocation(location, type, trackPoints, trackData, rawData)
+            val result = processor.processLocation(
+                location, type, trackPoints, trackData, rawData,
+                steps = point.steps,
+                cadence = point.cadence
+            )
             trackPoints = result.trackPoints
             trackData = result.trackDataPoints
             rawData = result.rawTrackDataPoints
-            if (result is GpsLocationProcessor.ProcessResult.Accepted) {
-                distance += result.segmentDistanceMeters
-                if (result.afterGap) gaps++
-            }
+            distance += result.distanceDeltaMeters
+            if (result is GpsLocationProcessor.ProcessResult.Accepted && result.afterGap) gaps++
         }
         return ReplayResult(distance, trackData, gaps)
     }
 
-    fun saved(raw: List<TrackPoint>, type: WorkoutType = WorkoutType.EASY_RUN): ReplayResult {
-        val points = TrackSanitizer.sanitize(raw, type)
+    fun saved(
+        raw: List<TrackPoint>,
+        type: WorkoutType = WorkoutType.EASY_RUN,
+        stepDistance: StepDistanceEstimator? = null
+    ): ReplayResult {
+        val points = TrackSanitizer.sanitize(raw, type, stepDistance)
         return ReplayResult(
             distanceMeters = TrackGeometry.totalDistanceMeters(points).toDouble(),
             points = points,
@@ -89,6 +102,11 @@ data class SyntheticRun(
     val outlierOffsetM: Double = 300.0,
     /** False-signal episode (spoofing / jamming), see [Spoof]. */
     val spoof: Spoof? = null,
+    /**
+     * True step length in metres; set, every fix carries the steps since the start (the true
+     * distance moved / stride) and the cadence. Null: no step sensor.
+     */
+    val strideM: Double? = null,
     val seed: Long = 42L
 ) {
     /**
@@ -145,6 +163,9 @@ data class SyntheticRun(
             return routeLengthM - (after - before) + hypot(x2 - x1, y2 - y1)
         }
 
+    /** Cadence of the run with [strideM], steps/min. */
+    val cadenceSpm: Double? get() = strideM?.let { 60.0 * speedMps / it }
+
     /** Metres actually covered while no fixes arrive (not counted: the track restarts after a gap). */
     val gapDistanceM: Double
         get() = gapSec?.let { range ->
@@ -177,7 +198,13 @@ data class SyntheticRun(
                     timeMs = START_TIME + (t * 1000).toLong(),
                     speed = burst?.speedMps ?: if (moving && noisy) speedMps.toFloat() else 0f,
                     altitude = burst?.altitudeM ?: ALTITUDE_M
-                )
+                ).let { p ->
+                    val stride = strideM ?: return@let p
+                    p.copy(
+                        steps = (movedAt(t) / stride).toInt(),
+                        cadence = if (moving) (60.0 * speedMps / stride).toFloat() else 0f
+                    )
+                }
             }
             t += stepSec
         }
