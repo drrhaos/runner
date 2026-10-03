@@ -6,10 +6,9 @@ import kotlin.math.abs
 /**
  * GPS settings for workout tracking.
  *
- * Dual profile:
- *  - Screen on: ~1 Hz, short delivery delay (live map).
- *  - Screen off: ~2 s base, long [maxUpdateDelay] batching to cut wakeups
- *    while still collecting dense enough points for smooth tracks.
+ * Dual profile, both delivered live (no batching, see [MAX_UPDATE_DELAY_MS]):
+ *  - Screen on: ~1 Hz (live map).
+ *  - Screen off: ~2 s base, still dense enough for smooth tracks.
  * Turns temporarily densify sampling so curves stay smooth.
  */
 object GpsConfig {
@@ -36,18 +35,13 @@ object GpsConfig {
     const val MIN_DISTANCE_SCREEN_OFF = 3f
 
     /**
-     * Batch delivery window while display is off (reduces app wakeups).
-     * Honoured by LocationManager only on API 31+ with GNSS HAL batching; older
-     * devices ignore it and deliver every fix live.
+     * No batching, screen on or off. On API 31+ the platform GNSS provider switches the chip to
+     * hardware batching once maxUpdateDelay >= 2 * interval. With the screen on the chip held
+     * fixes long enough for the watchdog to flag GPS as lost; with the screen off (Samsung S22,
+     * 20 s window) it stopped delivering for minutes and came back with a cold, jumpy fix.
+     * The service holds a wake lock during a workout, so batching would save no wakeups anyway.
      */
-    const val SCREEN_OFF_MAX_UPDATE_DELAY_MS = 20_000L
-
-    /**
-     * Display on: no batching (live map). On API 31+ the platform GNSS provider switches the
-     * chip to hardware batching once maxUpdateDelay >= 2 * interval, and the chip may then hold
-     * fixes long enough for the watchdog to flag GPS as lost.
-     */
-    const val SCREEN_ON_MAX_UPDATE_DELAY_MS = 0L
+    const val MAX_UPDATE_DELAY_MS = 0L
 
     /** Absolute bearing delta (degrees) that counts as a turn. */
     const val TURN_BEARING_DELTA_DEG = 20f
@@ -60,8 +54,8 @@ object GpsConfig {
 
     /**
      * Adaptive interval from current speed (km/h) and display state.
-     * [turning] densifies sampling only with the screen on: screen-off fixes arrive in
-     * batches, so a turn is seen after the fact and re-registering could drop the batch.
+     * [turning] densifies sampling only with the screen on: with the screen off nobody watches
+     * the curve being drawn, and each densify re-registers the request.
      */
     fun getAdaptiveInterval(
         currentSpeed: Float,
@@ -101,15 +95,10 @@ object GpsConfig {
     ): LocationRequestCompat {
         val interval = intervalMs.coerceAtLeast(MIN_UPDATE_INTERVAL)
         val minDistance = if (screenInteractive) MIN_DISTANCE else MIN_DISTANCE_SCREEN_OFF
-        val maxDelay = if (screenInteractive) {
-            SCREEN_ON_MAX_UPDATE_DELAY_MS
-        } else {
-            SCREEN_OFF_MAX_UPDATE_DELAY_MS.coerceAtLeast(interval * 2)
-        }
         return LocationRequestCompat.Builder(interval)
             .setQuality(LocationRequestCompat.QUALITY_HIGH_ACCURACY)
             .setMinUpdateIntervalMillis(minOf(MIN_UPDATE_INTERVAL, interval))
-            .setMaxUpdateDelayMillis(maxDelay)
+            .setMaxUpdateDelayMillis(MAX_UPDATE_DELAY_MS)
             .setMinUpdateDistanceMeters(minDistance)
             .build()
     }
@@ -174,7 +163,7 @@ object GpsConfig {
         return LocationRequestCompat.Builder(2000L)
             .setQuality(LocationRequestCompat.QUALITY_HIGH_ACCURACY)
             .setMinUpdateIntervalMillis(MIN_UPDATE_INTERVAL)
-            .setMaxUpdateDelayMillis(SCREEN_ON_MAX_UPDATE_DELAY_MS)
+            .setMaxUpdateDelayMillis(MAX_UPDATE_DELAY_MS)
             // Standing still must still receive accuracy improvements
             .setMinUpdateDistanceMeters(0f)
             .build()
