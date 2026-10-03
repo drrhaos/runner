@@ -17,6 +17,7 @@ import org.osmdroid.events.MapListener
 import org.osmdroid.events.ScrollEvent
 import org.osmdroid.events.ZoomEvent
 import com.runner.academy.R
+import com.runner.academy.data.GpsStatus
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.util.GpsFilter
@@ -85,6 +86,8 @@ class MapManager(
     private var committedSegments: List<List<GeoPoint>> = emptyList()
     /** Dashed bridges over dropped false-signal stretches (see [TrackRuns]). */
     private var committedBridges: List<Pair<GeoPoint, GeoPoint>> = emptyList()
+    /** True while the "me" marker and live tip are hidden ([hidesPosition]). */
+    private var positionHidden = false
     private var lastTrackSignature: String? = null
     private var displayedTip: GeoPoint? = null
     private var tipAnimStart: GeoPoint? = null
@@ -99,7 +102,7 @@ class MapManager(
     /** While > now, scroll/zoom from animateTo must not be treated as user pan. */
     private var ignoreInteractionUntilElapsed = 0L
     /** Force an immediate center when GPS becomes usable after searching/lost. */
-    private var lastAutoCenterGpsStatus: com.runner.academy.data.GpsStatus? = null
+    private var lastAutoCenterGpsStatus: GpsStatus? = null
     private var hasCenteredOnCurrentFix = false
 
     // Auto-center runnable
@@ -214,7 +217,7 @@ class MapManager(
         sessionLocationProvider.onLocationUpdated = { location ->
             callbacks.onLocationFix(location)
             // Center as soon as the first real fix arrives (before or during workout)
-            if (!hasCenteredOnCurrentFix) {
+            if (!hasCenteredOnCurrentFix && !positionHidden) {
                 hasCenteredOnCurrentFix = true
                 centerOnLocation(location, emptyList())
             }
@@ -334,10 +337,7 @@ class MapManager(
 
     private fun autoCenterOnLocation() {
         val session = callbacks.getCurrentWorkoutSession()
-        val location = session?.currentLocation
-            ?: locationOverlay?.lastFix
-            ?: sessionLocationProvider.getLastKnownLocation()
-            ?: return
+        val location = centerTarget(session) ?: return
         centerOnLocation(location, session?.trackPoints.orEmpty())
     }
 
@@ -348,11 +348,25 @@ class MapManager(
         hasCenteredOnCurrentFix = true
 
         val session = callbacks.getCurrentWorkoutSession()
-        val location = session?.currentLocation
+        val location = centerTarget(session) ?: return
+        centerOnLocation(location, session?.trackPoints.orEmpty())
+    }
+
+    /**
+     * Where the camera goes on re-center. While the position is hidden every live fix may be
+     * false (the pre-workout fallback included), so only the last point of the drawn track counts.
+     */
+    private fun centerTarget(session: WorkoutSession?): Location? {
+        if (positionHidden) {
+            val last = committedSegments.lastOrNull()?.lastOrNull() ?: return null
+            return Location("track").apply {
+                latitude = last.latitude
+                longitude = last.longitude
+            }
+        }
+        return session?.currentLocation
             ?: locationOverlay?.lastFix
             ?: sessionLocationProvider.getLastKnownLocation()
-            ?: return
-        centerOnLocation(location, session?.trackPoints.orEmpty())
     }
 
     private fun centerOnLocation(location: Location, trackPoints: List<GeoPoint>) {
@@ -416,9 +430,19 @@ class MapManager(
      * Draws committed track runs (solid, dashed across bridged stretches, nothing across
      * plain gaps) and a live tip that smoothly stretches to the person-icon rim at
      * [currentLocation].
+     *
+     * While [gpsStatus] says the fix is false ([hidesPosition]) the session location is not
+     * shown at all: the "me" marker is hidden and the tip retracts to the last good point.
      */
-    fun updateTrackFromDataPoints(trackDataPoints: List<TrackPoint>, currentLocation: Location?) {
-        currentLocation?.let { sessionLocationProvider.publish(it) }
+    fun updateTrackFromDataPoints(
+        trackDataPoints: List<TrackPoint>,
+        currentLocation: Location?,
+        gpsStatus: GpsStatus? = null
+    ) {
+        val hidden = hidesPosition(gpsStatus)
+        setPositionHidden(hidden)
+        val shownLocation = currentLocation.takeUnless { hidden }
+        shownLocation?.let { sessionLocationProvider.publish(it) }
 
         val signature = trackSignature(trackDataPoints)
         if (signature != lastTrackSignature) {
@@ -434,7 +458,7 @@ class MapManager(
         // Tip animation only while map is resumed (avoids setPoints after osmdroid detach).
         if (!tipFramesEnabled) return
 
-        if (currentLocation == null) {
+        if (shownLocation == null) {
             cancelTipAnimation()
             displayedTip = null
             tipAnimTarget = null
@@ -442,7 +466,7 @@ class MapManager(
             return
         }
 
-        val markerCenter = GeoPoint(currentLocation.latitude, currentLocation.longitude)
+        val markerCenter = GeoPoint(shownLocation.latitude, shownLocation.longitude)
         val lastCommitted = committedSegments.lastOrNull()?.lastOrNull()
         val tipTarget = if (lastCommitted != null) {
             tipAtIconEdge(lastCommitted, markerCenter)
@@ -456,6 +480,14 @@ class MapManager(
         if (points.isEmpty()) return "0"
         val last = points.last()
         return "${points.size}:${last.timestamp}:${last.latitude}:${last.longitude}:${last.afterGap}:${last.bridgeMeters}"
+    }
+
+    /** Shows or hides the "me" marker; the overlay keeps its provider so it reappears at once. */
+    private fun setPositionHidden(hidden: Boolean) {
+        if (hidden == positionHidden) return
+        positionHidden = hidden
+        locationOverlay?.isEnabled = !hidden
+        mapView.invalidate()
     }
 
     private fun rebuildCommittedPolylines() {
@@ -611,9 +643,10 @@ class MapManager(
         val location = session.currentLocation ?: return
         if (!isGpsUsableForCenter(session.gpsStatus)) {
             // Searching / lost again — allow a fresh snap when signal returns
-            if (session.gpsStatus == com.runner.academy.data.GpsStatus.SEARCHING ||
-                session.gpsStatus == com.runner.academy.data.GpsStatus.LOST ||
-                session.gpsStatus == com.runner.academy.data.GpsStatus.DENIED
+            if (session.gpsStatus == GpsStatus.SEARCHING ||
+                session.gpsStatus == GpsStatus.LOST ||
+                session.gpsStatus == GpsStatus.DENIED ||
+                session.gpsStatus == GpsStatus.UNRELIABLE
             ) {
                 hasCenteredOnCurrentFix = false
             }
@@ -624,8 +657,8 @@ class MapManager(
         val acquiredFix =
             !hasCenteredOnCurrentFix ||
                 (lastAutoCenterGpsStatus != null &&
-                    lastAutoCenterGpsStatus != com.runner.academy.data.GpsStatus.FOUND &&
-                    session.gpsStatus == com.runner.academy.data.GpsStatus.FOUND)
+                    lastAutoCenterGpsStatus != GpsStatus.FOUND &&
+                    session.gpsStatus == GpsStatus.FOUND)
 
         lastAutoCenterGpsStatus = session.gpsStatus
 
@@ -645,15 +678,21 @@ class MapManager(
         }
     }
 
-    private fun isGpsUsableForCenter(status: com.runner.academy.data.GpsStatus): Boolean {
+    private fun isGpsUsableForCenter(status: GpsStatus): Boolean {
         return when (status) {
-            com.runner.academy.data.GpsStatus.FOUND,
-            com.runner.academy.data.GpsStatus.STRONG,
-            com.runner.academy.data.GpsStatus.MEDIUM,
-            com.runner.academy.data.GpsStatus.WEAK -> true
-            else -> false
+            GpsStatus.FOUND,
+            GpsStatus.STRONG,
+            GpsStatus.MEDIUM,
+            GpsStatus.WEAK -> true
+            GpsStatus.SEARCHING,
+            GpsStatus.LOST,
+            GpsStatus.DENIED,
+            GpsStatus.UNRELIABLE -> false
         }
     }
+
+    /** A false (spoofed / jammed) fix is never drawn as the runner's position. */
+    private fun hidesPosition(status: GpsStatus?): Boolean = status == GpsStatus.UNRELIABLE
 
     private fun getDirectionBearing(trackPoints: List<GeoPoint>): Float {
         if (trackPoints.size < 2) return -1f
