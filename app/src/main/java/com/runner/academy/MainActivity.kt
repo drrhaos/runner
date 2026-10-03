@@ -2,7 +2,9 @@ package com.runner.academy
 
 import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.navigation.NavigationView
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -10,13 +12,16 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.runner.academy.databinding.ActivityMainBinding
+import com.runner.academy.util.PowerSaveCheck
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
+    private var powerSaveWarning: AlertDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +50,11 @@ class MainActivity : AppCompatActivity() {
         handleOpenTrackingIntent(intent)
     }
 
+    override fun onStart() {
+        super.onStart()
+        showPowerSaveWarningIfNeeded()
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -59,6 +69,36 @@ class MainActivity : AppCompatActivity() {
             navController.navigate(R.id.nav_tracking)
         } catch (e: Exception) {
             Log.w(TAG, "Could not navigate to tracking: ${e.message}")
+        }
+    }
+
+    /**
+     * Battery saver can stop or throttle GPS with the screen off, which the location
+     * foreground service does not prevent. Unlike the one-time battery optimization hint,
+     * this warns on every launch: the mode is toggled often and a run is exactly when it hurts.
+     * Checked in onStart so a warm start and a restore after process death are covered too.
+     */
+    private fun showPowerSaveWarningIfNeeded() {
+        if (powerSaveWarning?.isShowing == true) return
+        if (!PowerSaveCheck.affectsScreenOffTracking(PowerSaveCheck.read(this))) return
+        powerSaveWarning = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.power_save_warning_title)
+            .setMessage(R.string.power_save_warning_message)
+            .setPositiveButton(R.string.power_save_warning_open_settings) { _, _ -> openBatterySaverSettings() }
+            .setNegativeButton(R.string.power_save_warning_dismiss, null)
+            .show()
+    }
+
+    private fun openBatterySaverSettings() {
+        try {
+            startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS))
+        } catch (e: Exception) {
+            Log.w(TAG, "Battery saver settings unavailable: ${e.message}")
+            try {
+                startActivity(Intent(Settings.ACTION_SETTINGS))
+            } catch (e2: Exception) {
+                Log.w(TAG, "Settings unavailable: ${e2.message}")
+            }
         }
     }
 

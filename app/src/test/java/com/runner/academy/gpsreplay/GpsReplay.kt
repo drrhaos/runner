@@ -28,12 +28,14 @@ object GpsReplay {
 
     /**
      * Mirrors the per-fix loop of `WorkoutTrackingService.updateLocation`: the previous
-     * accepted fix is the reference, rejected fixes do not move it.
+     * accepted fix is the reference, rejected fixes do not move it. Accepted fixes and
+     * near-duplicates (`refreshGapClock`) move the gap clock.
      * Keep in sync with the service when that loop changes.
      */
     fun live(raw: List<TrackPoint>, type: WorkoutType = WorkoutType.EASY_RUN): ReplayResult {
         val processor = GpsLocationProcessor()
         var last: Location? = null
+        var lastValidFixTimeMs: Long? = null
         var distance = 0.0
         var gaps = 0
         var trackPoints = mutableListOf<org.osmdroid.util.GeoPoint>()
@@ -41,13 +43,15 @@ object GpsReplay {
         var rawData = mutableListOf<TrackPoint>()
 
         for (point in raw) {
+            val location = TrackSanitizer.toLocation(point)
             val result = processor.processLocation(
-                TrackSanitizer.toLocation(point),
+                location,
                 last,
                 type,
                 trackPoints,
                 trackData,
-                rawData
+                rawData,
+                lastValidFixTimeMs = lastValidFixTimeMs
             ) ?: continue
             trackPoints = result.trackPoints
             trackData = result.trackDataPoints
@@ -56,6 +60,9 @@ object GpsReplay {
                 distance += result.segmentDistanceMeters
                 if (result.afterGap) gaps++
                 last = result.filteredLocation
+                lastValidFixTimeMs = location.time
+            } else if (result is GpsLocationProcessor.ProcessResult.Rejected && result.refreshGapClock) {
+                lastValidFixTimeMs = location.time
             }
         }
         return ReplayResult(distance, trackData, gaps)
@@ -81,7 +88,10 @@ data class SyntheticRun(
     val route: List<Pair<Double, Double>>,
     val speedMps: Double = 3.3,
     val intervalMs: Long = 1_000L,
+    /** Seconds standing still (fixes keep coming) once [standStillAtM] metres are covered. */
     val standStillSec: Int = 0,
+    /** 0 = before the run; mid-route = a traffic light. */
+    val standStillAtM: Double = 0.0,
     val noiseInnovationM: Double = 0.4,
     val noiseDecay: Double = 0.95,
     val accuracyM: Float = 6f,
@@ -159,7 +169,7 @@ data class SyntheticRun(
                 val (x, y) = spoofed ?: positionAt(movedAt(t))
                 val noisy = spoofed == null || spoof?.noisy == true
                 val outlier = if (second in outlierAtSec && t - second < stepSec) outlierOffsetM else 0.0
-                val moving = t >= standStillSec
+                val moving = !isStanding(t)
                 points += point(
                     x + (if (noisy) errX else 0.0) + outlier,
                     y + (if (noisy) errY else 0.0),
@@ -194,8 +204,20 @@ data class SyntheticRun(
         return route.zipWithNext().minOf { (a, b) -> distanceToSegment(x, y, a, b) }
     }
 
-    private fun movedAt(t: Number): Double =
-        ((t.toDouble() - standStillSec).coerceAtLeast(0.0) * speedMps).coerceAtMost(routeLengthM)
+    private fun movedAt(t: Number): Double {
+        val unstopped = t.toDouble() * speedMps
+        val moved = if (unstopped > standStillAtM) {
+            (unstopped - standStillSec * speedMps).coerceAtLeast(standStillAtM)
+        } else {
+            unstopped
+        }
+        return moved.coerceAtMost(routeLengthM)
+    }
+
+    private fun isStanding(t: Double): Boolean {
+        val from = standStillAtM / speedMps
+        return t >= from && t < from + standStillSec
+    }
 
     private fun positionAt(distance: Double): Pair<Double, Double> {
         var left = distance
