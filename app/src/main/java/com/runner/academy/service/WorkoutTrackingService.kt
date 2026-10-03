@@ -149,11 +149,6 @@ class WorkoutTrackingService : Service() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var periodicLocationJob: Job? = null
     private var lastLocationTime: Long = 0
-    /**
-     * Fix time of the last valid fix, accepted or near-duplicate: standing still keeps it
-     * moving, so a stop at a traffic light is not a time gap (see [GpsFilter.isGapResume]).
-     */
-    private var lastValidFixTimeMs: Long? = null
     private var lastAppliedAdaptiveIntervalMs: Long = -1L
     private var lastAppliedScreenInteractive: Boolean? = null
     private var workoutTimerJob: Job? = null
@@ -281,26 +276,23 @@ class WorkoutTrackingService : Service() {
 
         if (isCurrentlyTracking && !sessionManager.getSession().isPaused) {
             val session = sessionManager.getSession()
-            // Time gaps are detected from fix timestamps inside GpsFilter.isGapResume,
+            // Time gaps are detected from fix timestamps inside the processor's TrackFilter,
             // counted from the last valid fix (near-duplicates included).
             // Wall-clock age must not be used: flushed or delayed fixes arrive late.
             val resumeAfterGap = session.gpsStatus == GpsStatus.LOST
 
             val result = gpsProcessor.processLocation(
                 location,
-                lastLocation,
                 selectedWorkoutType,
                 session.trackPoints.toMutableList(),
                 session.trackDataPoints.toMutableList(),
                 session.rawTrackDataPoints.toMutableList(),
-                resumeAfterGap = resumeAfterGap,
-                lastValidFixTimeMs = lastValidFixTimeMs
+                resumeAfterGap = resumeAfterGap
             )
 
             diagnostics.recordFix(location, result.toFixResult())
 
             when (result) {
-                null -> { /* point filtered out entirely */ }
                 is GpsLocationProcessor.ProcessResult.Accepted -> {
                     val segmentDistanceMeters = result.segmentDistanceMeters
                     sessionManager.updateMetricsFromLocation(
@@ -324,13 +316,11 @@ class WorkoutTrackingService : Service() {
 
                     lastLocation = filtered
                     lastLocationTime = System.currentTimeMillis()
-                    lastValidFixTimeMs = location.time
                 }
 
                 is GpsLocationProcessor.ProcessResult.Rejected -> {
                     if (result.refreshGapClock) {
                         lastLocationTime = System.currentTimeMillis()
-                        lastValidFixTimeMs = location.time
                         // Near-duplicate fix: move map tip / icon without committing a track point
                         sessionManager.updateLocationOnly(
                             currentLocation = location,
@@ -391,7 +381,7 @@ class WorkoutTrackingService : Service() {
         val preStartSeed = lastLocation?.takeIf { isUsablePreStartLocation(it) }
         lastLocation = null
         lastLocationTime = 0L
-        lastValidFixTimeMs = null
+        gpsProcessor.reset()
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
 
@@ -493,8 +483,8 @@ class WorkoutTrackingService : Service() {
         intervalCursor = checkpoint.intervalCursor()
         lastLocationTime = checkpoint.lastLocationTime
         lastLocation = checkpoint.toSession().currentLocation
-        // Not checkpointed: null falls back to the anchor's own time
-        lastValidFixTimeMs = null
+        // The gap clock is not checkpointed: it falls back to the anchor's own time
+        gpsProcessor.reset(anchor = lastLocation)
 
         val restoredSession = checkpoint.toSession().let { session ->
             // Recompute elapsed wall time after gap so the clock doesn't freeze at kill time
@@ -1102,8 +1092,7 @@ class WorkoutTrackingService : Service() {
 }
 
 /** The live filter's verdict as recorded in GPS diagnostics. */
-private fun GpsLocationProcessor.ProcessResult?.toFixResult(): FixResult = when (this) {
-    null -> FixResult.REJECTED
+private fun GpsLocationProcessor.ProcessResult.toFixResult(): FixResult = when (this) {
     is GpsLocationProcessor.ProcessResult.Accepted -> FixResult.ACCEPTED
     is GpsLocationProcessor.ProcessResult.Rejected ->
         if (refreshGapClock) FixResult.NEAR_DUPLICATE else FixResult.REJECTED

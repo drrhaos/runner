@@ -1,6 +1,5 @@
 package com.runner.academy.gpsreplay
 
-import android.location.Location
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.service.GpsLocationProcessor
@@ -27,15 +26,14 @@ data class ReplayResult(
 object GpsReplay {
 
     /**
-     * Mirrors the per-fix loop of `WorkoutTrackingService.updateLocation`: the previous
-     * accepted fix is the reference, rejected fixes do not move it. Accepted fixes and
-     * near-duplicates (`refreshGapClock`) move the gap clock.
+     * Mirrors the per-fix loop of `WorkoutTrackingService.updateLocation`: one
+     * [GpsLocationProcessor] per run, reset at the start, fed every fix; the service's session
+     * takes the returned lists and adds the segment distance of accepted fixes.
      * Keep in sync with the service when that loop changes.
      */
     fun live(raw: List<TrackPoint>, type: WorkoutType = WorkoutType.EASY_RUN): ReplayResult {
         val processor = GpsLocationProcessor()
-        var last: Location? = null
-        var lastValidFixTimeMs: Long? = null
+        processor.reset()
         var distance = 0.0
         var gaps = 0
         var trackPoints = mutableListOf<org.osmdroid.util.GeoPoint>()
@@ -44,25 +42,13 @@ object GpsReplay {
 
         for (point in raw) {
             val location = TrackSanitizer.toLocation(point)
-            val result = processor.processLocation(
-                location,
-                last,
-                type,
-                trackPoints,
-                trackData,
-                rawData,
-                lastValidFixTimeMs = lastValidFixTimeMs
-            ) ?: continue
+            val result = processor.processLocation(location, type, trackPoints, trackData, rawData)
             trackPoints = result.trackPoints
             trackData = result.trackDataPoints
             rawData = result.rawTrackDataPoints
             if (result is GpsLocationProcessor.ProcessResult.Accepted) {
                 distance += result.segmentDistanceMeters
                 if (result.afterGap) gaps++
-                last = result.filteredLocation
-                lastValidFixTimeMs = location.time
-            } else if (result is GpsLocationProcessor.ProcessResult.Rejected && result.refreshGapClock) {
-                lastValidFixTimeMs = location.time
             }
         }
         return ReplayResult(distance, trackData, gaps)
