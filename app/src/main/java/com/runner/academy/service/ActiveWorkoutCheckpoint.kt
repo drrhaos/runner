@@ -49,7 +49,13 @@ data class ActiveWorkoutCheckpoint(
     val intervalLastUpcomingWarnedIndex: Int = -1,
     val lastLocationTime: Long = 0L,
     val lastUpdateTime: Long = 0L,
-    val savedAt: Long = 0L
+    val savedAt: Long = 0L,
+    /** Steps since the start when saved; null without steps (and in older checkpoints). */
+    val steps: Int? = null,
+    /** Step distance of an open false-signal episode, already in [distance]. */
+    val pendingStepMeters: Float = 0f,
+    /** See [WorkoutSession.strideModelState]. */
+    val strideModelState: String? = null
 ) {
     fun intervalCursor(): IntervalCursor? {
         if (intervalSegmentsJson.isNullOrBlank()) return null
@@ -92,7 +98,8 @@ data class ActiveWorkoutCheckpoint(
             trackPoints = points,
             trackDataPoints = trackDataPoints,
             rawTrackDataPoints = rawTrackDataPoints,
-            currentLocation = location
+            currentLocation = location,
+            strideModelState = strideModelState
         )
     }
 
@@ -107,7 +114,9 @@ data class ActiveWorkoutCheckpoint(
             intervalSegmentsJson: String?,
             intervalCursor: IntervalCursor?,
             lastLocationTime: Long,
-            lastUpdateTime: Long
+            lastUpdateTime: Long,
+            steps: Int? = null,
+            pendingStepMeters: Float = 0f
         ): ActiveWorkoutCheckpoint = ActiveWorkoutCheckpoint(
             isTracking = session.isTracking,
             isPaused = session.isPaused,
@@ -134,7 +143,10 @@ data class ActiveWorkoutCheckpoint(
             intervalLastUpcomingWarnedIndex = intervalCursor?.lastUpcomingWarnedIndex ?: -1,
             lastLocationTime = lastLocationTime,
             lastUpdateTime = lastUpdateTime,
-            savedAt = System.currentTimeMillis()
+            savedAt = System.currentTimeMillis(),
+            steps = steps,
+            pendingStepMeters = pendingStepMeters,
+            strideModelState = session.strideModelState
         )
     }
 }
