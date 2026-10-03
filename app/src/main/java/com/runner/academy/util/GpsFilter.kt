@@ -15,6 +15,9 @@ object GpsFilter {
     /** After this silence between fixes, the next valid point is treated as gap resume (no phantom distance). */
     const val GAP_RESUME_THRESHOLD_MS = 20_000L
 
+    /** A fix closer than this to the last track point is a near-duplicate, not a new point. */
+    const val MIN_POINT_DISTANCE_METERS = 2f
+
     /** Absolute jump that is never plausible between consecutive accepted fixes. */
     private const val MAX_DISTANCE_BETWEEN_POINTS = 800.0
 

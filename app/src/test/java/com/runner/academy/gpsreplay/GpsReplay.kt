@@ -41,7 +41,7 @@ object GpsReplay {
         stepDistance: StepDistanceEstimator? = null
     ): ReplayResult {
         val processor = GpsLocationProcessor()
-        processor.reset(stepDistance = stepDistance)
+        processor.reset(workoutType = type, stepDistance = stepDistance)
         var distance = 0.0
         var gaps = 0
         var trackPoints = mutableListOf<org.osmdroid.util.GeoPoint>()
@@ -51,7 +51,7 @@ object GpsReplay {
         for (point in raw) {
             val location = TrackSanitizer.toLocation(point)
             val result = processor.processLocation(
-                location, type, trackPoints, trackData, rawData,
+                location, trackPoints, trackData, rawData,
                 steps = point.steps,
                 cadence = point.cadence
             )

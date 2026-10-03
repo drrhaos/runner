@@ -1,7 +1,6 @@
 package com.runner.academy.util
 
 import android.location.Location
-import com.runner.academy.data.LocationSource
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutType
 
@@ -35,29 +34,7 @@ object TrackSanitizer {
             )
             if (verdict is TrackFilter.Verdict.Rejected && verdict.retractStart) result.clear()
             if (verdict !is TrackFilter.Verdict.Accepted) continue
-            val filteredLocation = verdict.location
-            val first = result.isEmpty()
-            result.add(
-                point.copy(
-                    latitude = filteredLocation.latitude,
-                    longitude = filteredLocation.longitude,
-                    accuracy = filteredLocation.accuracy,
-                    speed = filteredLocation.speed,
-                    altitude = filteredLocation.altitude,
-                    afterGap = verdict.afterGap,
-                    // A stored bridge or lead-in survives a re-sanitize of track points
-                    bridgeMeters = when {
-                        verdict.afterGap -> verdict.bridgeMeters ?: point.bridgeMeters
-                        first -> verdict.leadInMeters ?: point.bridgeMeters
-                        else -> null
-                    },
-                    source = if (verdict.bridgeFromSteps) {
-                        LocationSource.PEDOMETER.name
-                    } else {
-                        point.source.ifBlank { LocationSource.GPS.name }
-                    }
-                )
-            )
+            result.add(verdict.toTrackPoint(point, firstPoint = result.isEmpty()))
         }
         return result
     }

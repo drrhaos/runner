@@ -1,7 +1,6 @@
 package com.runner.academy.util
 
 import androidx.core.location.LocationRequestCompat
-import com.runner.academy.service.GpsLocationProcessor
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -162,6 +161,6 @@ class GpsConfigTest {
 
     @Test
     fun min_distance_leaves_near_duplicate_filtering_to_the_processor() {
-        assertTrue(GpsConfig.MIN_DISTANCE < GpsLocationProcessor.MIN_POINT_DISTANCE_METERS)
+        assertTrue(GpsConfig.MIN_DISTANCE < GpsFilter.MIN_POINT_DISTANCE_METERS)
     }
 }
