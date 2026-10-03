@@ -119,6 +119,15 @@ class StrideModel private constructor(
         return true
     }
 
+    /** An independent copy: learning on one does not change the other. */
+    fun copy(): StrideModel = StrideModel(alpha, beta, pAA, pAB, pBB, sampleCount)
+
+    /**
+     * Distance estimator over a frozen copy of the current state: what one run uses for its
+     * bridges while the run's good stretches keep teaching this model.
+     */
+    fun frozenEstimator(): StepDistanceEstimator = copy().let { frozen -> StepDistanceEstimator(frozen::distanceMeters) }
+
     /** Compact text form for preferences; read back with [deserialize]. */
     fun serialize(): String = listOf(alpha, beta, pAA, pAB, pBB)
         .joinToString(separator = SEPARATOR, prefix = VERSION + SEPARATOR, postfix = SEPARATOR + sampleCount) {
