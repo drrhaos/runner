@@ -1,6 +1,7 @@
 package com.runner.academy.util
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.hardware.Sensor
@@ -15,6 +16,13 @@ import androidx.core.content.ContextCompat
 object StepPermissionPolicy {
 
     const val RUNTIME_PERMISSION_SDK = Build.VERSION_CODES.Q
+
+    /**
+     * `ACTIVITY_RECOGNITION`. The constant is inlined from API 29; it is only checked or
+     * requested when [needsRuntimePermission] is true.
+     */
+    @SuppressLint("InlinedApi")
+    const val PERMISSION = Manifest.permission.ACTIVITY_RECOGNITION
 
     fun needsRuntimePermission(sdkInt: Int): Boolean = sdkInt >= RUNTIME_PERMISSION_SDK
 
@@ -47,7 +55,7 @@ object StepTrackingAccess {
     fun hasPermission(context: Context): Boolean =
         !needsRuntimePermission() || ContextCompat.checkSelfPermission(
             context,
-            Manifest.permission.ACTIVITY_RECOGNITION
+            StepPermissionPolicy.PERMISSION
         ) == PackageManager.PERMISSION_GRANTED
 
     fun shouldPromptAtWorkoutStart(context: Context): Boolean {

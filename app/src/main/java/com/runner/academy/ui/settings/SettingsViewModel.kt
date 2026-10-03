@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.runner.academy.R
+import com.runner.academy.util.StepTrackingAccess
 import com.runner.academy.util.ThemeUtils
 import com.runner.academy.util.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,9 @@ data class SettingsState(
     val unitSystem: String = "metric",
     val voiceFeedback: Boolean = false,
     val gpsDiagnostics: Boolean = false,
+    /** Steps really in use: enabled and permission granted (or not needed). */
+    val stepsForDistance: Boolean = false,
+    val hasStepSensor: Boolean = true,
     val themeMode: String = ThemeUtils.THEME_SYSTEM,
     val appLanguage: String = "en",
     val isFirstLaunch: Boolean = true,
@@ -52,6 +56,8 @@ class SettingsViewModel(
                 unitSystem = userPreferences.unitSystem,
                 voiceFeedback = userPreferences.voiceFeedback,
                 gpsDiagnostics = userPreferences.gpsDiagnostics,
+                stepsForDistance = StepTrackingAccess.isStepTrackingAllowed(context),
+                hasStepSensor = StepTrackingAccess.hasStepSensor(context),
                 themeMode = userPreferences.themeMode,
                 appLanguage = userPreferences.appLanguage,
                 isFirstLaunch = userPreferences.isFirstLaunch,
@@ -93,6 +99,28 @@ class SettingsViewModel(
     fun updateGpsDiagnostics(enabled: Boolean) {
         userPreferences.gpsDiagnostics = enabled
         _settingsState.value = _settingsState.value.copy(gpsDiagnostics = enabled)
+    }
+
+    /**
+     * Turns steps for distance on or off. Turning on without the permission is finished by
+     * the fragment's permission request, which reports back via [onStepPermissionResult].
+     */
+    fun updateStepsForDistance(enabled: Boolean) {
+        userPreferences.stepsForDistanceEnabled = enabled
+        refreshStepsForDistance()
+    }
+
+    fun onStepPermissionResult(granted: Boolean) {
+        userPreferences.stepPermissionAsked = true
+        if (!granted) userPreferences.stepsForDistanceEnabled = false
+        refreshStepsForDistance()
+    }
+
+    /** Re-reads the effective state, e.g. after the user changed permissions in system settings. */
+    fun refreshStepsForDistance() {
+        _settingsState.value = _settingsState.value.copy(
+            stepsForDistance = StepTrackingAccess.isStepTrackingAllowed(context)
+        )
     }
 
     fun updateVoiceFeedback(voiceFeedback: Boolean) {
