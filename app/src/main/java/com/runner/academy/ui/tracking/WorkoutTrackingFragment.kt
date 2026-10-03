@@ -501,8 +501,12 @@ class WorkoutTrackingFragment : Fragment() {
         val tracking = session.isTracking || session.isPaused
         gpsStatusUpdater?.sessionStatus = if (tracking) session.gpsStatus else null
 
-        // Map updates always run to keep track current (respect GPS gaps)
-        mapManager?.updateTrackFromDataPoints(session.trackDataPoints, session.currentLocation)
+        // Map updates always run to keep track current (respect GPS gaps; no position on a false signal)
+        mapManager?.updateTrackFromDataPoints(
+            session.trackDataPoints,
+            session.currentLocation,
+            session.gpsStatus.takeIf { tracking }
+        )
         mapManager?.updateMapOrientation(session)
         updateGpsBanner(session)
         intervalController?.update(session)
