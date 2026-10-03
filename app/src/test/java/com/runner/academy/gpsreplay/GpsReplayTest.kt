@@ -2,6 +2,7 @@ package com.runner.academy.gpsreplay
 
 import com.google.gson.JsonParser
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.gpsreplay.ReplayAsserts.assertDistance
 import com.runner.academy.util.TrackDataJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -11,7 +12,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
-import kotlin.math.abs
 
 /**
  * GPS track-quality regression tests: synthetic runs with known true distance are replayed
@@ -24,19 +24,8 @@ import kotlin.math.abs
 @Config(sdk = [28])
 class GpsReplayTest {
 
-    private fun assertDistance(label: String, expected: Double, actual: Double, tolerancePercent: Double) {
-        val errorPercent = abs(actual - expected) / expected * 100
-        assertTrue(
-            "$label: expected %.0f m ± %.1f%%, got %.0f m (%.2f%%)"
-                .format(expected, tolerancePercent, actual, errorPercent),
-            errorPercent <= tolerancePercent
-        )
-    }
-
-    private fun bothPipelines(run: SyntheticRun, type: WorkoutType = WorkoutType.EASY_RUN): List<Pair<String, ReplayResult>> {
-        val raw = run.rawPoints()
-        return listOf("live" to GpsReplay.live(raw, type), "saved" to GpsReplay.saved(raw, type))
-    }
+    private fun bothPipelines(run: SyntheticRun, type: WorkoutType = WorkoutType.EASY_RUN) =
+        ReplayAsserts.bothPipelines(run.rawPoints(), type)
 
     private fun assertRetainsFixes(label: String, rawCount: Int, result: ReplayResult) {
         val share = result.points.size.toDouble() / rawCount
@@ -83,8 +72,7 @@ class GpsReplayTest {
         val run = SyntheticRun(SyntheticRun.blockLoop(), outlierAtSec = setOf(60, 180, 300, 420, 540))
         for ((name, result) in bothPipelines(run)) {
             assertDistance(name, run.routeLengthM, result.distanceMeters, DISTANCE_TOLERANCE_PERCENT)
-            val worst = result.points.maxOf { run.offRouteMeters(it) }
-            assertTrue("$name: accepted point %.0f m off route".format(worst), worst < MAX_OFF_ROUTE_M)
+            ReplayAsserts.assertNoTeleport(name, run, result)
         }
     }
 
@@ -119,10 +107,7 @@ class GpsReplayTest {
             val expected = json.get("expectedDistanceMeters").asDouble
             val tolerance = json.get("tolerancePercent")?.asDouble ?: DISTANCE_TOLERANCE_PERCENT
             val maxGaps = json.get("maxGaps")?.asInt ?: Int.MAX_VALUE
-            for ((name, result) in listOf(
-                "live" to GpsReplay.live(track!!.points, type),
-                "saved" to GpsReplay.saved(track.points, type)
-            )) {
+            for ((name, result) in ReplayAsserts.bothPipelines(track!!.points, type)) {
                 assertDistance("${file.name} $name", expected, result.distanceMeters, tolerance)
                 assertTrue("${file.name} $name: ${result.gapCount} gaps > $maxGaps", result.gapCount <= maxGaps)
             }
@@ -137,6 +122,5 @@ class GpsReplayTest {
         const val DISTANCE_TOLERANCE_PERCENT = 2.0
         const val MIN_RETAINED_SHARE = 0.9
         const val PIPELINE_AGREEMENT_PERCENT = 1.0
-        const val MAX_OFF_ROUTE_M = 30.0
     }
 }
