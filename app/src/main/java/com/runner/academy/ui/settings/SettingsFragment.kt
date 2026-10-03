@@ -1,17 +1,24 @@
 package com.runner.academy.ui.settings
 
 import android.app.DatePickerDialog
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.databinding.FragmentSettingsBinding
+import com.runner.academy.util.StepPermissionPolicy
+import com.runner.academy.util.StepTrackingAccess
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.Calendar
 import kotlinx.coroutines.launch
@@ -24,6 +31,23 @@ class SettingsFragment : Fragment() {
     private val viewModel: SettingsViewModel by viewModels {
         val app = requireContext().appContainer()
         SettingsViewModelFactory(requireContext(), app.userPreferences)
+    }
+
+    /** Set while the UI writes switch states, so programmatic changes do not act as taps. */
+    private var bindingState = false
+
+    private val stepPermissionRequest = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        viewModel.onStepPermissionResult(granted)
+        // Not granted and no rationale: "don't ask again" — only system settings can help now.
+        if (!granted && !shouldShowRequestPermissionRationale(StepPermissionPolicy.PERMISSION)) {
+            _binding?.let { b ->
+                Snackbar.make(b.root, R.string.steps_permission_denied, Snackbar.LENGTH_LONG)
+                    .setAction(R.string.steps_permission_open_settings) { openAppSystemSettings() }
+                    .show()
+            }
+        }
     }
 
     override fun onCreateView(
@@ -93,6 +117,12 @@ class SettingsFragment : Fragment() {
             viewModel.updateGpsDiagnostics(isChecked)
         }
 
+        // Шаги для дистанции при потере GPS
+        binding.switchStepsForDistance.setOnCheckedChangeListener { _, isChecked ->
+            if (bindingState) return@setOnCheckedChangeListener
+            onStepsForDistanceToggled(isChecked)
+        }
+
         // Сброс настроек
         binding.buttonResetSettings.setOnClickListener {
             showResetConfirmationDialog()
@@ -121,6 +151,40 @@ class SettingsFragment : Fragment() {
         binding.textViewStartCountdownValue.text = "${settings.startCountdownSeconds} s"
         binding.switchVoiceFeedback.isChecked = settings.voiceFeedback
         binding.switchGpsDiagnostics.isChecked = settings.gpsDiagnostics
+        bindingState = true
+        binding.switchStepsForDistance.isChecked = settings.stepsForDistance && settings.hasStepSensor
+        bindingState = false
+        binding.switchStepsForDistance.isEnabled = settings.hasStepSensor
+        binding.textViewStepsForDistanceHint.setText(
+            if (settings.hasStepSensor) R.string.settings_hint_steps_for_distance
+            else R.string.settings_hint_steps_no_sensor
+        )
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // The permission may have been changed in system settings meanwhile.
+        viewModel.refreshStepsForDistance()
+    }
+
+    private fun onStepsForDistanceToggled(enabled: Boolean) {
+        viewModel.updateStepsForDistance(enabled)
+        if (enabled && !StepTrackingAccess.hasPermission(requireContext())) {
+            stepPermissionRequest.launch(StepPermissionPolicy.PERMISSION)
+        }
+    }
+
+    private fun openAppSystemSettings() {
+        try {
+            startActivity(
+                Intent(
+                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.fromParts("package", requireContext().packageName, null)
+                )
+            )
+        } catch (e: Exception) {
+            android.util.Log.w("SettingsFragment", "App settings unavailable: ${e.message}")
+        }
     }
 
     private fun showWeightDialog() {
