@@ -73,6 +73,21 @@ class StepTracker(
     val steps: Int
         get() = if (hasStarted) accumulator.steps else 0
 
+    /**
+     * Steps at [elapsedRealtimeNanos] (e.g. a GPS fix's time; batched fixes arrive late);
+     * a time of 0 or in the future means now. 0 if never started.
+     */
+    @Synchronized
+    fun stepsAt(elapsedRealtimeNanos: Long): Int {
+        if (!hasStarted) return 0
+        val now = clockNanos()
+        return if (elapsedRealtimeNanos <= 0L || elapsedRealtimeNanos >= now) {
+            accumulator.steps
+        } else {
+            accumulator.stepsAt(elapsedRealtimeNanos)
+        }
+    }
+
     /** Steps per minute over the recent window, `null` when unknown, paused or not running. */
     @get:Synchronized
     val cadence: Float?
