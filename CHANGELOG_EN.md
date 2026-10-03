@@ -8,6 +8,11 @@ Current release: **`v.0.1.5`**.
 
 ## Unreleased
 
+## 0.1.5a1 — `v.0.1.5a1`
+
+- GPS no longer drops out for minutes with the screen off (seen on a Samsung S22): fixes are delivered without batching, and the CPU stays awake for the duration of a workout
+- Slightly higher battery use with the screen off, the price of a continuous track
+
 ## 0.1.5 — `v.0.1.5`
 
 - Location without Google Play Services: phone GPS only (`LocationManager`), no network location
