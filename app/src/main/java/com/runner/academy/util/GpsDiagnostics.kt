@@ -9,10 +9,14 @@ import com.google.gson.JsonParser
  *  - `header` — format version, recording start, app version, Android SDK;
  *  - `fix` — every raw fix from the provider (before filtering) with the filter's verdict;
  *  - `gnss` — satellites per system (visible / used in fix / C/N0), to spot spoofing and jamming;
- *  - `event` — pause, resume, screen on/off and similar session events.
+ *  - `event` — pause, resume, screen on/off and similar session events;
+ *  - `power` — battery saver state and its location mode ([PowerSaveCheck.locationModeName]),
+ *    at the start of the recording and on every change, since it can cut GPS with the screen off.
  *
  * Times: `t` is elapsedRealtime in ms (monotonic, comparable across record types);
  * `time` on a fix is the provider's wall-clock time.
+ *
+ * Readers skip unknown record types, so adding a type keeps [FORMAT_VERSION].
  */
 object GpsDiagnostics {
 
@@ -105,6 +109,8 @@ object GpsDiagnostics {
         data class Gnss(val elapsedMs: Long, val summary: GnssSummary) : DiagRecord()
         /** [name] stays a string so files with newer event names still parse. */
         data class Event(val elapsedMs: Long, val name: String) : DiagRecord()
+        /** [locationMode] is the wire name from [PowerSaveCheck.locationModeName]. */
+        data class Power(val elapsedMs: Long, val powerSaveMode: Boolean, val locationMode: String) : DiagRecord()
     }
 
     fun headerLine(startTimeMs: Long, appVersion: String, sdkInt: Int): String = JsonObject().apply {
@@ -149,6 +155,13 @@ object GpsDiagnostics {
         addProperty("type", "event")
         addProperty("t", elapsedMs)
         addProperty("name", event.wire)
+    }.toString()
+
+    fun powerLine(elapsedMs: Long, status: PowerSaveCheck.Status): String = JsonObject().apply {
+        addProperty("type", "power")
+        addProperty("t", elapsedMs)
+        addProperty("saver", status.powerSaveMode)
+        addProperty("location", PowerSaveCheck.locationModeName(status.locationMode))
     }.toString()
 
     /** Reads a diagnostics file back (e.g. to turn a shared file into a replay fixture). */
@@ -198,6 +211,11 @@ object GpsDiagnostics {
             )
         )
         "event" -> DiagRecord.Event(o.get("t").asLong, o.get("name").asString)
+        "power" -> DiagRecord.Power(
+            elapsedMs = o.get("t").asLong,
+            powerSaveMode = o.get("saver").asBoolean,
+            locationMode = o.get("location").asString
+        )
         else -> null
     }
 }
