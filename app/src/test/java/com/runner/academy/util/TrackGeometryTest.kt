@@ -52,4 +52,20 @@ class TrackGeometryTest {
         assertFalse(TrackGeometry.isBridgeStep(point(55.001, afterGap = true)))
         assertFalse(TrackGeometry.isBridgeStep(point(55.001)))
     }
+
+    @Test
+    fun lead_in_on_the_first_point_counts_once() {
+        val track = listOf(point(55.0, bridgeMeters = 120f), point(55.001))
+        assertEquals(120f, TrackGeometry.leadInMeters(track), 0.01f)
+        assertEquals(231f, TrackGeometry.totalDistanceMeters(track), 1f)
+        assertEquals(120f, TrackGeometry.totalDistanceMeters(track.take(1)), 0.01f)
+    }
+
+    @Test
+    fun tracks_without_a_lead_in_are_unchanged() {
+        assertEquals(0f, TrackGeometry.leadInMeters(listOf(point(55.0), point(55.001))), 0f)
+        assertEquals(0f, TrackGeometry.leadInMeters(emptyList()), 0f)
+        // A bridge value on a later point is a bridge, not a lead-in
+        assertEquals(0f, TrackGeometry.leadInMeters(listOf(point(55.0), point(55.01, afterGap = true, bridgeMeters = 9f))), 0f)
+    }
 }
