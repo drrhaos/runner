@@ -15,11 +15,28 @@ data class TrackPoint(
     val speed: Float?, // скорость в м/с
     @SerializedName("altitude")
     val altitude: Double?, // высота над уровнем моря
-    /** True when this point resumes the track after a GPS gap — do not count distance to previous. */
+    /**
+     * True when this point resumes the track after a break: the line is not drawn solid from the
+     * previous point. Without [bridgeMeters] it is a GPS gap and no distance is counted.
+     */
     @SerializedName("after_gap")
     val afterGap: Boolean = false,
+    /** [LocationSource.PEDOMETER] on a bridge point whose [bridgeMeters] came from steps. */
     @SerializedName("source")
-    val source: String = LocationSource.GPS.name
+    val source: String = LocationSource.GPS.name,
+    /**
+     * Set on an [afterGap] point that closes a dropped (false-signal) stretch: the distance
+     * counted from the previous point (straight line or steps × stride, whichever is longer).
+     * The step is drawn dashed. Optional: older tracks have none.
+     */
+    @SerializedName("bridge_m")
+    val bridgeMeters: Float? = null,
+    /** Steps since the workout started, at this fix; null without a step sensor. */
+    @SerializedName("steps")
+    val steps: Int? = null,
+    /** Steps per minute around this fix; null without a step sensor. */
+    @SerializedName("cadence")
+    val cadence: Float? = null
 )
 
 data class TrackData(
