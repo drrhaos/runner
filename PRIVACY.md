@@ -34,6 +34,7 @@ GPS updates come from the device's own GPS receiver through the Android `Locatio
 | Location (fine/coarse) | GPS workout tracking |
 | Foreground service (location) | Keep recording during a workout, including with the screen off |
 | Notifications | Foreground workout service notification |
+| Physical activity (Android 10+) | Step counter and cadence, for distance when GPS is lost; asked once at the first workout, optional (Settings) |
 | Internet, network state | Map tiles |
 | Wake lock | Keep tracking active during workouts |
 
