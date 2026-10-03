@@ -28,7 +28,8 @@ object GpsReplay {
     /**
      * Mirrors the per-fix loop of `WorkoutTrackingService.updateLocation`: one
      * [GpsLocationProcessor] per run, reset at the start, fed every fix; the service's session
-     * takes the returned lists and adds the segment distance of accepted fixes.
+     * takes the returned lists (on accepted fixes and on a retracted false-signal start) and adds
+     * the segment distance of accepted fixes, bridges included.
      * Keep in sync with the service when that loop changes.
      */
     fun live(raw: List<TrackPoint>, type: WorkoutType = WorkoutType.EASY_RUN): ReplayResult {
