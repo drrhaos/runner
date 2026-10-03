@@ -2,7 +2,6 @@ package com.runner.academy.service
 
 import android.location.Location
 import com.runner.academy.data.LocationSource
-import com.runner.academy.data.WorkoutType
 import com.runner.academy.service.GpsLocationProcessor.ProcessResult
 import com.runner.academy.util.TrackGeometry
 import org.junit.Assert.assertEquals
@@ -36,7 +35,6 @@ class GpsLocationProcessorStepsTest {
     private fun feed(location: Location, steps: Int?, cadence: Float? = 180f): ProcessResult {
         val result = processor.processLocation(
             location,
-            WorkoutType.EASY_RUN,
             last?.trackPoints ?: mutableListOf(),
             last?.trackDataPoints ?: mutableListOf(),
             last?.rawTrackDataPoints ?: mutableListOf(),
@@ -90,7 +88,7 @@ class GpsLocationProcessorStepsTest {
     @Test
     fun `without steps nothing changes`() {
         val plain = GpsLocationProcessor().apply { reset() }
-        val result = plain.processLocation(fix(0.0, 0), WorkoutType.EASY_RUN, mutableListOf(), mutableListOf(), mutableListOf())
+        val result = plain.processLocation(fix(0.0, 0), mutableListOf(), mutableListOf(), mutableListOf())
         assertNull(result.rawTrackDataPoints.single().steps)
         assertEquals(0f, result.distanceDeltaMeters, 0f)
     }

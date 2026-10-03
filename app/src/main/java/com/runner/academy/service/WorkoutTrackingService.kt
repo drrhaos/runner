@@ -313,7 +313,6 @@ class WorkoutTrackingService : Service() {
 
             val result = gpsProcessor.processLocation(
                 location,
-                selectedWorkoutType,
                 session.trackPoints.toMutableList(),
                 session.trackDataPoints.toMutableList(),
                 session.rawTrackDataPoints.toMutableList(),
@@ -463,7 +462,7 @@ class WorkoutTrackingService : Service() {
         lastProcessedFixTimeMs = 0L
         unreliableLatch.reset()
         val runStride = startSteps(initialSteps = 0, frozenState = null)
-        gpsProcessor.reset(stepDistance = runStride?.estimator)
+        gpsProcessor.reset(workoutType = selectedWorkoutType, stepDistance = runStride?.estimator)
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
 
@@ -583,6 +582,7 @@ class WorkoutTrackingService : Service() {
             }
         // The gap clock is not checkpointed: it falls back to the anchor's own time
         gpsProcessor.reset(
+            workoutType = selectedWorkoutType,
             anchor = lastLocation,
             anchorSteps = checkpoint.trackDataPoints.lastOrNull()?.steps,
             pendingMeters = checkpoint.pendingStepMeters,

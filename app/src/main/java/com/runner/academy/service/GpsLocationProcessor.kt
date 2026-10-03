@@ -24,12 +24,11 @@ import org.osmdroid.util.GeoPoint
 class GpsLocationProcessor {
 
     companion object {
-        const val MIN_POINT_DISTANCE_METERS = 2f
         const val MAX_TRACK_POINTS_DISPLAY = 8000
         const val MAX_RAW_TRACK_POINTS = 15000
     }
 
-    private val filter = TrackFilter()
+    private var filter = TrackFilter()
 
     /** Last accepted fix of the current run, null before the first one. */
     val anchor: Location? get() = filter.anchor
@@ -37,16 +36,18 @@ class GpsLocationProcessor {
     private var reportedMeters = 0f
 
     /**
-     * Starts a new run; [anchor] continues an interrupted one (see [TrackFilter.reset]).
-     * [stepDistance] (null without steps) bridges dropped stretches by steps for this run.
+     * Starts a new run of [workoutType]; [anchor] continues an interrupted one (see
+     * [TrackFilter.reset]). [stepDistance] (null without steps) bridges dropped stretches by
+     * steps for this run.
      */
     fun reset(
+        workoutType: WorkoutType = WorkoutType.EASY_RUN,
         anchor: Location? = null,
         anchorSteps: Int? = null,
         pendingMeters: Float = 0f,
         stepDistance: StepDistanceEstimator? = null
     ) {
-        filter.stepDistance = stepDistance
+        filter = TrackFilter(workoutType, stepDistance)
         filter.reset(anchor, anchorSteps, pendingMeters)
         // What was counted before an interruption is already in the session distance
         reportedMeters = filter.countedMeters
@@ -69,7 +70,6 @@ class GpsLocationProcessor {
      */
     fun processLocation(
         location: Location,
-        workoutType: WorkoutType,
         existingTrackPoints: MutableList<GeoPoint>,
         existingTrackDataPoints: MutableList<TrackPoint>,
         existingRawTrackDataPoints: MutableList<TrackPoint>,
@@ -97,7 +97,6 @@ class GpsLocationProcessor {
         newRawTrackDataPoints.add(rawTrackPoint)
         decimateRawPointsIfNeeded(newRawTrackDataPoints)
 
-        filter.workoutType = workoutType
         val verdict = filter.process(location, forceGapResume = resumeAfterGap, steps = steps, cadence = cadence)
         val distanceDelta = (filter.countedMeters - reportedMeters).coerceAtLeast(0f)
         reportedMeters = maxOf(reportedMeters, filter.countedMeters)
@@ -133,20 +132,10 @@ class GpsLocationProcessor {
             newTrackPoints.add(validGeoPoint)
         }
 
-        // Create TrackPoint for data persistence
-        val trackPoint = TrackPoint(
-            latitude = filteredLocation.latitude,
-            longitude = filteredLocation.longitude,
-            timestamp = filteredLocation.time,
-            accuracy = filteredLocation.accuracy,
-            speed = filteredLocation.speed,
-            altitude = filteredLocation.altitude,
-            afterGap = verdict.afterGap,
-            source = if (verdict.bridgeFromSteps) LocationSource.PEDOMETER.name else LocationSource.GPS.name,
-            // A lead-in rides on the first point (see TrackGeometry.leadInMeters)
-            bridgeMeters = verdict.bridgeMeters ?: verdict.leadInMeters,
-            steps = steps,
-            cadence = cadence
+        // Create TrackPoint for data persistence (the mapping the save path uses too)
+        val trackPoint = verdict.toTrackPoint(
+            rawTrackPoint.copy(timestamp = filteredLocation.time),
+            firstPoint = newTrackDataPoints.isEmpty()
         )
         newTrackDataPoints.add(trackPoint)
 

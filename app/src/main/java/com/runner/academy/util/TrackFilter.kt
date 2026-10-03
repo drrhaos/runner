@@ -2,16 +2,17 @@ package com.runner.academy.util
 
 import android.location.Location
 import android.util.Log
+import com.runner.academy.data.LocationSource
+import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.maxReasonableGpsSpeedMps
-import com.runner.academy.service.GpsLocationProcessor
 import kotlin.math.max
 
 /**
  * Per-run GPS fix filter: decides, fix by fix, what enters the track.
  *
  * One instance per workout, fed every fix in arrival order. Shared by the live path
- * ([GpsLocationProcessor], used by the tracking service) and the save path ([TrackSanitizer]),
+ * ([com.runner.academy.service.GpsLocationProcessor], used by the tracking service) and the save path ([TrackSanitizer]),
  * so the track shown during the run and the stored one come from the same rules.
  *
  * State:
@@ -34,9 +35,9 @@ import kotlin.math.max
  * never goes back.
  */
 class TrackFilter(
-    var workoutType: WorkoutType = WorkoutType.EASY_RUN,
+    val workoutType: WorkoutType = WorkoutType.EASY_RUN,
     /** Steps → metres for bridges; null (no step sensor / no permission): straight lines only. */
-    var stepDistance: StepDistanceEstimator? = null
+    private val stepDistance: StepDistanceEstimator? = null
 ) {
 
     /** Why a fix was dropped. */
@@ -81,9 +82,32 @@ class TrackFilter(
              * itself begins here). Not part of [segmentDistanceMeters].
              */
             val leadInMeters: Float? = null
-        ) : Verdict
+        ) : Verdict {
+            /**
+             * The track point for this fix, built from [from] (the raw point, or a stored point
+             * when re-sanitizing): position from [location], steps / cadence / time from [from].
+             * The one mapping shared by the live and the save path, so both store the same:
+             *  - [bridgeMeters] on a bridge, the [leadInMeters] on the [firstPoint] of the track
+             *    (see [TrackGeometry.leadInMeters]); a value already stored on [from] is kept;
+             *  - `source = PEDOMETER` when the bridge came from steps.
+             */
+            fun toTrackPoint(from: TrackPoint, firstPoint: Boolean): TrackPoint = from.copy(
+                latitude = location.latitude,
+                longitude = location.longitude,
+                accuracy = location.accuracy,
+                speed = location.speed,
+                altitude = location.altitude,
+                afterGap = afterGap,
+                bridgeMeters = when {
+                    afterGap -> bridgeMeters ?: from.bridgeMeters
+                    firstPoint -> leadInMeters ?: from.bridgeMeters
+                    else -> null
+                },
+                source = if (bridgeFromSteps) LocationSource.PEDOMETER.name else from.source.ifBlank { LocationSource.GPS.name }
+            )
+        }
 
-        /** Valid but closer than [GpsLocationProcessor.MIN_POINT_DISTANCE_METERS]: moves the gap clock only. */
+        /** Valid but closer than [GpsFilter.MIN_POINT_DISTANCE_METERS]: moves the gap clock only. */
         data object NearDuplicate : Verdict
 
         /**
@@ -228,7 +252,7 @@ class TrackFilter(
 
         // Close points refresh the gap clock so slow jogging doesn't look like a GPS outage
         if (!gapResume && previous != null &&
-            filtered.distanceTo(previous) < GpsLocationProcessor.MIN_POINT_DISTANCE_METERS
+            filtered.distanceTo(previous) < GpsFilter.MIN_POINT_DISTANCE_METERS
         ) {
             markValid(location.time)
             return Verdict.NearDuplicate
