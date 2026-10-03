@@ -311,7 +311,13 @@ class WorkoutTrackingViewModel(
         } else {
             session.trackDataPoints
         }
-        val sanitizedPoints = TrackSanitizer.sanitize(sourcePoints, workoutType)
+        val userPrefs = (application as? com.runner.academy.RunnerApplication)?.container?.userPreferences
+            ?: UserPreferences(application)
+        // The run's frozen stride, as the live path used it: the same bridges, the same distance
+        val stepDistance = session.strideModelState?.let {
+            com.runner.academy.util.StrideModel.deserialize(it, userPrefs.userHeight).frozenEstimator()
+        }
+        val sanitizedPoints = TrackSanitizer.sanitize(sourcePoints, workoutType, stepDistance)
         val hasTrack = sanitizedPoints.size >= 2
 
         val totalDistanceMeters = when {
@@ -345,8 +351,6 @@ class WorkoutTrackingViewModel(
             0f
         }
 
-        val userPrefs = (application as? com.runner.academy.RunnerApplication)?.container?.userPreferences
-            ?: UserPreferences(application)
         val calories = com.runner.academy.util.FormatUtils.calculateCalories(
             totalDistanceKm,
             userPrefs.userWeight
