@@ -143,6 +143,9 @@
     <string name="settings_label_voice_notifications">Voice notifications</string>
     <string name="settings_label_gps_diagnostics">Record GPS diagnostics</string>
     <string name="settings_hint_gps_diagnostics">Raw GPS points and satellites for each new workout, kept on this phone. Helps fix GPS problems; share from the workout details.</string>
+    <string name="settings_label_steps_for_distance">Steps for distance when GPS is lost</string>
+    <string name="settings_hint_steps_for_distance">Counts steps and cadence with the phone\'s step sensor to keep measuring distance in tunnels and dense streets. Needs the Physical activity permission.</string>
+    <string name="settings_hint_steps_no_sensor">This device has no step sensor.</string>
     <string name="settings_btn_reset">Reset settings</string>
     <string name="settings_weight_saved">Weight saved</string>
     <string name="settings_height_saved">Height saved</string>
@@ -330,6 +333,12 @@
     <string name="permission_notification_needed">Notification permission is required for background tracking</string>
     <string name="battery_optimization_hint">For stable operation, disable battery optimization in settings</string>
     <string name="battery_optimization_open_settings">Settings</string>
+    <string name="steps_permission_title">Steps for distance</string>
+    <string name="steps_permission_rationale">Allow the Physical activity permission to count steps — for distance when GPS is lost (tunnels, dense streets). The app asks only once; you can change this later in Settings.</string>
+    <string name="steps_permission_allow">Allow</string>
+    <string name="steps_permission_not_now">Not now</string>
+    <string name="steps_permission_denied">Physical activity permission is off. Turn it on in the app\'s system settings.</string>
+    <string name="steps_permission_open_settings">Open</string>
     <string name="power_save_warning_title">Battery saver is on</string>
     <string name="power_save_warning_message">In battery saver mode the phone may turn off GPS while the screen is off, so the workout track will have gaps. Turn battery saver off for the duration of your run.</string>
     <string name="power_save_warning_open_settings">Settings</string>

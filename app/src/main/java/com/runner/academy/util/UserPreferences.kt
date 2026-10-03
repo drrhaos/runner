@@ -26,6 +26,9 @@ class UserPreferences(context: Context) {
         private const val KEY_START_COUNTDOWN = "start_countdown_seconds"
         private const val KEY_BATTERY_HINT_SHOWN = "battery_optimization_hint_shown"
         private const val KEY_GPS_DIAGNOSTICS = "gps_diagnostics"
+        private const val KEY_STEPS_FOR_DISTANCE = "steps_for_distance"
+        private const val KEY_STEP_PERMISSION_ASKED = "step_permission_asked"
+        private const val KEY_STRIDE_MODEL = "stride_model"
         
         // Значения по умолчанию
         private const val DEFAULT_WEIGHT = 70f
@@ -35,6 +38,7 @@ class UserPreferences(context: Context) {
         private const val DEFAULT_UNIT_SYSTEM = "metric"
         private const val DEFAULT_VOICE_FEEDBACK = false
         private const val DEFAULT_GPS_DIAGNOSTICS = false
+        private const val DEFAULT_STEPS_FOR_DISTANCE = true
         private const val DEFAULT_FIRST_LAUNCH = true
         private val DEFAULT_THEME_MODE = ThemeUtils.THEME_SYSTEM
         private const val DEFAULT_APP_LANGUAGE = "en"
@@ -139,10 +143,39 @@ class UserPreferences(context: Context) {
         set(value) = prefs.edit().putInt(KEY_START_COUNTDOWN, value).apply()
 
     /**
-     * Сбрасывает все настройки к значениям по умолчанию
+     * Шаги для дистанции при потере GPS. По умолчанию включено; без разрешения
+     * ACTIVITY_RECOGNITION (API 29+) шаги всё равно не используются —
+     * см. [StepTrackingAccess.isStepTrackingAllowed].
+     */
+    var stepsForDistanceEnabled: Boolean
+        get() = prefs.getBoolean(KEY_STEPS_FOR_DISTANCE, DEFAULT_STEPS_FOR_DISTANCE)
+        set(value) = prefs.edit().putBoolean(KEY_STEPS_FOR_DISTANCE, value).apply()
+
+    /** Разрешение ACTIVITY_RECOGNITION уже запрашивалось — повторно автоматически не спрашиваем. */
+    var stepPermissionAsked: Boolean
+        get() = prefs.getBoolean(KEY_STEP_PERMISSION_ASKED, false)
+        set(value) = prefs.edit().putBoolean(KEY_STEP_PERMISSION_ASKED, value).apply()
+
+    /** Модель длины шага, обученная на прошлых пробежках (или из роста, если данных нет). */
+    fun loadStrideModel(): StrideModel =
+        StrideModel.deserialize(prefs.getString(KEY_STRIDE_MODEL, null), userHeight)
+
+    fun saveStrideModel(model: StrideModel) {
+        prefs.edit().putString(KEY_STRIDE_MODEL, model.serialize()).apply()
+    }
+
+    /**
+     * Сбрасывает все настройки к значениям по умолчанию. Обученная модель шага и отметка
+     * «разрешение на шаги уже спрашивали» — не настройки, а накопленное состояние: сохраняются.
      */
     fun resetToDefaults() {
-        prefs.edit().clear().apply()
+        val stepPermissionAsked = stepPermissionAsked
+        val strideModel = prefs.getString(KEY_STRIDE_MODEL, null)
+        // Editor.clear() is applied before the puts of the same edit.
+        val editor = prefs.edit().clear()
+        if (stepPermissionAsked) editor.putBoolean(KEY_STEP_PERMISSION_ASKED, true)
+        if (strideModel != null) editor.putString(KEY_STRIDE_MODEL, strideModel)
+        editor.apply()
     }
     
     /**

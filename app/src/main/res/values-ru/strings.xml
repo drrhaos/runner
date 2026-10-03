@@ -133,6 +133,9 @@
     <string name="settings_label_voice_notifications">Голосовые уведомления</string>
     <string name="settings_label_gps_diagnostics">Записывать диагностику GPS</string>
     <string name="settings_hint_gps_diagnostics">Сырые точки GPS и спутники для каждой новой тренировки, хранятся только на телефоне. Помогает разбирать проблемы с GPS; отправить можно из деталей тренировки.</string>
+    <string name="settings_label_steps_for_distance">Шаги для дистанции при потере GPS</string>
+    <string name="settings_hint_steps_for_distance">Считает шаги и каденс датчиком телефона, чтобы дистанция шла и в тоннелях, и среди плотной застройки. Нужно разрешение «Физическая активность».</string>
+    <string name="settings_hint_steps_no_sensor">На этом устройстве нет датчика шагов.</string>
     <string name="settings_btn_reset">Сбросить настройки</string>
     <string name="settings_weight_saved">Вес сохранен</string>
     <string name="settings_height_saved">Рост сохранен</string>
@@ -316,6 +319,12 @@
     <string name="permission_notification_needed">Разрешение на уведомления необходимо для фонового трекинга</string>
     <string name="battery_optimization_hint">Для стабильной работы приложения отключите оптимизацию батареи в настройках</string>
     <string name="battery_optimization_open_settings">Настройки</string>
+    <string name="steps_permission_title">Шаги для дистанции</string>
+    <string name="steps_permission_rationale">Разрешите доступ к физической активности, чтобы считать шаги — для дистанции при потере GPS (тоннели, плотная застройка). Спросим только один раз; изменить можно в настройках.</string>
+    <string name="steps_permission_allow">Разрешить</string>
+    <string name="steps_permission_not_now">Не сейчас</string>
+    <string name="steps_permission_denied">Разрешение «Физическая активность» выключено. Включите его в системных настройках приложения.</string>
+    <string name="steps_permission_open_settings">Открыть</string>
     <string name="power_save_warning_title">Включено энергосбережение</string>
     <string name="power_save_warning_message">В режиме энергосбережения телефон может отключать GPS при выключенном экране — трек тренировки будет прерываться. Отключите энергосбережение на время пробежки.</string>
     <string name="power_save_warning_open_settings">Настройки</string>
