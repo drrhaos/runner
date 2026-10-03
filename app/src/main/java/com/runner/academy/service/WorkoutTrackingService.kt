@@ -72,7 +72,7 @@ class WorkoutTrackingService : Service() {
         const val EXTRA_MODE_SELECTION = "MODE_SELECTION"
         const val EXTRA_INTERVAL_SEGMENTS_JSON = "INTERVAL_SEGMENTS_JSON"
         const val NO_LOCATION_UPDATE_TIMEOUT_MS = 5000L
-        /** Must exceed [GpsConfig.SCREEN_OFF_MAX_UPDATE_DELAY_MS]: batched fixes are not a GPS loss. */
+        /** Screen off: the system may still deliver fixes late, do not flag GPS as lost early. */
         const val NO_LOCATION_UPDATE_TIMEOUT_SCREEN_OFF_MS = 30_000L
         const val PERIODIC_LOCATION_REQUEST_INTERVAL_MS = 2000L
         const val PERIODIC_LOCATION_REQUEST_SCREEN_OFF_MS = 10_000L
@@ -84,6 +84,13 @@ class WorkoutTrackingService : Service() {
         const val PRE_START_LOCATION_MAX_ACCURACY_M = 20f
         private const val FLUSH_REQUEST_CODE = 1
         private const val FLUSH_TIMEOUT_MS = 3_000L
+        /**
+         * Safety net if a release is ever missed; renewed by the workout timer long before it
+         * expires, so a run of any length keeps the CPU awake.
+         */
+        private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60_000L
+        private const val WAKE_LOCK_RENEW_EVERY_TICKS = 60
+        private const val WAKE_LOCK_TAG = "Runner:WorkoutTracking"
     }
 
     // Extracted component instances
@@ -145,6 +152,17 @@ class WorkoutTrackingService : Service() {
     private var lastAppliedAdaptiveIntervalMs: Long = -1L
     private var lastAppliedScreenInteractive: Boolean? = null
     private var workoutTimerJob: Job? = null
+
+    /**
+     * Held while the workout timer runs. The location foreground service only keeps the process
+     * alive, not the CPU: with the screen off Samsung (S22) let the CPU sleep and the GPS
+     * stopped delivering fixes for minutes.
+     */
+    private val wakeLock: PowerManager.WakeLock? by lazy {
+        (getSystemService(POWER_SERVICE) as? PowerManager)
+            ?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG)
+            ?.apply { setReferenceCounted(false) }
+    }
     private var screenInteractive: Boolean = true
     private val turnDetector = GpsConfig.TurnDetector()
     private var turningDensifyActive: Boolean = false
@@ -259,7 +277,7 @@ class WorkoutTrackingService : Service() {
         if (isCurrentlyTracking && !sessionManager.getSession().isPaused) {
             val session = sessionManager.getSession()
             // Time gaps are detected from fix timestamps inside GpsFilter.isGapResume.
-            // Wall-clock age must not be used: screen-off batches arrive ~20 s late by design.
+            // Wall-clock age must not be used: flushed or delayed fixes arrive late.
             val resumeAfterGap = session.gpsStatus == GpsStatus.LOST
 
             val result = gpsProcessor.processLocation(
@@ -956,10 +974,13 @@ class WorkoutTrackingService : Service() {
 
     private fun startWorkoutTimer() {
         stopWorkoutTimer()
+        acquireWakeLock()
         workoutTimerJob = serviceScope.launch {
+            var ticks = 0
             while (isActive && isCurrentlyTracking && !sessionManager.getSession().isPaused) {
                 delay(WORKOUT_TIMER_INTERVAL_MS)
                 withContext(Dispatchers.Main) {
+                    if (++ticks % WAKE_LOCK_RENEW_EVERY_TICKS == 0) acquireWakeLock()
                     // Advance clock without fan-out to voice/checkpoint; UI + notification only
                     sessionManager.tickElapsedTime(broadcast = false)
                     val session = sessionManager.getSession()
@@ -973,6 +994,16 @@ class WorkoutTrackingService : Service() {
     private fun stopWorkoutTimer() {
         workoutTimerJob?.cancel()
         workoutTimerJob = null
+        releaseWakeLock()
+    }
+
+    /** Not reference counted: a repeat call only restarts the timeout. */
+    private fun acquireWakeLock() {
+        wakeLock?.acquire(WAKE_LOCK_TIMEOUT_MS)
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let { if (it.isHeld) it.release() }
     }
 
     // ------------------------------------------------------------------

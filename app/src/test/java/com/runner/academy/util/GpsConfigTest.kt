@@ -19,7 +19,7 @@ class GpsConfigTest {
         assertEquals(1000L, GpsConfig.MIN_UPDATE_INTERVAL)
         assertEquals(1000L, GpsConfig.HIGH_ACCURACY_INTERVAL)
         assertEquals(2000L, GpsConfig.SCREEN_OFF_INTERVAL)
-        assertEquals(20_000L, GpsConfig.SCREEN_OFF_MAX_UPDATE_DELAY_MS)
+        assertEquals(0L, GpsConfig.MAX_UPDATE_DELAY_MS)
         assertEquals(5000L, GpsConfig.MEDIUM_ACCURACY_INTERVAL)
         assertEquals(10000L, GpsConfig.LOW_ACCURACY_INTERVAL)
     }
@@ -45,7 +45,7 @@ class GpsConfigTest {
             1000L,
             GpsConfig.getAdaptiveInterval(2f, screenInteractive = true, turning = true)
         )
-        // Screen-off fixes are batched: turn seen after the fact, keep the base cadence
+        // Screen off: keep the base cadence
         assertEquals(
             2000L,
             GpsConfig.getAdaptiveInterval(12f, screenInteractive = false, turning = true)
@@ -68,15 +68,6 @@ class GpsConfigTest {
         assertFalse(detector.onFix(0f, 0.5f))
         assertFalse(detector.onFix(90f, 0.5f))
         assertFalse(detector.onFix(180f, 3f)) // no comparable previous bearing
-    }
-
-    @Test
-    fun screenOff_lost_timeout_exceeds_batch_delay() {
-        // Otherwise the watchdog treats a normal pending batch as a GPS outage
-        assertTrue(
-            com.runner.academy.service.WorkoutTrackingService.NO_LOCATION_UPDATE_TIMEOUT_SCREEN_OFF_MS >
-                GpsConfig.SCREEN_OFF_MAX_UPDATE_DELAY_MS
-        )
     }
 
     @Test
@@ -105,19 +96,23 @@ class GpsConfigTest {
     }
 
     @Test
-    fun createWorkoutLocationRequest_screenOff_batches_for_battery() {
+    fun createWorkoutLocationRequest_screenOff_is_live() {
         val request = GpsConfig.createWorkoutLocationRequest(screenInteractive = false)
         assertEquals(LocationRequestCompat.QUALITY_HIGH_ACCURACY, request.quality)
         assertEquals(GpsConfig.SCREEN_OFF_INTERVAL, request.intervalMillis)
         assertEquals(GpsConfig.MIN_DISTANCE_SCREEN_OFF, request.minUpdateDistanceMeters, 0.01f)
-        assertEquals(GpsConfig.SCREEN_OFF_MAX_UPDATE_DELAY_MS, request.maxUpdateDelayMillis)
+        // No batching: on a Samsung S22 the screen-off batch (20 s window) stalled the chip for
+        // minutes and it came back with a cold, jumpy fix.
+        assertEquals(0L, request.maxUpdateDelayMillis)
     }
 
     @Test
-    fun createAdaptiveLocationRequest_screenOn_never_batches_at_any_interval() {
-        for (interval in listOf(1000L, 2000L, 3000L)) {
-            val request = GpsConfig.createAdaptiveLocationRequest(interval, screenInteractive = true)
-            assertEquals(0L, request.maxUpdateDelayMillis)
+    fun createAdaptiveLocationRequest_never_batches_at_any_interval() {
+        for (screenInteractive in listOf(true, false)) {
+            for (interval in listOf(1000L, 2000L, 3000L)) {
+                val request = GpsConfig.createAdaptiveLocationRequest(interval, screenInteractive)
+                assertEquals(0L, request.maxUpdateDelayMillis)
+            }
         }
     }
 
