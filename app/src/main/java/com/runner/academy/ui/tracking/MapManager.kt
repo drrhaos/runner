@@ -26,6 +26,7 @@ import com.runner.academy.util.OsmMapTiles
 import com.runner.academy.util.TrackPolylineFactory
 import com.runner.academy.util.TrackRuns
 import com.runner.academy.util.bridges
+import com.runner.academy.util.gaps
 import com.runner.academy.util.solids
 import org.osmdroid.views.overlay.CopyrightOverlay
 import kotlin.math.hypot
@@ -84,7 +85,9 @@ class MapManager(
 
     /** Committed solid runs (no live tip); rebuilt only when trackDataPoints change. */
     private var committedSegments: List<List<GeoPoint>> = emptyList()
-    /** Dashed bridges over dropped false-signal stretches (see [TrackRuns]). */
+    /** Connectors across plain GPS gaps (see [TrackRuns]). */
+    private var committedGaps: List<Pair<GeoPoint, GeoPoint>> = emptyList()
+    /** Bridges over dropped false-signal stretches (see [TrackRuns]). */
     private var committedBridges: List<Pair<GeoPoint, GeoPoint>> = emptyList()
     /** True while the "me" marker and live tip are hidden ([hidesPosition]). */
     private var positionHidden = false
@@ -427,8 +430,7 @@ class MapManager(
     }
 
     /**
-     * Draws committed track runs (solid, dashed across bridged stretches, nothing across
-     * plain gaps) and a live tip that smoothly stretches to the person-icon rim at
+     * Draws committed track runs (solid; gap and bridge connectors in their own dashes) and a live tip that smoothly stretches to the person-icon rim at
      * [currentLocation].
      *
      * While [gpsStatus] says the fix is false ([hidesPosition]) the session location is not
@@ -449,6 +451,9 @@ class MapManager(
             lastTrackSignature = signature
             val runs = TrackRuns.split(trackDataPoints)
             committedSegments = runs.solids().map { run -> run.points.map(TrackPolylineFactory::toGeoPoint) }
+            committedGaps = runs.gaps().map {
+                TrackPolylineFactory.toGeoPoint(it.from) to TrackPolylineFactory.toGeoPoint(it.to)
+            }
             committedBridges = runs.bridges().map {
                 TrackPolylineFactory.toGeoPoint(it.from) to TrackPolylineFactory.toGeoPoint(it.to)
             }
@@ -515,6 +520,11 @@ class MapManager(
             mapView.overlays.add(poly)
         }
 
+        for ((from, to) in committedGaps) {
+            val dashed = TrackPolylineFactory.createDashedGap(from, to, TRACK_STYLE)
+            gapTrackPolylines.add(dashed)
+            mapView.overlays.add(dashed)
+        }
         for ((from, to) in committedBridges) {
             val dashed = TrackPolylineFactory.createDashedBridge(from, to, TRACK_STYLE)
             gapTrackPolylines.add(dashed)
