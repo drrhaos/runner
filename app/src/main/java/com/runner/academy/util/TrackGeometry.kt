@@ -45,12 +45,21 @@ object TrackGeometry {
         return stepM >= GAP_DISTANCE_METERS
     }
 
+    /** A break that still counts distance: [TrackPoint.bridgeMeters] over a dropped stretch. */
+    fun isBridgeStep(point: TrackPoint): Boolean = point.afterGap && point.bridgeMeters != null
+
+    /** Distance the step from [prev] to [point] adds to the total. */
+    fun stepDistanceMeters(prev: TrackPoint, point: TrackPoint): Float = when {
+        isBridgeStep(point) -> point.bridgeMeters ?: 0f
+        isTrackGapStep(prev, point) -> 0f
+        else -> distanceMeters(prev, point)
+    }
+
     fun totalDistanceMeters(points: List<TrackPoint>): Float {
         if (points.size < 2) return 0f
         var total = 0f
         for (i in 1 until points.size) {
-            if (isTrackGapStep(points[i - 1], points[i])) continue
-            total += distanceMeters(points[i - 1], points[i])
+            total += stepDistanceMeters(points[i - 1], points[i])
         }
         return total
     }
