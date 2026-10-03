@@ -3,6 +3,7 @@ package com.runner.academy.gpsreplay
 import com.runner.academy.gpsreplay.ReplayAsserts.assertDistance
 import com.runner.academy.gpsreplay.ReplayAsserts.assertNoTeleport
 import com.runner.academy.gpsreplay.SyntheticRun.Spoof
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Ignore
 import org.junit.Test
@@ -69,6 +70,28 @@ class SpoofingReplayTest {
     @Test
     fun `drift at a running pace is dropped and bridged`() =
         assertHandled(lapWith(Spoof.Drift(seconds = 100..220, rateMps = 2.0)))
+
+    /**
+     * Real-world shape: two minutes without fixes, then two fixes ~13 km away with a reported
+     * 28 m/s and a ~750 m higher altitude, then real fixes again. The silence stays a plain gap
+     * (no distance), the far fixes are dropped.
+     */
+    @Test
+    fun `far burst after a silence is dropped and the silence stays a gap`() {
+        val run = SyntheticRun(
+            SyntheticRun.blockLoop(laps = 1),
+            gapSec = 100..219,
+            spoof = Spoof.FarBurst(seconds = 220..221)
+        )
+        // Not counted: the silence and the two seconds of the burst
+        val expected = run.routeLengthM - run.gapDistanceM - 2 * run.speedMps
+        for ((name, result) in ReplayAsserts.bothPipelines(run.rawPoints())) {
+            assertNoTeleport(name, run, result)
+            assertDistance(name, expected, result.distanceMeters, TOLERANCE_PERCENT)
+            assertEquals("$name gaps", 1, result.gapCount)
+            assertTrue("$name: the silence is not bridged", result.points.none { it.bridgeMeters != null })
+        }
+    }
 
     private companion object {
         /** Detector acceptance: distance error within 5 %. */
