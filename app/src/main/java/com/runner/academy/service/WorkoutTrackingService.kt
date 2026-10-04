@@ -163,12 +163,13 @@ class WorkoutTrackingService : Service() {
     private val serviceScope = CoroutineScope(serviceJob + Dispatchers.Default)
     private val mainHandler = Handler(Looper.getMainLooper())
     private var periodicLocationJob: Job? = null
+    // Written on the main thread, read by the watchdog coroutine
     /** Wall time of the last good (accepted / near-duplicate) fix; 0 before the first. */
-    private var lastLocationTime: Long = 0
+    @Volatile private var lastLocationTime: Long = 0
     /** Wall time of the last fix fed to the filter, false ones included; 0 before the first. */
-    private var lastAnyFixTime: Long = 0
+    @Volatile private var lastAnyFixTime: Long = 0
     /** Fix time of the newest fix fed to the filter (a stale lastKnown must not repeat it). */
-    private var lastProcessedFixTimeMs: Long = 0
+    @Volatile private var lastProcessedFixTimeMs: Long = 0
     private var lastAppliedAdaptiveIntervalMs: Long = -1L
     private var lastAppliedScreenInteractive: Boolean? = null
     private var workoutTimerJob: Job? = null
@@ -331,11 +332,13 @@ class WorkoutTrackingService : Service() {
                 cadence = cadence
             )
 
-            val good = result is GpsLocationProcessor.ProcessResult.Accepted ||
-                (result as GpsLocationProcessor.ProcessResult.Rejected).refreshGapClock
+            val good = when (result) {
+                is GpsLocationProcessor.ProcessResult.Accepted -> true
+                is GpsLocationProcessor.ProcessResult.Rejected -> result.refreshGapClock
+            }
             val unreliable = unreliableLatch.onFix(gpsProcessor.inFalseSignal, good, location.time)
             // Leaving UNRELIABLE needs a status change even on a fix that keeps the old one
-            val rejectedStatus = when {
+            val statusOverride = when {
                 unreliable -> GpsStatus.UNRELIABLE
                 session.gpsStatus == GpsStatus.UNRELIABLE && good -> GpsStatus.FOUND
                 else -> null
@@ -385,7 +388,7 @@ class WorkoutTrackingService : Service() {
                         sessionManager.updateLocationOnly(
                             currentLocation = location,
                             rawTrackDataPoints = result.rawTrackDataPoints,
-                            gpsStatus = rejectedStatus
+                            gpsStatus = statusOverride
                         )
                     } else if (result.retractedStart) {
                         // The start fix was a false signal: the track restarts at the next good fix
@@ -397,7 +400,7 @@ class WorkoutTrackingService : Service() {
                             trackDataPoints = result.trackDataPoints,
                             addedDistanceMeters = result.distanceDeltaMeters,
                             userWeightKg = userPreferences.userWeight,
-                            gpsStatus = rejectedStatus
+                            gpsStatus = statusOverride
                         )
                     } else {
                         // Outlier: keep tip on last accepted fix so the line does not jump.
@@ -407,7 +410,7 @@ class WorkoutTrackingService : Service() {
                             rawTrackDataPoints = result.rawTrackDataPoints,
                             addedDistanceMeters = result.distanceDeltaMeters,
                             userWeightKg = userPreferences.userWeight,
-                            gpsStatus = rejectedStatus
+                            gpsStatus = statusOverride
                         )
                     }
                 }
@@ -550,6 +553,7 @@ class WorkoutTrackingService : Service() {
             // Already live in this process (e.g. bound UI + sticky race)
             if (!isCurrentlyTracking && !existing.isPaused) {
                 // Session flags say running but timers not started — re-arm
+                resumeStepsAfterAbandon(existing)
                 return resumeTrackingAfterRestore(existing)
             } else if (existing.isPaused) {
                 return ensureForegroundNotification()
@@ -734,6 +738,19 @@ class WorkoutTrackingService : Service() {
         // A restored run keeps the exact stride it froze, an untrained prior included
         val frozen = frozenState?.let { StrideModel.deserializeExact(it) } ?: model.copy()
         return RunStride(frozen.frozenEstimator(), frozen.serialize())
+    }
+
+    /**
+     * Re-arm in the same instance after [abandonRestore], which stopped the steps: the filter
+     * (anchor, episode, run stride) is intact, so only counting and learning restart.
+     */
+    private fun resumeStepsAfterAbandon(session: WorkoutSession) {
+        if (stepTracker?.isRunning == true) return
+        val savedSteps = maxOf(
+            activeWorkoutStore.load()?.steps ?: 0,
+            session.rawTrackDataPoints.lastOrNull()?.steps ?: 0
+        )
+        startSteps(initialSteps = savedSteps, frozenState = session.strideModelState)
     }
 
     /** Stops counting steps; with [saveLearned] the model keeps what this run taught it. */
