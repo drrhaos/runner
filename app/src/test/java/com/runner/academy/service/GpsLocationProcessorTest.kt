@@ -44,6 +44,21 @@ class GpsLocationProcessorTest {
     )
 
     @Test
+    fun countSilence_reports_the_step_distance_once() {
+        processor.reset(stepDistance = com.runner.academy.util.StepDistanceEstimator { steps, _ -> steps.toFloat() })
+        processor.processLocation(
+            location(55.7558, 37.6173, time = 1_000_000L), mutableListOf(), mutableListOf(), mutableListOf(),
+            steps = 0
+        )
+
+        assertEquals(0f, processor.countSilence(1_010_000L, steps = 30, cadence = 170f), 0.01f)
+        assertEquals(90f, processor.countSilence(1_030_000L, steps = 90, cadence = 170f), 0.5f)
+        // Same steps again: nothing new to show
+        assertEquals(0f, processor.countSilence(1_031_000L, steps = 90, cadence = 170f), 0.01f)
+        assertEquals(90f, processor.pendingStepMeters, 0.5f)
+    }
+
+    @Test
     fun processLocation_afterGap_acceptsAnchorWithZeroSegmentDistance() {
         val first = location(55.7558, 37.6173, time = 1_000_000L)
         // ~45 m after 20 s without fixes; the LOST flag forces the resume

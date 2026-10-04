@@ -167,18 +167,20 @@ class TrackFilterStepsTest {
     }
 
     @Test
-    fun `steps during a silence before a false signal are not counted`() {
+    fun `steps during a silence before a far burst are counted and the burst is dropped`() {
         runEast(0, 10)
         // Two minutes without fixes, then a far burst and a plausible good fix
         filter.process(fix(9_000.0, 9_500.0, 130), steps = 390)
         filter.process(fix(9_000.0, 9_500.0, 131), steps = 393)
-        assertEquals(0f, filter.pendingMeters, 0f)
+        // Owner's decision: a silence is counted by steps (393 - 30 at the anchor)
+        assertEquals(363f, filter.pendingMeters, 0.5f)
 
         val back = filter.process(fix(400.0, 0.0, 132), steps = 396).accepted()
 
         assertTrue(back.afterGap)
-        assertNull(back.bridgeMeters)
-        assertEquals(30f, filter.countedMeters, 0.5f)
+        // max(straight line 370 m, steps 366 m, already shown 363 m)
+        assertEquals(370f, back.bridgeMeters!!, 1f)
+        assertEquals(400f, filter.countedMeters, 1f)
     }
 
     @Test
@@ -192,9 +194,10 @@ class TrackFilterStepsTest {
         val back = filter.process(fix(400.0, 0.0, 100), steps = 300).accepted()
 
         assertTrue(back.afterGap)
-        assertTrue(back.bridgeFromSteps)
-        assertEquals(shown - 30f, back.bridgeMeters!!, 0.5f)
-        assertEquals(shown, filter.countedMeters, 0.5f)
+        // max(straight line 370 m, steps 270 m, already shown): never less than what was shown
+        val expected = maxOf(370f, 270f, shown - 30f)
+        assertEquals(expected, back.bridgeMeters!!, 1f)
+        assertTrue(filter.countedMeters >= shown)
     }
 
     @Test

@@ -121,6 +121,28 @@ class WorkoutSessionManager {
         if (broadcast) notifyChanged()
     }
 
+    /** See [WorkoutSession.openStepMeters]; no listeners (the next update carries it). */
+    fun setOpenStepMeters(meters: Float) {
+        session = session.copy(openStepMeters = meters)
+    }
+
+    /**
+     * Distance counted by steps while no fix arrives (a silence, see
+     * [GpsLocationProcessor.countSilence]).
+     */
+    fun addStepDistance(addedMeters: Float, userWeightKg: Float) {
+        if (addedMeters <= 0f) return
+        val newDistance = session.distance + addedMeters / 1000f
+        val avgSpeed = SpeedPaceCalculator.computeAverageSpeedKmH(newDistance.toDouble(), session.currentTime)
+        session = session.copy(
+            distance = newDistance,
+            avgSpeed = avgSpeed,
+            avgPace = SpeedPaceCalculator.computePaceRaw(avgSpeed),
+            calories = FormatUtils.calculateCalories(newDistance, userWeightKg)
+        )
+        notifyChanged()
+    }
+
     // ------------------------------------------------------------------
     // GPS-driven metric updates
     // ------------------------------------------------------------------

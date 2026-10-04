@@ -561,20 +561,25 @@ class WorkoutTrackingFragment : Fragment() {
         mapManager?.autoCenterIfNeeded(session)
     }
 
+    /** Steps count the distance while GPS is lost or false (allowed and a sensor exists). */
+    private fun stepsForDistance(): Boolean {
+        val context = requireContext()
+        return StepTrackingAccess.isStepTrackingAllowed(context) && StepTrackingAccess.hasStepSensor(context)
+    }
+
     private fun updateGpsBanner(session: WorkoutSession) {
         val banner = binding.textViewGpsBanner
         when {
             session.gpsStatus == GpsStatus.LOST && session.isTracking -> {
                 banner.visibility = View.VISIBLE
-                banner.text = getString(R.string.gps_lost_banner)
+                banner.text = getString(
+                    if (stepsForDistance()) R.string.gps_lost_banner_steps else R.string.gps_lost_banner
+                )
             }
             session.gpsStatus == GpsStatus.UNRELIABLE && session.isTracking -> {
                 banner.visibility = View.VISIBLE
-                val context = requireContext()
-                val withSteps = StepTrackingAccess.isStepTrackingAllowed(context) &&
-                    StepTrackingAccess.hasStepSensor(context)
                 banner.text = getString(
-                    if (withSteps) R.string.gps_unreliable_banner else R.string.gps_unreliable_banner_no_steps
+                    if (stepsForDistance()) R.string.gps_unreliable_banner else R.string.gps_unreliable_banner_no_steps
                 )
             }
             !session.isTracking && !session.isPaused -> {

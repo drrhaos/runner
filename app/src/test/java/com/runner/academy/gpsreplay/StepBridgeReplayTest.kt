@@ -133,6 +133,40 @@ class StepBridgeReplayTest {
     }
 
     @Test
+    fun `steps are counted live during a silence`() {
+        val run = lapWith(Spoof.FarBurst(seconds = 220..221), gapSec = 100..219)
+        val raw = run.rawPoints()
+        val ticked = GpsReplay.live(raw, stepDistance = trained, stepsAt = run::stepsAt)
+        val fixesOnly = GpsReplay.live(raw, stepDistance = trained)
+        // The ticks only show it earlier: the closing bridge adds the rest, never twice
+        assertEquals(fixesOnly.distanceMeters, ticked.distanceMeters, 1.0)
+        assertDistance("live", run.routeLengthM, ticked.distanceMeters, TOLERANCE_PERCENT)
+    }
+
+    @Test
+    fun `a silence still open at Stop keeps its step distance`() {
+        // GPS gone for the last ~200 s (screen off under battery saver), no fix closes it
+        val lap = lapWith(Spoof.FarBurst(seconds = 0..0))
+        val run = lap.copy(spoof = null, gapSec = (lap.durationSec - 200)..lap.durationSec)
+        val raw = run.rawPoints()
+        val live = GpsReplay.live(raw, stepDistance = trained, stepsAt = run::stepsAt, stopAtMs = run.endTimeMs)
+        val saved = GpsReplay.saved(raw, stepDistance = trained, tailMeters = live.openStepMeters)
+
+        assertTrue("an open tail", live.openStepMeters > 150f)
+        assertDistance("live", run.routeLengthM, live.distanceMeters, TOLERANCE_PERCENT)
+        assertEquals("saved = live", live.distanceMeters, saved.distanceMeters, 1.0)
+        assertEquals(live.openStepMeters, TrackGeometry.tailMeters(saved.points), 0.5f)
+    }
+
+    @Test
+    fun `without steps a silence open at Stop counts nothing`() {
+        val lap = lapWith(Spoof.FarBurst(seconds = 0..0))
+        val run = lap.copy(spoof = null, gapSec = (lap.durationSec - 200)..lap.durationSec)
+        val live = GpsReplay.live(run.rawPoints(), stopAtMs = run.endTimeMs, stepsAt = run::stepsAt)
+        assertEquals(0f, live.openStepMeters, 0.01f)
+    }
+
+    @Test
     fun `an estimator without steps in the points changes nothing`() {
         val run = SyntheticRun(SyntheticRun.blockLoop(laps = 1), spoof = Spoof.Teleport(seconds = 100..220))
         val raw = run.rawPoints()
