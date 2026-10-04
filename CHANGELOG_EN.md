@@ -8,6 +8,17 @@ Current release: **`v.0.1.5`**.
 
 ## Unreleased
 
+- False GPS signal (spoofing, jamming): teleport fixes, frozen coordinates and impossible speeds are dropped, no jumps are kept in the track
+- A dropped stretch is still counted: steps × stride or the straight line, whichever is longer; the map draws it with its own dashes
+- "Signal unreliable" status in the indicator, the banner and by voice; the map hides the position meanwhile and the distance grows by steps
+- Starting with a false signal is allowed: distance counts by steps, the track begins at the first good fix
+- Steps for distance (step sensor): the permission is asked once at the first start, with a switch in settings
+- Personal stride model: starts from an estimate by height and learns on the good GPS stretches of every run
+- A warning when battery saver may cut GPS with the screen off
+- If a workout cannot be restored in the background, a notification asks to open the app; the track is kept
+- Standing still (a traffic light) no longer counts as a GPS loss
+- GPS diagnostics record why each fix was dropped, and the steps and cadence
+
 ## 0.1.5a1 — `v.0.1.5a1`
 
 - GPS no longer drops out for minutes with the screen off (seen on a Samsung S22): fixes are delivered without batching, and the CPU stays awake for the duration of a workout

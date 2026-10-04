@@ -120,6 +120,40 @@ class WorkoutTrackingViewModelTest {
     }
 
     @Test
+    fun `saving bridges dropped stretches with the run's stride like the live path`() = runTest {
+        val run = com.runner.academy.gpsreplay.SyntheticRun(
+            com.runner.academy.gpsreplay.SyntheticRun.blockLoop(laps = 1),
+            speedMps = 1.1 * 165 / 60,
+            spoof = com.runner.academy.gpsreplay.SyntheticRun.Spoof.Teleport(seconds = 100..220),
+            strideM = 1.1
+        )
+        val raw = run.rawPoints()
+        val model = com.runner.academy.util.StrideModel.fromHeight(175f)
+        // What the live path showed with the frozen run stride
+        val live = com.runner.academy.gpsreplay.GpsReplay.live(raw, stepDistance = model.frozenEstimator())
+        val field = WorkoutTrackingViewModel::class.java.getDeclaredField("_workoutSession")
+        field.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val flow = field.get(viewModel) as kotlinx.coroutines.flow.MutableStateFlow<WorkoutSession>
+        // The height changed after the start: the run's frozen prior must still be used
+        com.runner.academy.util.UserPreferences(context).userHeight = 190f
+        flow.value = WorkoutSession(
+            startTime = raw.first().timestamp,
+            currentTime = raw.last().timestamp - raw.first().timestamp,
+            rawTrackDataPoints = raw,
+            distance = (live.distanceMeters / 1000).toFloat(),
+            strideModelState = model.serialize()
+        )
+
+        assertNotNull(viewModel.saveWorkoutToDatabase(WorkoutType.EASY_RUN))
+
+        val saved = workoutDao.getAllWorkouts().first().first()
+        assertEquals(live.distanceMeters / 1000, saved.distance.toDouble(), 0.002)
+        val bridge = TrackDataJson.parse(saved.trackData)!!.points.single { it.afterGap }
+        assertEquals(com.runner.academy.data.LocationSource.PEDOMETER.name, bridge.source)
+    }
+
+    @Test
     fun `viewModel should save duration-only workout without gps track`() = runTest {
         val field = WorkoutTrackingViewModel::class.java.getDeclaredField("_workoutSession")
         field.isAccessible = true

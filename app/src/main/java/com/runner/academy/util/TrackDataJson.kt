@@ -82,7 +82,10 @@ object TrackDataJson {
                 speed = obj.number("speed")?.toFloat(),
                 altitude = obj.number("altitude")?.toDouble(),
                 afterGap = obj.booleanOr("after_gap", false),
-                source = obj.stringOr("source", LocationSource.GPS.name)
+                source = obj.stringOr("source", LocationSource.GPS.name),
+                bridgeMeters = obj.number("bridge_m")?.toFloat(),
+                steps = obj.number("steps")?.toInt(),
+                cadence = obj.number("cadence")?.toFloat()
             )
         }
 

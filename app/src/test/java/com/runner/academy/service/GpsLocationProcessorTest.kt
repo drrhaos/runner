@@ -1,7 +1,6 @@
 package com.runner.academy.service
 
 import android.location.Location
-import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.GpsFilter
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -38,7 +37,6 @@ class GpsLocationProcessorTest {
         resumeAfterGap: Boolean = false
     ) = processor.processLocation(
         location,
-        WorkoutType.EASY_RUN,
         previous?.trackPoints ?: mutableListOf(),
         previous?.trackDataPoints ?: mutableListOf(),
         previous?.rawTrackDataPoints ?: mutableListOf(),

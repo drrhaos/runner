@@ -2,16 +2,17 @@ package com.runner.academy.util
 
 import android.location.Location
 import android.util.Log
+import com.runner.academy.data.LocationSource
+import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.maxReasonableGpsSpeedMps
-import com.runner.academy.service.GpsLocationProcessor
 import kotlin.math.max
 
 /**
  * Per-run GPS fix filter: decides, fix by fix, what enters the track.
  *
  * One instance per workout, fed every fix in arrival order. Shared by the live path
- * ([GpsLocationProcessor], used by the tracking service) and the save path ([TrackSanitizer]),
+ * ([com.runner.academy.service.GpsLocationProcessor], used by the tracking service) and the save path ([TrackSanitizer]),
  * so the track shown during the run and the stored one come from the same rules.
  *
  * State:
@@ -22,9 +23,22 @@ import kotlin.math.max
  *    fixes stay. A stretch of dropped fixes that ends with a good fix more than
  *    [GpsFilter.GAP_RESUME_THRESHOLD_MS] after the anchor is bridged by the straight line
  *    ([Verdict.Accepted.bridgeMeters]); a silence (no usable fixes at all for that long, a
- *    tunnel) stays a plain gap without distance.
+ *    tunnel) stays a plain gap without distance;
+ *  - steps (optional, [stepDistance] + `steps` per fix): a bridge is `max(straight line,
+ *    steps × stride)` ([Verdict.Accepted.bridgeFromSteps] when steps win); see [pendingMeters]
+ *    for an open episode and [Verdict.Accepted.leadInMeters] for a false start.
+ *
+ * Distance bookkeeping: [countedMeters] = [committedMeters] (what the kept points add up to,
+ * see [TrackGeometry.totalDistanceMeters]) + [pendingMeters] (steps over an open episode).
+ * It never decreases: a closing bridge or lead-in is at least the pending distance it replaces,
+ * so a live display that adds the change of [countedMeters] never counts a stretch twice and
+ * never goes back.
  */
-class TrackFilter(var workoutType: WorkoutType = WorkoutType.EASY_RUN) {
+class TrackFilter(
+    val workoutType: WorkoutType = WorkoutType.EASY_RUN,
+    /** Steps → metres for bridges; null (no step sensor / no permission): straight lines only. */
+    private val stepDistance: StepDistanceEstimator? = null
+) {
 
     /** Why a fix was dropped. */
     enum class Reason {
@@ -56,11 +70,44 @@ class TrackFilter(var workoutType: WorkoutType = WorkoutType.EASY_RUN) {
             val segmentDistanceMeters: Float,
             /** The fix resumes the track after a break (no solid line from the previous point). */
             val afterGap: Boolean,
-            /** Straight line from the previous anchor when [afterGap] closes a dropped stretch. */
-            val bridgeMeters: Float? = null
-        ) : Verdict
+            /**
+             * Distance from the previous anchor when [afterGap] closes a dropped stretch: the
+             * straight line, or steps × stride when longer ([bridgeFromSteps]).
+             */
+            val bridgeMeters: Float? = null,
+            /** [bridgeMeters] came from steps (stored as `source = PEDOMETER`). */
+            val bridgeFromSteps: Boolean = false,
+            /**
+             * On the first fix after a false start: distance run by steps before it (the track
+             * itself begins here). Not part of [segmentDistanceMeters].
+             */
+            val leadInMeters: Float? = null
+        ) : Verdict {
+            /**
+             * The track point for this fix, built from [from] (the raw point, or a stored point
+             * when re-sanitizing): position from [location], steps / cadence / time from [from].
+             * The one mapping shared by the live and the save path, so both store the same:
+             *  - [bridgeMeters] on a bridge, the [leadInMeters] on the [firstPoint] of the track
+             *    (see [TrackGeometry.leadInMeters]); a value already stored on [from] is kept;
+             *  - `source = PEDOMETER` when the bridge came from steps.
+             */
+            fun toTrackPoint(from: TrackPoint, firstPoint: Boolean): TrackPoint = from.copy(
+                latitude = location.latitude,
+                longitude = location.longitude,
+                accuracy = location.accuracy,
+                speed = location.speed,
+                altitude = location.altitude,
+                afterGap = afterGap,
+                bridgeMeters = when {
+                    afterGap -> bridgeMeters ?: from.bridgeMeters
+                    firstPoint -> leadInMeters ?: from.bridgeMeters
+                    else -> null
+                },
+                source = if (bridgeFromSteps) LocationSource.PEDOMETER.name else from.source.ifBlank { LocationSource.GPS.name }
+            )
+        }
 
-        /** Valid but closer than [GpsLocationProcessor.MIN_POINT_DISTANCE_METERS]: moves the gap clock only. */
+        /** Valid but closer than [GpsFilter.MIN_POINT_DISTANCE_METERS]: moves the gap clock only. */
         data object NearDuplicate : Verdict
 
         /**
@@ -82,8 +129,30 @@ class TrackFilter(var workoutType: WorkoutType = WorkoutType.EASY_RUN) {
     var inFalseSignal: Boolean = false
         private set
 
+    /** Sum of what the kept points add: segments, bridges and the lead-in. */
+    var committedMeters: Float = 0f
+        private set
+
+    /**
+     * Step distance of the open false-signal episode, not yet in a kept point. Grows (never
+     * shrinks) while the episode lasts and is replaced by the closing bridge or lead-in.
+     * Counted only once the stretch is long enough to close as a bridge
+     * ([GpsFilter.GAP_RESUME_THRESHOLD_MS] without a valid fix), or before the first good fix
+     * after a false start; not during a silence.
+     */
+    var pendingMeters: Float = 0f
+        private set
+
+    /** Distance counted so far: [committedMeters] + [pendingMeters]; never decreases. */
+    val countedMeters: Float get() = committedMeters + pendingMeters
+
     private var lastValidFixTimeMs: Long? = null
     private var acceptedCount = 0
+
+    // Steps
+    private var anchorSteps: Int? = null
+    private var falseSignalBeforeFirstFix = false
+    private var startLeadInMeters = 0f
 
     // Since the gap clock last moved
     private var droppedSinceValid = 0
@@ -98,10 +167,16 @@ class TrackFilter(var workoutType: WorkoutType = WorkoutType.EASY_RUN) {
 
     /**
      * Starts a new run. [anchor] continues an interrupted one (checkpoint restore): the gap
-     * is then measured from the anchor's own fix time.
+     * is then measured from the anchor's own fix time; [anchorSteps] are the steps at it and
+     * [pendingMeters] the step distance of an episode already counted before the interruption.
      */
-    fun reset(anchor: Location? = null) {
+    fun reset(anchor: Location? = null, anchorSteps: Int? = null, pendingMeters: Float = 0f) {
         this.anchor = anchor
+        this.anchorSteps = anchorSteps
+        this.pendingMeters = pendingMeters.coerceAtLeast(0f)
+        committedMeters = 0f
+        falseSignalBeforeFirstFix = anchor == null && pendingMeters > 0f
+        startLeadInMeters = 0f
         acceptedCount = if (anchor != null) 1 else 0
         lastValidFixTimeMs = null
         inFalseSignal = false
@@ -117,8 +192,23 @@ class TrackFilter(var workoutType: WorkoutType = WorkoutType.EASY_RUN) {
     /**
      * @param forceGapResume The fix re-anchors the track even without a time gap (the session
      *   was [com.runner.academy.data.GpsStatus.LOST], or a stored point is flagged after a gap).
+     * @param steps Steps since the workout start at this fix; null without a step sensor.
+     * @param cadence Steps/min around this fix, if known.
      */
-    fun process(location: Location, forceGapResume: Boolean = false): Verdict {
+    fun process(
+        location: Location,
+        forceGapResume: Boolean = false,
+        steps: Int? = null,
+        cadence: Float? = null
+    ): Verdict {
+        val verdict = decide(location, forceGapResume, steps, cadence)
+        if (verdict is Verdict.Rejected && verdict.reason != Reason.INVALID) {
+            updatePending(location.time, steps, cadence)
+        }
+        return verdict
+    }
+
+    private fun decide(location: Location, forceGapResume: Boolean, steps: Int?, cadence: Float?): Verdict {
         val previous = anchor
         if (!GpsFilter.isUsableFix(location) || (previous != null && location.time < previous.time)) {
             return Verdict.Rejected(Reason.INVALID)
@@ -131,8 +221,13 @@ class TrackFilter(var workoutType: WorkoutType = WorkoutType.EASY_RUN) {
                 previous.latitude == location.latitude && previous.longitude == location.longitude
             if (retract) {
                 anchor = null
+                anchorSteps = null
                 acceptedCount = 0
                 lastValidFixTimeMs = null
+                // A lead-in counted on the retracted start goes back to pending, not away
+                committedMeters -= startLeadInMeters
+                pendingMeters = max(pendingMeters, startLeadInMeters)
+                startLeadInMeters = 0f
             }
             return drop(Reason.FROZEN, retractStart = retract)
         }
@@ -157,7 +252,7 @@ class TrackFilter(var workoutType: WorkoutType = WorkoutType.EASY_RUN) {
 
         // Close points refresh the gap clock so slow jogging doesn't look like a GPS outage
         if (!gapResume && previous != null &&
-            filtered.distanceTo(previous) < GpsLocationProcessor.MIN_POINT_DISTANCE_METERS
+            filtered.distanceTo(previous) < GpsFilter.MIN_POINT_DISTANCE_METERS
         ) {
             markValid(location.time)
             return Verdict.NearDuplicate
@@ -167,17 +262,78 @@ class TrackFilter(var workoutType: WorkoutType = WorkoutType.EASY_RUN) {
         // Fixes kept coming but were dropped: bridge the stretch. A short bridge (back where the
         // track stopped, e.g. a receiver that pins the position while standing) is an ordinary step.
         val closesDroppedStretch = gapResume && previous != null && droppedSinceValid > 0 && !silenceSinceValid
-        val bridge = closesDroppedStretch && stepMeters > MIN_BRIDGE_METERS
+        val stepsMeters = if (closesDroppedStretch && previous != null) {
+            stepsMetersSince(previous, steps, location.time, cadence)
+        } else {
+            null
+        }
+        val byStepsMeters = max(stepsMeters ?: 0f, pendingMeters)
+        // Step distance already counted live stays counted, even across a later silence
+        val keepsPending = gapResume && previous != null && pendingMeters > 0f
+        val bridgeLength = if (closesDroppedStretch) max(stepMeters, byStepsMeters) else pendingMeters
+        val bridge = (closesDroppedStretch && bridgeLength > MIN_BRIDGE_METERS) || keepsPending
+        val bridgeFromSteps = bridge && byStepsMeters > 0f && (!closesDroppedStretch || byStepsMeters > stepMeters)
         val afterGap = gapResume && previous != null && (bridge || !closesDroppedStretch)
         val segment = when {
             previous == null -> 0f
-            !afterGap || bridge -> stepMeters // No phantom distance across a GPS gap
-            else -> 0f
+            bridge -> bridgeLength
+            !afterGap -> stepMeters
+            else -> 0f // No phantom distance across a GPS gap
+        }
+        val leadIn = if (previous == null && falseSignalBeforeFirstFix) {
+            max(stepsMetersSinceStart(steps, cadence) ?: 0f, pendingMeters).takeIf { it > 0f }
+        } else {
+            null
         }
         anchor = filtered
+        anchorSteps = steps
         acceptedCount++
+        committedMeters += segment + (leadIn ?: 0f)
+        if (previous == null) startLeadInMeters = leadIn ?: 0f
+        pendingMeters = 0f
+        falseSignalBeforeFirstFix = false
         markValid(location.time)
-        return Verdict.Accepted(filtered, segment, afterGap, bridgeMeters = if (bridge) stepMeters else null)
+        return Verdict.Accepted(
+            filtered,
+            segment,
+            afterGap,
+            bridgeMeters = if (bridge) bridgeLength else null,
+            bridgeFromSteps = bridgeFromSteps,
+            leadInMeters = leadIn
+        )
+    }
+
+    /** Counts the open episode's step distance, see [pendingMeters]. */
+    private fun updatePending(timeMs: Long, steps: Int?, cadence: Float?) {
+        if (!inFalseSignal || silenceSinceValid) return
+        val previous = anchor
+        val meters = if (previous == null) {
+            if (!falseSignalBeforeFirstFix) return
+            stepsMetersSinceStart(steps, cadence)
+        } else {
+            val lastValid = max(previous.time, lastValidFixTimeMs ?: previous.time)
+            if (timeMs - lastValid < GpsFilter.GAP_RESUME_THRESHOLD_MS) return
+            stepsMetersSince(previous, steps, timeMs, cadence)
+        } ?: return
+        pendingMeters = max(pendingMeters, meters)
+    }
+
+    /** Steps × stride from [from] (the anchor) to a fix at [timeMs], at the stretch's mean cadence. */
+    private fun stepsMetersSince(from: Location, steps: Int?, timeMs: Long, cadence: Float?): Float? {
+        val estimator = stepDistance ?: return null
+        val delta = (steps ?: return null) - (anchorSteps ?: return null)
+        if (delta < 0) return null
+        val elapsedMs = timeMs - from.time
+        val meanCadence = if (elapsedMs >= MIN_MEAN_CADENCE_SPAN_MS) delta * 60_000f / elapsedMs else cadence
+        return estimator.distanceMeters(delta, meanCadence)
+    }
+
+    /** Steps × stride since the workout start (steps count from 0 there). */
+    private fun stepsMetersSinceStart(steps: Int?, cadence: Float?): Float? {
+        val estimator = stepDistance ?: return null
+        val total = steps ?: return null
+        if (total <= 0) return null
+        return estimator.distanceMeters(total, cadence)
     }
 
     private fun noteUsable(location: Location) {
@@ -198,6 +354,7 @@ class TrackFilter(var workoutType: WorkoutType = WorkoutType.EASY_RUN) {
         if (reason != Reason.OUTLIER || consecutiveOutliers >= FALSE_SIGNAL_MIN_OUTLIERS) {
             if (!inFalseSignal) Log.w(TAG, "False GPS signal: $reason")
             inFalseSignal = true
+            if (anchor == null) falseSignalBeforeFirstFix = true
         }
         return Verdict.Rejected(reason, retractStart)
     }
@@ -221,5 +378,8 @@ class TrackFilter(var workoutType: WorkoutType = WorkoutType.EASY_RUN) {
 
         /** A dropped stretch that ends this close to where the track stopped is not drawn as a bridge. */
         const val MIN_BRIDGE_METERS = 25f
+
+        /** Shorter stretches use the sensor's cadence instead of steps / time. */
+        private const val MIN_MEAN_CADENCE_SPAN_MS = 5_000L
     }
 }

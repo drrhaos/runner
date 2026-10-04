@@ -119,6 +119,15 @@ class StrideModel private constructor(
         return true
     }
 
+    /** An independent copy: learning on one does not change the other. */
+    fun copy(): StrideModel = StrideModel(alpha, beta, pAA, pAB, pBB, sampleCount)
+
+    /**
+     * Distance estimator over a frozen copy of the current state: what one run uses for its
+     * bridges while the run's good stretches keep teaching this model.
+     */
+    fun frozenEstimator(): StepDistanceEstimator = copy().let { frozen -> StepDistanceEstimator(frozen::distanceMeters) }
+
     /** Compact text form for preferences; read back with [deserialize]. */
     fun serialize(): String = listOf(alpha, beta, pAA, pAB, pBB)
         .joinToString(separator = SEPARATOR, prefix = VERSION + SEPARATOR, postfix = SEPARATOR + sampleCount) {
@@ -180,17 +189,32 @@ class StrideModel private constructor(
          * from [heightCm].
          */
         fun deserialize(state: String?, heightCm: Float): StrideModel {
-            val parts = state?.split(SEPARATOR) ?: return fromHeight(heightCm)
-            if (parts.size != 7 || parts[0] != VERSION) return fromHeight(heightCm)
-            val values = parts.subList(1, 6).map { it.toDoubleOrNull() ?: return fromHeight(heightCm) }
-            val count = parts[6].toIntOrNull() ?: return fromHeight(heightCm)
-            if (values.any { !it.isFinite() } || count <= 0) return fromHeight(heightCm)
+            val model = deserializeExact(state) ?: return fromHeight(heightCm)
+            return if (model.sampleCount > 0) model else fromHeight(heightCm)
+        }
+
+        /**
+         * Restores [serialize]d state exactly as it was, an untrained prior included (it is not
+         * rebuilt from the current height): a run's frozen stride must give the save path the
+         * same bridges as the live path even if the height changed meanwhile. Null if corrupt.
+         */
+        fun deserializeExact(state: String?): StrideModel? {
+            val parts = state?.split(SEPARATOR) ?: return null
+            if (parts.size != 7 || parts[0] != VERSION) return null
+            val values = parts.subList(1, 6).map { it.toDoubleOrNull() ?: return null }
+            val count = parts[6].toIntOrNull() ?: return null
+            if (values.any { !it.isFinite() } || count < 0) return null
             val (alpha, beta, pAA, pAB, pBB) = values
-            if (alpha !in MIN_STRIDE_M.toDouble()..MAX_STRIDE_M.toDouble() || beta !in MIN_SLOPE..MAX_SLOPE) {
-                return fromHeight(heightCm)
-            }
-            if (pAA <= 0 || pBB <= 0) return fromHeight(heightCm)
+            if (alpha !in MIN_STRIDE_M.toDouble()..MAX_STRIDE_M.toDouble() || beta !in MIN_SLOPE..MAX_SLOPE) return null
+            if (pAA <= 0 || pBB <= 0) return null
             return StrideModel(alpha, beta, pAA, pAB, pBB, count)
         }
+
+        /**
+         * The estimator a run froze in [state] (see [frozenEstimator]); a corrupt state falls
+         * back to the prior from [fallbackHeightCm].
+         */
+        fun frozenEstimatorOf(state: String, fallbackHeightCm: Float): StepDistanceEstimator =
+            (deserializeExact(state) ?: fromHeight(fallbackHeightCm)).frozenEstimator()
     }
 }

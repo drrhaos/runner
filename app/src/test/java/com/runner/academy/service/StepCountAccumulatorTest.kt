@@ -164,4 +164,26 @@ class StepCountAccumulatorTest {
         acc.onCounterValue(60L, 3 * sec)
         assertEquals(0, acc.steps)
     }
+
+    @Test
+    fun `steps at an earlier time come from the history`() {
+        val acc = started()
+        acc.onDetectedSteps(3, 1 * sec)
+        acc.onDetectedSteps(3, 2 * sec)
+        acc.onDetectedSteps(3, 3 * sec)
+
+        assertEquals(0, acc.stepsAt(500_000_000L))
+        assertEquals(3, acc.stepsAt(1 * sec))
+        assertEquals(6, acc.stepsAt(2 * sec + 500_000_000L))
+        assertEquals(9, acc.stepsAt(10 * sec))
+    }
+
+    @Test
+    fun `steps at a time before the kept history are the oldest known`() {
+        val acc = started(at = 0L, initial = 100)
+        for (i in 1..400) acc.onDetectedSteps(1, i * sec)
+        assertEquals(400 + 100, acc.steps)
+        assertTrue(acc.stepsAt(0L) >= 100)
+        assertTrue(acc.stepsAt(0L) <= acc.stepsAt(399 * sec))
+    }
 }
