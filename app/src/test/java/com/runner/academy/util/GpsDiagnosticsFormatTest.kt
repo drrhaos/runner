@@ -6,6 +6,7 @@ import com.runner.academy.util.GpsDiagnostics.DiagSatellite
 import com.runner.academy.util.GpsDiagnostics.FixResult
 import com.runner.academy.util.GpsDiagnostics.GnssSummary
 import com.runner.academy.util.GpsDiagnostics.SystemStats
+import com.runner.academy.util.PowerSaveCheck.Status
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -77,6 +78,40 @@ class GpsDiagnosticsFormatTest {
     }
 
     @Test
+    fun powerLine_roundTripsThroughParse() {
+        val lines = listOf(
+            GpsDiagnostics.powerLine(
+                elapsedMs = 14_000L,
+                status = Status(powerSaveMode = true, locationMode = PowerSaveCheck.LOCATION_MODE_GPS_DISABLED_WHEN_SCREEN_OFF)
+            ),
+            GpsDiagnostics.powerLine(elapsedMs = 15_000L, status = Status(powerSaveMode = false, locationMode = null))
+        )
+
+        assertEquals(
+            listOf(
+                DiagRecord.Power(14_000L, powerSaveMode = true, locationMode = "gps_disabled_when_screen_off"),
+                DiagRecord.Power(15_000L, powerSaveMode = false, locationMode = "unknown")
+            ),
+            GpsDiagnostics.parse(lines)
+        )
+    }
+
+    @Test
+    fun powerLine_wireFormat() {
+        val line = GpsDiagnostics.powerLine(
+            elapsedMs = 14_000L,
+            status = Status(powerSaveMode = true, locationMode = PowerSaveCheck.LOCATION_MODE_FOREGROUND_ONLY)
+        )
+        assertEquals("""{"type":"power","t":14000,"saver":true,"location":"foreground_only"}""", line)
+    }
+
+    @Test
+    fun restoreFailedEvent_wireFormat() {
+        val line = GpsDiagnostics.eventLine(elapsedMs = 16_000L, event = GpsDiagnostics.Event.RESTORE_FAILED)
+        assertEquals("""{"type":"event","t":16000,"name":"restore_failed"}""", line)
+    }
+
+    @Test
     fun each_record_is_a_single_json_line() {
         val line = GpsDiagnostics.fixLine(fix, FixResult.NEAR_DUPLICATE)
         assertTrue(!line.contains('\n'))
@@ -89,5 +124,28 @@ class GpsDiagnosticsFormatTest {
         val good = GpsDiagnostics.eventLine(1L, GpsDiagnostics.Event.START)
         val records = GpsDiagnostics.parse(listOf(good, "", "{\"type\":\"fix\",\"lat\":5", "not json"))
         assertEquals(listOf(DiagRecord.Event(1L, "start")), records)
+    }
+
+    @Test
+    fun fixLine_carriesRejectReasonAndSteps() {
+        val stepped = fix.copy(steps = 1_234, cadence = 171.5f)
+        val line = GpsDiagnostics.fixLine(stepped, FixResult.REJECTED, reason = "FROZEN")
+
+        val record = GpsDiagnostics.parse(listOf(line)).single()
+
+        assertEquals(DiagRecord.Fix(stepped, FixResult.REJECTED, reason = "FROZEN"), record)
+    }
+
+    @Test
+    fun fixLine_withoutTheOptionalFieldsReadsAsBefore() {
+        // A release-1 line: no reason, steps or cadence
+        val line = """{"type":"fix","t":1,"time":2,"lat":55.0,"lon":37.0,"provider":"gps","result":"ACCEPTED"}"""
+
+        val record = GpsDiagnostics.parse(listOf(line)).single() as DiagRecord.Fix
+
+        assertEquals(null, record.reason)
+        assertEquals(null, record.fix.steps)
+        assertEquals(null, record.fix.cadence)
+        assertEquals(1, GpsDiagnostics.FORMAT_VERSION)
     }
 }

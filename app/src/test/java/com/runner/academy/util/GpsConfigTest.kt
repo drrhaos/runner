@@ -14,8 +14,7 @@ class GpsConfigTest {
 
     @Test
     fun constants_should_have_correct_values() {
-        assertEquals(2f, GpsConfig.MIN_DISTANCE, 0.01f)
-        assertEquals(3f, GpsConfig.MIN_DISTANCE_SCREEN_OFF, 0.01f)
+        assertEquals(0f, GpsConfig.MIN_DISTANCE, 0.01f)
         assertEquals(1000L, GpsConfig.MIN_UPDATE_INTERVAL)
         assertEquals(1000L, GpsConfig.HIGH_ACCURACY_INTERVAL)
         assertEquals(2000L, GpsConfig.SCREEN_OFF_INTERVAL)
@@ -89,7 +88,8 @@ class GpsConfigTest {
         val request = GpsConfig.createWorkoutLocationRequest(screenInteractive = true)
         assertEquals(LocationRequestCompat.QUALITY_HIGH_ACCURACY, request.quality)
         assertEquals(GpsConfig.HIGH_ACCURACY_INTERVAL, request.intervalMillis)
-        assertEquals(GpsConfig.MIN_DISTANCE, request.minUpdateDistanceMeters, 0.01f)
+        // Standing still must keep fixes coming, or the watchdog reports GPS as lost
+        assertEquals(0f, request.minUpdateDistanceMeters, 0.01f)
         // No batching: on API 31+ the GNSS HAL batches when maxUpdateDelay >= 2 * interval
         // and then holds fixes long enough for the watchdog to report GPS as lost.
         assertEquals(0L, request.maxUpdateDelayMillis)
@@ -100,7 +100,7 @@ class GpsConfigTest {
         val request = GpsConfig.createWorkoutLocationRequest(screenInteractive = false)
         assertEquals(LocationRequestCompat.QUALITY_HIGH_ACCURACY, request.quality)
         assertEquals(GpsConfig.SCREEN_OFF_INTERVAL, request.intervalMillis)
-        assertEquals(GpsConfig.MIN_DISTANCE_SCREEN_OFF, request.minUpdateDistanceMeters, 0.01f)
+        assertEquals(0f, request.minUpdateDistanceMeters, 0.01f)
         // No batching: on a Samsung S22 the screen-off batch (20 s window) stalled the chip for
         // minutes and it came back with a cold, jumpy fix.
         assertEquals(0L, request.maxUpdateDelayMillis)
@@ -108,11 +108,17 @@ class GpsConfigTest {
 
     @Test
     fun createAdaptiveLocationRequest_never_batches_at_any_interval() {
-        for (screenInteractive in listOf(true, false)) {
-            for (interval in listOf(1000L, 2000L, 3000L)) {
-                val request = GpsConfig.createAdaptiveLocationRequest(interval, screenInteractive)
-                assertEquals(0L, request.maxUpdateDelayMillis)
-            }
+        for (interval in listOf(1000L, 2000L, 3000L)) {
+            val request = GpsConfig.createAdaptiveLocationRequest(interval)
+            assertEquals(0L, request.maxUpdateDelayMillis)
+        }
+    }
+
+    @Test
+    fun createAdaptiveLocationRequest_keeps_updating_while_standing() {
+        for (interval in listOf(1000L, 2000L, 3000L)) {
+            val request = GpsConfig.createAdaptiveLocationRequest(interval)
+            assertEquals(0f, request.minUpdateDistanceMeters, 0.01f)
         }
     }
 
@@ -154,9 +160,7 @@ class GpsConfigTest {
     }
 
     @Test
-    fun min_distance_should_be_reasonable_for_gps() {
-        assertTrue(GpsConfig.MIN_DISTANCE > 0f)
-        assertTrue(GpsConfig.MIN_DISTANCE <= 50f)
-        assertTrue(GpsConfig.MIN_DISTANCE_SCREEN_OFF >= GpsConfig.MIN_DISTANCE)
+    fun min_distance_leaves_near_duplicate_filtering_to_the_processor() {
+        assertTrue(GpsConfig.MIN_DISTANCE < GpsFilter.MIN_POINT_DISTANCE_METERS)
     }
 }

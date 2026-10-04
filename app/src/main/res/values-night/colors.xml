@@ -54,6 +54,7 @@
     <color name="gps_signal_level_4">#B3FFFFFF</color>
     <color name="gps_signal_active">#B3FFFFFF</color>
     <color name="gps_signal_inactive">#33FFFFFF</color>
+    <color name="gps_signal_unreliable">#B3BF5AF2</color>
     <color name="map_control_surface">#99000000</color>
     <color name="map_control_icon">#CCFFFFFF</color>
     <color name="map_navigation_circle_fill">#33FF9F0A</color>

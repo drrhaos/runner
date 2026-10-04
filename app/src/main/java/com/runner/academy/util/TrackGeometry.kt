@@ -45,12 +45,35 @@ object TrackGeometry {
         return stepM >= GAP_DISTANCE_METERS
     }
 
+    /** A break that still counts distance: [TrackPoint.bridgeMeters] over a dropped stretch. */
+    fun isBridgeStep(point: TrackPoint): Boolean = point.afterGap && point.bridgeMeters != null
+
+    /**
+     * Distance run before the first point of the track: [TrackPoint.bridgeMeters] on a first
+     * point that is not [TrackPoint.afterGap]. Set after a false start (no position yet, steps
+     * counted), see `TrackFilter.Verdict.Accepted.leadInMeters`. Only the total counts it:
+     * renderers, splits and charts start at the first point, which has no earlier time to pace
+     * it against. Older tracks never have one (the first point never had a bridge).
+     */
+    fun leadInMeters(points: List<TrackPoint>): Float {
+        val first = points.firstOrNull() ?: return 0f
+        if (first.afterGap) return 0f
+        return first.bridgeMeters?.takeIf { it.isFinite() && it > 0f } ?: 0f
+    }
+
+    /** Distance the step from [prev] to [point] adds to the total. */
+    fun stepDistanceMeters(prev: TrackPoint, point: TrackPoint): Float = when {
+        isBridgeStep(point) -> point.bridgeMeters ?: 0f
+        isTrackGapStep(prev, point) -> 0f
+        else -> distanceMeters(prev, point)
+    }
+
+    /** Every step, bridges included, plus the [leadInMeters]. */
     fun totalDistanceMeters(points: List<TrackPoint>): Float {
-        if (points.size < 2) return 0f
-        var total = 0f
+        var total = leadInMeters(points)
+        if (points.size < 2) return total
         for (i in 1 until points.size) {
-            if (isTrackGapStep(points[i - 1], points[i])) continue
-            total += distanceMeters(points[i - 1], points[i])
+            total += stepDistanceMeters(points[i - 1], points[i])
         }
         return total
     }

@@ -1,9 +1,9 @@
 package com.runner.academy.gpsreplay
 
-import android.location.Location
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.service.GpsLocationProcessor
+import com.runner.academy.util.StepDistanceEstimator
 import com.runner.academy.util.TrackGeometry
 import com.runner.academy.util.TrackSanitizer
 import kotlin.math.cos
@@ -27,13 +27,21 @@ data class ReplayResult(
 object GpsReplay {
 
     /**
-     * Mirrors the per-fix loop of `WorkoutTrackingService.updateLocation`: the previous
-     * accepted fix is the reference, rejected fixes do not move it.
+     * Mirrors the per-fix loop of `WorkoutTrackingService.updateLocation`: one
+     * [GpsLocationProcessor] per run, reset at the start with the run's frozen [stepDistance],
+     * fed every fix with the steps and cadence of that moment; the service's session takes the
+     * returned lists (on accepted fixes and on a retracted false-signal start) and adds
+     * [GpsLocationProcessor.ProcessResult.distanceDeltaMeters] of every fix (segments, the rest
+     * of bridges and lead-ins, step distance counted during an episode).
      * Keep in sync with the service when that loop changes.
      */
-    fun live(raw: List<TrackPoint>, type: WorkoutType = WorkoutType.EASY_RUN): ReplayResult {
+    fun live(
+        raw: List<TrackPoint>,
+        type: WorkoutType = WorkoutType.EASY_RUN,
+        stepDistance: StepDistanceEstimator? = null
+    ): ReplayResult {
         val processor = GpsLocationProcessor()
-        var last: Location? = null
+        processor.reset(workoutType = type, stepDistance = stepDistance)
         var distance = 0.0
         var gaps = 0
         var trackPoints = mutableListOf<org.osmdroid.util.GeoPoint>()
@@ -41,28 +49,27 @@ object GpsReplay {
         var rawData = mutableListOf<TrackPoint>()
 
         for (point in raw) {
+            val location = TrackSanitizer.toLocation(point)
             val result = processor.processLocation(
-                TrackSanitizer.toLocation(point),
-                last,
-                type,
-                trackPoints,
-                trackData,
-                rawData
-            ) ?: continue
+                location, trackPoints, trackData, rawData,
+                steps = point.steps,
+                cadence = point.cadence
+            )
             trackPoints = result.trackPoints
             trackData = result.trackDataPoints
             rawData = result.rawTrackDataPoints
-            if (result is GpsLocationProcessor.ProcessResult.Accepted) {
-                distance += result.segmentDistanceMeters
-                if (result.afterGap) gaps++
-                last = result.filteredLocation
-            }
+            distance += result.distanceDeltaMeters
+            if (result is GpsLocationProcessor.ProcessResult.Accepted && result.afterGap) gaps++
         }
         return ReplayResult(distance, trackData, gaps)
     }
 
-    fun saved(raw: List<TrackPoint>, type: WorkoutType = WorkoutType.EASY_RUN): ReplayResult {
-        val points = TrackSanitizer.sanitize(raw, type)
+    fun saved(
+        raw: List<TrackPoint>,
+        type: WorkoutType = WorkoutType.EASY_RUN,
+        stepDistance: StepDistanceEstimator? = null
+    ): ReplayResult {
+        val points = TrackSanitizer.sanitize(raw, type, stepDistance)
         return ReplayResult(
             distanceMeters = TrackGeometry.totalDistanceMeters(points).toDouble(),
             points = points,
@@ -81,7 +88,10 @@ data class SyntheticRun(
     val route: List<Pair<Double, Double>>,
     val speedMps: Double = 3.3,
     val intervalMs: Long = 1_000L,
+    /** Seconds standing still (fixes keep coming) once [standStillAtM] metres are covered. */
     val standStillSec: Int = 0,
+    /** 0 = before the run; mid-route = a traffic light. */
+    val standStillAtM: Double = 0.0,
     val noiseInnovationM: Double = 0.4,
     val noiseDecay: Double = 0.95,
     val accuracyM: Float = 6f,
@@ -92,6 +102,11 @@ data class SyntheticRun(
     val outlierOffsetM: Double = 300.0,
     /** False-signal episode (spoofing / jamming), see [Spoof]. */
     val spoof: Spoof? = null,
+    /**
+     * True step length in metres; set, every fix carries the steps since the start (the true
+     * distance moved / stride) and the cadence. Null: no step sensor.
+     */
+    val strideM: Double? = null,
     val seed: Long = 42L
 ) {
     /**
@@ -112,6 +127,19 @@ data class SyntheticRun(
         /** Position drifts away at [rateMps] towards [headingDeg] (0 = north), then snaps back. */
         class Drift(seconds: IntRange, val rateMps: Double, val headingDeg: Double = 90.0) :
             Spoof(seconds, noisy = true)
+
+        /**
+         * A few jittering fixes [eastM]/[northM] away with a high reported [speedMps] and a
+         * wrong [altitudeM], good accuracy — modelled on a real false signal seen mid-run after
+         * two minutes without fixes (Samsung S22).
+         */
+        class FarBurst(
+            seconds: IntRange,
+            val eastM: Double = 9_000.0,
+            val northM: Double = 9_500.0,
+            val speedMps: Float = 28f,
+            val altitudeM: Double = 900.0
+        ) : Spoof(seconds, noisy = true)
     }
 
     val routeLengthM: Double = route.zipWithNext { a, b -> hypot(b.first - a.first, b.second - a.second) }.sum()
@@ -134,6 +162,9 @@ data class SyntheticRun(
             val (x2, y2) = positionAt(after)
             return routeLengthM - (after - before) + hypot(x2 - x1, y2 - y1)
         }
+
+    /** Cadence of the run with [strideM], steps/min. */
+    val cadenceSpm: Double? get() = strideM?.let { 60.0 * speedMps / it }
 
     /** Metres actually covered while no fixes arrive (not counted: the track restarts after a gap). */
     val gapDistanceM: Double
@@ -159,13 +190,21 @@ data class SyntheticRun(
                 val (x, y) = spoofed ?: positionAt(movedAt(t))
                 val noisy = spoofed == null || spoof?.noisy == true
                 val outlier = if (second in outlierAtSec && t - second < stepSec) outlierOffsetM else 0.0
-                val moving = t >= standStillSec
+                val moving = !isStanding(t)
+                val burst = (spoof as? Spoof.FarBurst)?.takeIf { spoofed != null }
                 points += point(
                     x + (if (noisy) errX else 0.0) + outlier,
                     y + (if (noisy) errY else 0.0),
                     timeMs = START_TIME + (t * 1000).toLong(),
-                    speed = if (moving && noisy) speedMps.toFloat() else 0f
-                )
+                    speed = burst?.speedMps ?: if (moving && noisy) speedMps.toFloat() else 0f,
+                    altitude = burst?.altitudeM ?: ALTITUDE_M
+                ).let { p ->
+                    val stride = strideM ?: return@let p
+                    p.copy(
+                        steps = (movedAt(t) / stride).toInt(),
+                        cadence = if (moving) (60.0 * speedMps / stride).toFloat() else 0f
+                    )
+                }
             }
             t += stepSec
         }
@@ -179,6 +218,7 @@ data class SyntheticRun(
         return when (episode) {
             is Spoof.Teleport -> episode.eastM to episode.northM
             is Spoof.Frozen -> positionAt(movedAt(begin))
+            is Spoof.FarBurst -> episode.eastM to episode.northM
             is Spoof.Drift -> {
                 val (x, y) = positionAt(movedAt(t))
                 val pulled = episode.rateMps * (t - begin)
@@ -194,8 +234,20 @@ data class SyntheticRun(
         return route.zipWithNext().minOf { (a, b) -> distanceToSegment(x, y, a, b) }
     }
 
-    private fun movedAt(t: Number): Double =
-        ((t.toDouble() - standStillSec).coerceAtLeast(0.0) * speedMps).coerceAtMost(routeLengthM)
+    private fun movedAt(t: Number): Double {
+        val unstopped = t.toDouble() * speedMps
+        val moved = if (unstopped > standStillAtM) {
+            (unstopped - standStillSec * speedMps).coerceAtLeast(standStillAtM)
+        } else {
+            unstopped
+        }
+        return moved.coerceAtMost(routeLengthM)
+    }
+
+    private fun isStanding(t: Double): Boolean {
+        val from = standStillAtM / speedMps
+        return t >= from && t < from + standStillSec
+    }
 
     private fun positionAt(distance: Double): Pair<Double, Double> {
         var left = distance
@@ -210,13 +262,13 @@ data class SyntheticRun(
         return route.last()
     }
 
-    private fun point(x: Double, y: Double, timeMs: Long, speed: Float) = TrackPoint(
+    private fun point(x: Double, y: Double, timeMs: Long, speed: Float, altitude: Double) = TrackPoint(
         latitude = LAT0 + y / M_PER_DEG,
         longitude = LON0 + x / (M_PER_DEG * cos(Math.toRadians(LAT0))),
         timestamp = timeMs,
         accuracy = accuracyM,
         speed = speed,
-        altitude = 150.0
+        altitude = altitude
     )
 
     private fun toXY(p: TrackPoint): Pair<Double, Double> =
@@ -242,6 +294,7 @@ data class SyntheticRun(
         const val LON0 = 37.6
         const val M_PER_DEG = 111_320.0
         const val START_TIME = 1_700_000_000_000L
+        const val ALTITUDE_M = 150.0
 
         /** 400 × 250 m rectangle, [laps] times round — sharp corners like a city block. */
         fun blockLoop(laps: Int = 2): List<Pair<Double, Double>> {

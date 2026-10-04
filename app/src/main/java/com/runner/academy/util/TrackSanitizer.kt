@@ -1,56 +1,40 @@
 package com.runner.academy.util
 
 import android.location.Location
-import com.runner.academy.data.LocationSource
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutType
-import com.runner.academy.data.maxReasonableGpsSpeedMps
-import com.runner.academy.service.GpsLocationProcessor
 
 /**
  * Save-time pipeline: turns the raw points of a finished session into the track that is
- * stored in the database (outliers dropped, near-duplicates merged, GPS gaps flagged).
+ * stored in the database (outliers dropped, near-duplicates merged, GPS gaps flagged), with the
+ * same per-run [TrackFilter] the live path uses.
+ *
+ * Steps and cadence come from the raw points; with the run's [StepDistanceEstimator] (the
+ * same frozen one the live path used) dropped stretches are bridged by steps exactly as live.
  *
  * Shared by [com.runner.academy.ui.tracking.WorkoutTrackingViewModel] and the GPS replay tests.
  */
 object TrackSanitizer {
 
-    fun sanitize(rawPoints: List<TrackPoint>, workoutType: WorkoutType): List<TrackPoint> {
+    fun sanitize(
+        rawPoints: List<TrackPoint>,
+        workoutType: WorkoutType,
+        stepDistance: StepDistanceEstimator? = null
+    ): List<TrackPoint> {
         if (rawPoints.isEmpty()) return emptyList()
         val result = mutableListOf<TrackPoint>()
-        var previousLocation: Location? = null
-        val maxReasonableSpeedMps = workoutType.maxReasonableGpsSpeedMps()
+        val filter = TrackFilter(workoutType, stepDistance)
 
         for (point in rawPoints) {
-            val rawLocation = toLocation(point)
-            val forceGap = GpsFilter.isGapResume(previousLocation, rawLocation) || point.afterGap
-            val filteredLocation = GpsFilter.filterGpsOutlier(
-                rawLocation,
-                previousLocation,
-                maxReasonableSpeedMps = maxReasonableSpeedMps,
-                forceGapResume = forceGap
-            ) ?: continue
-
-            val afterGap = forceGap && previousLocation != null
-            if (!afterGap && previousLocation != null) {
-                val segmentDistance = filteredLocation.distanceTo(previousLocation)
-                if (segmentDistance < GpsLocationProcessor.MIN_POINT_DISTANCE_METERS) {
-                    continue
-                }
-            }
-
-            result.add(
-                point.copy(
-                    latitude = filteredLocation.latitude,
-                    longitude = filteredLocation.longitude,
-                    accuracy = filteredLocation.accuracy,
-                    speed = filteredLocation.speed,
-                    altitude = filteredLocation.altitude,
-                    afterGap = afterGap,
-                    source = point.source.ifBlank { LocationSource.GPS.name }
-                )
+            val verdict = filter.process(
+                toLocation(point),
+                forceGapResume = point.afterGap,
+                steps = point.steps,
+                cadence = point.cadence
             )
-            previousLocation = filteredLocation
+            if (verdict is TrackFilter.Verdict.Rejected && verdict.retractStart) result.clear()
+            if (verdict !is TrackFilter.Verdict.Accepted) continue
+            result.add(verdict.toTrackPoint(point, firstPoint = result.isEmpty()))
         }
         return result
     }

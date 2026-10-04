@@ -36,7 +36,8 @@ class WorkoutSessionManager {
     // ------------------------------------------------------------------
 
     fun startNewSession(
-        initialGpsStatus: GpsStatus = GpsStatus.SEARCHING
+        initialGpsStatus: GpsStatus = GpsStatus.SEARCHING,
+        strideModelState: String? = null
     ) {
         val currentTime = System.currentTimeMillis()
         lastUpdateTime = 0L
@@ -58,7 +59,8 @@ class WorkoutSessionManager {
             trackPoints = emptyList(),
             trackDataPoints = emptyList(),
             rawTrackDataPoints = emptyList(),
-            currentLocation = null
+            currentLocation = null,
+            strideModelState = strideModelState
         )
         notifyChanged()
     }
@@ -126,7 +128,8 @@ class WorkoutSessionManager {
     /**
      * Update session metrics based on a processed GPS location.
      *
-     * @param segmentDistanceMeters Distance from the last accepted point (0 for first point).
+     * @param segmentDistanceMeters Distance to add for this fix (see
+     *   [GpsLocationProcessor.ProcessResult.distanceDeltaMeters]).
      * @param trackPoints Updated display track points list.
      * @param trackDataPoints Updated data track points list.
      * @param rawTrackDataPoints Updated raw track points list.
@@ -138,7 +141,8 @@ class WorkoutSessionManager {
         trackDataPoints: List<com.runner.academy.data.TrackPoint>,
         rawTrackDataPoints: List<com.runner.academy.data.TrackPoint>,
         userWeightKg: Float,
-        currentLocation: android.location.Location? = null
+        currentLocation: android.location.Location? = null,
+        gpsStatus: GpsStatus = GpsStatus.FOUND
     ) {
         val newDistance = session.distance + segmentDistanceMeters / 1000f
         val currentTime = System.currentTimeMillis()
@@ -162,7 +166,7 @@ class WorkoutSessionManager {
             currentPace = currentPace,
             avgPace = avgPace,
             calories = calories,
-            gpsStatus = GpsStatus.FOUND
+            gpsStatus = gpsStatus
         )
         lastUpdateTime = currentTime
         notifyChanged()
@@ -170,16 +174,37 @@ class WorkoutSessionManager {
 
     /**
      * Update session when a location is received but filtered out during active tracking.
-     * Does NOT change gpsStatus (preserves existing status).
+     * Keeps gpsStatus unless [gpsStatus] is given. [trackPoints] / [trackDataPoints]
+     * replace the track when the filter retracted it (a false-signal start).
+     * [addedDistanceMeters] is step distance counted during a false-signal episode.
      */
     fun updateLocationOnly(
         currentLocation: android.location.Location,
-        rawTrackDataPoints: List<com.runner.academy.data.TrackPoint>
+        rawTrackDataPoints: List<com.runner.academy.data.TrackPoint>,
+        trackPoints: List<org.osmdroid.util.GeoPoint>? = null,
+        trackDataPoints: List<com.runner.academy.data.TrackPoint>? = null,
+        addedDistanceMeters: Float = 0f,
+        userWeightKg: Float = 0f,
+        gpsStatus: GpsStatus? = null
     ) {
-        session = session.copy(
+        var updated = session.copy(
             currentLocation = currentLocation,
-            rawTrackDataPoints = rawTrackDataPoints
+            rawTrackDataPoints = rawTrackDataPoints,
+            trackPoints = trackPoints ?: session.trackPoints,
+            trackDataPoints = trackDataPoints ?: session.trackDataPoints,
+            gpsStatus = gpsStatus ?: session.gpsStatus
         )
+        if (addedDistanceMeters > 0f) {
+            val newDistance = updated.distance + addedDistanceMeters / 1000f
+            val avgSpeed = SpeedPaceCalculator.computeAverageSpeedKmH(newDistance.toDouble(), updated.currentTime)
+            updated = updated.copy(
+                distance = newDistance,
+                avgSpeed = avgSpeed,
+                avgPace = SpeedPaceCalculator.computePaceRaw(avgSpeed),
+                calories = FormatUtils.calculateCalories(newDistance, userWeightKg)
+            )
+        }
+        session = updated
         notifyChanged()
     }
 

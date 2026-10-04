@@ -6,6 +6,9 @@ import com.runner.academy.data.TrackPoint
 import com.runner.academy.util.OsmMapConfig
 import com.runner.academy.util.OsmMapTiles
 import com.runner.academy.util.TrackPolylineFactory
+import com.runner.academy.util.TrackRuns
+import com.runner.academy.util.allPoints
+import com.runner.academy.util.solids
 import org.osmdroid.util.BoundingBox
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
@@ -79,11 +82,11 @@ class DetailMapManager(
 
         clearTrackOverlays()
 
-        val segments = TrackPolylineFactory.splitIntoSegments(trackData.points)
-        if (segments.isEmpty()) return
+        val runs = TrackRuns.split(trackData.points)
+        if (runs.isEmpty()) return
 
-        val (solids, gaps) = TrackPolylineFactory.buildOverlays(segments, TRACK_STYLE)
-        val allGeoPoints = segments.flatten()
+        val (solids, gaps, bridges) = TrackPolylineFactory.buildOverlays(runs, TRACK_STYLE)
+        val allGeoPoints = runs.allPoints().map(TrackPolylineFactory::toGeoPoint)
 
         solids.forEachIndexed { index, poly ->
             if (index == 0) {
@@ -94,7 +97,7 @@ class DetailMapManager(
             val insertAt = mapView.overlays.indexOf(positionMarker).coerceAtLeast(0)
             mapView.overlays.add(insertAt, poly)
         }
-        gaps.forEach { dashed ->
+        (gaps + bridges).forEach { dashed ->
             gapPolylines.add(dashed)
             val insertAt = mapView.overlays.indexOf(positionMarker).coerceAtLeast(0)
             mapView.overlays.add(insertAt, dashed)
@@ -104,7 +107,7 @@ class DetailMapManager(
         mapView.invalidate()
         android.util.Log.d(
             "WorkoutDetail",
-            "Successfully loaded track with ${allGeoPoints.size} points in ${segments.size} segments"
+            "Successfully loaded track with ${allGeoPoints.size} points in ${runs.solids().size} segments"
         )
     }
 
