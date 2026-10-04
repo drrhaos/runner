@@ -578,7 +578,7 @@ class WorkoutTrackingService : Service() {
         // run's stride still bridges those, so live and saved stay equal
         val runStride = startSteps(initialSteps = savedSteps, frozenState = checkpoint.strideModelState)
             ?: checkpoint.strideModelState?.let { state ->
-                RunStride(StrideModel.deserialize(state, userPreferences.userHeight).frozenEstimator(), state)
+                RunStride(StrideModel.frozenEstimatorOf(state, userPreferences.userHeight), state)
             }
         // The gap clock is not checkpointed: it falls back to the anchor's own time
         gpsProcessor.reset(
@@ -730,8 +730,9 @@ class WorkoutTrackingService : Service() {
         learningStrideModel = model
         strideSamplesAtStart = model.sampleCount
         strideLearner = StrideLearner(model)
-        val frozen = frozenState?.let { StrideModel.deserialize(it, userPreferences.userHeight) } ?: model.copy()
-        return RunStride(frozen.frozenEstimator(), frozenState ?: frozen.serialize())
+        // A restored run keeps the exact stride it froze, an untrained prior included
+        val frozen = frozenState?.let { StrideModel.deserializeExact(it) } ?: model.copy()
+        return RunStride(frozen.frozenEstimator(), frozen.serialize())
     }
 
     /** Stops counting steps; with [saveLearned] the model keeps what this run taught it. */
