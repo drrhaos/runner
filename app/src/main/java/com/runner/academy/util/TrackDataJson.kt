@@ -85,7 +85,9 @@ object TrackDataJson {
                 source = obj.stringOr("source", LocationSource.GPS.name),
                 bridgeMeters = obj.number("bridge_m")?.toFloat(),
                 steps = obj.number("steps")?.toInt(),
-                cadence = obj.number("cadence")?.toFloat()
+                cadence = obj.number("cadence")?.toFloat(),
+                tailMeters = obj.number("tail_m")?.toFloat(),
+                afterPause = if (obj.booleanOr("after_pause", false)) true else null
             )
         }
 

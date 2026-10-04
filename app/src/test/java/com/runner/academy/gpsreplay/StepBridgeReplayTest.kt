@@ -120,14 +120,64 @@ class StepBridgeReplayTest {
     }
 
     @Test
-    fun `a silence stays a gap with steps too`() {
+    fun `a silence is counted by steps and the far burst after it is dropped`() {
+        // Owner's decision (2026-10-04): a silence (tunnel, jamming, GNSS off under battery
+        // saver) is bridged by steps; the burst of far fixes after it is still dropped
         val run = lapWith(Spoof.FarBurst(seconds = 220..221), gapSec = 100..219)
-        val expected = run.routeLengthM - run.gapDistanceM - 2 * run.speedMps
         for ((name, result) in bothPipelines(run, trained)) {
             assertNoTeleport(name, run, result)
-            assertDistance(name, expected, result.distanceMeters, TOLERANCE_PERCENT)
-            assertTrue("$name: the silence is not bridged", result.points.none { it.bridgeMeters != null })
+            assertDistance(name, run.routeLengthM, result.distanceMeters, TOLERANCE_PERCENT)
+            val bridge = result.points.single { TrackGeometry.isBridgeStep(it) }
+            assertEquals("$name: bridged by steps", LocationSource.PEDOMETER.name, bridge.source)
         }
+    }
+
+    @Test
+    fun `steps are counted live during a silence`() {
+        val run = lapWith(Spoof.FarBurst(seconds = 220..221), gapSec = 100..219)
+        val raw = run.rawPoints()
+        val ticked = GpsReplay.live(raw, stepDistance = trained, stepsAt = run::stepsAt)
+        val fixesOnly = GpsReplay.live(raw, stepDistance = trained)
+        // The ticks only show it earlier: the closing bridge adds the rest, never twice
+        assertEquals(fixesOnly.distanceMeters, ticked.distanceMeters, 1.0)
+        assertDistance("live", run.routeLengthM, ticked.distanceMeters, TOLERANCE_PERCENT)
+    }
+
+    @Test
+    fun `a silence still open at Stop keeps its step distance`() {
+        // GPS gone for the last ~200 s (screen off under battery saver), no fix closes it
+        val lap = lapWith(Spoof.FarBurst(seconds = 0..0))
+        val run = lap.copy(spoof = null, gapSec = (lap.durationSec - 200)..lap.durationSec)
+        val raw = run.rawPoints()
+        val live = GpsReplay.live(raw, stepDistance = trained, stepsAt = run::stepsAt, stopAtMs = run.endTimeMs)
+        val saved = GpsReplay.saved(raw, stepDistance = trained, tailMeters = live.openStepMeters)
+
+        assertTrue("an open tail", live.openStepMeters > 150f)
+        assertDistance("live", run.routeLengthM, live.distanceMeters, TOLERANCE_PERCENT)
+        assertEquals("saved = live", live.distanceMeters, saved.distanceMeters, 1.0)
+        assertEquals(live.openStepMeters, TrackGeometry.tailMeters(saved.points), 0.5f)
+    }
+
+    @Test
+    fun `a cold start counts the steps before the first fix the same live and saved`() {
+        // No fix for the first 40 s (GPS warming up, or off under battery saver)
+        val lap = lapWith(Spoof.FarBurst(seconds = 0..0))
+        val run = lap.copy(spoof = null, gapSec = 0..40)
+        val raw = run.rawPoints()
+        val live = GpsReplay.live(raw, stepDistance = trained, stepsAt = run::stepsAt, startAtMs = run.startTimeMs)
+        val saved = GpsReplay.saved(raw, stepDistance = trained, tailMeters = live.openStepMeters)
+
+        assertTrue("lead-in counted", TrackGeometry.leadInMeters(saved.points) > 100f)
+        assertDistance("live", run.routeLengthM, live.distanceMeters, TOLERANCE_PERCENT)
+        assertEquals("saved = live", live.distanceMeters, saved.distanceMeters, 1.0)
+    }
+
+    @Test
+    fun `without steps a silence open at Stop counts nothing`() {
+        val lap = lapWith(Spoof.FarBurst(seconds = 0..0))
+        val run = lap.copy(spoof = null, gapSec = (lap.durationSec - 200)..lap.durationSec)
+        val live = GpsReplay.live(run.rawPoints(), stopAtMs = run.endTimeMs, stepsAt = run::stepsAt)
+        assertEquals(0f, live.openStepMeters, 0.01f)
     }
 
     @Test

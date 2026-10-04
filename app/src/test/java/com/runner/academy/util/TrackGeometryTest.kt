@@ -44,6 +44,14 @@ class TrackGeometryTest {
     }
 
     @Test
+    fun tail_after_the_last_point_counts_toward_the_total() {
+        val points = listOf(point(55.0), point(55.001).copy(tailMeters = 250f))
+        assertEquals(111f + 250f, TrackGeometry.totalDistanceMeters(points), 1f)
+        assertEquals(250f, TrackGeometry.tailMeters(points), 0.01f)
+        assertEquals(0f, TrackGeometry.tailMeters(listOf(point(55.0))), 0.01f)
+    }
+
+    @Test
     fun bridge_is_a_break_in_the_line_but_not_a_lost_distance() {
         val prev = point(55.0)
         val bridged = point(55.001, afterGap = true, bridgeMeters = 120f)

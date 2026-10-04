@@ -124,8 +124,16 @@ object WorkoutDataCleaner {
             }
         }
         
+        // The tail belongs to the last point: keep it when cleaning dropped the original last one
+        val tail = originalTrackData.points.lastOrNull()?.tailMeters
+        val withTail = if (tail != null) {
+            orderedPoints.mapIndexed { i, p -> p.copy(tailMeters = if (i == orderedPoints.lastIndex) tail else null) }
+        } else {
+            orderedPoints
+        }
+
         // Вычисляем общее расстояние через SpeedPaceCalculator
-        val totalDistance = SpeedPaceCalculator.totalDistanceMeters(orderedPoints)
+        val totalDistance = SpeedPaceCalculator.totalDistanceMeters(withTail)
         
         // Вычисляем общую продолжительность
         val startTime = orderedPoints.first().timestamp
@@ -139,7 +147,7 @@ object WorkoutDataCleaner {
         Log.d("WorkoutDataCleaner", "Recalculated stats: distance=${totalDistance}m, duration=${totalDuration}ms, avgSpeed=${avgSpeed}m/s")
         
         return TrackData(
-            points = orderedPoints,
+            points = withTail,
             totalDistance = totalDistance,
             totalDuration = totalDuration,
             avgSpeed = avgSpeed,
