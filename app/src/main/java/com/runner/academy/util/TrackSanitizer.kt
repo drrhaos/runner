@@ -16,10 +16,16 @@ import com.runner.academy.data.WorkoutType
  */
 object TrackSanitizer {
 
+    /**
+     * @param tailMeters Step distance counted live after the last fix that no fix closed
+     *   ([com.runner.academy.data.WorkoutSession.openStepMeters]); stored as the track's tail
+     *   ([TrackPoint.tailMeters]). A tail already on [rawPoints] (a stored track) is kept.
+     */
     fun sanitize(
         rawPoints: List<TrackPoint>,
         workoutType: WorkoutType,
-        stepDistance: StepDistanceEstimator? = null
+        stepDistance: StepDistanceEstimator? = null,
+        tailMeters: Float = 0f
     ): List<TrackPoint> {
         if (rawPoints.isEmpty()) return emptyList()
         val result = mutableListOf<TrackPoint>()
@@ -34,8 +40,11 @@ object TrackSanitizer {
             )
             if (verdict is TrackFilter.Verdict.Rejected && verdict.retractStart) result.clear()
             if (verdict !is TrackFilter.Verdict.Accepted) continue
-            result.add(verdict.toTrackPoint(point, firstPoint = result.isEmpty()))
+            // The tail belongs to the last point only
+            result.add(verdict.toTrackPoint(point, firstPoint = result.isEmpty()).copy(tailMeters = null))
         }
+        val tail = maxOf(tailMeters, rawPoints.last().tailMeters ?: 0f, filter.pendingMeters)
+        if (tail > 0f && result.isNotEmpty()) result[result.lastIndex] = result.last().copy(tailMeters = tail)
         return result
     }
 

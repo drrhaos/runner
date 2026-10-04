@@ -26,7 +26,8 @@ class TrackDataJsonTest {
                 source = LocationSource.PEDOMETER.name,
                 bridgeMeters = 980f,
                 steps = 1_000,
-                cadence = 170.5f
+                cadence = 170.5f,
+                tailMeters = 240f
             )
         )
 

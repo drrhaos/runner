@@ -36,7 +36,13 @@ data class TrackPoint(
     val steps: Int? = null,
     /** Steps per minute around this fix; null without a step sensor. */
     @SerializedName("cadence")
-    val cadence: Float? = null
+    val cadence: Float? = null,
+    /**
+     * On the last point only: step distance counted after it that no fix closed (the run was
+     * stopped during a silence or a false signal). Counted in the total, not drawn.
+     */
+    @SerializedName("tail_m")
+    val tailMeters: Float? = null
 )
 
 data class TrackData(
