@@ -68,9 +68,16 @@ object TrackGeometry {
         else -> distanceMeters(prev, point)
     }
 
-    /** Every step, bridges included, plus the [leadInMeters]. */
+    /**
+     * Step distance after the last point that no fix closed (stopped during a silence or a false
+     * signal), see [TrackPoint.tailMeters]. Older tracks have none.
+     */
+    fun tailMeters(points: List<TrackPoint>): Float =
+        points.lastOrNull()?.tailMeters?.takeIf { it.isFinite() && it > 0f } ?: 0f
+
+    /** Every step, bridges included, plus the [leadInMeters] and the [tailMeters]. */
     fun totalDistanceMeters(points: List<TrackPoint>): Float {
-        var total = leadInMeters(points)
+        var total = leadInMeters(points) + tailMeters(points)
         if (points.size < 2) return total
         for (i in 1 until points.size) {
             total += stepDistanceMeters(points[i - 1], points[i])
