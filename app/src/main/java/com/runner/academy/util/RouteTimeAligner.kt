@@ -193,16 +193,11 @@ object RouteTimeAligner {
         }
     }
 
-    /** Накопленная дистанция по маршруту (шаги через разрыв GPS не считаются). */
+    /** Накопленная дистанция по маршруту (шаги через разрыв GPS не считаются, мосты — считаются). */
     private fun cumulativeDistances(points: List<TrackPoint>): DoubleArray {
         val cum = DoubleArray(points.size)
         for (i in 1 until points.size) {
-            val step = if (TrackGeometry.isTrackGapStep(points[i - 1], points[i])) {
-                0.0
-            } else {
-                TrackGeometry.distanceMeters(points[i - 1], points[i]).toDouble()
-            }
-            cum[i] = cum[i - 1] + step
+            cum[i] = cum[i - 1] + TrackGeometry.stepDistanceMeters(points[i - 1], points[i])
         }
         return cum
     }

@@ -7,12 +7,18 @@ import com.google.gson.JsonParser
  * GPS diagnostics file format: JSON Lines, one record per line, so a crash only loses the
  * last half-written line. Records:
  *  - `header` — format version, recording start, app version, Android SDK;
- *  - `fix` — every raw fix from the provider (before filtering) with the filter's verdict;
+ *  - `fix` — every raw fix from the provider (before filtering) with the filter's verdict,
+ *    optionally the reject `reason` (`TrackFilter.Reason`) and the workout's `steps` / `cadence`
+ *    at that fix (release 2; older files lack them, readers treat them as absent);
  *  - `gnss` — satellites per system (visible / used in fix / C/N0), to spot spoofing and jamming;
- *  - `event` — pause, resume, screen on/off and similar session events.
+ *  - `event` — pause, resume, screen on/off and similar session events;
+ *  - `power` — battery saver state and its location mode ([PowerSaveCheck.locationModeName]),
+ *    at the start of the recording and on every change, since it can cut GPS with the screen off.
  *
  * Times: `t` is elapsedRealtime in ms (monotonic, comparable across record types);
  * `time` on a fix is the provider's wall-clock time.
+ *
+ * Readers skip unknown record types and optional fields, so adding either keeps [FORMAT_VERSION].
  */
 object GpsDiagnostics {
 
@@ -48,7 +54,11 @@ object GpsDiagnostics {
         val bearing: Float?,
         val altitude: Double?,
         val provider: String,
-        val isMock: Boolean
+        val isMock: Boolean,
+        /** Steps since the workout start at this fix, null without a step sensor. */
+        val steps: Int? = null,
+        /** Steps/min around this fix, null when unknown. */
+        val cadence: Float? = null
     )
 
     /** Session events; [wire] is the name stored in the file. */
@@ -63,6 +73,11 @@ object GpsDiagnostics {
         STOP("stop"),
         /** The system destroyed the service mid-workout; a RESTORED usually follows. */
         SERVICE_DESTROYED("service_destroyed"),
+        /**
+         * A restore could not bring the service back to the foreground (refused from the
+         * background); tracking stopped until the user opens the app.
+         */
+        RESTORE_FAILED("restore_failed"),
         SIZE_LIMIT("size_limit")
     }
 
@@ -101,10 +116,13 @@ object GpsDiagnostics {
             val sdkInt: Int
         ) : DiagRecord()
 
-        data class Fix(val fix: DiagFix, val result: FixResult) : DiagRecord()
+        /** [reason] is the filter's reject reason name (kept a string, like [Event.name]). */
+        data class Fix(val fix: DiagFix, val result: FixResult, val reason: String? = null) : DiagRecord()
         data class Gnss(val elapsedMs: Long, val summary: GnssSummary) : DiagRecord()
         /** [name] stays a string so files with newer event names still parse. */
         data class Event(val elapsedMs: Long, val name: String) : DiagRecord()
+        /** [locationMode] is the wire name from [PowerSaveCheck.locationModeName]. */
+        data class Power(val elapsedMs: Long, val powerSaveMode: Boolean, val locationMode: String) : DiagRecord()
     }
 
     fun headerLine(startTimeMs: Long, appVersion: String, sdkInt: Int): String = JsonObject().apply {
@@ -115,7 +133,7 @@ object GpsDiagnostics {
         addProperty("sdk", sdkInt)
     }.toString()
 
-    fun fixLine(fix: DiagFix, result: FixResult): String = JsonObject().apply {
+    fun fixLine(fix: DiagFix, result: FixResult, reason: String? = null): String = JsonObject().apply {
         addProperty("type", "fix")
         addProperty("t", fix.elapsedMs)
         addProperty("time", fix.timeMs)
@@ -128,6 +146,9 @@ object GpsDiagnostics {
         addProperty("provider", fix.provider)
         if (fix.isMock) addProperty("mock", true)
         addProperty("result", result.name)
+        reason?.let { addProperty("reason", it) }
+        fix.steps?.let { addProperty("steps", it) }
+        fix.cadence?.let { addProperty("cadence", it) }
     }.toString()
 
     fun gnssLine(elapsedMs: Long, summary: GnssSummary): String = JsonObject().apply {
@@ -149,6 +170,13 @@ object GpsDiagnostics {
         addProperty("type", "event")
         addProperty("t", elapsedMs)
         addProperty("name", event.wire)
+    }.toString()
+
+    fun powerLine(elapsedMs: Long, status: PowerSaveCheck.Status): String = JsonObject().apply {
+        addProperty("type", "power")
+        addProperty("t", elapsedMs)
+        addProperty("saver", status.powerSaveMode)
+        addProperty("location", PowerSaveCheck.locationModeName(status.locationMode))
     }.toString()
 
     /** Reads a diagnostics file back (e.g. to turn a shared file into a replay fixture). */
@@ -179,9 +207,12 @@ object GpsDiagnostics {
                 bearing = o.get("bearing")?.asFloat,
                 altitude = o.get("alt")?.asDouble,
                 provider = o.get("provider").asString,
-                isMock = o.get("mock")?.asBoolean ?: false
+                isMock = o.get("mock")?.asBoolean ?: false,
+                steps = o.get("steps")?.asInt,
+                cadence = o.get("cadence")?.asFloat
             ),
-            result = FixResult.valueOf(o.get("result").asString)
+            result = FixResult.valueOf(o.get("result").asString),
+            reason = o.get("reason")?.asString
         )
         "gnss" -> DiagRecord.Gnss(
             elapsedMs = o.get("t").asLong,
@@ -198,6 +229,11 @@ object GpsDiagnostics {
             )
         )
         "event" -> DiagRecord.Event(o.get("t").asLong, o.get("name").asString)
+        "power" -> DiagRecord.Power(
+            elapsedMs = o.get("t").asLong,
+            powerSaveMode = o.get("saver").asBoolean,
+            locationMode = o.get("location").asString
+        )
         else -> null
     }
 }

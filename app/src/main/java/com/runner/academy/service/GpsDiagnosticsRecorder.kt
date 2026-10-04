@@ -1,11 +1,16 @@
 package com.runner.academy.service
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.location.Location
 import android.location.LocationManager
 import android.os.Build
+import android.os.PowerManager
 import android.os.SystemClock
+import androidx.core.content.ContextCompat
 import androidx.core.location.GnssStatusCompat
 import androidx.core.location.LocationCompat
 import androidx.core.location.LocationManagerCompat
@@ -17,14 +22,16 @@ import com.runner.academy.util.GpsDiagnostics.FixResult
 import com.runner.academy.util.GpsDiagnostics.GnssSummary
 import com.runner.academy.data.GpsDiagnosticsStore
 import com.runner.academy.util.GpsLocationClient
+import com.runner.academy.util.PowerSaveCheck
 import java.io.BufferedWriter
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.Executors
 
 /**
- * Writes a workout's raw GPS fixes, satellite summaries and session events to a
- * [GpsDiagnostics] file (see [GpsDiagnosticsStore]). Enabled in settings; off by default.
+ * Writes a workout's raw GPS fixes, satellite summaries, session events and battery saver
+ * state to a [GpsDiagnostics] file (see [GpsDiagnosticsStore]). Enabled in settings;
+ * off by default.
  *
  * All file I/O runs on one background thread, so callers on the main thread never block.
  * Lines are flushed in small batches: after a process kill at most a few seconds are lost.
@@ -60,6 +67,13 @@ class GpsDiagnosticsRecorder(
         }
     }
 
+    /** Battery saver can cut GPS with the screen off: record every change. */
+    private val powerSaveReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            if (isRecording) recordPowerState()
+        }
+    }
+
     /**
      * Starts (or, after a process restart, continues with [resume]) the recording for the
      * session that began at [startTimeMs].
@@ -90,6 +104,7 @@ class GpsDiagnosticsRecorder(
                         if (continuing) Event.RESTORED else Event.START
                     )
                 )
+                writeNow(GpsDiagnostics.powerLine(SystemClock.elapsedRealtime(), PowerSaveCheck.read(appContext)))
             } catch (e: IOException) {
                 android.util.Log.w(TAG, "Cannot open diagnostics file", e)
                 writer = null
@@ -102,9 +117,24 @@ class GpsDiagnosticsRecorder(
                 android.util.Log.w(TAG, "GNSS status unavailable", e)
             }
         }
+        ContextCompat.registerReceiver(
+            appContext,
+            powerSaveReceiver,
+            IntentFilter(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
     }
 
-    fun recordFix(location: Location, result: FixResult) {
+    /**
+     * [reason] is the filter's reject reason name; [steps] / [cadence] the workout's at this fix.
+     */
+    fun recordFix(
+        location: Location,
+        result: FixResult,
+        reason: String? = null,
+        steps: Int? = null,
+        cadence: Float? = null
+    ) {
         if (!isRecording) return
         val fix = DiagFix(
             elapsedMs = location.elapsedRealtimeNanos / 1_000_000L,
@@ -116,15 +146,23 @@ class GpsDiagnosticsRecorder(
             bearing = if (location.hasBearing()) location.bearing else null,
             altitude = if (location.hasAltitude()) location.altitude else null,
             provider = location.provider ?: "unknown",
-            isMock = LocationCompat.isMock(location)
+            isMock = LocationCompat.isMock(location),
+            steps = steps,
+            cadence = cadence
         )
-        io.execute { writeNow(GpsDiagnostics.fixLine(fix, result)) }
+        io.execute { writeNow(GpsDiagnostics.fixLine(fix, result, reason)) }
     }
 
     fun recordEvent(event: Event) {
         if (!isRecording) return
         val at = SystemClock.elapsedRealtime()
         io.execute { writeNow(GpsDiagnostics.eventLine(at, event)) }
+    }
+
+    private fun recordPowerState() {
+        val at = SystemClock.elapsedRealtime()
+        val status = PowerSaveCheck.read(appContext)
+        io.execute { writeNow(GpsDiagnostics.powerLine(at, status)) }
     }
 
     /**
@@ -138,6 +176,11 @@ class GpsDiagnosticsRecorder(
         try {
             LocationManagerCompat.unregisterGnssStatusCallback(locationManager, gnssCallback)
         } catch (_: Exception) {
+            // never registered
+        }
+        try {
+            appContext.unregisterReceiver(powerSaveReceiver)
+        } catch (_: IllegalArgumentException) {
             // never registered
         }
         io.execute {

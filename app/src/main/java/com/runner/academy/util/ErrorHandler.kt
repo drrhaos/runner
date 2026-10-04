@@ -90,6 +90,7 @@ object ErrorHandler {
             GpsStatus.WEAK -> context.getString(R.string.gps_weak_message)
             GpsStatus.MEDIUM -> context.getString(R.string.gps_medium_message)
             GpsStatus.STRONG -> context.getString(R.string.gps_strong_message)
+            GpsStatus.UNRELIABLE -> context.getString(R.string.gps_unreliable_message)
             GpsStatus.FOUND -> return
         }
         

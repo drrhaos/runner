@@ -28,11 +28,12 @@ object GpsConfig {
     const val MIN_UPDATE_INTERVAL = 1000L
 
     /**
-     * Match [com.runner.academy.service.GpsLocationProcessor.MIN_POINT_DISTANCE_METERS]
-     * for screen-on. Slightly higher when screen-off to drop standing jitter.
+     * No distance filter in the request, screen on or off. Standing at a traffic light the
+     * provider would otherwise deliver nothing, the watchdog would flag GPS as lost and the
+     * next fix would break the track. Standing jitter is dropped by
+     * [GpsFilter.MIN_POINT_DISTANCE_METERS] instead.
      */
-    const val MIN_DISTANCE = 2f
-    const val MIN_DISTANCE_SCREEN_OFF = 3f
+    const val MIN_DISTANCE = 0f
 
     /**
      * No batching, screen on or off. On API 31+ the platform GNSS provider switches the chip to
@@ -84,22 +85,18 @@ object GpsConfig {
 
     fun createWorkoutLocationRequest(screenInteractive: Boolean = true): LocationRequestCompat {
         return createAdaptiveLocationRequest(
-            intervalMs = if (screenInteractive) HIGH_ACCURACY_INTERVAL else SCREEN_OFF_INTERVAL,
-            screenInteractive = screenInteractive
+            intervalMs = if (screenInteractive) HIGH_ACCURACY_INTERVAL else SCREEN_OFF_INTERVAL
         )
     }
 
-    fun createAdaptiveLocationRequest(
-        intervalMs: Long,
-        screenInteractive: Boolean = true
-    ): LocationRequestCompat {
+    /** Screen state only picks [intervalMs]; the request itself is the same on and off screen. */
+    fun createAdaptiveLocationRequest(intervalMs: Long): LocationRequestCompat {
         val interval = intervalMs.coerceAtLeast(MIN_UPDATE_INTERVAL)
-        val minDistance = if (screenInteractive) MIN_DISTANCE else MIN_DISTANCE_SCREEN_OFF
         return LocationRequestCompat.Builder(interval)
             .setQuality(LocationRequestCompat.QUALITY_HIGH_ACCURACY)
             .setMinUpdateIntervalMillis(minOf(MIN_UPDATE_INTERVAL, interval))
             .setMaxUpdateDelayMillis(MAX_UPDATE_DELAY_MS)
-            .setMinUpdateDistanceMeters(minDistance)
+            .setMinUpdateDistanceMeters(MIN_DISTANCE)
             .build()
     }
 

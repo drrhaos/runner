@@ -35,6 +35,9 @@ import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutState
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.util.IntervalSegmentsJson
+import com.runner.academy.util.StepPermissionPolicy
+import com.runner.academy.util.StepTrackingAccess
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.ui.workout.WorkoutDetailFragmentArgs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
@@ -84,6 +87,7 @@ class WorkoutTrackingFragment : Fragment() {
     private var stopHoldJob: Job? = null
     private var stopHoldStartTime = 0L
     private var countdownJob: Job? = null
+    private var stepPromptShowing = false
 
     // Periodic GPS status icon refresh (accuracy comes from session location)
     private val gpsStatusHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -128,6 +132,15 @@ class WorkoutTrackingFragment : Fragment() {
         if (!isGranted && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             Toast.makeText(requireContext(), getString(R.string.permission_notification_needed), Toast.LENGTH_LONG).show()
         }
+    }
+
+    /** One-time step permission at the first start; whatever the answer, the start goes on. */
+    private val stepPermissionRequest = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        stepPromptShowing = false
+        if (!isGranted) StepTrackingAccess.decline(requireContext())
+        if (_binding != null) startCountdown()
     }
 
     // -- Fragment lifecycle --
@@ -306,7 +319,7 @@ class WorkoutTrackingFragment : Fragment() {
 
     private fun setupClickListeners() {
         binding.buttonStart.setOnClickListener {
-            startCountdown()
+            startAfterStepPermissionPrompt()
         }
 
         binding.buttonPause.setOnClickListener {
@@ -498,8 +511,15 @@ class WorkoutTrackingFragment : Fragment() {
         if (_binding == null || !isAdded || isDetached) return
         val now = System.currentTimeMillis()
 
-        // Map updates always run to keep track current (respect GPS gaps)
-        mapManager?.updateTrackFromDataPoints(session.trackDataPoints, session.currentLocation)
+        val tracking = session.isTracking || session.isPaused
+        gpsStatusUpdater?.sessionStatus = if (tracking) session.gpsStatus else null
+
+        // Map updates always run to keep track current (respect GPS gaps; no position on a false signal)
+        mapManager?.updateTrackFromDataPoints(
+            session.trackDataPoints,
+            session.currentLocation,
+            session.gpsStatus.takeIf { tracking }
+        )
         mapManager?.updateMapOrientation(session)
         updateGpsBanner(session)
         intervalController?.update(session)
@@ -515,7 +535,6 @@ class WorkoutTrackingFragment : Fragment() {
 
         metricsDisplayManager?.updateMetrics(session)
 
-        val tracking = session.isTracking || session.isPaused
         if (wasTrackingOrPaused && !tracking) {
             mapManager?.resumePreWorkoutLocationUpdates()
             updateIdleGpsBanner()
@@ -549,6 +568,15 @@ class WorkoutTrackingFragment : Fragment() {
                 banner.visibility = View.VISIBLE
                 banner.text = getString(R.string.gps_lost_banner)
             }
+            session.gpsStatus == GpsStatus.UNRELIABLE && session.isTracking -> {
+                banner.visibility = View.VISIBLE
+                val context = requireContext()
+                val withSteps = StepTrackingAccess.isStepTrackingAllowed(context) &&
+                    StepTrackingAccess.hasStepSensor(context)
+                banner.text = getString(
+                    if (withSteps) R.string.gps_unreliable_banner else R.string.gps_unreliable_banner_no_steps
+                )
+            }
             !session.isTracking && !session.isPaused -> {
                 updateIdleGpsBanner()
             }
@@ -571,7 +599,8 @@ class WorkoutTrackingFragment : Fragment() {
                 banner.visibility = View.VISIBLE
                 banner.text = getString(R.string.gps_ready_banner)
             }
-            GpsStatus.SEARCHING, GpsStatus.LOST -> {
+            // Accuracy alone never yields UNRELIABLE; listed for exhaustiveness.
+            GpsStatus.SEARCHING, GpsStatus.LOST, GpsStatus.UNRELIABLE -> {
                 banner.visibility = View.VISIBLE
                 banner.text = getString(R.string.gps_wait_banner)
             }
@@ -596,6 +625,43 @@ class WorkoutTrackingFragment : Fragment() {
     }
 
     // -- Workout start/stop flow --
+
+    /**
+     * On API 29+ asks for ACTIVITY_RECOGNITION once, at the first workout start, with a short
+     * rationale (steps for distance when GPS is lost). Any answer continues to the countdown;
+     * a refusal turns the setting off and is never asked again automatically.
+     */
+    private fun startAfterStepPermissionPrompt() {
+        if (stepPromptShowing || countdownJob != null) return
+        val context = requireContext()
+        if (!StepTrackingAccess.shouldPromptAtWorkoutStart(context) ||
+            !StepTrackingAccess.hasStepSensor(context)
+        ) {
+            startCountdown()
+            return
+        }
+        StepTrackingAccess.markPromptShown(context)
+        stepPromptShowing = true
+        var requested = false
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.steps_permission_title)
+            .setMessage(R.string.steps_permission_rationale)
+            .setPositiveButton(R.string.steps_permission_allow) { _, _ ->
+                requested = true
+                stepPermissionRequest.launch(StepPermissionPolicy.PERMISSION)
+            }
+            // Only an explicit answer turns steps off: "Not now", back or a tap outside
+            .setNegativeButton(R.string.steps_permission_not_now) { _, _ -> StepTrackingAccess.decline(context) }
+            .setOnCancelListener { StepTrackingAccess.decline(context) }
+            .setOnDismissListener {
+                if (requested) return@setOnDismissListener
+                stepPromptShowing = false
+                // Recreated (theme, locale): no answer was given, the user taps Start again
+                if (activity?.isChangingConfigurations == true) return@setOnDismissListener
+                if (_binding != null) startCountdown()
+            }
+            .show()
+    }
 
     private fun startCountdown() {
         if (countdownJob != null) return

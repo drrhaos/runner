@@ -21,6 +21,10 @@ import com.runner.academy.util.GpsDiagnostics.Event as DiagEvent
 import com.runner.academy.util.GpsFilter
 import com.runner.academy.util.GpsLocationClient
 import com.runner.academy.util.IntervalSegmentsJson
+import com.runner.academy.util.StepDistanceEstimator
+import com.runner.academy.util.StepTrackingAccess
+import com.runner.academy.util.StrideLearner
+import com.runner.academy.util.StrideModel
 import com.runner.academy.util.UserPreferences
 import com.runner.academy.ui.tracking.VoiceFeedbackManager
 import com.runner.academy.util.IntervalEngine
@@ -51,6 +55,8 @@ import kotlinx.coroutines.withContext
  *  - [WorkoutNotificationManager] for foreground notification lifecycle
  *  - [WorkoutSessionManager] for session state, metrics, and timer
  *  - [VoiceFeedbackManager] for distance / GPS / interval audio (works without UI)
+ *  - [StepTracker] for steps (distance over false-signal stretches) and [StrideLearner] to
+ *    teach the stride model on good GPS stretches
  *
  * The service itself handles:
  *  - Android Service lifecycle (onCreate, onDestroy, onBind)
@@ -91,6 +97,8 @@ class WorkoutTrackingService : Service() {
         private const val WAKE_LOCK_TIMEOUT_MS = 10 * 60_000L
         private const val WAKE_LOCK_RENEW_EVERY_TICKS = 60
         private const val WAKE_LOCK_TAG = "Runner:WorkoutTracking"
+        /** Fixes this accurate (or better) may teach the stride model. */
+        private const val STRIDE_LEARN_MAX_ACCURACY_M = 20f
     }
 
     // Extracted component instances
@@ -101,6 +109,13 @@ class WorkoutTrackingService : Service() {
     private var voiceFeedback: VoiceFeedbackManager? = null
     private var lastAnnouncedGpsStatus: GpsStatus? = null
     private var serviceIntervalEngine: IntervalEngine? = null
+
+    // Steps: tracker while allowed, the model that learns this run, and the learner feeding it
+    private var stepTracker: StepTracker? = null
+    private var learningStrideModel: StrideModel? = null
+    private var strideLearner: StrideLearner? = null
+    private var strideSamplesAtStart = 0
+    private val unreliableLatch = UnreliableSignalLatch()
 
     // Location provider bindings
     private var gpsClient: GpsLocationClient? = null
@@ -148,7 +163,13 @@ class WorkoutTrackingService : Service() {
     private val serviceScope = CoroutineScope(serviceJob + Dispatchers.Default)
     private val mainHandler = Handler(Looper.getMainLooper())
     private var periodicLocationJob: Job? = null
-    private var lastLocationTime: Long = 0
+    // Written on the main thread, read by the watchdog coroutine
+    /** Wall time of the last good (accepted / near-duplicate) fix; 0 before the first. */
+    @Volatile private var lastLocationTime: Long = 0
+    /** Wall time of the last fix fed to the filter, false ones included; 0 before the first. */
+    @Volatile private var lastAnyFixTime: Long = 0
+    /** Fix time of the newest fix fed to the filter (a stale lastKnown must not repeat it). */
+    @Volatile private var lastProcessedFixTimeMs: Long = 0
     private var lastAppliedAdaptiveIntervalMs: Long = -1L
     private var lastAppliedScreenInteractive: Boolean? = null
     private var workoutTimerJob: Job? = null
@@ -196,6 +217,7 @@ class WorkoutTrackingService : Service() {
             .container.userPreferences
         activeWorkoutStore = ActiveWorkoutStore(this)
         gpsClient = GpsLocationClient(this)
+        stepTracker = StepTracker(this)
         diagnostics = GpsDiagnosticsRecorder(
             this,
             (applicationContext as com.runner.academy.RunnerApplication).container.gpsDiagnosticsStore
@@ -259,7 +281,9 @@ class WorkoutTrackingService : Service() {
         stopWorkoutTimer()
         stopLocationUpdates()
         stopPeriodicLocationRequest()
-        // Mid-workout destroy: the checkpoint resumes later and the recording continues
+        // Mid-workout destroy: the checkpoint resumes later (steps continue from it); what the
+        // run taught the stride model so far is kept, a restore reloads it
+        stopSteps(saveLearned = true)
         diagnostics.release()
         serviceJob.cancel()
     }
@@ -276,33 +300,69 @@ class WorkoutTrackingService : Service() {
 
         if (isCurrentlyTracking && !sessionManager.getSession().isPaused) {
             val session = sessionManager.getSession()
-            // Time gaps are detected from fix timestamps inside GpsFilter.isGapResume.
+            // Time gaps are detected from fix timestamps inside the processor's TrackFilter,
+            // counted from the last valid fix (near-duplicates included).
             // Wall-clock age must not be used: flushed or delayed fixes arrive late.
+            // UNRELIABLE does not force a resume: false fixes keep the filter's own clock, which
+            // turns a long dropped stretch into a gap resume (bridge) by itself.
             val resumeAfterGap = session.gpsStatus == GpsStatus.LOST
+
+            // Steps at the fix's own time: batched screen-off fixes arrive late
+            val tracker = stepTracker?.takeIf { it.isRunning }
+            val steps = tracker?.stepsAt(location.elapsedRealtimeNanos)
+            val cadence = tracker?.cadence
 
             val result = gpsProcessor.processLocation(
                 location,
-                lastLocation,
-                selectedWorkoutType,
                 session.trackPoints.toMutableList(),
                 session.trackDataPoints.toMutableList(),
                 session.rawTrackDataPoints.toMutableList(),
-                resumeAfterGap = resumeAfterGap
+                resumeAfterGap = resumeAfterGap,
+                steps = steps,
+                cadence = cadence
+            )
+            lastAnyFixTime = System.currentTimeMillis()
+            lastProcessedFixTimeMs = maxOf(lastProcessedFixTimeMs, location.time)
+
+            diagnostics.recordFix(
+                location,
+                result.toFixResult(),
+                reason = (result as? GpsLocationProcessor.ProcessResult.Rejected)?.reason?.name,
+                steps = steps,
+                cadence = cadence
             )
 
-            diagnostics.recordFix(location, result.toFixResult())
+            val good = when (result) {
+                is GpsLocationProcessor.ProcessResult.Accepted -> true
+                is GpsLocationProcessor.ProcessResult.Rejected -> result.refreshGapClock
+            }
+            val unreliable = unreliableLatch.onFix(gpsProcessor.inFalseSignal, good, location.time)
+            // Leaving UNRELIABLE needs a status change even on a fix that keeps the old one
+            val statusOverride = when {
+                unreliable -> GpsStatus.UNRELIABLE
+                session.gpsStatus == GpsStatus.UNRELIABLE && good -> GpsStatus.FOUND
+                else -> null
+            }
 
             when (result) {
-                null -> { /* point filtered out entirely */ }
                 is GpsLocationProcessor.ProcessResult.Accepted -> {
-                    val segmentDistanceMeters = result.segmentDistanceMeters
                     sessionManager.updateMetricsFromLocation(
-                        segmentDistanceMeters = segmentDistanceMeters,
+                        segmentDistanceMeters = result.distanceDeltaMeters,
                         trackPoints = result.trackPoints,
                         trackDataPoints = result.trackDataPoints,
                         rawTrackDataPoints = result.rawTrackDataPoints,
                         userWeightKg = userPreferences.userWeight,
-                        currentLocation = result.filteredLocation
+                        currentLocation = result.filteredLocation,
+                        gpsStatus = if (unreliable) GpsStatus.UNRELIABLE else GpsStatus.FOUND
+                    )
+                    strideLearner?.onAccepted(
+                        segmentMeters = result.segmentDistanceMeters,
+                        afterGap = result.afterGap,
+                        bridged = result.bridgeMeters != null,
+                        steps = steps,
+                        timeMs = location.time,
+                        reliable = !unreliable &&
+                            (!location.hasAccuracy() || location.accuracy <= STRIDE_LEARN_MAX_ACCURACY_M)
                     )
 
                     val filtered = result.filteredLocation
@@ -322,16 +382,35 @@ class WorkoutTrackingService : Service() {
                 is GpsLocationProcessor.ProcessResult.Rejected -> {
                     if (result.refreshGapClock) {
                         lastLocationTime = System.currentTimeMillis()
+                        // Standing still: the stride sample would mix in time without steps
+                        strideLearner?.reset()
                         // Near-duplicate fix: move map tip / icon without committing a track point
                         sessionManager.updateLocationOnly(
                             currentLocation = location,
-                            rawTrackDataPoints = result.rawTrackDataPoints
+                            rawTrackDataPoints = result.rawTrackDataPoints,
+                            gpsStatus = statusOverride
+                        )
+                    } else if (result.retractedStart) {
+                        // The start fix was a false signal: the track restarts at the next good fix
+                        lastLocation = null
+                        sessionManager.updateLocationOnly(
+                            currentLocation = sessionManager.getSession().currentLocation ?: location,
+                            rawTrackDataPoints = result.rawTrackDataPoints,
+                            trackPoints = result.trackPoints,
+                            trackDataPoints = result.trackDataPoints,
+                            addedDistanceMeters = result.distanceDeltaMeters,
+                            userWeightKg = userPreferences.userWeight,
+                            gpsStatus = statusOverride
                         )
                     } else {
-                        // Outlier: keep tip on last accepted fix so the line does not jump
+                        // Outlier: keep tip on last accepted fix so the line does not jump.
+                        // During a false-signal episode the distance grows by steps.
                         sessionManager.updateLocationOnly(
                             currentLocation = lastLocation ?: location,
-                            rawTrackDataPoints = result.rawTrackDataPoints
+                            rawTrackDataPoints = result.rawTrackDataPoints,
+                            addedDistanceMeters = result.distanceDeltaMeters,
+                            userWeightKg = userPreferences.userWeight,
+                            gpsStatus = statusOverride
                         )
                     }
                 }
@@ -382,11 +461,16 @@ class WorkoutTrackingService : Service() {
         val preStartSeed = lastLocation?.takeIf { isUsablePreStartLocation(it) }
         lastLocation = null
         lastLocationTime = 0L
+        lastAnyFixTime = 0L
+        lastProcessedFixTimeMs = 0L
+        unreliableLatch.reset()
+        val runStride = startSteps(initialSteps = 0, frozenState = null)
+        gpsProcessor.reset(workoutType = selectedWorkoutType, stepDistance = runStride?.estimator)
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
 
         val initialGpsStatus = if (hasPermission) GpsStatus.SEARCHING else GpsStatus.DENIED
-        sessionManager.startNewSession(initialGpsStatus = initialGpsStatus)
+        sessionManager.startNewSession(initialGpsStatus = initialGpsStatus, strideModelState = runStride?.state)
         maybeSaveCheckpoint(sessionManager.getSession(), force = true)
         if (userPreferences.gpsDiagnostics) {
             diagnostics.start(sessionManager.getSession().startTime, resume = false)
@@ -399,6 +483,7 @@ class WorkoutTrackingService : Service() {
         }
         startWorkoutTimer()
         startForeground(NOTIFICATION_ID, notificationManager.buildNotification(sessionManager.getSession()))
+        notificationManager.cancelInterruptedNotification()
         notificationManager.updateNotification(sessionManager.getSession(), force = true)
         prepareVoiceForWorkout()
         rebuildIntervalEngineFromMetadata()
@@ -407,6 +492,8 @@ class WorkoutTrackingService : Service() {
     fun pauseWorkout() {
         diagnostics.recordEvent(DiagEvent.PAUSE)
         isCurrentlyTracking = false
+        stepTracker?.pause()
+        strideLearner?.reset()
         sessionManager.pause()
         stopLocationUpdates()
         stopPeriodicLocationRequest()
@@ -418,7 +505,12 @@ class WorkoutTrackingService : Service() {
     fun resumeWorkout() {
         diagnostics.recordEvent(DiagEvent.RESUME)
         isCurrentlyTracking = true
+        stepTracker?.resume()
         sessionManager.resume()
+        // Grace after the pause: no fixes were processed, so the watchdog must not flag the
+        // whole pause as a GPS loss before the first fix arrives
+        if (lastLocationTime != 0L) lastLocationTime = System.currentTimeMillis()
+        if (lastAnyFixTime != 0L) lastAnyFixTime = System.currentTimeMillis()
         if (hasLocationPermission()) {
             startLocationUpdates()
             startPeriodicLocationRequest()
@@ -435,6 +527,7 @@ class WorkoutTrackingService : Service() {
         turnDetector.reset()
         turningDensifyActive = false
         sessionManager.stop()
+        stopSteps(saveLearned = true)
         activeWorkoutStore.clear()
         modeSelectionKey = null
         intervalSegmentsJson = null
@@ -451,7 +544,8 @@ class WorkoutTrackingService : Service() {
 
     /**
      * Restore in-progress session from disk after process death.
-     * @return true if an active session was restored and tracking resumed.
+     * @return true if an active session was restored and tracking resumed; false also when the
+     *   system refused the foreground start (the checkpoint is kept, see [abandonRestore]).
      */
     private fun restoreFromCheckpoint(): Boolean {
         val existing = sessionManager.getSession()
@@ -459,9 +553,10 @@ class WorkoutTrackingService : Service() {
             // Already live in this process (e.g. bound UI + sticky race)
             if (!isCurrentlyTracking && !existing.isPaused) {
                 // Session flags say running but timers not started — re-arm
-                resumeTrackingAfterRestore(existing)
+                resumeStepsAfterAbandon(existing)
+                return resumeTrackingAfterRestore(existing)
             } else if (existing.isPaused) {
-                ensureForegroundNotification()
+                return ensureForegroundNotification()
             }
             return true
         }
@@ -477,9 +572,28 @@ class WorkoutTrackingService : Service() {
         intervalSegmentsJson = checkpoint.intervalSegmentsJson
         intervalCursor = checkpoint.intervalCursor()
         lastLocationTime = checkpoint.lastLocationTime
+        lastAnyFixTime = checkpoint.lastLocationTime
+        lastProcessedFixTimeMs = checkpoint.rawTrackDataPoints.lastOrNull()?.timestamp ?: 0L
         lastLocation = checkpoint.toSession().currentLocation
+        unreliableLatch.reset()
+        // Steps continue from the checkpoint; bridges keep the run's frozen stride
+        val savedSteps = maxOf(checkpoint.steps ?: 0, checkpoint.rawTrackDataPoints.lastOrNull()?.steps ?: 0)
+        // Without steps now (setting or permission changed) the points before keep theirs: the
+        // run's stride still bridges those, so live and saved stay equal
+        val runStride = startSteps(initialSteps = savedSteps, frozenState = checkpoint.strideModelState)
+            ?: checkpoint.strideModelState?.let { state ->
+                RunStride(StrideModel.frozenEstimatorOf(state, userPreferences.userHeight), state)
+            }
+        // The gap clock is not checkpointed: it falls back to the anchor's own time
+        gpsProcessor.reset(
+            workoutType = selectedWorkoutType,
+            anchor = lastLocation,
+            anchorSteps = checkpoint.trackDataPoints.lastOrNull()?.steps,
+            pendingMeters = checkpoint.pendingStepMeters,
+            stepDistance = runStride?.estimator
+        )
 
-        val restoredSession = checkpoint.toSession().let { session ->
+        val restoredSession = checkpoint.toSession().copy(strideModelState = runStride?.state).let { session ->
             // Recompute elapsed wall time after gap so the clock doesn't freeze at kill time
             if (session.isTracking && !session.isPaused && session.startTime > 0L) {
                 val elapsed = (System.currentTimeMillis() - session.startTime - session.totalPauseDuration)
@@ -492,7 +606,7 @@ class WorkoutTrackingService : Service() {
         sessionManager.restoreSession(restoredSession, checkpoint.lastUpdateTime)
         rebuildIntervalEngineFromMetadata()
         prepareVoiceForWorkout()
-        resumeTrackingAfterRestore(restoredSession)
+        if (!resumeTrackingAfterRestore(restoredSession)) return false
         android.util.Log.i(
             "WorkoutTrackingService",
             "Restored workout checkpoint: distance=${restoredSession.distance}, time=${restoredSession.currentTime}"
@@ -500,15 +614,18 @@ class WorkoutTrackingService : Service() {
         return true
     }
 
-    private fun resumeTrackingAfterRestore(session: WorkoutSession) {
-        ensureForegroundNotification()
+    /** @return false if the foreground start was refused and the restore abandoned. */
+    private fun resumeTrackingAfterRestore(session: WorkoutSession): Boolean {
+        // Before the foreground start, so a refused restore is recorded too
         if (userPreferences.gpsDiagnostics && session.startTime > 0L) {
             diagnostics.start(session.startTime, resume = true)
         }
+        if (!ensureForegroundNotification()) return false
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
         if (session.isPaused) {
             isCurrentlyTracking = false
+            stepTracker?.pause()
             stopWorkoutTimer()
             stopPeriodicLocationRequest()
             stopLocationUpdates()
@@ -522,10 +639,43 @@ class WorkoutTrackingService : Service() {
         }
         notificationManager.updateNotification(sessionManager.getSession(), force = true)
         maybeSaveCheckpoint(sessionManager.getSession(), force = true)
+        return true
     }
 
-    private fun ensureForegroundNotification() {
-        startForeground(NOTIFICATION_ID, notificationManager.buildNotification(sessionManager.getSession()))
+    /**
+     * Restores run from the background (sticky restart), where the system may refuse the
+     * foreground start; without this the service crashed and the track silently stopped.
+     * @return false if refused — the restore is then abandoned, see [abandonRestore].
+     */
+    private fun ensureForegroundNotification(): Boolean {
+        // Built outside: only the start itself may be refused
+        val notification = notificationManager.buildNotification(sessionManager.getSession())
+        val refusal = tryStartForeground { startForeground(NOTIFICATION_ID, notification) }
+        if (refusal != null) {
+            abandonRestore(refusal)
+            return false
+        }
+        notificationManager.cancelInterruptedNotification()
+        return true
+    }
+
+    /**
+     * Stops tracking without a foreground service but keeps [activeWorkoutStore]: the user is
+     * asked to open the app, and binding from the UI restores the workout from the foreground
+     * (see [onBind]). The caller stops the service.
+     */
+    private fun abandonRestore(refusal: RuntimeException) {
+        android.util.Log.e("WorkoutTrackingService", "Foreground start refused, workout restore abandoned", refusal)
+        isCurrentlyTracking = false
+        stopWorkoutTimer()
+        stopLocationUpdates()
+        stopPeriodicLocationRequest()
+        releaseVoice()
+        maybeSaveCheckpoint(sessionManager.getSession(), force = true)
+        // The checkpoint keeps the steps; the next restore continues from them
+        stopSteps(saveLearned = false)
+        diagnostics.stop(DiagEvent.RESTORE_FAILED)
+        notificationManager.showInterruptedNotification()
     }
 
     private fun requestRestoreIfCheckpointExists() {
@@ -558,13 +708,61 @@ class WorkoutTrackingService : Service() {
             intervalSegmentsJson = intervalSegmentsJson,
             intervalCursor = intervalCursor ?: serviceIntervalEngine?.snapshot(),
             lastLocationTime = lastLocationTime,
-            lastUpdateTime = sessionManager.getLastUpdateTime()
+            lastUpdateTime = sessionManager.getLastUpdateTime(),
+            steps = stepTracker?.takeIf { it.isRunning }?.steps,
+            pendingStepMeters = gpsProcessor.pendingStepMeters
         )
         serviceScope.launch(Dispatchers.IO) {
             activeWorkoutStore.save(snapshot)
         }
     }
 
+    /** The run's frozen stride for bridges, and its serialized state for the save path. */
+    private class RunStride(val estimator: StepDistanceEstimator, val state: String)
+
+    /**
+     * Starts the step tracker when steps are allowed and available, and the stride model that
+     * learns this run. [frozenState] is a restored run's bridge stride (null: a frozen copy of
+     * the learned model). Returns null without steps: bridges are straight lines only.
+     */
+    private fun startSteps(initialSteps: Int, frozenState: String?): RunStride? {
+        stopSteps(saveLearned = false)
+        val tracker = stepTracker ?: return null
+        if (!StepTrackingAccess.isStepTrackingAllowed(this) || !tracker.start(initialSteps)) return null
+        // Loaded once per run (start or restore); the frozen copy keeps live and saved bridges equal
+        val model = userPreferences.loadStrideModel()
+        learningStrideModel = model
+        strideSamplesAtStart = model.sampleCount
+        // Saved on every accepted sample (cheap): a process death keeps what was learned
+        strideLearner = StrideLearner(model) { learned -> userPreferences.saveStrideModel(learned) }
+        // A restored run keeps the exact stride it froze, an untrained prior included
+        val frozen = frozenState?.let { StrideModel.deserializeExact(it) } ?: model.copy()
+        return RunStride(frozen.frozenEstimator(), frozen.serialize())
+    }
+
+    /**
+     * Re-arm in the same instance after [abandonRestore], which stopped the steps: the filter
+     * (anchor, episode, run stride) is intact, so only counting and learning restart.
+     */
+    private fun resumeStepsAfterAbandon(session: WorkoutSession) {
+        if (stepTracker?.isRunning == true) return
+        val savedSteps = maxOf(
+            activeWorkoutStore.load()?.steps ?: 0,
+            session.rawTrackDataPoints.lastOrNull()?.steps ?: 0
+        )
+        startSteps(initialSteps = savedSteps, frozenState = session.strideModelState)
+    }
+
+    /** Stops counting steps; with [saveLearned] the model keeps what this run taught it. */
+    private fun stopSteps(saveLearned: Boolean) {
+        stepTracker?.stop()
+        val model = learningStrideModel
+        if (saveLearned && model != null && model.sampleCount > strideSamplesAtStart) {
+            userPreferences.saveStrideModel(model)
+        }
+        learningStrideModel = null
+        strideLearner = null
+    }
     private fun prepareVoiceForWorkout() {
         if (!userPreferences.voiceFeedback) {
             releaseVoice()
@@ -782,7 +980,8 @@ class WorkoutTrackingService : Service() {
                 delay(intervalMs)
                 if (!isActive) break
                 val currentTime = System.currentTimeMillis()
-                if (currentTime - lastLocationTime > lostTimeoutMs) {
+                // Any fix counts here: while false fixes keep arriving there is nothing to pull
+                if (currentTime - maxOf(lastLocationTime, lastAnyFixTime) > lostTimeoutMs) {
                     // Do NOT stamp lastLocationTime here — only Accepted / refreshGapClock
                     // updates should. Stale lastKnown would mask GpsStatus.LOST.
                     if (!screenInteractive) {
@@ -796,7 +995,9 @@ class WorkoutTrackingService : Service() {
                             requestLastKnownLocation { location ->
                                 val age = (SystemClock.elapsedRealtimeNanos() - location.elapsedRealtimeNanos) /
                                     1_000_000L
-                                val newerThanTrack = location.time > (lastLocation?.time ?: 0L)
+                                // Newer than any fix already processed, dropped ones included:
+                                // re-feeding the last false fix would look like a frozen receiver
+                                val newerThanTrack = location.time > maxOf(lastLocation?.time ?: 0L, lastProcessedFixTimeMs)
                                 if (age in 0..ageCapMs && newerThanTrack) {
                                     updateLocation(location)
                                 }
@@ -826,34 +1027,19 @@ class WorkoutTrackingService : Service() {
         }
 
         val currentStatus = sessionManager.getSession().gpsStatus
-
-        // If we haven't received any location yet, keep searching status
-        if (lastLocationTime == 0L) {
-            if (currentStatus != GpsStatus.SEARCHING) {
-                sessionManager.updateGpsStatus(GpsStatus.SEARCHING)
-            }
-            return
+        val next = GpsStatusWatchdog.resolve(
+            current = currentStatus,
+            nowMs = System.currentTimeMillis(),
+            lastGoodFixMs = lastLocationTime,
+            lastAnyFixMs = lastAnyFixTime,
+            lostTimeoutMs = locationLostTimeoutMs()
+        ) ?: return
+        when (next) {
+            GpsStatus.LOST -> android.util.Log.w("WorkoutTrackingService", "GPS signal lost during workout")
+            GpsStatus.FOUND -> android.util.Log.i("WorkoutTrackingService", "GPS signal recovered during workout")
+            else -> Unit
         }
-
-        val elapsedSinceLastLocation = System.currentTimeMillis() - lastLocationTime
-        val lostTimeoutMs = locationLostTimeoutMs()
-
-        when {
-            elapsedSinceLastLocation > lostTimeoutMs * 3 -> {
-                // No location for an extended period - GPS likely lost
-                if (currentStatus != GpsStatus.LOST) {
-                    android.util.Log.w("WorkoutTrackingService", "GPS signal lost during workout (${elapsedSinceLastLocation}ms since last fix)")
-                    sessionManager.updateGpsStatus(GpsStatus.LOST)
-                }
-            }
-            currentStatus == GpsStatus.LOST || currentStatus == GpsStatus.SEARCHING -> {
-                // Recent accepted fix recovered the signal
-                if (elapsedSinceLastLocation <= lostTimeoutMs) {
-                    android.util.Log.i("WorkoutTrackingService", "GPS signal recovered during workout")
-                    sessionManager.updateGpsStatus(GpsStatus.FOUND)
-                }
-            }
-        }
+        sessionManager.updateGpsStatus(next)
     }
 
     private fun stopPeriodicLocationRequest() {
@@ -883,10 +1069,7 @@ class WorkoutTrackingService : Service() {
 
         try {
             val client = gpsClient ?: return
-            val newLocationRequest = GpsConfig.createAdaptiveLocationRequest(
-                intervalMs = adaptiveInterval,
-                screenInteractive = screenInteractive
-            )
+            val newLocationRequest = GpsConfig.createAdaptiveLocationRequest(adaptiveInterval)
             currentLocationRequest = newLocationRequest
             lastAppliedAdaptiveIntervalMs = adaptiveInterval
             lastAppliedScreenInteractive = screenInteractive
@@ -1055,8 +1238,7 @@ class WorkoutTrackingService : Service() {
 }
 
 /** The live filter's verdict as recorded in GPS diagnostics. */
-private fun GpsLocationProcessor.ProcessResult?.toFixResult(): FixResult = when (this) {
-    null -> FixResult.REJECTED
+private fun GpsLocationProcessor.ProcessResult.toFixResult(): FixResult = when (this) {
     is GpsLocationProcessor.ProcessResult.Accepted -> FixResult.ACCEPTED
     is GpsLocationProcessor.ProcessResult.Rejected ->
         if (refreshGapClock) FixResult.NEAR_DUPLICATE else FixResult.REJECTED

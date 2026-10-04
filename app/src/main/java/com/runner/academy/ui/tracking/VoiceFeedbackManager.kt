@@ -69,17 +69,13 @@ class VoiceFeedbackManager(
     }
 
     fun notifyGpsStatus(current: com.runner.academy.data.GpsStatus, previous: com.runner.academy.data.GpsStatus?) {
-        if (previous == current) return
-        when {
-            current == com.runner.academy.data.GpsStatus.LOST &&
-                previous != null &&
-                previous != com.runner.academy.data.GpsStatus.LOST -> {
-                speak(context.getString(R.string.voice_gps_lost), "gps_lost")
-            }
-            current == com.runner.academy.data.GpsStatus.FOUND &&
-                previous == com.runner.academy.data.GpsStatus.LOST -> {
+        when (GpsVoiceTransition.announcement(current, previous)) {
+            GpsAnnouncement.LOST -> speak(context.getString(R.string.voice_gps_lost), "gps_lost")
+            GpsAnnouncement.UNRELIABLE ->
+                speak(context.getString(R.string.voice_gps_unreliable), "gps_unreliable")
+            GpsAnnouncement.RECOVERED ->
                 speak(context.getString(R.string.voice_gps_recovered), "gps_recovered")
-            }
+            null -> Unit
         }
     }
 

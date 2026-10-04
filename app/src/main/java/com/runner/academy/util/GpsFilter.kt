@@ -15,6 +15,9 @@ object GpsFilter {
     /** After this silence between fixes, the next valid point is treated as gap resume (no phantom distance). */
     const val GAP_RESUME_THRESHOLD_MS = 20_000L
 
+    /** A fix closer than this to the last track point is a near-duplicate, not a new point. */
+    const val MIN_POINT_DISTANCE_METERS = 2f
+
     /** Absolute jump that is never plausible between consecutive accepted fixes. */
     private const val MAX_DISTANCE_BETWEEN_POINTS = 800.0
 
@@ -43,15 +46,21 @@ object GpsFilter {
     /**
      * True when the new fix should re-anchor the track after a GPS outage
      * (long time gap and/or explicit [forceGapResume] from LOST status).
+     *
+     * @param lastValidFixTimeMs Fix time of the last valid fix, including near-duplicates that
+     *   did not become [previousLocation] (standing at a traffic light). When given, the gap is
+     *   measured from the later of it and [previousLocation]; otherwise from [previousLocation].
      */
     fun isGapResume(
         previousLocation: Location?,
         newLocation: Location,
-        forceGapResume: Boolean = false
+        forceGapResume: Boolean = false,
+        lastValidFixTimeMs: Long? = null
     ): Boolean {
         if (forceGapResume && previousLocation != null) return true
         if (previousLocation == null) return false
-        val timeDiff = newLocation.time - previousLocation.time
+        val referenceTime = max(previousLocation.time, lastValidFixTimeMs ?: previousLocation.time)
+        val timeDiff = newLocation.time - referenceTime
         return timeDiff >= GAP_RESUME_THRESHOLD_MS
     }
 
@@ -66,18 +75,7 @@ object GpsFilter {
                 "speed=${if (location.hasSpeed()) location.speed else "N/A"}m/s"
         )
 
-        if (!isValidCoordinate(location.latitude, location.longitude)) {
-            Log.w("GpsFilter", "Invalid coordinates: lat=${location.latitude}, lon=${location.longitude}")
-            return false
-        }
-
-        if (location.hasAccuracy() && location.accuracy > MAX_ACCEPTABLE_ACCURACY) {
-            Log.w(
-                "GpsFilter",
-                "GPS accuracy too poor: ${location.accuracy}m > ${MAX_ACCEPTABLE_ACCURACY}m"
-            )
-            return false
-        }
+        if (!isUsableFix(location)) return false
 
         // Ignore mild reported-speed spikes; only drop absurd values
         if (location.hasSpeed() && location.speed > MAX_REPORTED_SPEED_MPS) {
@@ -91,6 +89,40 @@ object GpsFilter {
         Log.d("GpsFilter", "GPS location validation passed")
         return true
     }
+
+    /**
+     * Valid coordinates and usable accuracy, regardless of the reported speed: the receiver has a
+     * position fix. A fix failing this is no signal (weak / indoor), not a false signal.
+     */
+    fun isUsableFix(location: Location): Boolean {
+        if (!isValidCoordinate(location.latitude, location.longitude)) {
+            Log.w("GpsFilter", "Invalid coordinates: lat=${location.latitude}, lon=${location.longitude}")
+            return false
+        }
+        if (location.hasAccuracy() && location.accuracy > MAX_ACCEPTABLE_ACCURACY) {
+            Log.w(
+                "GpsFilter",
+                "GPS accuracy too poor: ${location.accuracy}m > ${MAX_ACCEPTABLE_ACCURACY}m"
+            )
+            return false
+        }
+        return true
+    }
+
+    /**
+     * Farthest [newLocation] can plausibly be from [previousLocation]: the workout's max speed
+     * (with margin) over the time between them, plus accuracy and jitter slack.
+     */
+    fun maxPlausibleDistanceMeters(
+        previousLocation: Location,
+        newLocation: Location,
+        maxReasonableSpeedMps: Float
+    ): Double = calculateExpectedMaxDistance(
+        previousLocation,
+        newLocation,
+        newLocation.time - previousLocation.time,
+        maxReasonableSpeedMps
+    )
 
     private fun isValidCoordinate(latitude: Double, longitude: Double): Boolean {
         return latitude in -90.0..90.0 &&
@@ -108,12 +140,15 @@ object GpsFilter {
      * [GAP_RESUME_THRESHOLD_MS], speed/distance outlier checks against the previous
      * point are skipped so the first fix after a tunnel/indoor gap is accepted as
      * a new anchor (caller must not add segment distance across the gap).
+     * [lastValidFixTimeMs] only moves the gap clock, see [isGapResume]; the outlier checks
+     * still compare against [previousLocation].
      */
     fun filterGpsOutlier(
         newLocation: Location,
         previousLocation: Location?,
         maxReasonableSpeedMps: Float = DEFAULT_MAX_REASONABLE_SPEED_MPS.toFloat(),
-        forceGapResume: Boolean = false
+        forceGapResume: Boolean = false,
+        lastValidFixTimeMs: Long? = null
     ): Location? {
         if (previousLocation == null) {
             return if (isValidGpsLocation(newLocation)) {
@@ -135,10 +170,11 @@ object GpsFilter {
             return null
         }
 
-        if (isGapResume(previousLocation, newLocation, forceGapResume)) {
+        if (isGapResume(previousLocation, newLocation, forceGapResume, lastValidFixTimeMs)) {
             Log.d(
                 "GpsFilter",
-                "Gap resume accepted: dt=${newLocation.time - previousLocation.time}ms, force=$forceGapResume"
+                "Gap resume accepted: dt=${newLocation.time - max(previousLocation.time, lastValidFixTimeMs ?: 0L)}ms, " +
+                    "force=$forceGapResume"
             )
             return newLocation
         }

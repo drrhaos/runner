@@ -341,6 +341,7 @@ cd runner
 1. On first launch, the app will request permissions:
    - Location access (required)
    - Notification permission (for the workout notification)
+   - At the first workout start (Android 10+), once: physical activity (steps for distance when GPS is lost; optional)
 
 2. Fill in profile settings:
    - Weight, height, age, gender
@@ -422,6 +423,7 @@ The app requests only the permissions it needs:
 - `ACCESS_FINE_LOCATION` / `ACCESS_COARSE_LOCATION` — GPS tracking
 - `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION` — tracking service; keeps recording with the screen off, so **background location (`ACCESS_BACKGROUND_LOCATION`) is not required**
 - `POST_NOTIFICATIONS` — workout notification
+- `ACTIVITY_RECOGNITION` — step sensor and cadence, for distance when GPS is lost; asked once at the first workout (Android 10+), can be turned on or off in Settings
 - `WAKE_LOCK` — stable recording during a workout
 - `INTERNET`, `ACCESS_NETWORK_STATE` — OpenStreetMap tiles
 

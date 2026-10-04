@@ -11,14 +11,15 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Датчик шагов (API 29+ — runtime): дистанция при потере GPS, каденс. Спрашивается один раз. -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
 
     <!--
       Намеренно НЕ объявлены (см. docs/ROADMAP.md, этап 0):
       - ACCESS_BACKGROUND_LOCATION: трекинг идёт в foreground service типа location,
         запущенном с открытого экрана — фоновое местоположение не нужно;
       - REQUEST_IGNORE_BATTERY_OPTIMIZATIONS: ограничено политикой Google Play,
-        вместо системного запроса — подсказка со ссылкой на общий список настроек;
-      - ACTIVITY_RECOGNITION: вернуть вместе с каденсом (датчик шагов).
+        вместо системного запроса — подсказка со ссылкой на общий список настроек.
     -->
 
     <application
