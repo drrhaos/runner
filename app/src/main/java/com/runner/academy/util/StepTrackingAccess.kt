@@ -68,6 +68,19 @@ object StepTrackingAccess {
         )
     }
 
+    /** The one-time prompt is being shown: it is never shown again automatically. */
+    fun markPromptShown(context: Context) {
+        UserPreferences(context).stepPermissionAsked = true
+    }
+
+    /**
+     * The user said no (dialog declined or permission denied): steps stay off until they are
+     * turned on in settings.
+     */
+    fun decline(context: Context) {
+        UserPreferences(context).stepsForDistanceEnabled = false
+    }
+
     /** The device has a step counter or step detector. */
     fun hasStepSensor(context: Context): Boolean {
         val manager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager ?: return false

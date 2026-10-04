@@ -69,4 +69,22 @@ class StepTrackingAccessTest {
         shadowOf(RuntimeEnvironment.getApplication()).grantPermissions(Manifest.permission.ACTIVITY_RECOGNITION)
         assertTrue(StepTrackingAccess.isStepTrackingAllowed(context))
     }
+
+    @Test
+    @Config(sdk = [34])
+    fun `showing the prompt stops further prompts but keeps steps enabled`() {
+        assertTrue(StepTrackingAccess.shouldPromptAtWorkoutStart(context))
+        StepTrackingAccess.markPromptShown(context)
+        assertFalse(StepTrackingAccess.shouldPromptAtWorkoutStart(context))
+        // No answer yet (e.g. the screen was recreated): granting later still enables steps
+        assertTrue(prefs.stepsForDistanceEnabled)
+    }
+
+    @Test
+    @Config(sdk = [28])
+    fun `declining turns steps off`() {
+        StepTrackingAccess.decline(context)
+        assertFalse(prefs.stepsForDistanceEnabled)
+        assertFalse(StepTrackingAccess.isStepTrackingAllowed(context))
+    }
 }
