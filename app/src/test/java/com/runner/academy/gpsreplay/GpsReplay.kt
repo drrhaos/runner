@@ -47,12 +47,14 @@ object GpsReplay {
          */
         stepsAt: ((Long) -> Pair<Int, Float?>?)? = null,
         /** The run stops at this time (ticks run until then); null: at the last fix. */
-        stopAtMs: Long? = null
+        stopAtMs: Long? = null,
+        /** The run starts at this time (ticks from then on); null: at the first fix. */
+        startAtMs: Long? = null
     ): ReplayResult {
         val processor = GpsLocationProcessor()
         processor.reset(workoutType = type, stepDistance = stepDistance)
         var distance = 0.0
-        var nextTickMs = raw.firstOrNull()?.timestamp?.plus(TICK_MS) ?: 0L
+        var nextTickMs = (startAtMs ?: raw.firstOrNull()?.timestamp ?: 0L) + TICK_MS
         fun tickUntil(endMs: Long) {
             val sensor = stepsAt ?: return
             while (nextTickMs < endMs) {
@@ -266,6 +268,9 @@ data class SyntheticRun(
         val cadence = if (isStanding(t)) 0f else (60.0 * speedMps / stride).toFloat()
         return (movedAt(t) / stride).toInt() to cadence
     }
+
+    /** Time of the run's start. */
+    val startTimeMs: Long get() = START_TIME
 
     /** Time of the run's end, the last second of [durationSec]. */
     val endTimeMs: Long get() = START_TIME + durationSec * 1000L

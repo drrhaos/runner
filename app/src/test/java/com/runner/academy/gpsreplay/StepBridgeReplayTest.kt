@@ -159,6 +159,20 @@ class StepBridgeReplayTest {
     }
 
     @Test
+    fun `a cold start counts the steps before the first fix the same live and saved`() {
+        // No fix for the first 40 s (GPS warming up, or off under battery saver)
+        val lap = lapWith(Spoof.FarBurst(seconds = 0..0))
+        val run = lap.copy(spoof = null, gapSec = 0..40)
+        val raw = run.rawPoints()
+        val live = GpsReplay.live(raw, stepDistance = trained, stepsAt = run::stepsAt, startAtMs = run.startTimeMs)
+        val saved = GpsReplay.saved(raw, stepDistance = trained, tailMeters = live.openStepMeters)
+
+        assertTrue("lead-in counted", TrackGeometry.leadInMeters(saved.points) > 100f)
+        assertDistance("live", run.routeLengthM, live.distanceMeters, TOLERANCE_PERCENT)
+        assertEquals("saved = live", live.distanceMeters, saved.distanceMeters, 1.0)
+    }
+
+    @Test
     fun `without steps a silence open at Stop counts nothing`() {
         val lap = lapWith(Spoof.FarBurst(seconds = 0..0))
         val run = lap.copy(spoof = null, gapSec = (lap.durationSec - 200)..lap.durationSec)

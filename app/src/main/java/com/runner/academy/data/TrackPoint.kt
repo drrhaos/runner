@@ -42,7 +42,13 @@ data class TrackPoint(
      * stopped during a silence or a false signal). Counted in the total, not drawn.
      */
     @SerializedName("tail_m")
-    val tailMeters: Float? = null
+    val tailMeters: Float? = null,
+    /**
+     * Raw points only: the first fix after the run resumed from a pause, so the save path knows
+     * the straight line from the previous point crosses the pause (not run).
+     */
+    @SerializedName("after_pause")
+    val afterPause: Boolean? = null
 )
 
 data class TrackData(

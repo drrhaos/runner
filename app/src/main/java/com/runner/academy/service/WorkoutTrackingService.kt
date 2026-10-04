@@ -508,6 +508,7 @@ class WorkoutTrackingService : Service() {
         diagnostics.recordEvent(DiagEvent.RESUME)
         isCurrentlyTracking = true
         stepTracker?.resume()
+        gpsProcessor.onResume()
         sessionManager.resume()
         // Grace after the pause: no fixes were processed, so the watchdog must not flag the
         // whole pause as a GPS loss before the first fix arrives
@@ -1185,7 +1186,8 @@ class WorkoutTrackingService : Service() {
      */
     private fun countSilenceBySteps() {
         val tracker = stepTracker?.takeIf { it.isRunning } ?: return
-        val added = gpsProcessor.countSilence(System.currentTimeMillis(), tracker.steps, tracker.cadence)
+        // Monotonic, like the fixes' elapsedRealtime the filter measures a silence against
+        val added = gpsProcessor.countSilence(SystemClock.elapsedRealtime(), tracker.steps, tracker.cadence)
         sessionManager.setOpenStepMeters(gpsProcessor.pendingStepMeters)
         sessionManager.addStepDistance(added, userPreferences.userWeight)
     }

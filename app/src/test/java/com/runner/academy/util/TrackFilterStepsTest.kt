@@ -146,11 +146,12 @@ class TrackFilterStepsTest {
     }
 
     @Test
-    fun `a normal start has no lead-in even with steps`() {
+    fun `steps run while GPS warms up count as a lead-in`() {
+        // Owner's decision: a silence is counted by steps, the one at the start too
         val first = filter.process(fix(0.0, 0.0, 20), steps = 60).accepted()
 
-        assertNull(first.leadInMeters)
-        assertEquals(0f, filter.countedMeters, 0f)
+        assertEquals(60f, first.leadInMeters!!, 0.5f)
+        assertEquals(60f, filter.countedMeters, 0.5f)
     }
 
     @Test

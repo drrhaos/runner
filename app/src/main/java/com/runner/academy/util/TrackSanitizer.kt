@@ -32,6 +32,7 @@ object TrackSanitizer {
         val filter = TrackFilter(workoutType, stepDistance)
 
         for (point in rawPoints) {
+            if (point.afterPause == true) filter.onResume()
             val verdict = filter.process(
                 toLocation(point),
                 forceGapResume = point.afterGap,
@@ -41,7 +42,7 @@ object TrackSanitizer {
             if (verdict is TrackFilter.Verdict.Rejected && verdict.retractStart) result.clear()
             if (verdict !is TrackFilter.Verdict.Accepted) continue
             // The tail belongs to the last point only
-            result.add(verdict.toTrackPoint(point, firstPoint = result.isEmpty()).copy(tailMeters = null))
+            result.add(verdict.toTrackPoint(point, firstPoint = result.isEmpty()).copy(tailMeters = null, afterPause = null))
         }
         val tail = maxOf(tailMeters, rawPoints.last().tailMeters ?: 0f, filter.pendingMeters)
         if (tail > 0f && result.isNotEmpty()) result[result.lastIndex] = result.last().copy(tailMeters = tail)
