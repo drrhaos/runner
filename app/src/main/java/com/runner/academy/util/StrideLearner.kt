@@ -7,12 +7,16 @@ package com.runner.academy.util
  * steps, mean cadence) and a new stretch begins. Anything else (a gap, a bridge, a fix
  * without steps, an unreliable signal, [reset] on pause / standing still) restarts it.
  *
+ * [onLearned] gets the model after every accepted sample, to persist it at once: a process
+ * death mid-run then keeps what was learned.
+ *
  * Not thread-safe, like the model: use it on the thread that processes fixes.
  */
 class StrideLearner(
     private val model: StrideModel,
     private val minDurationMs: Long = DEFAULT_MIN_DURATION_MS,
-    private val minDistanceM: Float = DEFAULT_MIN_DISTANCE_M
+    private val minDistanceM: Float = DEFAULT_MIN_DISTANCE_M,
+    private val onLearned: (StrideModel) -> Unit = {}
 ) {
     private var startSteps: Int? = null
     private var startTimeMs = 0L
@@ -43,6 +47,7 @@ class StrideLearner(
         val cadence = stepCount * 60_000f / elapsedMs
         val used = model.learn(distanceM, stepCount, cadence)
         begin(steps, timeMs)
+        if (used) onLearned(model)
         return used
     }
 

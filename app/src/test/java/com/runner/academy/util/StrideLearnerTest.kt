@@ -56,4 +56,14 @@ class StrideLearnerTest {
             assertFalse(learner.onAccepted(3.3f, false, false, steps = null, timeMs = s * 1_000L, reliable = true))
         }
     }
+
+    @Test
+    fun `every accepted sample is handed on for saving`() {
+        val saved = mutableListOf<Int>()
+        val saving = StrideLearner(model, minDurationMs = 30_000L, minDistanceM = 100f) { saved += it.sampleCount }
+        for (s in 0 until 120) saving.onAccepted(3.3f, false, false, steps = s * 3, timeMs = s * 1_000L, reliable = true)
+
+        assertTrue(saved.isNotEmpty())
+        assertEquals(model.sampleCount, saved.last())
+    }
 }

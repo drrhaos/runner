@@ -729,7 +729,8 @@ class WorkoutTrackingService : Service() {
         val model = userPreferences.loadStrideModel()
         learningStrideModel = model
         strideSamplesAtStart = model.sampleCount
-        strideLearner = StrideLearner(model)
+        // Saved on every accepted sample (cheap): a process death keeps what was learned
+        strideLearner = StrideLearner(model) { learned -> userPreferences.saveStrideModel(learned) }
         // A restored run keeps the exact stride it froze, an untrained prior included
         val frozen = frozenState?.let { StrideModel.deserializeExact(it) } ?: model.copy()
         return RunStride(frozen.frozenEstimator(), frozen.serialize())
