@@ -22,11 +22,13 @@ import kotlin.math.max
  *  - false-signal detector: only explicit violations are dropped (see [Reason]); doubtful
  *    fixes stay. A stretch of dropped fixes that ends with a good fix more than
  *    [GpsFilter.GAP_RESUME_THRESHOLD_MS] after the anchor is bridged by the straight line
- *    ([Verdict.Accepted.bridgeMeters]); a silence (no usable fixes at all for that long, a
- *    tunnel) stays a plain gap without distance;
+ *    ([Verdict.Accepted.bridgeMeters]); a silence (no usable fixes at all for that long: tunnel,
+ *    jamming, GNSS switched off by battery saver) is bridged only with steps, otherwise it
+ *    stays a plain gap without distance;
  *  - steps (optional, [stepDistance] + `steps` per fix): a bridge is `max(straight line,
  *    steps × stride)` ([Verdict.Accepted.bridgeFromSteps] when steps win); see [pendingMeters]
- *    for an open episode and [Verdict.Accepted.leadInMeters] for a false start.
+ *    for an open episode or silence ([countSilence] while no fix arrives) and
+ *    [Verdict.Accepted.leadInMeters] for steps before the first good fix.
  *
  * Distance bookkeeping: [countedMeters] = [committedMeters] (what the kept points add up to,
  * see [TrackGeometry.totalDistanceMeters]) + [pendingMeters] (steps over an open episode).
@@ -134,11 +136,10 @@ class TrackFilter(
         private set
 
     /**
-     * Step distance of the open false-signal episode, not yet in a kept point. Grows (never
-     * shrinks) while the episode lasts and is replaced by the closing bridge or lead-in.
-     * Counted only once the stretch is long enough to close as a bridge
-     * ([GpsFilter.GAP_RESUME_THRESHOLD_MS] without a valid fix), or before the first good fix
-     * after a false start; not during a silence.
+     * Step distance of the open false-signal episode or silence, not yet in a kept point. Grows
+     * (never shrinks) while it lasts and is replaced by the closing bridge or lead-in. Counted
+     * only once the stretch is long enough to close as a bridge
+     * ([GpsFilter.GAP_RESUME_THRESHOLD_MS] without a valid fix), or before the first good fix.
      */
     var pendingMeters: Float = 0f
         private set
@@ -151,7 +152,8 @@ class TrackFilter(
 
     // Steps
     private var anchorSteps: Int? = null
-    private var falseSignalBeforeFirstFix = false
+    /** Steps before the first good fix (false start, or no fix yet) become its lead-in. */
+    private var leadInBeforeFirstFix = false
     private var startLeadInMeters = 0f
 
     // Since the gap clock last moved
@@ -175,7 +177,7 @@ class TrackFilter(
         this.anchorSteps = anchorSteps
         this.pendingMeters = pendingMeters.coerceAtLeast(0f)
         committedMeters = 0f
-        falseSignalBeforeFirstFix = anchor == null && pendingMeters > 0f
+        leadInBeforeFirstFix = anchor == null && pendingMeters > 0f
         startLeadInMeters = 0f
         acceptedCount = if (anchor != null) 1 else 0
         lastValidFixTimeMs = null
@@ -262,17 +264,19 @@ class TrackFilter(
         // Fixes kept coming but were dropped: bridge the stretch. A short bridge (back where the
         // track stopped, e.g. a receiver that pins the position while standing) is an ordinary step.
         val closesDroppedStretch = gapResume && previous != null && droppedSinceValid > 0 && !silenceSinceValid
-        val stepsMeters = if (closesDroppedStretch && previous != null) {
+        val stepsMeters = if (gapResume && previous != null) {
             stepsMetersSince(previous, steps, location.time, cadence)
         } else {
             null
         }
+        // Step distance already counted live (pendingMeters) stays counted
         val byStepsMeters = max(stepsMeters ?: 0f, pendingMeters)
-        // Step distance already counted live stays counted, even across a later silence
-        val keepsPending = gapResume && previous != null && pendingMeters > 0f
-        val bridgeLength = if (closesDroppedStretch) max(stepMeters, byStepsMeters) else pendingMeters
-        val bridge = (closesDroppedStretch && bridgeLength > MIN_BRIDGE_METERS) || keepsPending
-        val bridgeFromSteps = bridge && byStepsMeters > 0f && (!closesDroppedStretch || byStepsMeters > stepMeters)
+        // A silence is bridged only by steps; without them it stays a plain gap
+        val closesSilenceBySteps = gapResume && previous != null && !closesDroppedStretch && byStepsMeters > 0f
+        val bridgeLength = if (closesDroppedStretch || closesSilenceBySteps) max(stepMeters, byStepsMeters) else 0f
+        val bridge = (closesDroppedStretch || closesSilenceBySteps) &&
+            (bridgeLength > MIN_BRIDGE_METERS || pendingMeters > 0f)
+        val bridgeFromSteps = bridge && byStepsMeters > stepMeters
         val afterGap = gapResume && previous != null && (bridge || !closesDroppedStretch)
         val segment = when {
             previous == null -> 0f
@@ -280,7 +284,7 @@ class TrackFilter(
             !afterGap -> stepMeters
             else -> 0f // No phantom distance across a GPS gap
         }
-        val leadIn = if (previous == null && falseSignalBeforeFirstFix) {
+        val leadIn = if (previous == null && leadInBeforeFirstFix) {
             max(stepsMetersSinceStart(steps, cadence) ?: 0f, pendingMeters).takeIf { it > 0f }
         } else {
             null
@@ -291,7 +295,7 @@ class TrackFilter(
         committedMeters += segment + (leadIn ?: 0f)
         if (previous == null) startLeadInMeters = leadIn ?: 0f
         pendingMeters = 0f
-        falseSignalBeforeFirstFix = false
+        leadInBeforeFirstFix = false
         markValid(location.time)
         return Verdict.Accepted(
             filtered,
@@ -303,12 +307,31 @@ class TrackFilter(
         )
     }
 
-    /** Counts the open episode's step distance, see [pendingMeters]. */
-    private fun updatePending(timeMs: Long, steps: Int?, cadence: Float?) {
-        if (!inFalseSignal || silenceSinceValid) return
+    /**
+     * A clock tick while no fix arrives (the tracking service calls it every second): during a
+     * silence — no usable fix for [GpsFilter.GAP_RESUME_THRESHOLD_MS] — or before the first good
+     * fix, counts the step distance into [pendingMeters]. Without steps it does nothing.
+     * [nowMs] is on the fixes' clock (wall time).
+     */
+    fun countSilence(nowMs: Long, steps: Int?, cadence: Float?) {
+        if (stepDistance == null || steps == null) return
         val previous = anchor
         val meters = if (previous == null) {
-            if (!falseSignalBeforeFirstFix) return
+            stepsMetersSinceStart(steps, cadence)?.also { leadInBeforeFirstFix = true }
+        } else {
+            val lastUsable = max(previous.time, lastUsableTimeMs ?: previous.time)
+            if (nowMs - lastUsable < GpsFilter.GAP_RESUME_THRESHOLD_MS) return
+            stepsMetersSince(previous, steps, nowMs, cadence)
+        } ?: return
+        pendingMeters = max(pendingMeters, meters)
+    }
+
+    /** Counts the open episode's step distance, see [pendingMeters]. */
+    private fun updatePending(timeMs: Long, steps: Int?, cadence: Float?) {
+        if (!inFalseSignal) return
+        val previous = anchor
+        val meters = if (previous == null) {
+            if (!leadInBeforeFirstFix) return
             stepsMetersSinceStart(steps, cadence)
         } else {
             val lastValid = max(previous.time, lastValidFixTimeMs ?: previous.time)
@@ -354,7 +377,7 @@ class TrackFilter(
         if (reason != Reason.OUTLIER || consecutiveOutliers >= FALSE_SIGNAL_MIN_OUTLIERS) {
             if (!inFalseSignal) Log.w(TAG, "False GPS signal: $reason")
             inFalseSignal = true
-            if (anchor == null) falseSignalBeforeFirstFix = true
+            if (anchor == null) leadInBeforeFirstFix = true
         }
         return Verdict.Rejected(reason, retractStart)
     }

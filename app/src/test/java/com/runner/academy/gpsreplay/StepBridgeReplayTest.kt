@@ -120,13 +120,15 @@ class StepBridgeReplayTest {
     }
 
     @Test
-    fun `a silence stays a gap with steps too`() {
+    fun `a silence is counted by steps and the far burst after it is dropped`() {
+        // Owner's decision (2026-10-04): a silence (tunnel, jamming, GNSS off under battery
+        // saver) is bridged by steps; the burst of far fixes after it is still dropped
         val run = lapWith(Spoof.FarBurst(seconds = 220..221), gapSec = 100..219)
-        val expected = run.routeLengthM - run.gapDistanceM - 2 * run.speedMps
         for ((name, result) in bothPipelines(run, trained)) {
             assertNoTeleport(name, run, result)
-            assertDistance(name, expected, result.distanceMeters, TOLERANCE_PERCENT)
-            assertTrue("$name: the silence is not bridged", result.points.none { it.bridgeMeters != null })
+            assertDistance(name, run.routeLengthM, result.distanceMeters, TOLERANCE_PERCENT)
+            val bridge = result.points.single { TrackGeometry.isBridgeStep(it) }
+            assertEquals("$name: bridged by steps", LocationSource.PEDOMETER.name, bridge.source)
         }
     }
 
