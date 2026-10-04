@@ -262,6 +262,74 @@ class TrackFilterTest {
         assertEquals(30f + 360f, stepped.countedMeters, 1f)
     }
 
+    @Test
+    fun `a pause is not a silence and its straight line is not counted`() {
+        runEastWithSteps(0, 10)
+        stepped.onResume()
+        // Right after a long pause: the silence clock restarts at the resume
+        stepped.countSilence(nowMs = T0 + 300_000L, steps = 30, cadence = 0f)
+        stepped.countSilence(nowMs = T0 + 310_000L, steps = 45, cadence = 170f)
+        assertEquals(0f, stepped.pendingMeters, 0.01f)
+
+        // First fix after resume, 900 m away (drove while paused), 15 steps since resume
+        val back = stepped.process(fix(930.0, 0.0, 312), steps = 45).accepted()
+        assertTrue(back.afterGap)
+        assertNull("no distance across the pause", back.bridgeMeters)
+        assertEquals(30f, stepped.countedMeters, 0.5f)
+    }
+
+    @Test
+    fun `after a pause a silence counts only the steps run after it`() {
+        runEastWithSteps(0, 10)
+        stepped.onResume()
+        stepped.countSilence(nowMs = T0 + 300_000L, steps = 30, cadence = 170f)
+        stepped.countSilence(nowMs = T0 + 330_000L, steps = 120, cadence = 170f)
+        assertEquals(90f, stepped.pendingMeters, 0.5f)
+
+        val back = stepped.process(fix(2_000.0, 0.0, 335), steps = 135).accepted()
+        // Steps only: the straight line crosses the pause
+        assertEquals(105f, back.bridgeMeters!!, 0.5f)
+        assertTrue(back.bridgeFromSteps)
+    }
+
+    @Test
+    fun `the silence clock runs on the fixes' monotonic time`() {
+        val f = TrackFilter(WorkoutType.EASY_RUN, StepDistanceEstimator { steps, _ -> steps.toFloat() })
+        val boot = 5_000L
+        for (sec in 0..10) {
+            val location = fix(sec * 3.0, 0.0, sec).apply { elapsedRealtimeNanos = (boot + sec * 1_000L) * 1_000_000L }
+            f.process(location, steps = sec * 3)
+        }
+        // Wall time far ahead of the fixes' clock does not count as silence
+        f.countSilence(nowMs = boot + 15_000L, steps = 45, cadence = 170f)
+        assertEquals(0f, f.pendingMeters, 0.01f)
+        f.countSilence(nowMs = boot + 40_000L, steps = 120, cadence = 170f)
+        assertEquals(90f, f.pendingMeters, 0.5f)
+    }
+
+    @Test
+    fun `a short step silence is neither shown nor bridged`() {
+        runEastWithSteps(0, 10)
+        stepped.countSilence(nowMs = T0 + 40_000L, steps = 50, cadence = 60f)
+        assertEquals("20 m by steps: below a bridge", 0f, stepped.pendingMeters, 0.01f)
+
+        val back = stepped.process(fix(40.0, 0.0, 41), steps = 50).accepted()
+        assertTrue(back.afterGap)
+        assertNull(back.bridgeMeters)
+    }
+
+    @Test
+    fun `steps before the first fix are a lead-in without any tick`() {
+        val first = stepped.process(fix(0.0, 0.0, 30), steps = 90).accepted()
+        assertEquals(90f, first.leadInMeters!!, 0.5f)
+    }
+
+    @Test
+    fun `a few steps before the first fix are no lead-in`() {
+        val first = stepped.process(fix(0.0, 0.0, 5), steps = 8).accepted()
+        assertNull(first.leadInMeters)
+    }
+
     private companion object {
         const val LAT0 = 55.75
         const val LON0 = 37.6
