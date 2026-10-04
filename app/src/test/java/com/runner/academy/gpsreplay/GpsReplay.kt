@@ -16,7 +16,9 @@ import kotlin.random.Random
 data class ReplayResult(
     val distanceMeters: Double,
     val points: List<TrackPoint>,
-    val gapCount: Int
+    val gapCount: Int,
+    /** Live only: step distance counted but not closed by a fix at the end (the run's tail). */
+    val openStepMeters: Float = 0f
 )
 
 /**
@@ -38,17 +40,37 @@ object GpsReplay {
     fun live(
         raw: List<TrackPoint>,
         type: WorkoutType = WorkoutType.EASY_RUN,
-        stepDistance: StepDistanceEstimator? = null
+        stepDistance: StepDistanceEstimator? = null,
+        /**
+         * The step sensor between fixes (steps, cadence at a time), for the service's 1 s timer
+         * that counts a silence by steps; null: no ticks (fixes alone).
+         */
+        stepsAt: ((Long) -> Pair<Int, Float?>?)? = null,
+        /** The run stops at this time (ticks run until then); null: at the last fix. */
+        stopAtMs: Long? = null,
+        /** The run starts at this time (ticks from then on); null: at the first fix. */
+        startAtMs: Long? = null
     ): ReplayResult {
         val processor = GpsLocationProcessor()
         processor.reset(workoutType = type, stepDistance = stepDistance)
         var distance = 0.0
+        var nextTickMs = (startAtMs ?: raw.firstOrNull()?.timestamp ?: 0L) + TICK_MS
+        fun tickUntil(endMs: Long) {
+            val sensor = stepsAt ?: return
+            while (nextTickMs < endMs) {
+                sensor(nextTickMs)?.let { (steps, cadence) ->
+                    distance += processor.countSilence(nextTickMs, steps, cadence)
+                }
+                nextTickMs += TICK_MS
+            }
+        }
         var gaps = 0
         var trackPoints = mutableListOf<org.osmdroid.util.GeoPoint>()
         var trackData = mutableListOf<TrackPoint>()
         var rawData = mutableListOf<TrackPoint>()
 
         for (point in raw) {
+            tickUntil(point.timestamp)
             val location = TrackSanitizer.toLocation(point)
             val result = processor.processLocation(
                 location, trackPoints, trackData, rawData,
@@ -61,15 +83,20 @@ object GpsReplay {
             distance += result.distanceDeltaMeters
             if (result is GpsLocationProcessor.ProcessResult.Accepted && result.afterGap) gaps++
         }
-        return ReplayResult(distance, trackData, gaps)
+        stopAtMs?.let { tickUntil(it + 1) }
+        return ReplayResult(distance, trackData, gaps, processor.pendingStepMeters)
     }
+
+    private const val TICK_MS = 1_000L
 
     fun saved(
         raw: List<TrackPoint>,
         type: WorkoutType = WorkoutType.EASY_RUN,
-        stepDistance: StepDistanceEstimator? = null
+        stepDistance: StepDistanceEstimator? = null,
+        /** The live run's open step distance at Stop ([ReplayResult.openStepMeters]). */
+        tailMeters: Float = 0f
     ): ReplayResult {
-        val points = TrackSanitizer.sanitize(raw, type, stepDistance)
+        val points = TrackSanitizer.sanitize(raw, type, stepDistance, tailMeters)
         return ReplayResult(
             distanceMeters = TrackGeometry.totalDistanceMeters(points).toDouble(),
             points = points,
@@ -233,6 +260,20 @@ data class SyntheticRun(
         val (x, y) = toXY(p)
         return route.zipWithNext().minOf { (a, b) -> distanceToSegment(x, y, a, b) }
     }
+
+    /** The step sensor at [timeMs] (steps since the start, cadence); null without [strideM]. */
+    fun stepsAt(timeMs: Long): Pair<Int, Float?>? {
+        val stride = strideM ?: return null
+        val t = (timeMs - START_TIME) / 1000.0
+        val cadence = if (isStanding(t)) 0f else (60.0 * speedMps / stride).toFloat()
+        return (movedAt(t) / stride).toInt() to cadence
+    }
+
+    /** Time of the run's start. */
+    val startTimeMs: Long get() = START_TIME
+
+    /** Time of the run's end, the last second of [durationSec]. */
+    val endTimeMs: Long get() = START_TIME + durationSec * 1000L
 
     private fun movedAt(t: Number): Double {
         val unstopped = t.toDouble() * speedMps

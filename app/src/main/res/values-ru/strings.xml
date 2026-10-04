@@ -49,6 +49,7 @@
     <string name="gps_accuracy_denied">Нет доступа к GPS</string>
     <string name="gps_accuracy_unreliable">Сигнал ненадёжен</string>
     <string name="gps_lost_banner">GPS потерян — время идёт, дистанция паузится до возврата сигнала</string>
+    <string name="gps_lost_banner_steps">GPS потерян — время идёт, дистанция считается по шагам</string>
     <string name="gps_unreliable_banner">Сигнал GPS ненадёжен — позиция скрыта, дистанция по шагам</string>
     <string name="gps_unreliable_banner_no_steps">Сигнал GPS ненадёжен — позиция скрыта, участок досчитается по прямой, когда сигнал вернётся</string>
     <string name="gps_ready_banner">GPS готов — можно начинать</string>
@@ -325,7 +326,7 @@
     <string name="battery_optimization_hint">Для стабильной работы приложения отключите оптимизацию батареи в настройках</string>
     <string name="battery_optimization_open_settings">Настройки</string>
     <string name="steps_permission_title">Шаги для дистанции</string>
-    <string name="steps_permission_rationale">Разрешите доступ к физической активности, чтобы считать шаги — для дистанции, пока сигнал GPS ложный или ненадёжен. Спросим только один раз; изменить можно в настройках.</string>
+    <string name="steps_permission_rationale">Разрешите доступ к физической активности, чтобы считать шаги — для дистанции, пока GPS потерян или его сигнал ложный. Спросим только один раз; изменить можно в настройках.</string>
     <string name="steps_permission_allow">Разрешить</string>
     <string name="steps_permission_not_now">Не сейчас</string>
     <string name="steps_permission_denied">Разрешение «Физическая активность» выключено. Включите его в системных настройках приложения.</string>
