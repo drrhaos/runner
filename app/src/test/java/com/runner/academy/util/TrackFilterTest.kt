@@ -181,6 +181,87 @@ class TrackFilterTest {
         assertEquals(3f, next.segmentDistanceMeters, 0.2f)
     }
 
+    // --- Silence counted by steps (owner's decision 2026-10-04) ---
+
+    /** 1 m per step, so steps equal metres run. */
+    private val stepped = TrackFilter(WorkoutType.EASY_RUN, StepDistanceEstimator { steps, _ -> steps.toFloat() })
+
+    /** Runs east at 3 m/s with steps from [fromSec] to [toSec] through [stepped]. */
+    private fun runEastWithSteps(fromSec: Int, toSec: Int) {
+        for (sec in fromSec..toSec) {
+            assertTrue("fix at $sec s", stepped.process(fix(sec * 3.0, 0.0, sec), steps = sec * 3) is Verdict.Accepted)
+        }
+    }
+
+    @Test
+    fun `a silence with steps is bridged by steps when GPS returns`() {
+        runEastWithSteps(0, 10)
+        // 50 s without any fix; the runner ran 150 m but came back close to where GPS stopped
+        val back = stepped.process(fix(60.0, 0.0, 61), steps = 183).accepted()
+
+        assertTrue(back.afterGap)
+        assertEquals(153f, back.bridgeMeters!!, 0.5f)
+        assertTrue(back.bridgeFromSteps)
+        assertEquals(153f, back.segmentDistanceMeters, 0.5f)
+    }
+
+    @Test
+    fun `a silence with steps takes the straight line when it is longer`() {
+        runEastWithSteps(0, 10)
+        val back = stepped.process(fix(400.0, 0.0, 61), steps = 130).accepted()
+
+        assertEquals(370f, back.bridgeMeters!!, 1f)
+        assertFalse(back.bridgeFromSteps)
+    }
+
+    @Test
+    fun `steps are counted live during a silence and the closing fix only adds the rest`() {
+        runEastWithSteps(0, 10)
+        val before = stepped.countedMeters
+
+        // Less than 20 s without a fix: not a silence yet
+        stepped.countSilence(nowMs = T0 + 25_000L, steps = 75, cadence = 170f)
+        assertEquals(before, stepped.countedMeters, 0.01f)
+
+        stepped.countSilence(nowMs = T0 + 40_000L, steps = 120, cadence = 170f)
+        assertEquals(before + 90f, stepped.countedMeters, 0.5f)
+
+        val counted = stepped.countedMeters
+        val back = stepped.process(fix(60.0, 0.0, 61), steps = 183).accepted()
+        assertEquals(153f, back.bridgeMeters!!, 0.5f)
+        assertEquals(before + 153f, stepped.countedMeters, 0.5f)
+        assertTrue(stepped.countedMeters >= counted)
+        assertEquals(0f, stepped.pendingMeters, 0.01f)
+    }
+
+    @Test
+    fun `steps before the first fix count as a lead-in`() {
+        stepped.countSilence(nowMs = T0 + 30_000L, steps = 90, cadence = 170f)
+        assertEquals(90f, stepped.pendingMeters, 0.5f)
+
+        val first = stepped.process(fix(0.0, 0.0, 31), steps = 93).accepted()
+        assertEquals(93f, first.leadInMeters!!, 0.5f)
+        assertEquals(93f, stepped.countedMeters, 0.5f)
+    }
+
+    @Test
+    fun `without steps a silence counts nothing`() {
+        runEast(0, 10)
+        filter.countSilence(nowMs = T0 + 60_000L, steps = 150, cadence = 170f)
+        assertEquals(0f, filter.pendingMeters, 0.01f)
+    }
+
+    @Test
+    fun `a far fix after a silence with steps is still dropped`() {
+        runEastWithSteps(0, 10)
+        stepped.countSilence(nowMs = T0 + 120_000L, steps = 360, cadence = 170f)
+
+        val far = stepped.process(fix(9_000.0, 9_500.0, 130), steps = 390).rejected()
+        assertEquals(TrackFilter.Reason.IMPLAUSIBLE_JUMP, far.reason)
+        // Counted live stays counted, and the dropped fix carries the steps on to its own time
+        assertEquals(30f + 360f, stepped.countedMeters, 1f)
+    }
+
     private companion object {
         const val LAT0 = 55.75
         const val LON0 = 37.6
