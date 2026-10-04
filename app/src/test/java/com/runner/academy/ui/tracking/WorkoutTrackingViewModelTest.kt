@@ -135,7 +135,8 @@ class WorkoutTrackingViewModelTest {
         field.isAccessible = true
         @Suppress("UNCHECKED_CAST")
         val flow = field.get(viewModel) as kotlinx.coroutines.flow.MutableStateFlow<WorkoutSession>
-        com.runner.academy.util.UserPreferences(context).userHeight = 175f
+        // The height changed after the start: the run's frozen prior must still be used
+        com.runner.academy.util.UserPreferences(context).userHeight = 190f
         flow.value = WorkoutSession(
             startTime = raw.first().timestamp,
             currentTime = raw.last().timestamp - raw.first().timestamp,
