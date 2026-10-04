@@ -139,8 +139,7 @@ class WorkoutTrackingFragment : Fragment() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         stepPromptShowing = false
-        // Denied: steps stay off until the user turns them on in settings.
-        if (!isGranted) requireContext().appContainer().userPreferences.stepsForDistanceEnabled = false
+        if (!isGranted) StepTrackingAccess.decline(requireContext())
         if (_binding != null) startCountdown()
     }
 
@@ -571,7 +570,12 @@ class WorkoutTrackingFragment : Fragment() {
             }
             session.gpsStatus == GpsStatus.UNRELIABLE && session.isTracking -> {
                 banner.visibility = View.VISIBLE
-                banner.text = getString(R.string.gps_unreliable_banner)
+                val context = requireContext()
+                val withSteps = StepTrackingAccess.isStepTrackingAllowed(context) &&
+                    StepTrackingAccess.hasStepSensor(context)
+                banner.text = getString(
+                    if (withSteps) R.string.gps_unreliable_banner else R.string.gps_unreliable_banner_no_steps
+                )
             }
             !session.isTracking && !session.isPaused -> {
                 updateIdleGpsBanner()
@@ -636,8 +640,7 @@ class WorkoutTrackingFragment : Fragment() {
             startCountdown()
             return
         }
-        val prefs = context.appContainer().userPreferences
-        prefs.stepPermissionAsked = true
+        StepTrackingAccess.markPromptShown(context)
         stepPromptShowing = true
         var requested = false
         MaterialAlertDialogBuilder(context)
@@ -647,11 +650,14 @@ class WorkoutTrackingFragment : Fragment() {
                 requested = true
                 stepPermissionRequest.launch(StepPermissionPolicy.PERMISSION)
             }
-            .setNegativeButton(R.string.steps_permission_not_now, null)
+            // Only an explicit answer turns steps off: "Not now", back or a tap outside
+            .setNegativeButton(R.string.steps_permission_not_now) { _, _ -> StepTrackingAccess.decline(context) }
+            .setOnCancelListener { StepTrackingAccess.decline(context) }
             .setOnDismissListener {
                 if (requested) return@setOnDismissListener
                 stepPromptShowing = false
-                prefs.stepsForDistanceEnabled = false
+                // Recreated (theme, locale): no answer was given, the user taps Start again
+                if (activity?.isChangingConfigurations == true) return@setOnDismissListener
                 if (_binding != null) startCountdown()
             }
             .show()

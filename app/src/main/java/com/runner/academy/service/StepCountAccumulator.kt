@@ -16,12 +16,16 @@ package com.runner.academy.service
  * before start, or until [minCadenceSpanNanos] of data exist after start/resume, and falls to 0
  * when no steps arrive for a whole window (standing still).
  *
+ * [stepsAt] answers the count at an earlier moment from a short history ([historyNanos]): GPS
+ * fixes batched with the screen off arrive late, and each must carry the steps of its own time.
+ *
  * Timestamps are one monotonic clock in nanoseconds (the caller uses `elapsedRealtimeNanos`).
  * Not thread-safe; [StepTracker] synchronises access.
  */
 class StepCountAccumulator(
     private val cadenceWindowNanos: Long = DEFAULT_CADENCE_WINDOW_NANOS,
-    private val minCadenceSpanNanos: Long = DEFAULT_MIN_CADENCE_SPAN_NANOS
+    private val minCadenceSpanNanos: Long = DEFAULT_MIN_CADENCE_SPAN_NANOS,
+    private val historyNanos: Long = DEFAULT_HISTORY_NANOS
 ) {
 
     private class Sample(val timeNanos: Long, val steps: Int)
@@ -31,6 +35,7 @@ class StepCountAccumulator(
     private var stepCount = 0
     private var lastCounterValue: Long? = null
     private val samples = ArrayDeque<Sample>()
+    private val history = ArrayDeque<Sample>()
 
     /** Steps counted since [start], excluding pauses. */
     val steps: Int get() = stepCount
@@ -48,6 +53,22 @@ class StepCountAccumulator(
         lastCounterValue = null
         samples.clear()
         samples.addLast(Sample(nowNanos, stepCount))
+        history.clear()
+        history.addLast(Sample(nowNanos, stepCount))
+    }
+
+    /**
+     * Steps counted at [timeNanos]: the count after the last step event at or before it, the
+     * oldest kept count for a time before the history, [steps] for now or later.
+     */
+    fun stepsAt(timeNanos: Long): Int {
+        if (history.isEmpty() || timeNanos >= history.last().timeNanos) return stepCount
+        var result = history.first().steps
+        for (sample in history) {
+            if (sample.timeNanos > timeNanos) break
+            result = sample.steps
+        }
+        return result
     }
 
     fun onCounterValue(totalSinceBoot: Long, nowNanos: Long) {
@@ -101,6 +122,8 @@ class StepCountAccumulator(
         stepCount += count
         samples.addLast(Sample(nowNanos, stepCount))
         prune(nowNanos - cadenceWindowNanos)
+        history.addLast(Sample(nowNanos, stepCount))
+        while (history.size >= 2 && history[1].timeNanos <= nowNanos - historyNanos) history.removeFirst()
     }
 
     /** Keeps the newest sample at or before [windowStart] as the reference, drops older ones. */
@@ -113,6 +136,8 @@ class StepCountAccumulator(
     companion object {
         const val DEFAULT_CADENCE_WINDOW_NANOS = 12_000_000_000L
         const val DEFAULT_MIN_CADENCE_SPAN_NANOS = 5_000_000_000L
+        /** Longer than a screen-off batch of fixes. */
+        const val DEFAULT_HISTORY_NANOS = 180_000_000_000L
         private const val NANOS_PER_MINUTE = 60_000_000_000.0
     }
 }

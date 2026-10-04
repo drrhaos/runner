@@ -31,7 +31,7 @@ object GpsConfig {
      * No distance filter in the request, screen on or off. Standing at a traffic light the
      * provider would otherwise deliver nothing, the watchdog would flag GPS as lost and the
      * next fix would break the track. Standing jitter is dropped by
-     * [com.runner.academy.service.GpsLocationProcessor.MIN_POINT_DISTANCE_METERS] instead.
+     * [GpsFilter.MIN_POINT_DISTANCE_METERS] instead.
      */
     const val MIN_DISTANCE = 0f
 

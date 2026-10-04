@@ -61,6 +61,7 @@
     <string name="gps_accuracy_unreliable">Unreliable signal</string>
     <string name="gps_lost_banner">GPS lost — time continues, distance pauses until signal returns</string>
     <string name="gps_unreliable_banner">GPS signal unreliable — position hidden, distance from steps</string>
+    <string name="gps_unreliable_banner_no_steps">GPS signal unreliable — position hidden, the stretch is counted as a straight line once the signal is back</string>
     <string name="gps_ready_banner">GPS ready — you can start</string>
     <string name="gps_wait_banner">Wait for GPS before starting for a better track</string>
     <string name="save_distance_dialog_title">Enter distance</string>
@@ -338,7 +339,7 @@
     <string name="battery_optimization_hint">For stable operation, disable battery optimization in settings</string>
     <string name="battery_optimization_open_settings">Settings</string>
     <string name="steps_permission_title">Steps for distance</string>
-    <string name="steps_permission_rationale">Allow the Physical activity permission to count steps — for distance when GPS is lost (tunnels, dense streets). The app asks only once; you can change this later in Settings.</string>
+    <string name="steps_permission_rationale">Allow the Physical activity permission to count steps — for distance while the GPS signal is false or unreliable. The app asks only once; you can change this later in Settings.</string>
     <string name="steps_permission_allow">Allow</string>
     <string name="steps_permission_not_now">Not now</string>
     <string name="steps_permission_denied">Physical activity permission is off. Turn it on in the app\'s system settings.</string>

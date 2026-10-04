@@ -125,7 +125,16 @@ class GpsDiagnosticsRecorder(
         )
     }
 
-    fun recordFix(location: Location, result: FixResult) {
+    /**
+     * [reason] is the filter's reject reason name; [steps] / [cadence] the workout's at this fix.
+     */
+    fun recordFix(
+        location: Location,
+        result: FixResult,
+        reason: String? = null,
+        steps: Int? = null,
+        cadence: Float? = null
+    ) {
         if (!isRecording) return
         val fix = DiagFix(
             elapsedMs = location.elapsedRealtimeNanos / 1_000_000L,
@@ -137,9 +146,11 @@ class GpsDiagnosticsRecorder(
             bearing = if (location.hasBearing()) location.bearing else null,
             altitude = if (location.hasAltitude()) location.altitude else null,
             provider = location.provider ?: "unknown",
-            isMock = LocationCompat.isMock(location)
+            isMock = LocationCompat.isMock(location),
+            steps = steps,
+            cadence = cadence
         )
-        io.execute { writeNow(GpsDiagnostics.fixLine(fix, result)) }
+        io.execute { writeNow(GpsDiagnostics.fixLine(fix, result, reason)) }
     }
 
     fun recordEvent(event: Event) {

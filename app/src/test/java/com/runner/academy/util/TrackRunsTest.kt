@@ -172,4 +172,11 @@ class TrackRunsTest {
         )
         assertEquals(listOf(1.0, 2.0, 3.0), runs.allPoints().map { it.latitude })
     }
+
+    @Test
+    fun lead_in_on_the_first_point_is_not_drawn() {
+        val runs = TrackRuns.split(listOf(point(55.0, bridgeMeters = 120f), point(55.001)))
+        assertEquals(1, runs.size)
+        assertTrue(runs.single() is Solid)
+    }
 }

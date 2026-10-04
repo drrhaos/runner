@@ -176,4 +176,23 @@ class StrideModelTest {
         )
         assertNull(StrideModel.deserialize("v1;x", 175f).takeIf { it.sampleCount > 0 })
     }
+
+    @Test
+    fun `an untrained run-frozen state keeps its exact prior when the height changes`() {
+        val frozen = StrideModel.fromHeight(175f)
+        val state = frozen.serialize()
+
+        val restored = StrideModel.deserializeExact(state)!!
+
+        assertEquals(frozen.strideMeters(165f), restored.strideMeters(165f), 1e-6f)
+        // The height-aware reader still rebuilds an untrained model from the current height
+        assertTrue(StrideModel.deserialize(state, 190f).strideMeters(165f) > frozen.strideMeters(165f) + 0.05f)
+    }
+
+    @Test
+    fun `a corrupt exact state is null`() {
+        assertEquals(null, StrideModel.deserializeExact(null))
+        assertEquals(null, StrideModel.deserializeExact("v1;x"))
+        assertEquals(null, StrideModel.deserializeExact("v1;1;0;1;0;1;-1"))
+    }
 }

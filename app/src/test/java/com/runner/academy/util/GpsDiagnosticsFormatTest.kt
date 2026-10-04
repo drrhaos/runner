@@ -125,4 +125,27 @@ class GpsDiagnosticsFormatTest {
         val records = GpsDiagnostics.parse(listOf(good, "", "{\"type\":\"fix\",\"lat\":5", "not json"))
         assertEquals(listOf(DiagRecord.Event(1L, "start")), records)
     }
+
+    @Test
+    fun fixLine_carriesRejectReasonAndSteps() {
+        val stepped = fix.copy(steps = 1_234, cadence = 171.5f)
+        val line = GpsDiagnostics.fixLine(stepped, FixResult.REJECTED, reason = "FROZEN")
+
+        val record = GpsDiagnostics.parse(listOf(line)).single()
+
+        assertEquals(DiagRecord.Fix(stepped, FixResult.REJECTED, reason = "FROZEN"), record)
+    }
+
+    @Test
+    fun fixLine_withoutTheOptionalFieldsReadsAsBefore() {
+        // A release-1 line: no reason, steps or cadence
+        val line = """{"type":"fix","t":1,"time":2,"lat":55.0,"lon":37.0,"provider":"gps","result":"ACCEPTED"}"""
+
+        val record = GpsDiagnostics.parse(listOf(line)).single() as DiagRecord.Fix
+
+        assertEquals(null, record.reason)
+        assertEquals(null, record.fix.steps)
+        assertEquals(null, record.fix.cadence)
+        assertEquals(1, GpsDiagnostics.FORMAT_VERSION)
+    }
 }
