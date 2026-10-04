@@ -53,6 +53,28 @@ class GpsLocationProcessor {
         reportedMeters = filter.countedMeters
     }
 
+    /**
+     * A clock tick without a fix (the service calls it every second): counts the step distance of
+     * a silence, see [TrackFilter.countSilence]. Returns the distance to add to the display.
+     */
+    fun countSilence(nowMs: Long, steps: Int?, cadence: Float?): Float {
+        filter.countSilence(nowMs, steps, cadence)
+        val delta = (filter.countedMeters - reportedMeters).coerceAtLeast(0f)
+        reportedMeters = maxOf(reportedMeters, filter.countedMeters)
+        return delta
+    }
+
+    private var nextFixAfterPause = false
+
+    /**
+     * The run resumes after a pause (see [TrackFilter.onResume]); the next raw point is marked
+     * [TrackPoint.afterPause] so the save path sees the pause too.
+     */
+    fun onResume() {
+        filter.onResume()
+        nextFixAfterPause = true
+    }
+
     /** Step distance of the open false-signal episode, already in the reported distance. */
     val pendingStepMeters: Float get() = filter.pendingMeters
 
@@ -92,8 +114,10 @@ class GpsLocationProcessor {
             afterGap = false,
             source = LocationSource.GPS.name,
             steps = steps,
-            cadence = cadence
+            cadence = cadence,
+            afterPause = if (nextFixAfterPause) true else null
         )
+        nextFixAfterPause = false
         newRawTrackDataPoints.add(rawTrackPoint)
         decimateRawPointsIfNeeded(newRawTrackDataPoints)
 

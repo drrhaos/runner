@@ -566,15 +566,15 @@ class WorkoutTrackingFragment : Fragment() {
         when {
             session.gpsStatus == GpsStatus.LOST && session.isTracking -> {
                 banner.visibility = View.VISIBLE
-                banner.text = getString(R.string.gps_lost_banner)
+                banner.text = getString(
+                    if (session.strideModelState != null) R.string.gps_lost_banner_steps else R.string.gps_lost_banner
+                )
             }
             session.gpsStatus == GpsStatus.UNRELIABLE && session.isTracking -> {
                 banner.visibility = View.VISIBLE
-                val context = requireContext()
-                val withSteps = StepTrackingAccess.isStepTrackingAllowed(context) &&
-                    StepTrackingAccess.hasStepSensor(context)
+                // Steps count only when this run started them (allowed and a sensor at start)
                 banner.text = getString(
-                    if (withSteps) R.string.gps_unreliable_banner else R.string.gps_unreliable_banner_no_steps
+                    if (session.strideModelState != null) R.string.gps_unreliable_banner else R.string.gps_unreliable_banner_no_steps
                 )
             }
             !session.isTracking && !session.isPaused -> {

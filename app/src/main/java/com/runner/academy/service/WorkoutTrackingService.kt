@@ -323,6 +323,8 @@ class WorkoutTrackingService : Service() {
             )
             lastAnyFixTime = System.currentTimeMillis()
             lastProcessedFixTimeMs = maxOf(lastProcessedFixTimeMs, location.time)
+            // Before the session update below, so a stop right after a closing fix saves no tail
+            sessionManager.setOpenStepMeters(gpsProcessor.pendingStepMeters)
 
             diagnostics.recordFix(
                 location,
@@ -506,6 +508,7 @@ class WorkoutTrackingService : Service() {
         diagnostics.recordEvent(DiagEvent.RESUME)
         isCurrentlyTracking = true
         stepTracker?.resume()
+        gpsProcessor.onResume()
         sessionManager.resume()
         // Grace after the pause: no fixes were processed, so the watchdog must not flag the
         // whole pause as a GPS loss before the first fix arrives
@@ -604,6 +607,7 @@ class WorkoutTrackingService : Service() {
             }
         }
         sessionManager.restoreSession(restoredSession, checkpoint.lastUpdateTime)
+        sessionManager.setOpenStepMeters(gpsProcessor.pendingStepMeters)
         rebuildIntervalEngineFromMetadata()
         prepareVoiceForWorkout()
         if (!resumeTrackingAfterRestore(restoredSession)) return false
@@ -1164,6 +1168,7 @@ class WorkoutTrackingService : Service() {
                 delay(WORKOUT_TIMER_INTERVAL_MS)
                 withContext(Dispatchers.Main) {
                     if (++ticks % WAKE_LOCK_RENEW_EVERY_TICKS == 0) acquireWakeLock()
+                    countSilenceBySteps()
                     // Advance clock without fan-out to voice/checkpoint; UI + notification only
                     sessionManager.tickElapsedTime(broadcast = false)
                     val session = sessionManager.getSession()
@@ -1172,6 +1177,19 @@ class WorkoutTrackingService : Service() {
                 }
             }
         }
+    }
+
+    /**
+     * No fix arrives during a silence (tunnel, jamming, GNSS off under battery saver), so the
+     * step distance of a silence is counted on the timer instead, see
+     * [GpsLocationProcessor.countSilence].
+     */
+    private fun countSilenceBySteps() {
+        val tracker = stepTracker?.takeIf { it.isRunning } ?: return
+        // Monotonic, like the fixes' elapsedRealtime the filter measures a silence against
+        val added = gpsProcessor.countSilence(SystemClock.elapsedRealtime(), tracker.steps, tracker.cadence)
+        sessionManager.setOpenStepMeters(gpsProcessor.pendingStepMeters)
+        sessionManager.addStepDistance(added, userPreferences.userWeight)
     }
 
     private fun stopWorkoutTimer() {

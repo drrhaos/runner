@@ -27,7 +27,13 @@ data class WorkoutSession(
      * dropped stretches by steps; the save path rebuilds the same estimator from it so the saved
      * distance matches the live one. Null when steps are not used in this run.
      */
-    val strideModelState: String? = null
+    val strideModelState: String? = null,
+    /**
+     * Step distance already in [distance] that no kept point carries yet (an open silence or
+     * false signal, [com.runner.academy.service.GpsLocationProcessor.pendingStepMeters]): saved as
+     * the track's tail if the run stops before a fix closes it.
+     */
+    val openStepMeters: Float = 0f
 )
 
 enum class GpsStatus {

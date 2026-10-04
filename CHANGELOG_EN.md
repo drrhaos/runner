@@ -10,6 +10,7 @@ Current release: **`v.0.1.5`**.
 
 - False GPS signal (spoofing, jamming): teleport fixes, frozen coordinates and impossible speeds are dropped, no jumps are kept in the track
 - A dropped stretch is still counted: steps × stride or the straight line, whichever is longer; the map draws it with its own dashes
+- A stretch with no signal at all (tunnel, jamming, GPS switched off by battery saver with the screen off) is counted by steps; stopping before the signal returns keeps that distance
 - "Signal unreliable" status in the indicator, the banner and by voice; the map hides the position meanwhile and the distance grows by steps
 - Starting with a false signal is allowed: distance counts by steps, the track begins at the first good fix
 - Steps for distance (step sensor): the permission is asked once at the first start, with a switch in settings

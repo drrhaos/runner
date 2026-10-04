@@ -316,7 +316,8 @@ class WorkoutTrackingViewModel(
             ?: UserPreferences(application)
         // The run's frozen stride, as the live path used it: the same bridges, the same distance
         val stepDistance = session.strideModelState?.let { StrideModel.frozenEstimatorOf(it, userPrefs.userHeight) }
-        val sanitizedPoints = TrackSanitizer.sanitize(sourcePoints, workoutType, stepDistance)
+        // An open silence or false signal at Stop keeps its step distance as the track's tail
+        val sanitizedPoints = TrackSanitizer.sanitize(sourcePoints, workoutType, stepDistance, session.openStepMeters)
         val hasTrack = sanitizedPoints.size >= 2
 
         val totalDistanceMeters = when {

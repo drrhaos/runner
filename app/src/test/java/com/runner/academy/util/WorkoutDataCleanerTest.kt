@@ -42,4 +42,16 @@ class WorkoutDataCleanerTest {
         assertEquals(TrackGeometry.totalDistanceMeters(points), cleaned.totalDistance, 0.5f)
         assertTrue("step counts survive", cleaned.points.all { it.steps != null && it.cadence != null })
     }
+
+    @Test
+    fun `the tail survives when cleaning drops the last point`() {
+        val outlierLast = points.last().copy(longitude = 37.70, tailMeters = 240f)
+        val withTail = points.dropLast(1) + outlierLast
+        val track = TrackData(withTail, 0f, 0L, 0f, 0f, withTail.first().timestamp, withTail.last().timestamp)
+
+        val cleaned = WorkoutDataCleaner.cleanTrackData(track, WorkoutType.EASY_RUN)
+
+        assertTrue("the far last point is dropped", cleaned.points.size < withTail.size)
+        assertEquals(240f, TrackGeometry.tailMeters(cleaned.points), 0.01f)
+    }
 }
