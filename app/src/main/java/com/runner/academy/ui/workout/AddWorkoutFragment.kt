@@ -435,7 +435,8 @@ class AddWorkoutFragment : Fragment() {
         } catch (_: Exception) {
             0
         }
-        binding.textViewRouteStatus.text = getString(R.string.edit_workout_route_attached, pointCount)
+        val points = resources.getQuantityString(R.plurals.edit_workout_route_points_count, pointCount, pointCount)
+        binding.textViewRouteStatus.text = getString(R.string.edit_workout_route_attached, points)
         binding.buttonClearRoute.isEnabled = true
     }
 

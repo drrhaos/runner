@@ -104,7 +104,7 @@
     <string name="edit_workout_title">Edit workout</string>
     <string name="edit_workout_label_route">Route</string>
     <string name="edit_workout_route_none">No route attached</string>
-    <string name="edit_workout_route_attached">Route attached (%1$d points)</string>
+    <string name="edit_workout_route_attached">Route attached (%1$s)</string>
     <string name="edit_workout_select_route">Select route</string>
     <string name="edit_workout_clear_route">Clear</string>
     <string name="edit_workout_pick_route_title">Select a route</string>

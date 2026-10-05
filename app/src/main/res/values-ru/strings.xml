@@ -94,7 +94,7 @@
     <string name="edit_workout_title">Редактировать тренировку</string>
     <string name="edit_workout_label_route">Маршрут</string>
     <string name="edit_workout_route_none">Маршрут не привязан</string>
-    <string name="edit_workout_route_attached">Маршрут привязан (%1$d точек)</string>
+    <string name="edit_workout_route_attached">Маршрут привязан (%1$s)</string>
     <string name="edit_workout_select_route">Выбрать маршрут</string>
     <string name="edit_workout_clear_route">Очистить</string>
     <string name="edit_workout_pick_route_title">Выберите маршрут</string>
