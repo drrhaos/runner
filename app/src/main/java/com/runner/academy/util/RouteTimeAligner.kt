@@ -157,12 +157,22 @@ object RouteTimeAligner {
         val startTime = points.firstOrNull()?.timestamp ?: 0L
         val endTime = points.lastOrNull()?.timestamp ?: startTime
         val totalDuration = (endTime - startTime).coerceAtLeast(0L)
-        return (from ?: TrackData(points, 0f, 0L, 0f, 0f, 0L, null)).copy(
+        val avgSpeed = SpeedPaceCalculator.averageSpeedMs(totalDistance, totalDuration)
+        val maxSpeed = TrackGeometry.maxDerivedSpeedMs(points)
+        return from?.copy(
             points = points,
             totalDistance = totalDistance,
             totalDuration = totalDuration,
-            avgSpeed = SpeedPaceCalculator.averageSpeedMs(totalDistance, totalDuration),
-            maxSpeed = TrackGeometry.maxDerivedSpeedMs(points),
+            avgSpeed = avgSpeed,
+            maxSpeed = maxSpeed,
+            startTime = startTime,
+            endTime = endTime
+        ) ?: TrackData(
+            points = points,
+            totalDistance = totalDistance,
+            totalDuration = totalDuration,
+            avgSpeed = avgSpeed,
+            maxSpeed = maxSpeed,
             startTime = startTime,
             endTime = endTime
         )

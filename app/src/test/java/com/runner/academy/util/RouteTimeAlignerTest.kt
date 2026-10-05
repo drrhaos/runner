@@ -2,6 +2,7 @@ package com.runner.academy.util
 
 import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.PauseInterval
+import com.runner.academy.data.PauseKind
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import org.junit.Assert.assertEquals
@@ -137,7 +138,7 @@ class RouteTimeAlignerTest {
         assertEquals(start + day, TrackDataJson.parse(result.trackDataJson)!!.startTime)
     }
 
-    private val pauses = listOf(PauseInterval(start + 10_000L, start + 70_000L, "AUTO"))
+    private val pauses = listOf(PauseInterval(start + 10_000L, start + 70_000L, PauseKind.AUTO))
 
     private fun withTrackFields(track: TrackData) =
         track.copy(pauses = pauses, timeSynthetic = true, elevationSource = ElevationSource.FILE)
@@ -146,7 +147,7 @@ class RouteTimeAlignerTest {
     fun `shiftTime moves the pauses with the points and keeps the other track fields`() {
         val shifted = RouteTimeAligner.shiftTime(withTrackFields(recordedOutAndBack()), 5_000L)
 
-        assertEquals(listOf(PauseInterval(start + 15_000L, start + 75_000L, "AUTO")), shifted.pauses)
+        assertEquals(listOf(PauseInterval(start + 15_000L, start + 75_000L, PauseKind.AUTO)), shifted.pauses)
         assertEquals(true, shifted.timeSynthetic)
         assertEquals(ElevationSource.FILE, shifted.elevationSource)
     }
