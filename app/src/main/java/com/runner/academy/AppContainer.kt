@@ -11,6 +11,7 @@ import com.runner.academy.util.UserPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.withContext
 
 /**
  * Manual DI graph for the app. Constructed once on [RunnerApplication].
@@ -30,7 +31,11 @@ class AppContainer(context: Context) {
     /** Derived metrics of rows saved without them; started on app start and after an import. */
     val metricsBackfill: MetricsBackfill by lazy {
         val activeWorkout = ActiveWorkoutStore(appContext)
-        MetricsBackfill(database, applicationScope, isWorkoutActive = { activeWorkout.exists() })
+        MetricsBackfill(
+            database,
+            applicationScope,
+            isWorkoutActive = { withContext(Dispatchers.IO) { activeWorkout.isWorkoutActive() } }
+        )
     }
 
     val trainingPlanRepository: TrainingPlanRepository by lazy {

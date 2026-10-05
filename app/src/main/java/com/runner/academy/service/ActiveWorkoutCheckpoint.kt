@@ -181,8 +181,17 @@ class ActiveWorkoutStore(context: Context) {
         }
     }
 
-    /** A workout is being recorded (or was interrupted and awaits restore) until [clear]. */
-    fun exists(): Boolean = file.exists()
+    /**
+     * A workout is being recorded: the checkpoint is running or paused and was saved within
+     * [LIVE_WINDOW_MS]. A running service saves it every [WorkoutTrackingService]
+     * checkpoint interval; an older one is left by a restore the system refused (kept until the
+     * app is opened) or by a pause long enough for background work. Reads the file: call off
+     * the main thread.
+     */
+    fun isWorkoutActive(now: Long = System.currentTimeMillis()): Boolean {
+        val checkpoint = load() ?: return false
+        return (checkpoint.isTracking || checkpoint.isPaused) && now - checkpoint.savedAt < LIVE_WINDOW_MS
+    }
 
     @Synchronized
     fun clear() {
@@ -194,6 +203,8 @@ class ActiveWorkoutStore(context: Context) {
     }
 
     companion object {
+        /** Far above the save interval of a running workout (15 s). */
+        const val LIVE_WINDOW_MS = 10 * 60_000L
         private const val FILE_NAME = "active_workout_checkpoint.json"
         private const val TAG = "ActiveWorkoutStore"
     }
