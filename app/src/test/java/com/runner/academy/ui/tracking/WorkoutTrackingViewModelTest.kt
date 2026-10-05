@@ -169,7 +169,10 @@ class WorkoutTrackingViewModelTest {
 
         val saved = workoutDao.getAllWorkouts().first().first()
         assertEquals(120_000L, saved.duration)
+        // No auto-pause yet: all of the time is moving
+        assertEquals(120_000L, saved.movingDuration)
         assertEquals(0f, saved.distance)
+        assertEquals(0f, saved.avgPace)
         assertNull(saved.trackData)
     }
 
@@ -193,6 +196,7 @@ class WorkoutTrackingViewModelTest {
             date = Date(),
             distance = 0.2f,
             duration = 2000L,
+            movingDuration = 2000L,
             avgPace = 5.0f,
             calories = 50,
             notes = null,

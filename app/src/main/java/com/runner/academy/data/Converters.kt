@@ -50,4 +50,11 @@ class Converters {
     @TypeConverter
     fun toScheduledWorkoutStatus(value: String): ScheduledWorkoutStatus =
         ScheduledWorkoutStatus.entries.find { it.name == value } ?: ScheduledWorkoutStatus.PLANNED
+
+    @TypeConverter
+    fun fromElevationSource(value: ElevationSource?): String? = value?.name
+
+    @TypeConverter
+    fun toElevationSource(value: String?): ElevationSource? =
+        value?.let { name -> ElevationSource.entries.find { it.name == name } }
 }
