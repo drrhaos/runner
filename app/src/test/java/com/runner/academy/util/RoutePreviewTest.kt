@@ -191,6 +191,24 @@ class RoutePreviewTest {
     }
 
     @Test
+    fun extremeDeltas_decodeToNull() {
+        val min = Long.MIN_VALUE
+        val max = Long.MAX_VALUE
+        val extreme = listOf(
+            // abs(Long.MIN_VALUE) is negative: no longer slips past the range check
+            "1|5|S:$min,0;0,0",
+            "1|5|S:0,$min;0,0",
+            // Sums that overflow a Long
+            "1|5|S:90000000,0;$max,0",
+            "1|5|S:-90000000,0;$min,0",
+            "1|5|S:0,-180000000;0,$min"
+        )
+        for (text in extreme) {
+            assertNull(text, RoutePreviewCodec.decode(text))
+        }
+    }
+
+    @Test
     fun decodedPoints_carryTheMarksTrackRunsReads() {
         val decoded = RoutePreviewCodec.decode(RoutePreviewCodec.encode(RoutePreviews.of(brokenTrack())!!))!!
 

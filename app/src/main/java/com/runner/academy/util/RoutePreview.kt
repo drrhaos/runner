@@ -2,7 +2,6 @@ package com.runner.academy.util
 
 import com.runner.academy.data.LocationSource
 import com.runner.academy.data.TrackPoint
-import kotlin.math.abs
 import kotlin.math.roundToLong
 
 /**
@@ -47,6 +46,8 @@ object RoutePreviewCodec {
     private const val BRIDGE = "B"
     private const val STEP_BRIDGE = "P"
     private const val SCALE = 1_000_000.0
+    private const val MAX_LAT = 90_000_000L
+    private const val MAX_LON = 180_000_000L
 
     /** Only "it is a bridge" matters to the renderers; the distance is not kept. */
     private const val BRIDGE_STUB_METERS = 1f
@@ -105,9 +106,11 @@ object RoutePreviewCodec {
                 pairs.forEachIndexed { index, pair ->
                     val coords = pair.split(COORD_SEPARATOR)
                     if (coords.size != 2) return null
-                    lat += coords[0].toLongOrNull() ?: return null
-                    lon += coords[1].toLongOrNull() ?: return null
-                    if (abs(lat) > 90 * SCALE || abs(lon) > 180 * SCALE) return null
+                    // addExact throws (caught by decode) where += would wrap around;
+                    // ranges, not abs(): abs(Long.MIN_VALUE) is negative
+                    lat = Math.addExact(lat, coords[0].toLongOrNull() ?: return null)
+                    lon = Math.addExact(lon, coords[1].toLongOrNull() ?: return null)
+                    if (lat !in -MAX_LAT..MAX_LAT || lon !in -MAX_LON..MAX_LON) return null
                     val point = TrackPoint(lat / SCALE, lon / SCALE, 0L, null, null, null)
                     points.add(if (index == 0) point.pending() else point)
                 }

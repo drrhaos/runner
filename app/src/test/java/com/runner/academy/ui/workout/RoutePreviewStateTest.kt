@@ -5,6 +5,7 @@ import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.RoutePreviewCodec
 import com.runner.academy.util.WorkoutDerivation
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertSame
 import org.junit.Test
 import java.util.Date
 
@@ -33,6 +34,14 @@ class RoutePreviewStateTest {
     fun manualWorkout_hasNoRoute() {
         assertEquals(RoutePreviewState.NoRoute, RoutePreviewState.of(item(false, null, 0)))
         assertEquals(RoutePreviewState.NoRoute, RoutePreviewState.of(item(false, null, current)))
+    }
+
+    @Test
+    fun repeatedRows_reuseTheirDecodedPreview() {
+        val first = RoutePreviewState.of(item(true, preview, current)) as RoutePreviewState.Ready
+        val again = RoutePreviewState.of(item(true, preview, current)) as RoutePreviewState.Ready
+
+        assertSame(first.preview, again.preview)
     }
 
     @Test

@@ -104,11 +104,11 @@ class WorkoutAdapter(
             showNoRoute()
         }
 
-        /** "No route": the text is read by TalkBack, the invisible image keeps its description. */
+        /** "No route": TalkBack reads the text; the invisible image has nothing to say. */
         private fun showNoRoute() {
             binding.routePreview.setImageDrawable(null)
             binding.routePreview.visibility = View.INVISIBLE
-            binding.routePreview.contentDescription = context.getString(R.string.edit_workout_route_preview_cd)
+            binding.routePreview.contentDescription = null
             binding.textViewRoutePreviewEmpty.visibility = View.VISIBLE
         }
 
@@ -129,7 +129,8 @@ class WorkoutAdapter(
             }
 
             val night = com.runner.academy.util.OsmMapTiles.isNightMode(binding.root.context)
-            val cacheKey = "${workout.id}:${workout.routePreview.hashCode()}:$previewSizePx:$night"
+            // The whole preview text, not its hash: a collision would show another route
+            val cacheKey = "${workout.id}:$previewSizePx:$night:${workout.routePreview}"
             val cached = RouteMapBitmapRenderer.peek(cacheKey)
             if (cached != null) {
                 showEmptySlot(R.string.edit_workout_route_preview_cd)
