@@ -181,6 +181,9 @@ class ActiveWorkoutStore(context: Context) {
         }
     }
 
+    /** A workout is being recorded (or was interrupted and awaits restore) until [clear]. */
+    fun exists(): Boolean = file.exists()
+
     @Synchronized
     fun clear() {
         try {
