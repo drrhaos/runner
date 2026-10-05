@@ -210,6 +210,48 @@ class WorkoutDatabaseMigrationTest {
         }
     }
 
+    @Test
+    @Throws(IOException::class)
+    fun migrate6To7_movingDurationIsDuration_newColumnsEmpty() {
+        helper.createDatabase(testDb, 6).apply {
+            execSQL(
+                """
+                INSERT INTO workouts (date, distance, duration, avgPace, calories, notes, type, trackData, isFavorite, intervalSegmentsJson)
+                VALUES (1700000000000, 5.0, 1800000, 6.0, 350, 'note', 'EASY_RUN', '{"points":[]}', 1, NULL)
+                """.trimIndent()
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            testDb,
+            7,
+            true,
+            WorkoutDatabase.MIGRATION_6_7
+        ).apply {
+            query(
+                """
+                SELECT movingDuration, elevationGain, elevationLoss, elevationSource, avgCadence,
+                       routePreview, excludeFromRecords, avgHeartRate, maxHeartRate, metricsVersion
+                FROM workouts
+                """.trimIndent()
+            ).use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(1_800_000L, cursor.getLong(0))
+                for (column in 1..5) assertTrue("column $column", cursor.isNull(column))
+                assertEquals(0, cursor.getInt(6))
+                assertTrue(cursor.isNull(7))
+                assertTrue(cursor.isNull(8))
+                assertEquals(0, cursor.getInt(9))
+            }
+            query("SELECT COUNT(*) FROM best_efforts").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(0, cursor.getInt(0))
+            }
+            close()
+        }
+    }
+
     /** Oldest schema → current: the whole chain must land exactly on the latest schema. */
     @Test
     @Throws(IOException::class)
@@ -231,13 +273,16 @@ class WorkoutDatabaseMigrationTest {
             true,
             *WorkoutDatabase.ALL_MIGRATIONS
         ).apply {
-            query("SELECT distance, type, trackData, isFavorite, intervalSegmentsJson FROM workouts").use { cursor ->
+            query(
+                "SELECT distance, type, trackData, isFavorite, intervalSegmentsJson, movingDuration FROM workouts"
+            ).use { cursor ->
                 assertTrue(cursor.moveToFirst())
                 assertEquals(10.0, cursor.getDouble(0), 0.001)
                 assertEquals("LONG_RUN", cursor.getString(1))
                 assertTrue(cursor.isNull(2))
                 assertEquals(0, cursor.getInt(3))
                 assertTrue(cursor.isNull(4))
+                assertEquals(3_600_000L, cursor.getLong(5))
             }
             close()
         }

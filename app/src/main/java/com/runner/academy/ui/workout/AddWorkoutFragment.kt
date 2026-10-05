@@ -516,6 +516,7 @@ class AddWorkoutFragment : Fragment() {
                 date = form.selectedDate,
                 distance = distance,
                 duration = duration,
+                movingDuration = duration,
                 avgPace = avgPace,
                 calories = calories,
                 notes = notesText.ifBlank { null },

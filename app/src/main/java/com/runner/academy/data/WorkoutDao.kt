@@ -23,7 +23,10 @@ interface WorkoutDao {
     suspend fun countRoutes(excludeId: Long): Int
 
     /** Statistics need only these columns; tracks stay on disk. */
-    @Query("SELECT date, distance, duration, avgPace, calories, type FROM workouts")
+    @Query(
+        "SELECT date, distance, duration, movingDuration, avgPace, calories, type, " +
+            "elevationGain, elevationSource, avgCadence FROM workouts"
+    )
     suspend fun getStatsRows(): List<WorkoutStatsRow>
 
     @Query("SELECT * FROM workouts WHERE id = :id")
@@ -40,6 +43,10 @@ interface WorkoutDao {
 
     @Query("UPDATE workouts SET isFavorite = :isFavorite WHERE id = :id")
     suspend fun setFavorite(id: Long, isFavorite: Boolean)
+
+    /** Records are filtered by this flag when read, so nothing has to be recomputed. */
+    @Query("UPDATE workouts SET excludeFromRecords = :exclude WHERE id = :id")
+    suspend fun setExcludeFromRecords(id: Long, exclude: Boolean)
 
     @Delete
     suspend fun deleteWorkout(workout: Workout)

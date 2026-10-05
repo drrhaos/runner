@@ -52,6 +52,7 @@ object GpxImporter {
             date = Date(points.first().timestamp),
             distance = distanceKm,
             duration = metrics.durationMs,
+            movingDuration = metrics.durationMs,
             avgPace = avgPace,
             calories = null,
             notes = fileName?.let { "Imported from $it" },
