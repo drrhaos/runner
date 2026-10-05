@@ -51,10 +51,18 @@ class WorkoutRepository(
         store.insert(workout)
     }
 
-    /** Inserts workouts (IDs should be 0 for auto-generation); see [WorkoutStore.Mode]. */
-    suspend fun insertWorkouts(workouts: List<Workout>, mode: WorkoutStore.Mode): List<Long> =
+    /**
+     * Imports a backup as new rows (new ids). Hundreds of rows at once: they are saved
+     * uncomputed and derived by the background pass ([WorkoutStore.Mode.DEFERRED]).
+     */
+    suspend fun importBackup(workouts: List<Workout>): List<Long> = importAsNew(workouts, WorkoutStore.Mode.DEFERRED)
+
+    /** Imports GPX workouts as new rows (new ids), with their metrics computed before saving. */
+    suspend fun importGpx(workouts: List<Workout>): List<Long> = importAsNew(workouts, WorkoutStore.Mode.INLINE)
+
+    private suspend fun importAsNew(workouts: List<Workout>, mode: WorkoutStore.Mode): List<Long> =
         withContext(Dispatchers.IO) {
-            store.insertAll(workouts, mode)
+            store.insertAll(workouts.map { it.copy(id = 0) }, mode)
         }
 
     /** Saves an edited workout as a whole row with fresh metrics; see [WorkoutDao.saveEdited]. */

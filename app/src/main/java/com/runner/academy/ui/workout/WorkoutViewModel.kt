@@ -10,7 +10,6 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutRepository
-import com.runner.academy.data.WorkoutStore
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.PaceMath
 import com.runner.academy.util.WorkoutTrackRebuilder
@@ -88,16 +87,17 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         loadStatistics()
     }
 
-    /**
-     * Imports workouts (always with new auto-generated IDs). Returns inserted count. A backup is
-     * imported [WorkoutStore.Mode.DEFERRED] (metrics in background), GPX files inline.
-     */
-    suspend fun importWorkouts(workouts: List<Workout>, mode: WorkoutStore.Mode): Int {
+    /** Imports a backup as new workouts (metrics follow in background). Returns inserted count. */
+    suspend fun importBackup(workouts: List<Workout>): Int = import(workouts, repository::importBackup)
+
+    /** Imports workouts read from GPX files as new workouts. Returns inserted count. */
+    suspend fun importGpx(workouts: List<Workout>): Int = import(workouts, repository::importGpx)
+
+    private suspend fun import(workouts: List<Workout>, insert: suspend (List<Workout>) -> List<Long>): Int {
         if (workouts.isEmpty()) return 0
-        val toInsert = workouts.map { it.copy(id = 0) }
-        repository.insertWorkouts(toInsert, mode)
+        val count = insert(workouts).size
         loadStatistics()
-        return toInsert.size
+        return count
     }
 
     /**
