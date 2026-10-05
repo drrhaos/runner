@@ -8,10 +8,9 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.util.LruCache
-import com.runner.academy.data.TrackData
 import com.runner.academy.util.OsmMapConfig
 import com.runner.academy.util.OsmMapTiles
-import com.runner.academy.util.TrackRuns
+import com.runner.academy.util.TrackRun
 import com.runner.academy.util.allPoints
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -39,7 +38,6 @@ import kotlin.math.tan
 object RouteMapBitmapRenderer {
 
     private const val TILE_SIZE = 256
-    private const val MAX_DRAW_POINTS = 160
     private const val MIN_ZOOM = 11
     private const val MAX_ZOOM = 16
     private const val MAX_TILES_PER_PREVIEW = 25
@@ -50,21 +48,25 @@ object RouteMapBitmapRenderer {
         override fun sizeOf(key: String, value: Bitmap): Int = value.byteCount
     }
 
+    /**
+     * [runs] are drawn as they are: already thinned ([com.runner.academy.util.RoutePreview]).
+     * [cacheKey] must change with the runs, the size and the theme.
+     */
     suspend fun getOrRender(
         context: Context,
         cacheKey: String,
-        trackData: TrackData,
+        runs: List<TrackRun>,
         widthPx: Int,
         heightPx: Int
     ): Bitmap? = withContext(Dispatchers.IO) {
-        if (widthPx <= 0 || heightPx <= 0 || trackData.points.size < 2) return@withContext null
+        if (widthPx <= 0 || heightPx <= 0) return@withContext null
 
         cacheMutex.withLock {
             memoryCache.get(cacheKey)?.takeIf { !it.isRecycled }?.let { return@withContext it }
         }
 
         val rendered = try {
-            render(context.applicationContext, trackData, widthPx, heightPx)
+            render(context.applicationContext, runs, widthPx, heightPx)
         } catch (e: Exception) {
             android.util.Log.e("RouteMapBitmap", "Preview render failed", e)
             null
@@ -81,14 +83,13 @@ object RouteMapBitmapRenderer {
 
     private suspend fun render(
         context: Context,
-        trackData: TrackData,
+        runs: List<TrackRun>,
         widthPx: Int,
         heightPx: Int
     ): Bitmap? {
-        OsmMapConfig.apply(context)
-        val runs = TrackRuns.downsample(TrackRuns.split(trackData.points), MAX_DRAW_POINTS)
         val points = runs.allPoints()
         if (points.size < 2) return null
+        OsmMapConfig.apply(context)
 
         var minLat = Double.POSITIVE_INFINITY
         var maxLat = Double.NEGATIVE_INFINITY

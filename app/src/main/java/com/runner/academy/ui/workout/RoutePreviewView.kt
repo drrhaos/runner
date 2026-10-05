@@ -9,9 +9,7 @@ import android.util.AttributeSet
 import android.view.View
 import androidx.core.content.ContextCompat
 import com.runner.academy.R
-import com.runner.academy.data.TrackData
-import com.runner.academy.data.TrackPoint
-import com.runner.academy.util.TrackRuns
+import com.runner.academy.util.TrackRun
 import com.runner.academy.util.allPoints
 import kotlin.math.max
 import kotlin.math.min
@@ -26,7 +24,6 @@ class RoutePreviewView @JvmOverloads constructor(
 ) : View(context, attrs, defStyleAttr) {
 
     companion object {
-        private const val MAX_DRAW_POINTS = 240
         private const val CONTENT_PADDING_DP = 10f
         private const val TRACK_STROKE_DP = 2.5f
         private const val START_RADIUS_DP = 3.5f
@@ -61,20 +58,19 @@ class RoutePreviewView @JvmOverloads constructor(
         color = ContextCompat.getColor(context, R.color.route_preview_end)
     }
 
-    private var points: List<TrackPoint> = emptyList()
+    private var runs: List<TrackRun> = emptyList()
     private var startX = 0f
     private var startY = 0f
     private var endX = 0f
     private var endY = 0f
     private var hasGeometry = false
 
-    fun setTrackData(trackData: TrackData?) {
-        points = trackData?.points.orEmpty()
-        rebuildPathOrSchedule()
-    }
-
-    fun setTrackPoints(trackPoints: List<TrackPoint>) {
-        points = trackPoints
+    /**
+     * Draws [runs] as they are (already thinned, see [com.runner.academy.util.RoutePreview]);
+     * empty runs leave only the background.
+     */
+    fun setRuns(runs: List<TrackRun>) {
+        this.runs = runs
         rebuildPathOrSchedule()
     }
 
@@ -86,7 +82,7 @@ class RoutePreviewView @JvmOverloads constructor(
 
     override fun onVisibilityChanged(changedView: View, visibility: Int) {
         super.onVisibilityChanged(changedView, visibility)
-        if (changedView === this && visibility == VISIBLE && points.size >= 2) {
+        if (changedView === this && visibility == VISIBLE && runs.isNotEmpty()) {
             rebuildPathOrSchedule()
         }
     }
@@ -131,10 +127,9 @@ class RoutePreviewView @JvmOverloads constructor(
         trackPath.reset()
         bridgePath.reset()
         hasGeometry = false
-        if (viewWidth <= 0 || viewHeight <= 0 || points.size < 2) return
-
-        val runs = TrackRuns.downsample(TrackRuns.split(points), MAX_DRAW_POINTS)
         val sampled = runs.allPoints()
+        if (viewWidth <= 0 || viewHeight <= 0 || sampled.size < 2) return
+
         var minLat = Double.POSITIVE_INFINITY
         var maxLat = Double.NEGATIVE_INFINITY
         var minLon = Double.POSITIVE_INFINITY

@@ -9,6 +9,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.runner.academy.data.Workout
+import com.runner.academy.data.WorkoutListItem
 import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.PaceMath
@@ -41,7 +42,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     private val _listFilter = MutableStateFlow(WorkoutListFilter.ALL)
     val listFilter: StateFlow<WorkoutListFilter> = _listFilter.asStateFlow()
 
-    val pagedWorkouts: Flow<PagingData<Workout>> = _listFilter
+    val pagedWorkouts: Flow<PagingData<WorkoutListItem>> = _listFilter
         .flatMapLatest { filter ->
             Pager(
                 config = PAGING_CONFIG,
@@ -58,8 +59,11 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     suspend fun countRoutes(excludeId: Long): Int = repository.countRoutes(excludeId)
 
     /** Route picker pages (workouts with a track, favorites first), same bounded window. */
-    fun routePages(excludeId: Long): Flow<PagingData<Workout>> =
+    fun routePages(excludeId: Long): Flow<PagingData<WorkoutListItem>> =
         Pager(PAGING_CONFIG) { repository.pagingSourceRoutes(excludeId) }.flow
+
+    /** The full track of a picked route; null when it has none (or was deleted meanwhile). */
+    suspend fun getTrackData(id: Long): String? = repository.getTrackData(id)
 
     private val _totalDistance = MutableStateFlow(0f)
     val totalDistance: StateFlow<Float> = _totalDistance.asStateFlow()
@@ -141,10 +145,11 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         refreshListItemCount()
     }
 
-    fun toggleFavorite(workout: Workout) {
+    /** Flips the flag of workout [id], which is [isFavorite] now (a list row or the details). */
+    fun toggleFavorite(id: Long, isFavorite: Boolean) {
         viewModelScope.launch {
             try {
-                repository.setFavorite(workout.id, !workout.isFavorite)
+                repository.setFavorite(id, !isFavorite)
                 loadStatistics()
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutViewModel", "Error toggling favorite: ${e.message}", e)
@@ -205,8 +210,8 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         private const val PREFETCH_DISTANCE = 5
 
         /**
-         * Pages hold whole rows including track JSON (for route previews), so only a window of
-         * [MAX_LOADED_ITEMS] stays in memory; pages scrolled past are dropped and reloaded on
+         * Pages hold list rows without tracks ([WorkoutListItem]); still only a window of
+         * [MAX_LOADED_ITEMS] stays in memory, pages scrolled past are dropped and reloaded on
          * the way back. A year of running is hundreds of workouts.
          */
         private const val MAX_LOADED_ITEMS = 60
