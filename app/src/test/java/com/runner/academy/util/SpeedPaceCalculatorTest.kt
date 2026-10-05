@@ -98,26 +98,6 @@ class SpeedPaceCalculatorTest {
     }
 
     @Test
-    fun `overallAveragePace uses total time over total distance`() {
-        // 10 km in 50 minutes → 5:00 /km
-        val pace = SpeedPaceCalculator.overallAveragePace(10_000.0, 50 * 60.0)
-        assertEquals(5f, pace, 0.01f)
-    }
-
-    @Test
-    fun `overallAveragePace is not average of average durations`() {
-        // Bug regression: avgDuration/totalDistance would give wrong result
-        // Two workouts: 5 km in 25 min and 5 km in 35 min → overall 6:00 /km
-        val totalDistance = 10f
-        val totalDuration = (25 + 35) * 60_000L
-        assertEquals(6f, SpeedPaceCalculator.overallAveragePace(totalDistance * 1000.0, totalDuration / 1000.0), 0.01f)
-
-        val wrongAvgDuration = ((25 + 35) / 2f) * 60_000f
-        val wrongPace = (wrongAvgDuration / 60_000f) / totalDistance
-        assertTrue(wrongPace < 6f) // would incorrectly show ~3:00 /km
-    }
-
-    @Test
     fun `buildSegments metric creates one km segments with correct pace`() {
         // Dense ~100 m steps east at ~55.75 lat (0.0016° lon ≈ 100 m)
         val points = mutableListOf<TrackPoint>()
@@ -172,8 +152,8 @@ class SpeedPaceCalculatorTest {
     }
 
     @Test
-    fun `paceFromSpeedKmh and overallAveragePace are consistent`() {
-        val pace = SpeedPaceCalculator.overallAveragePace(10_000.0, 60 * 60.0)
+    fun `paceFromSpeedKmh and PaceMath avgPace are consistent`() {
+        val pace = PaceMath.avgPace(10f, 60 * 60_000L)
         val speed = SpeedPaceCalculator.averageSpeedKmh(10f, 60 * 60_000L)
         assertEquals(pace, SpeedPaceCalculator.paceFromSpeedKmh(speed), 0.01f)
     }

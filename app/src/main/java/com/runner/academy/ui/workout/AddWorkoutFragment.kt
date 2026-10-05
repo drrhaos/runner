@@ -510,19 +510,17 @@ class AddWorkoutFragment : Fragment() {
                 return
             }
 
-            val avgPace = viewModel.calculatePace(distance, duration)
-            val workout = Workout(
-                id = original?.id ?: 0,
-                date = form.selectedDate,
-                distance = distance,
-                duration = duration,
-                avgPace = avgPace,
-                calories = calories,
-                notes = notesText.ifBlank { null },
-                type = form.selectedType,
-                trackData = form.selectedTrackDataJson,
-                isFavorite = original?.isFavorite ?: false,
-                intervalSegmentsJson = original?.intervalSegmentsJson
+            val workout = WorkoutFormMapper.toWorkout(
+                WorkoutFormMapper.FormInput(
+                    date = form.selectedDate,
+                    type = form.selectedType,
+                    distanceKm = distance,
+                    durationMs = duration,
+                    calories = calories,
+                    notes = notesText.ifBlank { null },
+                    trackDataJson = form.selectedTrackDataJson
+                ),
+                original
             )
             persistWorkout(workout, original)
         } catch (e: NumberFormatException) {

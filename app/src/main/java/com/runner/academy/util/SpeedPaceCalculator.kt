@@ -41,9 +41,6 @@ object SpeedPaceCalculator {
     fun segmentPaceMetric(durationMs: Long, distanceKm: Float, metric: Boolean): Float =
         PaceSpeedMath.segmentPaceMetric(durationMs, distanceKm, metric)
 
-    fun overallAveragePace(totalDistanceMeters: Double, totalDurationSeconds: Double): Float =
-        PaceSpeedMath.overallAveragePace(totalDistanceMeters, totalDurationSeconds)
-
     fun averageSpeedKmh(distanceKm: Float, durationMs: Long): Float =
         PaceSpeedMath.averageSpeedKmh(distanceKm, durationMs)
 

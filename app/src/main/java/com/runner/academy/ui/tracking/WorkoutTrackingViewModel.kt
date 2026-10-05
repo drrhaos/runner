@@ -20,6 +20,7 @@ import com.runner.academy.data.WorkoutType
 import com.runner.academy.service.IntervalCursor
 import com.runner.academy.service.WorkoutTrackingService
 import com.runner.academy.util.IntervalSegmentsJson
+import com.runner.academy.util.PaceMath
 import com.runner.academy.util.SpeedPaceCalculator
 import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.StrideModel
@@ -337,14 +338,10 @@ class WorkoutTrackingViewModel(
         } else {
             0f
         }
-        val avgPace = if (totalDistanceKm > 0f) {
-            SpeedPaceCalculator.overallAveragePace(
-                totalDistanceMeters = totalDistanceKm * 1000.0,
-                totalDurationSeconds = durationMs / 1000.0
-            )
-        } else {
-            0f
-        }
+        // TODO(r3-session-clock): the live movingDuration comes from SessionClock.movingMs(stop);
+        //  until auto-pause lands it equals the total time
+        val movingDurationMs = durationMs
+        val avgPace = PaceMath.avgPace(totalDistanceKm, movingDurationMs)
         val maxSpeedMps = if (hasTrack && manualDistanceKm == null) {
             SpeedPaceCalculator.maxDerivedSpeedMs(sanitizedPoints)
         } else {
@@ -376,6 +373,7 @@ class WorkoutTrackingViewModel(
             date = Date(session.startTime),
             distance = totalDistanceKm,
             duration = durationMs,
+            movingDuration = movingDurationMs,
             avgPace = avgPace,
             calories = calories,
             notes = null,

@@ -54,15 +54,17 @@ class WorkoutRepository(
         workoutDao.insertWorkouts(workouts)
     }
 
-    /**
-     * Update an existing workout.
-     */
-    suspend fun updateWorkout(workout: Workout) = withContext(Dispatchers.IO) {
-        workoutDao.updateWorkout(workout)
+    /** Saves an edited workout as a whole row; see [WorkoutDao.saveEdited]. */
+    suspend fun saveEdited(workout: Workout) = withContext(Dispatchers.IO) {
+        workoutDao.saveEdited(workout)
     }
 
     suspend fun setFavorite(id: Long, isFavorite: Boolean) = withContext(Dispatchers.IO) {
         workoutDao.setFavorite(id, isFavorite)
+    }
+
+    suspend fun setExcludeFromRecords(id: Long, exclude: Boolean) = withContext(Dispatchers.IO) {
+        workoutDao.setExcludeFromRecords(id, exclude)
     }
 
     /**
@@ -105,14 +107,16 @@ class WorkoutRepository(
         workoutDao.getFavoriteWorkoutsCount()
     }
 
-    /**
-     * Get the average duration across all workouts.
-     */
-    suspend fun getAverageDuration(): Long? = withContext(Dispatchers.IO) {
-        workoutDao.getAverageDuration()
+    /** The average moving time across all workouts. */
+    suspend fun getAverageMovingDuration(): Long? = withContext(Dispatchers.IO) {
+        workoutDao.getAverageMovingDuration()
     }
 
     suspend fun getTotalDuration(): Long? = withContext(Dispatchers.IO) {
         workoutDao.getTotalDuration()
+    }
+
+    suspend fun getTotalMovingDuration(): Long? = withContext(Dispatchers.IO) {
+        workoutDao.getTotalMovingDuration()
     }
 }
