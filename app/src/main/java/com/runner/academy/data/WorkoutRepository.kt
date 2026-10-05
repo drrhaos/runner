@@ -11,9 +11,15 @@ import kotlinx.coroutines.withContext
  * ViewModels from the underlying data source implementation.
  */
 class WorkoutRepository(
-    private val workoutDao: WorkoutDao,
-    private val diagnosticsStore: GpsDiagnosticsStore? = null
+    database: WorkoutDatabase,
+    private val diagnosticsStore: GpsDiagnosticsStore? = null,
+    /** Starts the background metrics pass after rows were saved uncomputed. */
+    onDeferredSaved: () -> Unit = {}
 ) {
+    private val workoutDao: WorkoutDao = database.workoutDao()
+
+    /** Every whole-row write goes through it, with the derived metrics. */
+    private val store = WorkoutStore(database, onDeferredSaved = onDeferredSaved)
 
     /**
      * Get all workouts ordered by date descending as a Flow.
@@ -40,23 +46,20 @@ class WorkoutRepository(
      */
     fun getWorkoutById(id: Long): Flow<Workout?> = workoutDao.getWorkoutById(id)
 
-    /**
-     * Insert a new workout and return the generated row ID.
-     */
+    /** Inserts a new workout with its metrics computed and returns the generated row ID. */
     suspend fun insertWorkout(workout: Workout): Long = withContext(Dispatchers.IO) {
-        workoutDao.insertWorkout(workout)
+        store.insert(workout)
     }
 
-    /**
-     * Insert multiple workouts (IDs should be 0 for auto-generation).
-     */
-    suspend fun insertWorkouts(workouts: List<Workout>): List<Long> = withContext(Dispatchers.IO) {
-        workoutDao.insertWorkouts(workouts)
-    }
+    /** Inserts workouts (IDs should be 0 for auto-generation); see [WorkoutStore.Mode]. */
+    suspend fun insertWorkouts(workouts: List<Workout>, mode: WorkoutStore.Mode): List<Long> =
+        withContext(Dispatchers.IO) {
+            store.insertAll(workouts, mode)
+        }
 
-    /** Saves an edited workout as a whole row; see [WorkoutDao.saveEdited]. */
+    /** Saves an edited workout as a whole row with fresh metrics; see [WorkoutDao.saveEdited]. */
     suspend fun saveEdited(workout: Workout) = withContext(Dispatchers.IO) {
-        workoutDao.saveEdited(workout)
+        store.saveEdited(workout)
     }
 
     suspend fun setFavorite(id: Long, isFavorite: Boolean) = withContext(Dispatchers.IO) {
