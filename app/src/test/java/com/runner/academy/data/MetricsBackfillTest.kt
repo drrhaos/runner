@@ -1,6 +1,8 @@
 package com.runner.academy.data
 
 import android.content.Context
+import android.database.sqlite.SQLiteBlobTooBigException
+import android.database.sqlite.SQLiteException
 import androidx.test.core.app.ApplicationProvider
 import com.runner.academy.util.DerivationInput
 import com.runner.academy.util.Derived
@@ -25,6 +27,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.util.Date
+import kotlin.coroutines.cancellation.CancellationException
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -59,7 +62,7 @@ class MetricsBackfillTest {
     private fun backfill(
         derive: (DerivationInput) -> Derived = this.derive,
         version: Int = WorkoutDerivation.CURRENT_METRICS_VERSION,
-        isWorkoutActive: () -> Boolean = { false }
+        isWorkoutActive: suspend () -> Boolean = { false }
     ) = MetricsBackfill(database, scope, isWorkoutActive, derive, version)
 
     /** Row [n] is dated n seconds and lasts n minutes; uncomputed unless [version] is given. */
@@ -96,25 +99,70 @@ class MetricsBackfillTest {
         val ids = (1..10).map { insert(it) }
         val derivedDurations = mutableListOf<Long>()
         val dying = backfill(derive = { input ->
-            if (derivedDurations.size == 3) throw IllegalStateException("process killed")
+            if (derivedDurations.size == 3) throw CancellationException("process killed")
             derivedDurations += input.durationMs
             derive(input)
         })
 
         try {
             dying.runOnce()
-            fail("the pass should die")
-        } catch (expected: IllegalStateException) {
+            fail("the pass should stop")
+        } catch (expected: CancellationException) {
         }
 
         // Newest first: rows 10, 9, 8 are done, the rest wait
         assertEquals(listOf(600_000L, 540_000L, 480_000L), derivedDurations)
         assertEquals(7, workouts.countWithMetricsBelow(WorkoutDerivation.CURRENT_METRICS_VERSION))
+        assertEquals("a stopped pass is not shown as running", BackfillState.Idle, dying.progress.value)
 
         val report = backfill().runOnce()
 
         assertEquals(7, report.computed)
         assertComputedByOnePass(ids)
+    }
+
+    @Test
+    fun deriveFailingOnOneRow_marksItAndComputesTheOlderRows() = runBlocking {
+        val older = insert(1)
+        val poison = insert(2, track = "poison")
+        val newer = insert(3)
+
+        val report = backfill(derive = { input ->
+            if (input.trackJson == "poison") throw RuntimeException("bug in derivation") else derive(input)
+        }).runOnce()
+
+        assertEquals(2, report.computed)
+        assertEquals(1, report.unreadable)
+        val row = row(poison)
+        assertEquals(WorkoutDerivation.CURRENT_METRICS_VERSION, row.metricsVersion)
+        assertNull(row.avgCadence)
+        assertTrue(efforts.getForWorkout(poison).isEmpty())
+        assertComputedByOnePass(listOf(newer, older))
+        assertEquals("never retried", 0, backfill().runOnce().unreadable)
+    }
+
+    @Test
+    fun rowTooBigForCursor_isRecognizedOnlyByItsReadError() {
+        val tooBig = IllegalStateException(
+            "Couldn't read row 0, col 1 from CursorWindow.  Make sure the Cursor is initialized correctly before accessing data from it."
+        )
+        assertTrue(MetricsBackfill.isRowTooBig(tooBig, sdkInt = 27))
+        assertTrue(MetricsBackfill.isRowTooBig(SQLiteBlobTooBigException("row too big"), sdkInt = 28))
+
+        assertFalse("from API 28 the blob exception says it", MetricsBackfill.isRowTooBig(tooBig, sdkInt = 28))
+        assertFalse(MetricsBackfill.isRowTooBig(IllegalStateException("attempt to re-open an already-closed object"), sdkInt = 27))
+        assertFalse(MetricsBackfill.isRowTooBig(CancellationException("Couldn't read row"), sdkInt = 27))
+        assertFalse(MetricsBackfill.isRowTooBig(SQLiteException("database is locked"), sdkInt = 28))
+    }
+
+    @Test
+    fun nothingToCompute_staysIdle() = runBlocking {
+        insert(1, version = WorkoutDerivation.CURRENT_METRICS_VERSION)
+        val pass = backfill()
+
+        pass.runOnce()
+
+        assertEquals(BackfillState.Idle, pass.progress.value)
     }
 
     @Test

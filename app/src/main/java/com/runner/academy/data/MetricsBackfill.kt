@@ -1,7 +1,6 @@
 package com.runner.academy.data
 
 import android.database.sqlite.SQLiteBlobTooBigException
-import android.database.sqlite.SQLiteException
 import android.os.Build
 import android.util.Log
 import androidx.room.withTransaction
@@ -34,7 +33,10 @@ sealed interface BackfillState {
 data class BackfillReport(
     /** Rows whose metrics were written by this pass. */
     val computed: Int,
-    /** Rows that could not be read (too big, out of memory): marked computed with nothing derived. */
+    /**
+     * Rows that could not be read (too big, out of memory) or derived (the derivation failed):
+     * marked computed with nothing derived.
+     */
     val unreadable: Int,
     /** Rows saved by an edit meanwhile: their own metrics were kept. */
     val skippedEdited: Int,
@@ -55,7 +57,7 @@ class MetricsBackfill(
     private val database: WorkoutDatabase,
     private val scope: CoroutineScope,
     /** True while a workout is recorded: the pass waits (CPU and battery go to the run). */
-    private val isWorkoutActive: () -> Boolean = { false },
+    private val isWorkoutActive: suspend () -> Boolean = { false },
     private val derive: (DerivationInput) -> Derived = WorkoutDerivation::derive,
     private val version: Int = WorkoutDerivation.CURRENT_METRICS_VERSION
 ) {
@@ -98,7 +100,8 @@ class MetricsBackfill(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Rows not reached keep their version: the next start continues from them
+            // A failure outside a row's derivation (e.g. the database): rows not reached keep
+            // their version and the next start continues from them
             Log.e(TAG, "Metrics pass failed", e)
         } finally {
             synchronized(lock) {
@@ -116,25 +119,32 @@ class MetricsBackfill(
         var done = 0
         fun report(paused: Boolean) = BackfillReport(computed, unreadable, skipped, paused)
 
-        while (true) {
-            val ids = dao.idsWithMetricsBelow(version, BATCH_SIZE)
-            if (ids.isEmpty()) break
-            val total = done + dao.countWithMetricsBelow(version)
-            _progress.value = BackfillState.Running(done, total)
-            for (id in ids) {
-                if (isWorkoutActive()) return@withLock report(paused = true)
-                when (recompute(id)) {
-                    Outcome.COMPUTED -> computed++
-                    Outcome.UNREADABLE -> unreadable++
-                    Outcome.SKIPPED -> skipped++
+        try {
+            while (true) {
+                val ids = dao.idsWithMetricsBelow(version, BATCH_SIZE)
+                if (ids.isEmpty()) break
+                val total = done + dao.countWithMetricsBelow(version)
+                _progress.value = BackfillState.Running(done, total)
+                for (id in ids) {
+                    if (isWorkoutActive()) return@withLock report(paused = true)
+                    when (recompute(id)) {
+                        Outcome.COMPUTED -> computed++
+                        Outcome.UNREADABLE -> unreadable++
+                        Outcome.SKIPPED -> skipped++
+                    }
+                    done++
+                    _progress.value = BackfillState.Running(done, maxOf(total, done))
+                    yield()
                 }
-                done++
-                _progress.value = BackfillState.Running(done, maxOf(total, done))
-                yield()
             }
+        } catch (e: Throwable) {
+            // Stopped or failed: nothing runs until the next start
+            _progress.value = BackfillState.Idle
+            throw e
         }
+        // A pass with nothing to compute changed no records: no "Records updated" signal
         // TODO(r3-records-core): count distances whose current record changed during the pass
-        _progress.value = BackfillState.Done(changedDistances = 0)
+        _progress.value = if (done == 0) BackfillState.Idle else BackfillState.Done(changedDistances = 0)
         report(paused = false)
     }
 
@@ -143,12 +153,11 @@ class MetricsBackfill(
     private suspend fun recompute(id: Long): Outcome {
         val row = try {
             database.workoutDao().getMetricsSource(id) ?: return Outcome.SKIPPED // deleted meanwhile
-        } catch (e: SQLiteException) {
-            if (!isRowTooBig(e)) throw e
-            return markUnreadable(id, e)
-        } catch (e: IllegalStateException) {
-            // Before API 28 a row too big for the cursor window fails with "Couldn't read row"
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) throw e
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: RuntimeException) {
+            // Any other read error (closed database, locked file) leaves the row for a later pass
+            if (!isRowTooBig(e, Build.VERSION.SDK_INT)) throw e
             return markUnreadable(id, e)
         } catch (e: OutOfMemoryError) {
             return markUnreadable(id, e)
@@ -157,14 +166,16 @@ class MetricsBackfill(
             withContext(Dispatchers.Default) {
                 derive(DerivationInput(row.trackData, row.type, row.duration))
             }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // A row the derivation fails on would stop the pass before every older row, forever
+            return markUnreadable(id, e)
         } catch (e: OutOfMemoryError) {
             return markUnreadable(id, e)
         }
         return if (write(id, metrics)) Outcome.COMPUTED else Outcome.SKIPPED
     }
-
-    private fun isRowTooBig(e: SQLiteException): Boolean =
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && e is SQLiteBlobTooBigException
 
     /** Marks the row computed with nothing derived, so it is never retried. */
     private suspend fun markUnreadable(id: Long, error: Throwable): Outcome {
@@ -193,5 +204,19 @@ class MetricsBackfill(
         private const val TAG = "MetricsBackfill"
         private const val BATCH_SIZE = 50
         private const val WORKOUT_POLL_MS = 60_000L
+
+        /** Native message of a row that does not fit the cursor window before API 28. */
+        private const val CURSOR_ROW_UNREADABLE = "Couldn't read row"
+
+        /**
+         * True when reading the row failed because it is too big for the cursor window: from API
+         * 28 [SQLiteBlobTooBigException], before it an [IllegalStateException] "Couldn't read
+         * row …" from the cursor window. Never a cancellation, which is an IllegalStateException too.
+         */
+        internal fun isRowTooBig(e: Throwable, sdkInt: Int): Boolean = when {
+            e is CancellationException -> false
+            sdkInt >= Build.VERSION_CODES.P -> e is SQLiteBlobTooBigException
+            else -> e is IllegalStateException && e.message?.startsWith(CURSOR_ROW_UNREADABLE) == true
+        }
     }
 }
