@@ -38,12 +38,31 @@ class WorkoutDerivationTest {
     fun `a track is derived with the current version`() {
         val derived = WorkoutDerivation.derive(DerivationInput(trackJson, WorkoutType.EASY_RUN, 57_000L))
 
-        // Only the version so far: each metric is added by its own release-3 branch
-        assertEquals(nothingDerived, derived)
+        // The other metrics are added by their own release-3 branches
+        assertEquals(nothingDerived.copy(routePreview = derived.routePreview), derived)
+    }
+
+    @Test
+    fun `a track gets the route preview of its display track`() {
+        val derived = WorkoutDerivation.derive(DerivationInput(trackJson, WorkoutType.EASY_RUN, 57_000L))
+
+        val points = DisplayTrack.of(trackJson, WorkoutType.EASY_RUN)!!.points
+        assertEquals(RoutePreviewCodec.encode(RoutePreviews.of(points)!!), derived.routePreview)
+        assertEquals(20, RoutePreviewCodec.decode(derived.routePreview)!!.pointCount)
+    }
+
+    @Test
+    fun `a track of one point has no route preview`() {
+        val onePoint = TrackDataJson.toJson(
+            TrackData(listOf(TrackPoint(55.75, 37.60, 1_000_000L, 5f, 3f, 150.0)), 0f, 0L, 0f, 0f, 1_000_000L, null)
+        )
+
+        assertEquals(nothingDerived, WorkoutDerivation.derive(DerivationInput(onePoint, WorkoutType.EASY_RUN, 0L)))
     }
 
     @Test
     fun `no or broken track is marked computed with nothing derived`() {
+        assertEquals(2, WorkoutDerivation.CURRENT_METRICS_VERSION)
         for (json in listOf(null, "", "{broken", "[1,2]")) {
             assertEquals(json, nothingDerived, WorkoutDerivation.derive(DerivationInput(json, WorkoutType.EASY_RUN, 0L)))
         }
