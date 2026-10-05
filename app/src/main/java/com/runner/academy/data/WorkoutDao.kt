@@ -38,6 +38,7 @@ interface WorkoutDao {
     @Insert
     suspend fun insertWorkouts(workouts: List<Workout>): List<Long>
 
+    /** Whole-row update: only through [WorkoutRepository.saveEdited]. */
     @Update
     suspend fun updateWorkout(workout: Workout)
 
@@ -65,6 +66,10 @@ interface WorkoutDao {
 
     @Query("SELECT SUM(duration) FROM workouts")
     suspend fun getTotalDuration(): Long?
+
+    /** The pace of all workouts is over moving time. */
+    @Query("SELECT SUM(movingDuration) FROM workouts")
+    suspend fun getTotalMovingDuration(): Long?
 
     companion object {
         /** A workout usable as a route: it has a track and is not the one being edited. */

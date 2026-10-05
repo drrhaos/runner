@@ -41,19 +41,15 @@ object GpxImporter {
             endTime = points.last().timestamp
         )
         val distanceKm = SpeedPaceCalculator.metersToKm(metrics.distanceMeters)
-        val avgPace = if (distanceKm > 0f && metrics.durationMs > 0L) {
-            (metrics.durationMs / 60_000f) / distanceKm
-        } else {
-            0f
-        }
 
         return Workout(
             id = 0,
             date = Date(points.first().timestamp),
             distance = distanceKm,
             duration = metrics.durationMs,
+            // A file has no auto-pause intervals: its pauses stay inside the time (not healed)
             movingDuration = metrics.durationMs,
-            avgPace = avgPace,
+            avgPace = PaceMath.avgPace(distanceKm, metrics.durationMs),
             calories = null,
             notes = fileName?.let { "Imported from $it" },
             type = WorkoutType.EASY_RUN,

@@ -270,6 +270,9 @@ class WorkoutImportTest {
         assertEquals(WorkoutType.EASY_RUN, workout.type)
         assertTrue(workout.distance > 0f)
         assertEquals(600_000L, workout.duration)
+        // No auto-pause in a file: the whole time is moving, and the pace follows it
+        assertEquals(600_000L, workout.movingDuration)
+        assertEquals(PaceMath.avgPace(workout.distance, 600_000L), workout.avgPace, 0f)
         assertNotNull(workout.trackData)
         assertEquals("Imported from test.gpx", workout.notes)
     }
