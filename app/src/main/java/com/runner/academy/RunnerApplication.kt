@@ -28,6 +28,9 @@ class RunnerApplication : Application() {
         AppCompatDelegate.setApplicationLocales(localeList)
         ThemeUtils.applyTheme(userPreferences.themeMode)
 
+        // Rows migrated or imported without derived metrics; continues an interrupted pass
+        container.metricsBackfill.start()
+
         // Unsaved GPS diagnostics recordings (workout discarded) are dropped after a day
         Thread {
             container.gpsDiagnosticsStore.cleanupOrphans(System.currentTimeMillis())

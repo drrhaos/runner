@@ -23,7 +23,7 @@ object GpxImporter {
     }
 
     fun parseGpx(xml: String, fileName: String? = null): Workout {
-        val points = parseTrackPoints(xml)
+        val (points, timeMissing) = parseTrackPoints(xml)
         if (points.size < 2) {
             throw IllegalArgumentException(
                 "GPX has too few track points${fileName?.let { " ($it)" } ?: ""}"
@@ -38,7 +38,9 @@ object GpxImporter {
             avgSpeed = metrics.avgSpeedMs,
             maxSpeed = metrics.maxSpeedMs,
             startTime = points.first().timestamp,
-            endTime = points.last().timestamp
+            endTime = points.last().timestamp,
+            // A point without <time> got a made-up one: the track is no record candidate
+            timeSynthetic = if (timeMissing) true else null
         )
         val distanceKm = SpeedPaceCalculator.metersToKm(metrics.distanceMeters)
 
@@ -94,12 +96,14 @@ object GpxImporter {
         return TrackMetrics(distanceMeters, durationMs, avgSpeed, maxSpeed)
     }
 
-    private fun parseTrackPoints(xml: String): List<TrackPoint> {
+    /** The track points, and whether any of them had no `<time>` (its time is made up). */
+    private fun parseTrackPoints(xml: String): Pair<List<TrackPoint>, Boolean> {
         val parser = Xml.newPullParser()
         parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true)
         parser.setInput(StringReader(xml))
 
         val points = mutableListOf<TrackPoint>()
+        var timeMissing = false
         var event = parser.eventType
         var lat: Double? = null
         var lon: Double? = null
@@ -136,6 +140,7 @@ object GpxImporter {
                         val latitude = lat
                         val longitude = lon
                         if (latitude != null && longitude != null) {
+                            if (timeMs == null) timeMissing = true
                             val timestamp = timeMs
                                 ?: (points.lastOrNull()?.timestamp?.plus(1000L)
                                     ?: System.currentTimeMillis())
@@ -158,7 +163,7 @@ object GpxImporter {
             }
             event = parser.next()
         }
-        return points
+        return points to timeMissing
     }
 
     private fun parseGpxTime(raw: String): Long? {

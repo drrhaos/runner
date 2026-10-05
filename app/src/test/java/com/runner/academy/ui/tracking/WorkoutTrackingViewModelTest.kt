@@ -57,7 +57,7 @@ class WorkoutTrackingViewModelTest {
         )
         database = WorkoutDatabase.getInMemoryDatabase(context)
         workoutDao = database.workoutDao()
-        viewModel = WorkoutTrackingViewModel(WorkoutRepository(workoutDao), context as Application)
+        viewModel = WorkoutTrackingViewModel(WorkoutRepository(database), context as Application)
     }
 
     @After
