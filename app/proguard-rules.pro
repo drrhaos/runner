@@ -20,6 +20,7 @@
 -keep class com.runner.academy.util.WorkoutBackupFormat$* { *; }
 -keep class com.runner.academy.util.TrainingPlanBackupFormat$* { *; }
 -keep class com.runner.academy.service.ActiveWorkoutCheckpoint { *; }
+-keep class com.runner.academy.service.SessionClockState { *; }
 -keep class com.runner.academy.service.IntervalCursor { *; }
 
 # OSMDroid
