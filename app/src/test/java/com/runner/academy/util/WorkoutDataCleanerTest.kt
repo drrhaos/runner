@@ -1,5 +1,7 @@
 package com.runner.academy.util
 
+import com.runner.academy.data.ElevationSource
+import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutType
@@ -53,5 +55,23 @@ class WorkoutDataCleanerTest {
 
         assertTrue("the far last point is dropped", cleaned.points.size < withTail.size)
         assertEquals(240f, TrackGeometry.tailMeters(cleaned.points), 0.01f)
+    }
+
+    @Test
+    fun `cleaning keeps the track fields`() {
+        val pauses = listOf(PauseInterval(1_010_000L, 1_040_000L, "AUTO"))
+        val outlier = points.last().copy(longitude = 37.70)
+        val track = TrackData(points.dropLast(1) + outlier, 0f, 0L, 0f, 0f, 0L, null).copy(
+            pauses = pauses,
+            timeSynthetic = true,
+            elevationSource = ElevationSource.GPS
+        )
+
+        val cleaned = WorkoutDataCleaner.cleanTrackData(track, WorkoutType.EASY_RUN)
+
+        assertTrue("cleaning rebuilt the track", cleaned.points.size < track.points.size)
+        assertEquals(pauses, cleaned.pauses)
+        assertEquals(true, cleaned.timeSynthetic)
+        assertEquals(ElevationSource.GPS, cleaned.elevationSource)
     }
 }
