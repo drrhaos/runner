@@ -62,6 +62,39 @@ abstract class WorkoutDao {
     @Delete
     abstract suspend fun deleteWorkout(workout: Workout)
 
+    /** Rows whose derived columns are older than [version], newest first (they head the list). */
+    @Query("SELECT id FROM workouts WHERE metricsVersion < :version ORDER BY date DESC LIMIT :limit")
+    abstract suspend fun idsWithMetricsBelow(version: Int, limit: Int): List<Long>
+
+    @Query("SELECT COUNT(*) FROM workouts WHERE metricsVersion < :version")
+    abstract suspend fun countWithMetricsBelow(version: Int): Int
+
+    /** Only what the metrics are derived from: one track in memory at a time. */
+    @Query("SELECT id, trackData, type, duration FROM workouts WHERE id = :id")
+    abstract suspend fun getMetricsSource(id: Long): MetricsSourceRow?
+
+    /**
+     * Writes derived columns unless the row was saved meanwhile with [version] or newer (an
+     * edit computes its own). Returns the number of rows updated: 0 = leave its efforts alone.
+     */
+    @Query(
+        """
+        UPDATE workouts SET elevationGain = :elevationGain, elevationLoss = :elevationLoss,
+            elevationSource = :elevationSource, avgCadence = :avgCadence,
+            routePreview = :routePreview, metricsVersion = :version
+        WHERE id = :id AND metricsVersion < :version
+        """
+    )
+    abstract suspend fun updateMetricsIfOlder(
+        id: Long,
+        version: Int,
+        elevationGain: Float?,
+        elevationLoss: Float?,
+        elevationSource: ElevationSource?,
+        avgCadence: Float?,
+        routePreview: String?
+    ): Int
+
     @Query("SELECT SUM(distance) FROM workouts")
     abstract suspend fun getTotalDistance(): Float?
 

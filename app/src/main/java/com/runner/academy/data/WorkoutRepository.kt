@@ -11,9 +11,15 @@ import kotlinx.coroutines.withContext
  * ViewModels from the underlying data source implementation.
  */
 class WorkoutRepository(
-    private val workoutDao: WorkoutDao,
-    private val diagnosticsStore: GpsDiagnosticsStore? = null
+    database: WorkoutDatabase,
+    private val diagnosticsStore: GpsDiagnosticsStore? = null,
+    /** Starts the background metrics pass after rows were saved uncomputed. */
+    onDeferredSaved: () -> Unit = {}
 ) {
+    private val workoutDao: WorkoutDao = database.workoutDao()
+
+    /** Every whole-row write goes through it, with the derived metrics. */
+    private val store = WorkoutStore(database, onDeferredSaved = onDeferredSaved)
 
     /**
      * Get all workouts ordered by date descending as a Flow.
@@ -40,23 +46,28 @@ class WorkoutRepository(
      */
     fun getWorkoutById(id: Long): Flow<Workout?> = workoutDao.getWorkoutById(id)
 
-    /**
-     * Insert a new workout and return the generated row ID.
-     */
+    /** Inserts a new workout with its metrics computed and returns the generated row ID. */
     suspend fun insertWorkout(workout: Workout): Long = withContext(Dispatchers.IO) {
-        workoutDao.insertWorkout(workout)
+        store.insert(workout)
     }
 
     /**
-     * Insert multiple workouts (IDs should be 0 for auto-generation).
+     * Imports a backup as new rows (new ids). Hundreds of rows at once: they are saved
+     * uncomputed and derived by the background pass ([WorkoutStore.Mode.DEFERRED]).
      */
-    suspend fun insertWorkouts(workouts: List<Workout>): List<Long> = withContext(Dispatchers.IO) {
-        workoutDao.insertWorkouts(workouts)
-    }
+    suspend fun importBackup(workouts: List<Workout>): List<Long> = importAsNew(workouts, WorkoutStore.Mode.DEFERRED)
 
-    /** Saves an edited workout as a whole row; see [WorkoutDao.saveEdited]. */
+    /** Imports GPX workouts as new rows (new ids), with their metrics computed before saving. */
+    suspend fun importGpx(workouts: List<Workout>): List<Long> = importAsNew(workouts, WorkoutStore.Mode.INLINE)
+
+    private suspend fun importAsNew(workouts: List<Workout>, mode: WorkoutStore.Mode): List<Long> =
+        withContext(Dispatchers.IO) {
+            store.insertAll(workouts.map { it.copy(id = 0) }, mode)
+        }
+
+    /** Saves an edited workout as a whole row with fresh metrics; see [WorkoutDao.saveEdited]. */
     suspend fun saveEdited(workout: Workout) = withContext(Dispatchers.IO) {
-        workoutDao.saveEdited(workout)
+        store.saveEdited(workout)
     }
 
     suspend fun setFavorite(id: Long, isFavorite: Boolean) = withContext(Dispatchers.IO) {

@@ -12,8 +12,6 @@ import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.PaceMath
-import com.runner.academy.util.TrackDataJson
-import com.runner.academy.util.WorkoutDataCleaner
 import com.runner.academy.util.WorkoutTrackRebuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -89,26 +87,17 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         loadStatistics()
     }
 
-    fun insertWorkout(workout: Workout) {
-        viewModelScope.launch {
-            try {
-                repository.insertWorkout(workout)
-                loadStatistics()
-            } catch (e: Exception) {
-                android.util.Log.e("WorkoutViewModel", "Error inserting workout: ${e.message}", e)
-            }
-        }
-    }
+    /** Imports a backup as new workouts (metrics follow in background). Returns inserted count. */
+    suspend fun importBackup(workouts: List<Workout>): Int = import(workouts, repository::importBackup)
 
-    /**
-     * Imports workouts (always with new auto-generated IDs). Returns inserted count.
-     */
-    suspend fun importWorkouts(workouts: List<Workout>): Int {
+    /** Imports workouts read from GPX files as new workouts. Returns inserted count. */
+    suspend fun importGpx(workouts: List<Workout>): Int = import(workouts, repository::importGpx)
+
+    private suspend fun import(workouts: List<Workout>, insert: suspend (List<Workout>) -> List<Long>): Int {
         if (workouts.isEmpty()) return 0
-        val toInsert = workouts.map { it.copy(id = 0) }
-        repository.insertWorkouts(toInsert)
+        val count = insert(workouts).size
         loadStatistics()
-        return toInsert.size
+        return count
     }
 
     /**
@@ -209,73 +198,6 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
 
     fun getWorkoutTypes(): List<WorkoutType> {
         return WorkoutType.entries
-    }
-
-    /**
-     * Очищает данные тренировки от GPS выбросов
-     * @param forceClean если true, очистка выполняется принудительно, даже если needsCleaning возвращает false
-     */
-    suspend fun cleanWorkoutData(workout: Workout, forceClean: Boolean = false): Workout? {
-        return try {
-            if (workout.trackData == null) {
-                android.util.Log.d("WorkoutViewModel", "Workout has no track data to clean")
-                return workout
-            }
-
-            val trackData = TrackDataJson.parse(workout.trackData)
-                ?: run {
-                    android.util.Log.d("WorkoutViewModel", "Workout track data could not be parsed")
-                    return workout
-                }
-
-            // Проверяем, нужна ли очистка (если не принудительная)
-            if (!forceClean) {
-                val needsCleaning = WorkoutDataCleaner.needsCleaning(trackData)
-                if (!needsCleaning) {
-                    android.util.Log.d("WorkoutViewModel", "Workout data doesn't need cleaning")
-                    return workout
-                }
-            }
-
-            android.util.Log.d(
-                "WorkoutViewModel",
-                "Cleaning workout data for workout ${workout.id} (forceClean=$forceClean)"
-            )
-
-            // Очищаем данные
-            val cleanedTrackData = WorkoutDataCleaner.cleanTrackData(trackData, workout.type)
-            if (
-                cleanedTrackData.points.size == trackData.points.size &&
-                cleanedTrackData.totalDistance == trackData.totalDistance &&
-                cleanedTrackData.totalDuration == trackData.totalDuration
-            ) {
-                android.util.Log.d("WorkoutViewModel", "Cleaning produced no meaningful changes")
-                return workout
-            }
-
-            // Создаем обновленную тренировку с очищенными данными
-            val distanceKm = cleanedTrackData.totalDistance / 1000f // Конвертируем в км
-            val duration = cleanedTrackData.totalDuration
-            // Auto-paused time stays subtracted from the new time
-            val autoPausedMs = workout.duration - workout.movingDuration
-            val movingDuration = (duration - autoPausedMs).coerceIn(0L, duration)
-            val cleanedWorkout = workout.copy(
-                distance = distanceKm,
-                duration = duration,
-                movingDuration = movingDuration,
-                avgPace = PaceMath.avgPace(distanceKm, movingDuration),
-                trackData = TrackDataJson.toJson(cleanedTrackData)
-            )
-
-            // Сохраняем очищенные данные в базу
-            repository.saveEdited(cleanedWorkout)
-
-            android.util.Log.d("WorkoutViewModel", "Workout data cleaned and saved successfully")
-            cleanedWorkout
-        } catch (e: Exception) {
-            android.util.Log.e("WorkoutViewModel", "Error cleaning workout data: ${e.message}", e)
-            null
-        }
     }
 
     companion object {

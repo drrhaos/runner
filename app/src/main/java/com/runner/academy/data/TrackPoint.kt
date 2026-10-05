@@ -1,6 +1,11 @@
 package com.runner.academy.data
 
+import com.google.gson.TypeAdapter
+import com.google.gson.annotations.JsonAdapter
 import com.google.gson.annotations.SerializedName
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonToken
+import com.google.gson.stream.JsonWriter
 
 data class TrackPoint(
     @SerializedName("latitude")
@@ -65,5 +70,50 @@ data class TrackData(
     @SerializedName("start_time")
     val startTime: Long, // время начала тренировки
     @SerializedName("end_time")
-    val endTime: Long? // время окончания тренировки
+    val endTime: Long?, // время окончания тренировки
+    /**
+     * Pause intervals of the session (wall clock). Null on older tracks and on routes whose
+     * time was rebuilt: "unknown, assume no pauses". Every builder of a track carries it over.
+     */
+    @SerializedName("pauses")
+    val pauses: List<PauseInterval>? = null,
+    /** True when the point times were made up (GPX without `<time>`, route time from the form). */
+    @SerializedName("time_synthetic")
+    val timeSynthetic: Boolean? = null,
+    /** Where the point altitudes come from, when the writer knew it; null on older tracks. */
+    @SerializedName("elevation_source")
+    val elevationSource: ElevationSource? = null
 )
+
+/**
+ * A pause of the session, [start]..[end] in wall-clock ms.
+ * Every field has a default so Gson builds it through the no-arg constructor.
+ */
+data class PauseInterval(
+    @SerializedName("start")
+    val start: Long = 0L,
+    @SerializedName("end")
+    val end: Long = 0L,
+    @SerializedName("kind")
+    val kind: PauseKind = PauseKind.AUTO
+)
+
+/** Who paused: the runner or auto-pause. Stored by name; a missing or unknown name reads as [AUTO]. */
+@JsonAdapter(PauseKindAdapter::class, nullSafe = false)
+enum class PauseKind { MANUAL, AUTO }
+
+/** Gson's own enum adapter reads an unknown name as null, which a non-null [PauseInterval.kind] cannot hold. */
+class PauseKindAdapter : TypeAdapter<PauseKind>() {
+    override fun write(out: JsonWriter, value: PauseKind?) {
+        if (value == null) out.nullValue() else out.value(value.name)
+    }
+
+    override fun read(reader: JsonReader): PauseKind {
+        if (reader.peek() == JsonToken.NULL) {
+            reader.nextNull()
+            return PauseKind.AUTO
+        }
+        val name = reader.nextString()
+        return PauseKind.entries.find { it.name == name } ?: PauseKind.AUTO
+    }
+}

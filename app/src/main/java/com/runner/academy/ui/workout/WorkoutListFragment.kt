@@ -109,12 +109,6 @@ class WorkoutListFragment : Fragment() {
                 loadStates.append.endOfPaginationReached &&
                 workoutAdapter.itemCount == 0
             updateEmptyState(isEmpty)
-            if (refresh is LoadState.NotLoading &&
-                workoutAdapter.itemCount > 0 &&
-                viewModel.listFilter.value == WorkoutListFilter.ALL
-            ) {
-                cleanVisibleWorkoutsInBackground()
-            }
         }
     }
 
@@ -316,7 +310,7 @@ class WorkoutListFragment : Fragment() {
                 val workouts = withContext(Dispatchers.Default) {
                     WorkoutBackupFormat.parseBackupJson(json)
                 }
-                val count = viewModel.importWorkouts(workouts)
+                val count = viewModel.importBackup(workouts)
                 showImportResult(count, failed = 0)
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "JSON import failed: ${e.message}", e)
@@ -347,7 +341,7 @@ class WorkoutListFragment : Fragment() {
                     return@launch
                 }
                 val count = if (workouts.isNotEmpty()) {
-                    viewModel.importWorkouts(workouts)
+                    viewModel.importGpx(workouts)
                 } else {
                     0
                 }
@@ -506,47 +500,6 @@ class WorkoutListFragment : Fragment() {
         } else {
             binding.layoutEmptyState.visibility = View.GONE
             binding.recyclerViewWorkouts.visibility = View.VISIBLE
-        }
-    }
-
-    private val cleanedWorkoutIds = mutableSetOf<Long>()
-    private var cleaningInProgress = false
-
-    private fun cleanVisibleWorkoutsInBackground() {
-        if (cleaningInProgress) return
-        if (viewModel.listFilter.value != WorkoutListFilter.ALL) return
-        val snapshot = (0 until workoutAdapter.itemCount).mapNotNull { index ->
-            workoutAdapter.peek(index)
-        }.filter { it.trackData != null && it.id !in cleanedWorkoutIds }
-        if (snapshot.isEmpty()) return
-
-        cleaningInProgress = true
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                var cleanedCount = 0
-                for (workout in snapshot) {
-                    cleanedWorkoutIds.add(workout.id)
-                    val cleanedWorkout = withContext(Dispatchers.Default) {
-                        viewModel.cleanWorkoutData(workout)
-                    }
-                    if (cleanedWorkout != null && cleanedWorkout != workout) {
-                        cleanedCount++
-                    }
-                }
-                if (cleanedCount > 0) {
-                    android.util.Log.d("WorkoutList", "Cleaned $cleanedCount workouts in background")
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                android.util.Log.e(
-                    "WorkoutList",
-                    "Error cleaning workouts in background: ${e.message}",
-                    e
-                )
-            } finally {
-                cleaningInProgress = false
-            }
         }
     }
 

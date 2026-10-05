@@ -1,0 +1,106 @@
+package com.runner.academy.util
+
+import com.runner.academy.data.BestEffort
+import com.runner.academy.data.ElevationSource
+import com.runner.academy.data.TrackData
+import com.runner.academy.data.TrackPoint
+import com.runner.academy.data.Workout
+import com.runner.academy.data.WorkoutType
+import org.junit.Assert.assertEquals
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import java.util.Date
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
+class WorkoutDerivationTest {
+
+    private val trackJson = TrackDataJson.toJson(
+        TrackData(
+            (0 until 20).map { TrackPoint(55.75, 37.60 + it * 0.00016, 1_000_000L + it * 3_000L, 5f, 3f, 150.0) },
+            0f, 0L, 0f, 0f, 1_000_000L, null
+        )
+    )
+
+    private val nothingDerived = Derived(
+        elevationGain = null,
+        elevationLoss = null,
+        elevationSource = null,
+        avgCadence = null,
+        routePreview = null,
+        efforts = emptyList(),
+        metricsVersion = WorkoutDerivation.CURRENT_METRICS_VERSION
+    )
+
+    @Test
+    fun `a track is derived with the current version`() {
+        val derived = WorkoutDerivation.derive(DerivationInput(trackJson, WorkoutType.EASY_RUN, 57_000L))
+
+        // Only the version so far: each metric is added by its own release-3 branch
+        assertEquals(nothingDerived, derived)
+    }
+
+    @Test
+    fun `no or broken track is marked computed with nothing derived`() {
+        for (json in listOf(null, "", "{broken", "[1,2]")) {
+            assertEquals(json, nothingDerived, WorkoutDerivation.derive(DerivationInput(json, WorkoutType.EASY_RUN, 0L)))
+        }
+    }
+
+    @Test
+    fun `applying overwrites every derived column and keeps the rest`() {
+        val stale = Workout(
+            id = 7L,
+            date = Date(1_000L),
+            distance = 5f,
+            duration = 1_800_000L,
+            movingDuration = 1_700_000L,
+            avgPace = 5.7f,
+            calories = 300,
+            notes = "n",
+            type = WorkoutType.TEMPO_RUN,
+            trackData = trackJson,
+            isFavorite = true,
+            elevationGain = 12f,
+            elevationLoss = 11f,
+            elevationSource = ElevationSource.GPS,
+            avgCadence = 170f,
+            routePreview = "old",
+            excludeFromRecords = true,
+            avgHeartRate = 150,
+            metricsVersion = 0
+        )
+        val derived = Derived(
+            elevationGain = 20f,
+            elevationLoss = null,
+            elevationSource = ElevationSource.FILE,
+            avgCadence = null,
+            routePreview = "new",
+            efforts = emptyList(),
+            metricsVersion = 9
+        )
+
+        val applied = derived.applyTo(stale)
+
+        assertEquals(
+            stale.copy(
+                elevationGain = 20f,
+                elevationLoss = null,
+                elevationSource = ElevationSource.FILE,
+                avgCadence = null,
+                routePreview = "new",
+                metricsVersion = 9
+            ),
+            applied
+        )
+    }
+
+    @Test
+    fun `an effort becomes a best effort row of the workout`() {
+        val effort = Effort(distanceM = 5_000, elapsedMs = 1_500_000L, startTime = 10L, endTime = 1_500_010L, stepsShare = 0.05f)
+
+        assertEquals(BestEffort(3L, 5_000, 1_500_000L, 10L, 1_500_010L, 0.05f), effort.toBestEffort(3L))
+    }
+}

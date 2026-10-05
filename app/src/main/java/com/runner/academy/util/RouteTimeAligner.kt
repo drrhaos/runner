@@ -120,7 +120,8 @@ object RouteTimeAligner {
             times[k] = anchorTimes[last] + ((routeCum[k] - routeCum[last]) / avgSpeedMps * 1000.0).toLong()
         }
 
-        return buildTrackData(withTimes(routePoints, times))
+        // The recorded pauses do not belong to the route's new times
+        return buildTrackData(withTimes(routePoints, times), from = route).copy(pauses = null)
     }
 
     /**
@@ -137,27 +138,41 @@ object RouteTimeAligner {
             val fraction = if (total > 0.0) routeCum[k] / total else k.toDouble() / lastIndex
             startTime + (fraction * durationMs).toLong()
         }
-        return buildTrackData(withTimes(routePoints, times))
+        return buildTrackData(withTimes(routePoints, times), from = route).copy(pauses = null)
     }
 
-    /** Сдвигает все временные метки трека на [deltaMs] (смена даты тренировки). */
+    /** Сдвигает все временные метки трека на [deltaMs] (смена даты тренировки), вместе с паузами. */
     fun shiftTime(track: TrackData, deltaMs: Long): TrackData {
         if (deltaMs == 0L || track.points.isEmpty()) return track
-        return buildTrackData(track.points.map { it.copy(timestamp = it.timestamp + deltaMs) })
+        return buildTrackData(track.points.map { it.copy(timestamp = it.timestamp + deltaMs) }, from = track)
+            .copy(pauses = track.pauses?.map { it.copy(start = it.start + deltaMs, end = it.end + deltaMs) })
     }
 
-    /** Пересчитывает итоговые показатели трека по точкам. */
-    fun buildTrackData(points: List<TrackPoint>): TrackData {
+    /**
+     * Пересчитывает итоговые показатели трека по точкам. Остальные поля трека (паузы,
+     * признак синтетического времени, источник высоты) берутся из [from].
+     */
+    fun buildTrackData(points: List<TrackPoint>, from: TrackData? = null): TrackData {
         val totalDistance = TrackGeometry.totalDistanceMeters(points)
         val startTime = points.firstOrNull()?.timestamp ?: 0L
         val endTime = points.lastOrNull()?.timestamp ?: startTime
         val totalDuration = (endTime - startTime).coerceAtLeast(0L)
-        return TrackData(
+        val avgSpeed = SpeedPaceCalculator.averageSpeedMs(totalDistance, totalDuration)
+        val maxSpeed = TrackGeometry.maxDerivedSpeedMs(points)
+        return from?.copy(
             points = points,
             totalDistance = totalDistance,
             totalDuration = totalDuration,
-            avgSpeed = SpeedPaceCalculator.averageSpeedMs(totalDistance, totalDuration),
-            maxSpeed = TrackGeometry.maxDerivedSpeedMs(points),
+            avgSpeed = avgSpeed,
+            maxSpeed = maxSpeed,
+            startTime = startTime,
+            endTime = endTime
+        ) ?: TrackData(
+            points = points,
+            totalDistance = totalDistance,
+            totalDuration = totalDuration,
+            avgSpeed = avgSpeed,
+            maxSpeed = maxSpeed,
             startTime = startTime,
             endTime = endTime
         )

@@ -13,10 +13,9 @@ import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.data.TrackData
 import com.runner.academy.databinding.FragmentWorkoutDetailBinding
+import com.runner.academy.util.DisplayTrack
 import com.runner.academy.util.ErrorHandler
 import com.runner.academy.util.ShareExports
-import com.runner.academy.util.TrackDataJson
-import com.runner.academy.util.WorkoutDataCleaner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -195,8 +194,8 @@ class WorkoutDetailFragment : Fragment() {
                     chartRenderer?.intervalPlanSegments =
                         com.runner.academy.util.IntervalSegmentsJson.parse(workout.intervalSegmentsJson)
 
-                    // Avoid clean→DB update→Flow→redraw loop (map flicker / missing track).
-                    // Track is re-cleaned and redrawn only when its inputs change:
+                    // Row updates (favorite, background metrics) must not redraw the map (flicker).
+                    // The display track is rebuilt and redrawn only when its inputs change:
                     // the JSON itself or the type (type drives the GPS outlier threshold).
                     val renderKey = workout.trackData?.let { workout.type to it }
                     if (renderKey != boundTrackRenderKey) {
@@ -238,13 +237,7 @@ class WorkoutDetailFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val cleanedTrackData = withContext(Dispatchers.Default) {
-                    val trackData = TrackDataJson.parse(trackDataJson) ?: return@withContext null
-                    if (trackData.points.isEmpty()) return@withContext trackData
-                    if (WorkoutDataCleaner.needsCleaning(trackData)) {
-                        WorkoutDataCleaner.cleanTrackData(trackData, workout.type)
-                    } else {
-                        trackData
-                    }
+                    DisplayTrack.of(trackDataJson, workout.type)
                 }
 
                 if (_binding == null || !isAdded || isDetached) return@launch
