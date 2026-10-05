@@ -18,7 +18,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.data.Workout
-import com.runner.academy.data.WorkoutStore
 import com.runner.academy.databinding.FragmentWorkoutListBinding
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.GpxImporter
@@ -311,8 +310,7 @@ class WorkoutListFragment : Fragment() {
                 val workouts = withContext(Dispatchers.Default) {
                     WorkoutBackupFormat.parseBackupJson(json)
                 }
-                // Hundreds of rows: their metrics are computed by the background pass
-                val count = viewModel.importWorkouts(workouts, WorkoutStore.Mode.DEFERRED)
+                val count = viewModel.importBackup(workouts)
                 showImportResult(count, failed = 0)
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "JSON import failed: ${e.message}", e)
@@ -343,7 +341,7 @@ class WorkoutListFragment : Fragment() {
                     return@launch
                 }
                 val count = if (workouts.isNotEmpty()) {
-                    viewModel.importWorkouts(workouts, WorkoutStore.Mode.INLINE)
+                    viewModel.importGpx(workouts)
                 } else {
                     0
                 }
