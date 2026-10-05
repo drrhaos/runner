@@ -1,5 +1,7 @@
 package com.runner.academy.util
 
+import com.runner.academy.data.ElevationSource
+import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import org.junit.Assert.assertEquals
@@ -133,5 +135,60 @@ class RouteTimeAlignerTest {
         val result = WorkoutTrackRebuilder.rebuild(json, json, Date(start), Date(start + day), 1L)
         assertEquals(WorkoutTrackRebuilder.TimeSource.SHIFTED, result.timeSource)
         assertEquals(start + day, TrackDataJson.parse(result.trackDataJson)!!.startTime)
+    }
+
+    private val pauses = listOf(PauseInterval(start + 10_000L, start + 70_000L, "AUTO"))
+
+    private fun withTrackFields(track: TrackData) =
+        track.copy(pauses = pauses, timeSynthetic = true, elevationSource = ElevationSource.FILE)
+
+    @Test
+    fun `shiftTime moves the pauses with the points and keeps the other track fields`() {
+        val shifted = RouteTimeAligner.shiftTime(withTrackFields(recordedOutAndBack()), 5_000L)
+
+        assertEquals(listOf(PauseInterval(start + 15_000L, start + 75_000L, "AUTO")), shifted.pauses)
+        assertEquals(true, shifted.timeSynthetic)
+        assertEquals(ElevationSource.FILE, shifted.elevationSource)
+    }
+
+    @Test
+    fun `a route with new times has no pauses but keeps its elevation source`() {
+        val route = withTrackFields(track((0..20).map { point(it * 50.0, 5.0) }))
+
+        val uniform = RouteTimeAligner.distributeByDistance(route, start, 600_000L)!!
+        val aligned = RouteTimeAligner.alignToRecorded(route, recordedOutAndBack())!!
+
+        for (result in listOf(uniform, aligned)) {
+            assertNull(result.pauses)
+            assertEquals(ElevationSource.FILE, result.elevationSource)
+        }
+    }
+
+    @Test
+    fun `rebuilder marks route time from the form as synthetic`() {
+        val routeJson = TrackDataJson.toJson(track((0..20).map { point(it * 50.0, 5.0, time = 42L + it) }))
+
+        val uniform = WorkoutTrackRebuilder.rebuild(null, routeJson, null, Date(start), 600_000L)
+        val recorded = WorkoutTrackRebuilder.rebuild(
+            TrackDataJson.toJson(recordedOutAndBack()), routeJson, Date(start), Date(start), 1L
+        )
+
+        assertEquals(WorkoutTrackRebuilder.TimeSource.UNIFORM, uniform.timeSource)
+        assertEquals(WorkoutTrackRebuilder.TimeSource.RECORDED, recorded.timeSource)
+        assertEquals(true, TrackDataJson.parse(uniform.trackDataJson)!!.timeSynthetic)
+        assertEquals(true, TrackDataJson.parse(recorded.trackDataJson)!!.timeSynthetic)
+    }
+
+    @Test
+    fun `rebuilder keeps the synthetic flag when only the date changes`() {
+        val day = 86_400_000L
+        val synthetic = TrackDataJson.toJson(recordedOutAndBack().copy(timeSynthetic = true))
+        val real = TrackDataJson.toJson(recordedOutAndBack())
+
+        val shiftedSynthetic = WorkoutTrackRebuilder.rebuild(synthetic, synthetic, Date(start), Date(start + day), 1L)
+        val shiftedReal = WorkoutTrackRebuilder.rebuild(real, real, Date(start), Date(start + day), 1L)
+
+        assertEquals(true, TrackDataJson.parse(shiftedSynthetic.trackDataJson)!!.timeSynthetic)
+        assertNull(TrackDataJson.parse(shiftedReal.trackDataJson)!!.timeSynthetic)
     }
 }

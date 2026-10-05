@@ -146,7 +146,8 @@ object WorkoutDataCleaner {
         
         Log.d("WorkoutDataCleaner", "Recalculated stats: distance=${totalDistance}m, duration=${totalDuration}ms, avgSpeed=${avgSpeed}m/s")
         
-        return TrackData(
+        // copy: pauses and the other track fields survive cleaning
+        return originalTrackData.copy(
             points = withTail,
             totalDistance = totalDistance,
             totalDuration = totalDuration,

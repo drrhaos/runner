@@ -65,5 +65,30 @@ data class TrackData(
     @SerializedName("start_time")
     val startTime: Long, // время начала тренировки
     @SerializedName("end_time")
-    val endTime: Long? // время окончания тренировки
+    val endTime: Long?, // время окончания тренировки
+    /**
+     * Pause intervals of the session (wall clock). Null on older tracks and on routes whose
+     * time was rebuilt: "unknown, assume no pauses". Every builder of a track carries it over.
+     */
+    @SerializedName("pauses")
+    val pauses: List<PauseInterval>? = null,
+    /** True when the point times were made up (GPX without `<time>`, route time from the form). */
+    @SerializedName("time_synthetic")
+    val timeSynthetic: Boolean? = null,
+    /** Where the point altitudes come from, when the writer knew it; null on older tracks. */
+    @SerializedName("elevation_source")
+    val elevationSource: ElevationSource? = null
+)
+
+/**
+ * A pause of the session, [start]..[end] in wall-clock ms. [kind] is `MANUAL` or `AUTO`.
+ * Every field has a default so Gson builds it through the no-arg constructor.
+ */
+data class PauseInterval(
+    @SerializedName("start")
+    val start: Long = 0L,
+    @SerializedName("end")
+    val end: Long = 0L,
+    @SerializedName("kind")
+    val kind: String = "AUTO"
 )

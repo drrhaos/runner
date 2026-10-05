@@ -3,6 +3,7 @@ package com.runner.academy.util
 import com.runner.academy.data.WorkoutType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -275,6 +276,25 @@ class WorkoutImportTest {
         assertEquals(PaceMath.avgPace(workout.distance, 600_000L), workout.avgPace, 0f)
         assertNotNull(workout.trackData)
         assertEquals("Imported from test.gpx", workout.notes)
+        assertNull("every point has its time", TrackDataJson.parse(workout.trackData)!!.timeSynthetic)
+    }
+
+    @Test
+    fun parseGpx_pointWithoutTimeMarksTheTrackSynthetic() {
+        val gpx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+              <trk><trkseg>
+                <trkpt lat="55.7558" lon="37.6176"><time>2024-01-01T10:00:00Z</time></trkpt>
+                <trkpt lat="55.7568" lon="37.6186"></trkpt>
+                <trkpt lat="55.7578" lon="37.6196"><time>2024-01-01T10:10:00Z</time></trkpt>
+              </trkseg></trk>
+            </gpx>
+        """.trimIndent()
+
+        val workout = GpxImporter.parseGpx(gpx)
+
+        assertEquals(true, TrackDataJson.parse(workout.trackData)!!.timeSynthetic)
     }
 
     @Test(expected = IllegalArgumentException::class)
