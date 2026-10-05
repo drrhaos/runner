@@ -1,5 +1,6 @@
 package com.runner.academy.data
 
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -40,12 +41,7 @@ data class BestEffort(
 
 /** A best effort with the workout columns records are ordered and labelled by. */
 data class EffortRow(
-    val workoutId: Long,
-    val distanceM: Int,
-    val elapsedMs: Long,
-    val startTime: Long,
-    val endTime: Long,
-    val stepsShare: Float,
+    @Embedded val effort: BestEffort,
     val date: java.util.Date,
     val type: WorkoutType
 )

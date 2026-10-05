@@ -90,7 +90,7 @@ class BestEffortDaoTest {
 
         val rows = efforts.observeEligibleEfforts().first()
         assertEquals(
-            listOf(EffortRow(kept, 5_000, 1_500_000L, 0L, 1_500_000L, 0f, Date(1_000L), WorkoutType.LONG_RUN)),
+            listOf(EffortRow(effort(kept, RecordDistance.KM_5, 1_500_000L), Date(1_000L), WorkoutType.LONG_RUN)),
             rows
         )
     }

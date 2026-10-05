@@ -29,8 +29,7 @@ interface BestEffortDao {
     /** Every effort that may count as a record: workouts excluded by the user are filtered here. */
     @Query(
         """
-        SELECT b.workoutId, b.distanceM, b.elapsedMs, b.startTime, b.endTime, b.stepsShare,
-               w.date, w.type
+        SELECT b.*, w.date, w.type
         FROM best_efforts b JOIN workouts w ON w.id = b.workoutId
         WHERE w.excludeFromRecords = 0
         """
