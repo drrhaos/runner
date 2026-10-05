@@ -91,7 +91,7 @@ class WorkoutListFragment : Fragment() {
                 )
             },
             onFavoriteClick = { workout ->
-                viewModel.toggleFavorite(workout)
+                viewModel.toggleFavorite(workout.id, workout.isFavorite)
             }
         )
 

@@ -104,7 +104,7 @@
     <string name="edit_workout_title">Edit workout</string>
     <string name="edit_workout_label_route">Route</string>
     <string name="edit_workout_route_none">No route attached</string>
-    <string name="edit_workout_route_attached">Route attached (%1$d points)</string>
+    <string name="edit_workout_route_attached">Route attached (%1$s)</string>
     <string name="edit_workout_select_route">Select route</string>
     <string name="edit_workout_clear_route">Clear</string>
     <string name="edit_workout_pick_route_title">Select a route</string>
@@ -125,7 +125,6 @@
     <string name="edit_workout_keep_editing">Keep editing</string>
     <string name="edit_workout_route_preview_cd">Route preview</string>
     <string name="edit_workout_route_meta">%1$.1f km · %2$s</string>
-    <string name="edit_workout_route_points">%1$d points</string>
     <string name="workout_updated">Workout updated</string>
 
     <string name="settings_title">Settings</string>
@@ -305,6 +304,7 @@
     <string name="workout_list_message_no_favorites">No favorite routes yet</string>
     <string name="workout_list_message_add_favorites">Mark a workout with a star to save it here.</string>
     <string name="workout_list_no_route_preview">No route</string>
+    <string name="workout_list_route_preview_pending_cd">Route preview is being prepared</string>
     <string name="workout_list_import">Import workouts</string>
     <string name="workout_list_export">Export workouts</string>
     <string name="workout_list_export_choose_format">Choose export format</string>
@@ -405,6 +405,11 @@
     <plurals name="hours">
         <item quantity="one">%d hour</item>
         <item quantity="other">%d hours</item>
+    </plurals>
+
+    <plurals name="edit_workout_route_points_count">
+        <item quantity="one">%d point</item>
+        <item quantity="other">%d points</item>
     </plurals>
 
     <plurals name="minutes">

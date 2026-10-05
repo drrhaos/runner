@@ -21,6 +21,7 @@ import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.data.Workout
+import com.runner.academy.data.WorkoutListItem
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.DialogRoutePickerBinding
@@ -333,9 +334,9 @@ class AddWorkoutFragment : Fragment() {
                     .setNegativeButton(R.string.cancel, null)
                     .create()
 
-                val adapter = RoutePickerAdapter { workout ->
+                val adapter = RoutePickerAdapter { route ->
                     dialog.dismiss()
-                    onRouteSelected(workout)
+                    pickRoute(route)
                 }
                 dialogBinding.recyclerViewRoutes.layoutManager =
                     LinearLayoutManager(requireContext())
@@ -359,27 +360,47 @@ class AddWorkoutFragment : Fragment() {
         }
     }
 
-    private fun onRouteSelected(source: Workout) {
-        form.selectedTrackDataJson = source.trackData
+    /** Picker rows carry no track: the picked one is read by id here. */
+    private fun pickRoute(route: WorkoutListItem) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val trackJson = try {
+                viewModel.getTrackData(route.id)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error loading route track: ${e.message}", e)
+                null
+            }
+            if (!isAdded || isDetached) return@launch
+            if (trackJson.isNullOrBlank()) {
+                // Deleted or cleared since the picker listed it
+                Toast.makeText(requireContext(), getString(R.string.route_load_error), Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            onRouteSelected(trackJson, route.distance)
+        }
+    }
+
+    private fun onRouteSelected(trackJson: String, routeDistanceKm: Float) {
+        form.selectedTrackDataJson = trackJson
         updateFieldLocks()
-        applyDistanceFromRoute(source)
+        applyDistanceFromRoute(trackJson, routeDistanceKm)
         updateRouteStatus()
         Toast.makeText(requireContext(), getString(R.string.edit_workout_route_selected), Toast.LENGTH_SHORT)
             .show()
     }
 
-    private fun applyDistanceFromRoute(source: Workout) {
-        val trackJson = source.trackData
+    private fun applyDistanceFromRoute(trackJson: String, routeDistanceKm: Float) {
         val distanceKm = try {
-            val trackData = trackJson?.let { TrackDataJson.parse(it) }
+            val trackData = TrackDataJson.parse(trackJson)
             if (trackData != null && trackData.totalDistance > 0) {
                 trackData.totalDistance / 1000f
             } else {
-                source.distance
+                routeDistanceKm
             }
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error reading route distance: ${e.message}", e)
-            source.distance
+            routeDistanceKm
         }
         binding.editTextDistance.setText(formatDistance(distanceKm))
     }
@@ -414,7 +435,8 @@ class AddWorkoutFragment : Fragment() {
         } catch (_: Exception) {
             0
         }
-        binding.textViewRouteStatus.text = getString(R.string.edit_workout_route_attached, pointCount)
+        val points = resources.getQuantityString(R.plurals.edit_workout_route_points_count, pointCount, pointCount)
+        binding.textViewRouteStatus.text = getString(R.string.edit_workout_route_attached, points)
         binding.buttonClearRoute.isEnabled = true
     }
 
