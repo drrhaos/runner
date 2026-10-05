@@ -113,7 +113,7 @@ class WorkoutDetailFragment : Fragment() {
         binding.buttonFavorite.setOnClickListener {
             currentWorkout?.let { workout ->
                 val willBeFavorite = !workout.isFavorite
-                viewModel.toggleFavorite(workout)
+                viewModel.toggleFavorite(workout.id, workout.isFavorite)
                 currentWorkout = workout.copy(isFavorite = willBeFavorite)
                 updateFavoriteButton(willBeFavorite)
                 val message = if (willBeFavorite) {

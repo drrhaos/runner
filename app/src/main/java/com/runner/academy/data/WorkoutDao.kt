@@ -10,15 +10,19 @@ abstract class WorkoutDao {
     @Query("SELECT * FROM workouts ORDER BY date DESC")
     abstract fun getAllWorkouts(): Flow<List<Workout>>
 
-    @Query("SELECT * FROM workouts ORDER BY date DESC")
-    abstract fun pagingSourceAll(): PagingSource<Int, Workout>
+    /** List pages never load the track: [WorkoutListItem] columns only. */
+    @Query("SELECT $LIST_ITEM_COLUMNS FROM workouts ORDER BY date DESC")
+    abstract fun pagingSourceAll(): PagingSource<Int, WorkoutListItem>
 
-    @Query("SELECT * FROM workouts WHERE isFavorite = 1 ORDER BY date DESC")
-    abstract fun pagingSourceFavorites(): PagingSource<Int, Workout>
+    @Query("SELECT $LIST_ITEM_COLUMNS FROM workouts WHERE isFavorite = 1 ORDER BY date DESC")
+    abstract fun pagingSourceFavorites(): PagingSource<Int, WorkoutListItem>
 
-    /** Route picker: workouts with a track, favorites first; excludes the one being edited. */
-    @Query("SELECT * FROM workouts WHERE $ROUTE_FILTER ORDER BY isFavorite DESC, date DESC")
-    abstract fun pagingSourceRoutes(excludeId: Long): PagingSource<Int, Workout>
+    /**
+     * Route picker: workouts with a track, favorites first; excludes the one being edited.
+     * The filter reads the track in SQLite only; the chosen one is loaded by [getTrackData].
+     */
+    @Query("SELECT $LIST_ITEM_COLUMNS FROM workouts WHERE $ROUTE_FILTER ORDER BY isFavorite DESC, date DESC")
+    abstract fun pagingSourceRoutes(excludeId: Long): PagingSource<Int, WorkoutListItem>
 
     @Query("SELECT COUNT(*) FROM workouts WHERE $ROUTE_FILTER")
     abstract suspend fun countRoutes(excludeId: Long): Int
@@ -32,6 +36,10 @@ abstract class WorkoutDao {
 
     @Query("SELECT * FROM workouts WHERE id = :id")
     abstract fun getWorkoutById(id: Long): Flow<Workout?>
+
+    /** The track of one workout (the route picker hands it to the form); null without one. */
+    @Query("SELECT trackData FROM workouts WHERE id = :id")
+    abstract suspend fun getTrackData(id: Long): String?
 
     @Insert
     abstract suspend fun insertWorkout(workout: Workout): Long
@@ -116,6 +124,11 @@ abstract class WorkoutDao {
     abstract suspend fun getTotalMovingDuration(): Long?
 
     companion object {
+        /** The [WorkoutListItem] columns; `IS NOT NULL` reads only the record header of the track. */
+        private const val LIST_ITEM_COLUMNS =
+            "id, date, distance, duration, movingDuration, avgPace, calories, notes, type, isFavorite, " +
+                "(trackData IS NOT NULL) AS hasTrack, routePreview, metricsVersion"
+
         /** A workout usable as a route: it has a track and is not the one being edited. */
         private const val ROUTE_FILTER =
             "trackData IS NOT NULL AND TRIM(trackData) != '' AND id != :excludeId"
