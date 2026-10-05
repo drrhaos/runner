@@ -235,6 +235,7 @@ object WorkoutBackupFormat {
             date = Date(dateMillis),
             distance = distanceKm.coerceAtLeast(0f),
             duration = durationMs.coerceAtLeast(0L),
+            movingDuration = durationMs.coerceAtLeast(0L),
             avgPace = avgPace.coerceAtLeast(0f),
             calories = calories,
             notes = notes,

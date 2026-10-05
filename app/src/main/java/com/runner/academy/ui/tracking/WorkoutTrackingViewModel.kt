@@ -376,6 +376,8 @@ class WorkoutTrackingViewModel(
             date = Date(session.startTime),
             distance = totalDistanceKm,
             duration = durationMs,
+            // Equal until auto-pause (SessionClock) lands
+            movingDuration = durationMs,
             avgPace = avgPace,
             calories = calories,
             notes = null,

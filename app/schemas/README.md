@@ -10,9 +10,12 @@ After installing the Android SDK, generate schemas with:
 ```
 
 Commit the generated JSON files under `com.runner.academy.data.WorkoutDatabase/`.
-They are required for `WorkoutDatabaseMigrationTest` in instrumented tests.
+They are required for `WorkoutDatabaseMigrationTest` in instrumented tests and for
+`WorkoutDatabaseMigrationJvmTest` in unit tests (there they are read as classpath resources:
+the old database is built from `createSql` and Room validates the migrated schema on open).
 
-Current schema version: **6** (`intervalSegmentsJson` on workouts).
+Current schema version: **7** (release 3 metrics: `movingDuration`, elevation, cadence, route
+preview, `excludeFromRecords`, heart rate, `metricsVersion` on workouts; `best_efforts` table).
 
 `1.json` was never exported by Room: it is reconstructed from `2.json` minus the
 `trackData` column that `MIGRATION_1_2` adds (version 2 has only the `workouts`

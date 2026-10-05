@@ -48,6 +48,7 @@ class WorkoutBoundedLoadingTest {
         date = Date(dateMs),
         distance = distance,
         duration = 1_800_000L,
+        movingDuration = 1_800_000L,
         avgPace = 6f,
         calories = 300,
         notes = null,
@@ -58,14 +59,32 @@ class WorkoutBoundedLoadingTest {
 
     @Test
     fun statsRows_carryEveryFieldStatisticsUses() = runBlocking {
-        dao.insertWorkout(workout(1_000L, distance = 10f, type = WorkoutType.LONG_RUN))
+        dao.insertWorkout(
+            workout(1_000L, distance = 10f, type = WorkoutType.LONG_RUN).copy(
+                movingDuration = 1_500_000L,
+                elevationGain = 42f,
+                elevationSource = ElevationSource.GPS,
+                avgCadence = 171f
+            )
+        )
         dao.insertWorkout(workout(2_000L, track = null))
 
         val rows = dao.getStatsRows()
 
         assertEquals(2, rows.size)
         assertEquals(
-            WorkoutStatsRow(Date(1_000L), 10f, 1_800_000L, 6f, 300, WorkoutType.LONG_RUN),
+            WorkoutStatsRow(
+                date = Date(1_000L),
+                distance = 10f,
+                duration = 1_800_000L,
+                movingDuration = 1_500_000L,
+                avgPace = 6f,
+                calories = 300,
+                type = WorkoutType.LONG_RUN,
+                elevationGain = 42f,
+                elevationSource = ElevationSource.GPS,
+                avgCadence = 171f
+            ),
             rows.first { it.date.time == 1_000L }
         )
     }

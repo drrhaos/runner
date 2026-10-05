@@ -193,6 +193,7 @@ class WorkoutTrackingViewModelTest {
             date = Date(),
             distance = 0.2f,
             duration = 2000L,
+            movingDuration = 2000L,
             avgPace = 5.0f,
             calories = 50,
             notes = null,

@@ -16,9 +16,10 @@ import android.content.Context
         TrainingPlan::class,
         TrainingPlanDay::class,
         PlanSchedule::class,
-        ScheduledWorkout::class
+        ScheduledWorkout::class,
+        BestEffort::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -27,6 +28,7 @@ abstract class WorkoutDatabase : RoomDatabase() {
     abstract fun workoutTemplateDao(): WorkoutTemplateDao
     abstract fun trainingPlanDao(): TrainingPlanDao
     abstract fun planScheduleDao(): PlanScheduleDao
+    abstract fun bestEffortDao(): BestEffortDao
 
     companion object {
         @Volatile
@@ -173,13 +175,61 @@ abstract class WorkoutDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Release 3 metrics. Only `movingDuration` is filled here (= duration: old rows had no
+         * auto-pause); the derived columns stay empty with `metricsVersion = 0` for the background
+         * metrics pass. DEFAULT values must match the entity's `@ColumnInfo(defaultValue)`.
+         */
+        internal val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE workouts ADD COLUMN movingDuration INTEGER NOT NULL DEFAULT 0"
+                )
+                database.execSQL("UPDATE workouts SET movingDuration = duration")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN elevationGain REAL")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN elevationLoss REAL")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN elevationSource TEXT")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN avgCadence REAL")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN routePreview TEXT")
+                database.execSQL(
+                    "ALTER TABLE workouts ADD COLUMN excludeFromRecords INTEGER NOT NULL DEFAULT 0"
+                )
+                database.execSQL("ALTER TABLE workouts ADD COLUMN avgHeartRate INTEGER")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN maxHeartRate INTEGER")
+                database.execSQL(
+                    "ALTER TABLE workouts ADD COLUMN metricsVersion INTEGER NOT NULL DEFAULT 0"
+                )
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `best_efforts` (
+                        `workoutId` INTEGER NOT NULL,
+                        `distanceM` INTEGER NOT NULL,
+                        `elapsedMs` INTEGER NOT NULL,
+                        `startTime` INTEGER NOT NULL,
+                        `endTime` INTEGER NOT NULL,
+                        `stepsShare` REAL NOT NULL,
+                        PRIMARY KEY(`workoutId`, `distanceM`),
+                        FOREIGN KEY(`workoutId`) REFERENCES `workouts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_best_efforts_workoutId` ON `best_efforts` (`workoutId`)"
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_best_efforts_distanceM_elapsedMs` ON `best_efforts` (`distanceM`, `elapsedMs`)"
+                )
+            }
+        }
+
         /** Every migration, oldest first — shared with the migration tests. Append new ones here. */
         internal val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
             MIGRATION_3_4,
             MIGRATION_4_5,
-            MIGRATION_5_6
+            MIGRATION_5_6,
+            MIGRATION_6_7
         )
 
         fun getDatabase(context: Context): WorkoutDatabase {

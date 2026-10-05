@@ -100,6 +100,9 @@ android {
 
     sourceSets {
         getByName("androidTest").assets.srcDir("$projectDir/schemas")
+        // JVM migration tests build old databases from the exported schemas (classpath resources):
+        // Robolectric does not see test-only assets, so MigrationTestHelper cannot run there
+        getByName("test").resources.srcDir("$projectDir/schemas")
     }
 
     testOptions {
