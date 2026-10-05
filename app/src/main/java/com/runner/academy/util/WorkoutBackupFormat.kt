@@ -20,23 +20,33 @@ import java.util.Date
  *
  * Parsing is manual via JsonObject so missing fields don't blow up —
  * Gson + Kotlin non-null defaults are unsafe.
+ *
+ * formatVersion=2 (DB schema 7) adds movingDurationMs, excludeFromRecords, avgHeartRate and
+ * maxHeartRate. Derived metrics (elevation, cadence, route preview, records) are not exported:
+ * imported rows get metricsVersion 0 and are recomputed from the track. Older builds read
+ * format 2 too — they ignore unknown keys.
  */
 object WorkoutBackupFormat {
 
-    const val FORMAT_VERSION = 1
+    const val FORMAT_VERSION = 2
 
     data class WorkoutBackupDto(
         val id: Long = 0,
         val dateMillis: Long,
         val distanceKm: Float,
         val durationMs: Long,
+        /** Format 2; absent in format 1 (= durationMs). */
+        val movingDurationMs: Long? = null,
         val avgPace: Float,
         val calories: Int? = null,
         val notes: String? = null,
         val type: String = WorkoutType.EASY_RUN.name,
         val trackData: String? = null,
         val isFavorite: Boolean = false,
-        val intervalSegmentsJson: String? = null
+        val intervalSegmentsJson: String? = null,
+        val excludeFromRecords: Boolean = false,
+        val avgHeartRate: Int? = null,
+        val maxHeartRate: Int? = null
     )
 
     data class WorkoutsBackupFile(
@@ -77,6 +87,7 @@ object WorkoutBackupFormat {
                     addProperty("dateMillis", workout.date.time)
                     addProperty("distanceKm", workout.distance)
                     addProperty("durationMs", workout.duration)
+                    addProperty("movingDurationMs", workout.movingDuration)
                     addProperty("avgPace", workout.avgPace)
                     workout.calories?.let { addProperty("calories", it) }
                     workout.notes?.let { addProperty("notes", it) }
@@ -84,6 +95,9 @@ object WorkoutBackupFormat {
                     workout.trackData?.let { addProperty("trackData", it) }
                     addProperty("isFavorite", workout.isFavorite)
                     workout.intervalSegmentsJson?.let { addProperty("intervalSegmentsJson", it) }
+                    addProperty("excludeFromRecords", workout.excludeFromRecords)
+                    workout.avgHeartRate?.let { addProperty("avgHeartRate", it) }
+                    workout.maxHeartRate?.let { addProperty("maxHeartRate", it) }
                 }
             )
         }
@@ -121,18 +135,23 @@ object WorkoutBackupFormat {
         // id, dateMillis, distanceKm, durationMs, avgPace, calories, notes,
         // type, trackData, isFavorite [, intervalSegmentsJson]
         // → a … j [, k]. Null notes are omitted, so letters after notes still match.
+        // Format 2 keys never had obfuscated aliases.
         return WorkoutBackupDto(
             id = longOr(listOf("id", "a"), 0L),
             dateMillis = longOr(listOf("dateMillis", "b"), System.currentTimeMillis()),
             distanceKm = floatOr(listOf("distanceKm", "c"), 0f),
             durationMs = longOr(listOf("durationMs", "d"), 0L),
+            movingDurationMs = longOrNull(listOf("movingDurationMs")),
             avgPace = floatOr(listOf("avgPace", "e"), 0f),
             calories = intOrNull(listOf("calories", "f")),
             notes = stringOrNull(listOf("notes", "g")),
             type = stringOr(listOf("type", "h"), WorkoutType.EASY_RUN.name),
             trackData = trackDataOrNull(listOf("trackData", "i")),
             isFavorite = booleanOr(listOf("isFavorite", "j"), false),
-            intervalSegmentsJson = stringOrNull(listOf("intervalSegmentsJson", "k"))
+            intervalSegmentsJson = stringOrNull(listOf("intervalSegmentsJson", "k")),
+            excludeFromRecords = booleanOr(listOf("excludeFromRecords"), false),
+            avgHeartRate = intOrNull(listOf("avgHeartRate")),
+            maxHeartRate = intOrNull(listOf("maxHeartRate"))
         )
     }
 
@@ -155,17 +174,19 @@ object WorkoutBackupFormat {
         return null
     }
 
-    private fun JsonObject.longOr(keys: List<String>, default: Long): Long {
-        val el = firstPresent(keys) ?: return default
+    private fun JsonObject.longOr(keys: List<String>, default: Long): Long =
+        longOrNull(keys) ?: default
+
+    private fun JsonObject.longOrNull(keys: List<String>): Long? {
+        val el = firstPresent(keys) ?: return null
         return try {
             when {
                 el.isJsonPrimitive && el.asJsonPrimitive.isNumber -> el.asLong
-                el.isJsonPrimitive && el.asJsonPrimitive.isString ->
-                    el.asString.toLongOrNull() ?: default
-                else -> default
+                el.isJsonPrimitive && el.asJsonPrimitive.isString -> el.asString.toLongOrNull()
+                else -> null
             }
         } catch (_: Exception) {
-            default
+            null
         }
     }
 
@@ -230,19 +251,28 @@ object WorkoutBackupFormat {
     private fun WorkoutBackupDto.toWorkout(): Workout {
         val workoutType = WorkoutType.entries.find { it.name.equals(type, ignoreCase = true) }
             ?: WorkoutType.EASY_RUN
+        val distance = distanceKm.coerceAtLeast(0f)
+        val duration = durationMs.coerceAtLeast(0L)
+        // Format 1 has no moving time; a value out of 0 < m ≤ duration is not trusted
+        val movingDuration = movingDurationMs?.takeIf { it in 1..duration } ?: duration
         return Workout(
             id = 0,
             date = Date(dateMillis),
-            distance = distanceKm.coerceAtLeast(0f),
-            duration = durationMs.coerceAtLeast(0L),
-            movingDuration = durationMs.coerceAtLeast(0L),
-            avgPace = avgPace.coerceAtLeast(0f),
+            distance = distance,
+            duration = duration,
+            movingDuration = movingDuration,
+            // Recomputed like on every other path, not taken from the file
+            avgPace = PaceMath.avgPace(distance, movingDuration),
             calories = calories,
             notes = notes,
             type = workoutType,
             trackData = TrackDataJson.normalizeStored(trackData),
             isFavorite = isFavorite,
-            intervalSegmentsJson = intervalSegmentsJson
+            intervalSegmentsJson = intervalSegmentsJson,
+            excludeFromRecords = excludeFromRecords,
+            avgHeartRate = avgHeartRate,
+            maxHeartRate = maxHeartRate,
+            metricsVersion = 0
         )
     }
 }
