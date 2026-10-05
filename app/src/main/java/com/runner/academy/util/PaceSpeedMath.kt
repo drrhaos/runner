@@ -35,17 +35,6 @@ object PaceSpeedMath {
         }
     }
 
-    /**
-     * Overall average pace: totalDuration / totalDistance (min/km).
-     * Uses totals — NOT avgDuration / avgDistance.
-     */
-    fun overallAveragePace(totalDistanceMeters: Double, totalDurationSeconds: Double): Float {
-        if (totalDistanceMeters <= 0.0 || totalDurationSeconds <= 0.0) return 0f
-        val totalDistanceKm = totalDistanceMeters / 1000.0
-        val totalDurationMinutes = totalDurationSeconds / 60.0
-        return (totalDurationMinutes / totalDistanceKm).toFloat()
-    }
-
     fun averageSpeedKmh(distanceKm: Float, durationMs: Long): Float {
         if (distanceKm <= 0f || durationMs <= 0L) return 0f
         return distanceKm / (durationMs / SpeedPaceUnits.MS_PER_HOUR)
