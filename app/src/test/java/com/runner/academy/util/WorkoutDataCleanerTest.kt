@@ -2,6 +2,7 @@ package com.runner.academy.util
 
 import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.PauseInterval
+import com.runner.academy.data.PauseKind
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutType
@@ -59,7 +60,7 @@ class WorkoutDataCleanerTest {
 
     @Test
     fun `cleaning keeps the track fields`() {
-        val pauses = listOf(PauseInterval(1_010_000L, 1_040_000L, "AUTO"))
+        val pauses = listOf(PauseInterval(1_010_000L, 1_040_000L, PauseKind.AUTO))
         val outlier = points.last().copy(longitude = 37.70)
         val track = TrackData(points.dropLast(1) + outlier, 0f, 0L, 0f, 0f, 0L, null).copy(
             pauses = pauses,
