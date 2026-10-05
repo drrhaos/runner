@@ -11,6 +11,7 @@ import androidx.paging.cachedIn
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.util.PaceMath
 import com.runner.academy.util.SpeedPaceCalculator
 import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.WorkoutDataCleaner
@@ -111,17 +112,6 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         return toInsert.size
     }
 
-    fun updateWorkout(workout: Workout) {
-        viewModelScope.launch {
-            try {
-                repository.updateWorkout(workout)
-                loadStatistics()
-            } catch (e: Exception) {
-                android.util.Log.e("WorkoutViewModel", "Error updating workout: ${e.message}", e)
-            }
-        }
-    }
-
     /**
      * Сохраняет тренировку из формы добавления/редактирования, пересобирая время трека
      * (см. [WorkoutTrackRebuilder]). Suspend, чтобы экран закрывался только после записи в БД.
@@ -138,7 +128,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
         }
         val toSave = workout.copy(trackData = rebuilt.trackDataJson)
         if (original != null) {
-            repository.updateWorkout(toSave)
+            repository.saveEdited(toSave)
         } else {
             repository.insertWorkout(toSave)
         }
@@ -196,25 +186,21 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             try {
                 val totalDistanceKm = repository.getTotalDistance() ?: 0f
                 val totalDurationMs = repository.getTotalDuration() ?: 0L
+                val totalMovingMs = repository.getTotalMovingDuration() ?: 0L
                 _totalDistance.value = totalDistanceKm
                 _totalWorkouts.value = repository.getTotalWorkouts()
                 _averageDuration.value = repository.getAverageDuration() ?: 0L
                 _totalDuration.value = totalDurationMs
+                // Pace over moving time, like each workout's avgPace
                 _averagePace.value = SpeedPaceCalculator.overallAveragePace(
                     totalDistanceMeters = totalDistanceKm.toDouble() * 1000.0,
-                    totalDurationSeconds = totalDurationMs / 1000.0
+                    totalDurationSeconds = totalMovingMs / 1000.0
                 )
                 refreshListItemCount()
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutViewModel", "Error loading statistics: ${e.message}", e)
             }
         }
-    }
-
-    fun calculatePace(distance: Float, durationMs: Long): Float {
-        if (distance <= 0 || durationMs <= 0) return 0f
-        val durationMinutes = durationMs / 60000f
-        return durationMinutes / distance
     }
 
     fun formatDuration(durationMs: Long): String {
@@ -272,18 +258,21 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             }
 
             // Создаем обновленную тренировку с очищенными данными
+            val distanceKm = cleanedTrackData.totalDistance / 1000f // Конвертируем в км
+            val duration = cleanedTrackData.totalDuration
+            // Auto-paused time stays subtracted from the new time
+            val autoPausedMs = workout.duration - workout.movingDuration
+            val movingDuration = (duration - autoPausedMs).coerceIn(0L, duration)
             val cleanedWorkout = workout.copy(
-                distance = cleanedTrackData.totalDistance / 1000f, // Конвертируем в км
-                duration = cleanedTrackData.totalDuration,
-                avgPace = calculatePace(
-                    cleanedTrackData.totalDistance / 1000f,
-                    cleanedTrackData.totalDuration
-                ),
+                distance = distanceKm,
+                duration = duration,
+                movingDuration = movingDuration,
+                avgPace = PaceMath.avgPace(distanceKm, movingDuration),
                 trackData = TrackDataJson.toJson(cleanedTrackData)
             )
 
             // Сохраняем очищенные данные в базу
-            repository.updateWorkout(cleanedWorkout)
+            repository.saveEdited(cleanedWorkout)
 
             android.util.Log.d("WorkoutViewModel", "Workout data cleaned and saved successfully")
             cleanedWorkout
