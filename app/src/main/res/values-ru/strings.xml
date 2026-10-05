@@ -115,7 +115,6 @@
     <string name="edit_workout_keep_editing">Продолжить редактирование</string>
     <string name="edit_workout_route_preview_cd">Превью маршрута</string>
     <string name="edit_workout_route_meta">%1$.1f км · %2$s</string>
-    <string name="edit_workout_route_points">%1$d точек</string>
     <string name="workout_updated">Тренировка обновлена</string>
 
     <string name="settings_title">Настройки</string>
@@ -292,6 +291,7 @@
     <string name="workout_list_message_no_favorites">Пока нет избранных маршрутов</string>
     <string name="workout_list_message_add_favorites">Отметьте тренировку звёздочкой, чтобы сохранить её здесь.</string>
     <string name="workout_list_no_route_preview">Нет трека</string>
+    <string name="workout_list_route_preview_pending_cd">Превью маршрута ещё готовится</string>
     <string name="workout_list_import">Импорт тренировок</string>
     <string name="workout_list_export">Экспорт тренировок</string>
     <string name="workout_list_export_choose_format">Выберите формат экспорта</string>
@@ -392,6 +392,13 @@
         <item quantity="few">%d часа</item>
         <item quantity="many">%d часов</item>
         <item quantity="other">%d часа</item>
+    </plurals>
+
+    <plurals name="edit_workout_route_points_count">
+        <item quantity="one">%d точка</item>
+        <item quantity="few">%d точки</item>
+        <item quantity="many">%d точек</item>
+        <item quantity="other">%d точек</item>
     </plurals>
 
     <plurals name="minutes">

@@ -7,17 +7,16 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.runner.academy.R
-import com.runner.academy.data.TrackData
-import com.runner.academy.data.Workout
+import com.runner.academy.data.WorkoutListItem
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.ItemRoutePickerBinding
-import com.runner.academy.util.TrackDataJson
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+/** Routes to pick from; rows carry only the preview, the picked track is loaded by id. */
 class RoutePickerAdapter(
-    private val onRouteClick: (Workout) -> Unit
-) : PagingDataAdapter<Workout, RoutePickerAdapter.RouteViewHolder>(DiffCallback) {
+    private val onRouteClick: (WorkoutListItem) -> Unit
+) : PagingDataAdapter<WorkoutListItem, RoutePickerAdapter.RouteViewHolder>(DiffCallback) {
 
     private val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
 
@@ -39,7 +38,7 @@ class RoutePickerAdapter(
         private val binding: ItemRoutePickerBinding
     ) : RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(workout: Workout) {
+        fun bind(workout: WorkoutListItem) {
             val context = binding.root.context
             binding.textViewRouteType.text = workout.type.displayName(context)
             binding.textViewRouteMeta.text = context.getString(
@@ -47,14 +46,7 @@ class RoutePickerAdapter(
                 workout.distance,
                 dateFormat.format(workout.date)
             )
-
-            val trackData = parseTrack(workout.trackData)
-            val pointCount = trackData?.points?.size ?: 0
-            binding.textViewRoutePoints.text = context.getString(
-                R.string.edit_workout_route_points,
-                pointCount
-            )
-            binding.routePreview.setTrackData(trackData)
+            bindPreview(RoutePreviewState.of(workout))
 
             binding.imageViewFavorite.visibility =
                 if (workout.isFavorite) View.VISIBLE else View.GONE
@@ -62,15 +54,40 @@ class RoutePickerAdapter(
             binding.root.setOnClickListener { onRouteClick(workout) }
         }
 
-        private fun parseTrack(trackJson: String?): TrackData? =
-            TrackDataJson.parse(trackJson)
+        /**
+         * The points caption stays INVISIBLE (not GONE) without a preview, so the text column
+         * keeps its height and position. Every state sets its own description: rows are reused.
+         */
+        private fun bindPreview(state: RoutePreviewState) {
+            val context = binding.root.context
+            val preview = (state as? RoutePreviewState.Ready)?.preview
+            binding.routePreview.setRuns(preview?.runs.orEmpty())
+            binding.routePreview.contentDescription = context.getString(
+                when (state) {
+                    is RoutePreviewState.Ready -> R.string.edit_workout_route_preview_cd
+                    RoutePreviewState.Pending -> R.string.workout_list_route_preview_pending_cd
+                    RoutePreviewState.NoRoute -> R.string.workout_list_no_route_preview
+                }
+            )
+            if (preview != null) {
+                binding.textViewRoutePoints.text = context.resources.getQuantityString(
+                    R.plurals.edit_workout_route_points_count,
+                    preview.pointCount,
+                    preview.pointCount
+                )
+                binding.textViewRoutePoints.visibility = View.VISIBLE
+            } else {
+                binding.textViewRoutePoints.text = null
+                binding.textViewRoutePoints.visibility = View.INVISIBLE
+            }
+        }
     }
 
-    private object DiffCallback : DiffUtil.ItemCallback<Workout>() {
-        override fun areItemsTheSame(oldItem: Workout, newItem: Workout): Boolean =
+    private object DiffCallback : DiffUtil.ItemCallback<WorkoutListItem>() {
+        override fun areItemsTheSame(oldItem: WorkoutListItem, newItem: WorkoutListItem): Boolean =
             oldItem.id == newItem.id
 
-        override fun areContentsTheSame(oldItem: Workout, newItem: Workout): Boolean =
+        override fun areContentsTheSame(oldItem: WorkoutListItem, newItem: WorkoutListItem): Boolean =
             oldItem == newItem
     }
 }

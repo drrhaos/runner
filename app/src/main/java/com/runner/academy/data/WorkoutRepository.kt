@@ -26,12 +26,17 @@ class WorkoutRepository(
      */
     fun getAllWorkouts(): Flow<List<Workout>> = workoutDao.getAllWorkouts()
 
-    fun pagingSourceAll(): PagingSource<Int, Workout> = workoutDao.pagingSourceAll()
+    fun pagingSourceAll(): PagingSource<Int, WorkoutListItem> = workoutDao.pagingSourceAll()
 
-    fun pagingSourceFavorites(): PagingSource<Int, Workout> = workoutDao.pagingSourceFavorites()
+    fun pagingSourceFavorites(): PagingSource<Int, WorkoutListItem> = workoutDao.pagingSourceFavorites()
 
-    fun pagingSourceRoutes(excludeId: Long): PagingSource<Int, Workout> =
+    fun pagingSourceRoutes(excludeId: Long): PagingSource<Int, WorkoutListItem> =
         workoutDao.pagingSourceRoutes(excludeId)
+
+    /** The track of one workout, read when a route is picked; null without one. */
+    suspend fun getTrackData(id: Long): String? = withContext(Dispatchers.IO) {
+        workoutDao.getTrackData(id)
+    }
 
     suspend fun countRoutes(excludeId: Long): Int = withContext(Dispatchers.IO) {
         workoutDao.countRoutes(excludeId)
