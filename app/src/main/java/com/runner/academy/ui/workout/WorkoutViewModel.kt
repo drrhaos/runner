@@ -12,7 +12,6 @@ import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.PaceMath
-import com.runner.academy.util.SpeedPaceCalculator
 import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.WorkoutDataCleaner
 import com.runner.academy.util.WorkoutTrackRebuilder
@@ -189,13 +188,10 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
                 val totalMovingMs = repository.getTotalMovingDuration() ?: 0L
                 _totalDistance.value = totalDistanceKm
                 _totalWorkouts.value = repository.getTotalWorkouts()
-                _averageDuration.value = repository.getAverageDuration() ?: 0L
+                // Average time and pace are over moving time, like each workout's avgPace
+                _averageDuration.value = repository.getAverageMovingDuration() ?: 0L
                 _totalDuration.value = totalDurationMs
-                // Pace over moving time, like each workout's avgPace
-                _averagePace.value = SpeedPaceCalculator.overallAveragePace(
-                    totalDistanceMeters = totalDistanceKm.toDouble() * 1000.0,
-                    totalDurationSeconds = totalMovingMs / 1000.0
-                )
+                _averagePace.value = PaceMath.avgPace(totalDistanceKm, totalMovingMs)
                 refreshListItemCount()
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutViewModel", "Error loading statistics: ${e.message}", e)

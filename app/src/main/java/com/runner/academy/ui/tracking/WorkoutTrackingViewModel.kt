@@ -338,7 +338,8 @@ class WorkoutTrackingViewModel(
         } else {
             0f
         }
-        // Equal until auto-pause (SessionClock) lands
+        // TODO(r3-session-clock): the live movingDuration comes from SessionClock.movingMs(stop);
+        //  until auto-pause lands it equals the total time
         val movingDurationMs = durationMs
         val avgPace = PaceMath.avgPace(totalDistanceKm, movingDurationMs)
         val maxSpeedMps = if (hasTrack && manualDistanceKm == null) {

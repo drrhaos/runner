@@ -54,14 +54,9 @@ class WorkoutRepository(
         workoutDao.insertWorkouts(workouts)
     }
 
-    /**
-     * Saves an edited workout as a whole row. The only way to rewrite a row: [workout] must be a
-     * copy of the stored one (see [com.runner.academy.ui.workout.WorkoutFormMapper]) so columns
-     * the editor does not know about survive. Single flags have their own point updates.
-     */
+    /** Saves an edited workout as a whole row; see [WorkoutDao.saveEdited]. */
     suspend fun saveEdited(workout: Workout) = withContext(Dispatchers.IO) {
-        require(workout.id != 0L) { "saveEdited needs a stored workout" }
-        workoutDao.updateWorkout(workout)
+        workoutDao.saveEdited(workout)
     }
 
     suspend fun setFavorite(id: Long, isFavorite: Boolean) = withContext(Dispatchers.IO) {
@@ -112,11 +107,9 @@ class WorkoutRepository(
         workoutDao.getFavoriteWorkoutsCount()
     }
 
-    /**
-     * Get the average duration across all workouts.
-     */
-    suspend fun getAverageDuration(): Long? = withContext(Dispatchers.IO) {
-        workoutDao.getAverageDuration()
+    /** The average moving time across all workouts. */
+    suspend fun getAverageMovingDuration(): Long? = withContext(Dispatchers.IO) {
+        workoutDao.getAverageMovingDuration()
     }
 
     suspend fun getTotalDuration(): Long? = withContext(Dispatchers.IO) {

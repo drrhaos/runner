@@ -1,7 +1,7 @@
 package com.runner.academy.ui.statistics
 
 import com.runner.academy.data.WorkoutStatsRow
-import com.runner.academy.util.SpeedPaceCalculator
+import com.runner.academy.util.PaceMath
 import java.util.Calendar
 import java.util.Date
 
@@ -21,10 +21,7 @@ object StatisticsSummary {
         val averageDistance = if (totalWorkouts > 0) totalDistance / totalWorkouts else 0f
         // Average time and pace are over moving time, like each workout's avgPace
         val averageDuration = if (totalWorkouts > 0) totalMovingDuration / totalWorkouts else 0L
-        val averagePace = SpeedPaceCalculator.overallAveragePace(
-            totalDistanceMeters = totalDistance * 1000.0,
-            totalDurationSeconds = totalMovingDuration / 1000.0
-        )
+        val averagePace = PaceMath.avgPace(totalDistance, totalMovingDuration)
 
         // Находим лучшие результаты
         val bestPace = rows

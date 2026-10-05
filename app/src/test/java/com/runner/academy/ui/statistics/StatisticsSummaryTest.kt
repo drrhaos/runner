@@ -2,6 +2,7 @@ package com.runner.academy.ui.statistics
 
 import com.runner.academy.data.WorkoutStatsRow
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.util.PaceMath
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.Date
@@ -40,6 +41,18 @@ class StatisticsSummaryTest {
         assertEquals(3_600_000L, data.longestDuration)
         assertEquals(10f, data.longestDistance, 0f)
         assertEquals(2, data.workoutsThisWeek)
+    }
+
+    @Test
+    fun averagePace_isPaceMathOverTotals_zeroNotNaN() {
+        val rows = listOf(
+            row(distance = 10f, duration = 3_600_000L, moving = 3_000_000L, avgPace = 5f),
+            row(distance = 5f, duration = 3_300_000L, moving = 3_300_000L, avgPace = 11f)
+        )
+        assertEquals(PaceMath.avgPace(15f, 6_300_000L), StatisticsSummary.of(rows, now).averagePace, 0f)
+
+        val broken = listOf(row(distance = Float.NaN, duration = 60_000L, moving = 60_000L, avgPace = 0f))
+        assertEquals(0f, StatisticsSummary.of(broken, now).averagePace, 0f)
     }
 
     @Test

@@ -12,6 +12,12 @@ class PaceMathTest {
     }
 
     @Test
+    fun avgPace_overTotals_isNotTheAverageOfAverages() {
+        // Two workouts: 5 km in 25 min and 5 km in 35 min → overall 6:00 /km
+        assertEquals(6f, PaceMath.avgPace(10f, (25 + 35) * 60_000L), 0.0001f)
+    }
+
+    @Test
     fun avgPace_zeroDistanceOrTime_isZeroNotNaN() {
         assertEquals(0f, PaceMath.avgPace(0f, 60_000L), 0f)
         assertEquals(0f, PaceMath.avgPace(5f, 0L), 0f)
