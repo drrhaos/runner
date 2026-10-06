@@ -10,9 +10,7 @@ import android.os.IBinder
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.runner.academy.util.GpsLocationClient
-import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
-import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutState
@@ -20,18 +18,13 @@ import com.runner.academy.data.WorkoutType
 import com.runner.academy.service.IntervalCursor
 import com.runner.academy.service.WorkoutTrackingService
 import com.runner.academy.util.IntervalSegmentsJson
-import com.runner.academy.util.PaceMath
-import com.runner.academy.util.SpeedPaceCalculator
-import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.StrideModel
-import com.runner.academy.util.TrackSanitizer
 import com.runner.academy.util.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.Date
 
 /**
  * UI mirror of [WorkoutTrackingService]. Does not run GPS or workout timers locally —
@@ -246,11 +239,12 @@ class WorkoutTrackingViewModel(
             }
             application.startService(intent)
             unbindTrackingService()
+            // The moment of Stop: the save path takes duration and moving time from it, however
+            // long the save dialog stays open (no more updates arrive once unbound)
+            _workoutSession.value = LiveWorkoutBuilder.stopped(_workoutSession.value, System.currentTimeMillis())
         } else {
-            _workoutSession.value = _workoutSession.value.copy(
-                isTracking = false,
-                isPaused = false
-            )
+            _workoutSession.value = LiveWorkoutBuilder.stopped(_workoutSession.value, System.currentTimeMillis())
+                .copy(isTracking = false, isPaused = false)
             _workoutState.value = WorkoutState.STOPPED
         }
     }
@@ -308,79 +302,24 @@ class WorkoutTrackingViewModel(
         val session = _workoutSession.value
         if (session.currentTime <= 0) return null
 
-        val sourcePoints = if (session.rawTrackDataPoints.isNotEmpty()) {
-            session.rawTrackDataPoints
-        } else {
-            session.trackDataPoints
-        }
         val userPrefs = (application as? com.runner.academy.RunnerApplication)?.container?.userPreferences
             ?: UserPreferences(application)
         // The run's frozen stride, as the live path used it: the same bridges, the same distance
         val stepDistance = session.strideModelState?.let { StrideModel.frozenEstimatorOf(it, userPrefs.userHeight) }
-        // An open silence or false signal at Stop keeps its step distance as the track's tail
-        val sanitizedPoints = TrackSanitizer.sanitize(sourcePoints, workoutType, stepDistance, session.openStepMeters)
-        val hasTrack = sanitizedPoints.size >= 2
-
-        val totalDistanceMeters = when {
-            manualDistanceKm != null && manualDistanceKm >= 0f -> manualDistanceKm * 1000f
-            hasTrack -> SpeedPaceCalculator.totalDistanceMeters(sanitizedPoints)
-            session.distance > 0f -> session.distance * 1000f
-            else -> 0f
-        }
-        if (totalDistanceMeters <= 0f && session.currentTime <= 0) {
+        // The clock was stopped at Stop (stopWorkout); duration and moving time are its own
+        val workout = LiveWorkoutBuilder.build(
+            session = session,
+            workoutType = workoutType,
+            manualDistanceKm = manualDistanceKm,
+            intervalSegmentsJson = intervalSegmentsJson,
+            stepDistance = stepDistance,
+            userWeightKg = userPrefs.userWeight,
+            stopAt = System.currentTimeMillis()
+        )
+        if (workout == null) {
             android.util.Log.w(TAG, "No distance and no duration to save")
             return null
         }
-        val totalDistanceKm = totalDistanceMeters / 1000f
-        val durationMs = session.currentTime
-        val avgSpeedMps = if (totalDistanceMeters > 0f) {
-            SpeedPaceCalculator.averageSpeedMs(totalDistanceMeters, durationMs)
-        } else {
-            0f
-        }
-        // TODO(r3-session-clock): the live movingDuration comes from SessionClock.movingMs(stop);
-        //  until auto-pause lands it equals the total time
-        val movingDurationMs = durationMs
-        val avgPace = PaceMath.avgPace(totalDistanceKm, movingDurationMs)
-        val maxSpeedMps = if (hasTrack && manualDistanceKm == null) {
-            SpeedPaceCalculator.maxDerivedSpeedMs(sanitizedPoints)
-        } else {
-            0f
-        }
-
-        val calories = com.runner.academy.util.FormatUtils.calculateCalories(
-            totalDistanceKm,
-            userPrefs.userWeight
-        )
-
-        val trackDataJson = if (hasTrack && manualDistanceKm == null && totalDistanceMeters > 0f) {
-            TrackDataJson.toJson(
-                TrackData(
-                    points = sanitizedPoints,
-                    totalDistance = totalDistanceMeters,
-                    totalDuration = durationMs,
-                    avgSpeed = avgSpeedMps,
-                    maxSpeed = maxSpeedMps,
-                    startTime = session.startTime,
-                    endTime = System.currentTimeMillis()
-                )
-            )
-        } else {
-            null
-        }
-
-        val workout = Workout(
-            date = Date(session.startTime),
-            distance = totalDistanceKm,
-            duration = durationMs,
-            movingDuration = movingDurationMs,
-            avgPace = avgPace,
-            calories = calories,
-            notes = null,
-            type = workoutType,
-            trackData = trackDataJson,
-            intervalSegmentsJson = intervalSegmentsJson
-        )
 
         return try {
             val id = com.runner.academy.util.ErrorHandler.retryWithBackoff(
