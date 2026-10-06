@@ -56,6 +56,12 @@ data class TrackPoint(
     val afterPause: Boolean? = null
 )
 
+/**
+ * The altitude of this point, or null when it has none. Exactly 0.0 is "none" too: older
+ * tracks stored a missing altitude as 0.0, and a real ellipsoid height is never exactly zero.
+ */
+fun TrackPoint.knownAltitude(): Double? = altitude?.takeIf { it.isFinite() && it != 0.0 }
+
 data class TrackData(
     @SerializedName("points")
     val points: List<TrackPoint>,

@@ -3,6 +3,7 @@ package com.runner.academy.util
 import android.location.Location
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.data.knownAltitude
 
 /**
  * Save-time pipeline: turns the raw points of a finished session into the track that is
@@ -56,7 +57,8 @@ object TrackSanitizer {
             time = if (point.timestamp > 0) point.timestamp else System.currentTimeMillis()
             accuracy = point.accuracy ?: 50f
             speed = point.speed ?: 0f
-            point.altitude?.let { altitude = it }
+            // No altitude (or the old 0.0 for none): hasAltitude() stays false, the point keeps none
+            point.knownAltitude()?.let { altitude = it }
         }
     }
 }

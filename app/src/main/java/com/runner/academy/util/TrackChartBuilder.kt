@@ -4,6 +4,7 @@ import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutTemplateSegment
+import com.runner.academy.data.knownAltitude
 import kotlin.math.abs
 
 /** Single data point for pace/speed chart series. */
@@ -87,11 +88,24 @@ object TrackChartBuilder {
         return result
     }
 
-    fun buildElevationSeries(points: List<TrackPoint>): List<ElevationPoint> {
-        if (points.isEmpty() || points.all { it.altitude == null }) return emptyList()
+    fun buildElevationSeries(points: List<TrackPoint>): List<ElevationPoint> =
+        buildElevationRuns(points).flatten()
 
-        val result = mutableListOf<ElevationPoint>()
+    /**
+     * The elevation line over distance as runs of points: it breaks at a point without altitude
+     * ([knownAltitude]: null or the old 0.0, never drawn as zero) and at every
+     * [TrackPoint.afterGap] — a gap or a dropped stretch has no altitude, as in [ElevationGain].
+     * The distance still counts a bridge, like the total.
+     */
+    fun buildElevationRuns(points: List<TrackPoint>): List<List<ElevationPoint>> {
+        val runs = mutableListOf<List<ElevationPoint>>()
+        var run = mutableListOf<ElevationPoint>()
         var cumulativeKm = 0f
+
+        fun closeRun() {
+            if (run.isNotEmpty()) runs.add(run)
+            run = mutableListOf()
+        }
 
         for (i in points.indices) {
             if (i > 0) {
@@ -99,10 +113,14 @@ object TrackChartBuilder {
                 cumulativeKm += SpeedPaceUnits.metersToKm(
                     TrackGeometry.stepDistanceMeters(points[i - 1], points[i])
                 )
+                if (points[i].afterGap) closeRun()
             }
-            val altitude = points[i].altitude?.toFloat() ?: continue
-            if (!altitude.isFinite() || !cumulativeKm.isFinite()) continue
-            result.add(
+            val altitude = points[i].knownAltitude()?.toFloat()
+            if (altitude == null || !altitude.isFinite() || !cumulativeKm.isFinite()) {
+                closeRun()
+                continue
+            }
+            run.add(
                 ElevationPoint(
                     distanceKm = cumulativeKm,
                     altitudeMeters = altitude,
@@ -110,7 +128,8 @@ object TrackChartBuilder {
                 )
             )
         }
-        return result
+        closeRun()
+        return runs
     }
 
     /**
