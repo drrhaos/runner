@@ -300,7 +300,8 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Третий ряд: общее время, когда оно отличается от времени в движении -->
+            <!-- Третий ряд: общее время, когда оно отличается от времени в движении
+                 (плитки набора и сброса высоты встанут перед ним) -->
             <LinearLayout
                 android:id="@+id/layout_detail_third_row"
                 android:layout_width="match_parent"
@@ -308,9 +309,11 @@
                 android:orientation="horizontal"
                 android:gravity="end"
                 android:weightSum="3"
+                android:baselineAligned="false"
                 android:layout_marginBottom="16dp"
                 android:visibility="gone"
-                tools:visibility="visible">
+                tools:visibility="visible"
+                tools:ignore="UselessParent">
 
                 <!-- Общее время -->
                 <LinearLayout
@@ -334,7 +337,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/workout_elapsed_time_label"
-                        android:textSize="10sp"
+                        android:textSize="12sp"
                         android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
             </LinearLayout>
