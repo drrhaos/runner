@@ -55,7 +55,21 @@ enum class ElevationSource {
     BAROMETER,
     GPS,
     FILE,
-    NONE
+    NONE;
+
+    companion object {
+        /**
+         * The source of [track]'s altitudes, derived from the track alone (so the column can
+         * always be recomputed): none without a known altitude ([knownAltitude]), else what
+         * the writer declared, else GPS (tracks recorded before the source was stored).
+         */
+        fun of(track: TrackData): ElevationSource {
+            if (track.points.none { it.knownAltitude() != null }) return NONE
+            track.elevationSource?.let { return it }
+            // The barometer branch (≥ 80 % of points with a pressure altitude) goes here
+            return GPS
+        }
+    }
 }
 
 enum class WorkoutType {
