@@ -45,6 +45,22 @@ class TrackPausesTest {
     }
 
     @Test
+    fun `overlapping pauses count their union once`() {
+        // A manual pause on top of an auto-pause, and one touching it
+        val overlapping = listOf(
+            PauseInterval(500L, 800L, PauseKind.AUTO),
+            PauseInterval(600L, 700L, PauseKind.MANUAL),
+            PauseInterval(750L, 900L, PauseKind.MANUAL),
+            PauseInterval(900L, 950L, PauseKind.AUTO)
+        )
+
+        assertEquals(450L, TrackPauses.overlapMs(overlapping, 0L, 1_000L))
+        assertEquals(150L, TrackPauses.overlapMs(overlapping, 650L, 800L))
+        // Order does not matter
+        assertEquals(450L, TrackPauses.overlapMs(overlapping.reversed(), 0L, 1_000L))
+    }
+
+    @Test
     fun `a moment is inside a pause strictly between its ends`() {
         assertTrue(TrackPauses.isInside(pauses, 150L))
         assertTrue(TrackPauses.isInside(pauses, 501L))
