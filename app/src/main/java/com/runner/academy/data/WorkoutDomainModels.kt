@@ -33,7 +33,14 @@ data class WorkoutSession(
      * false signal, [com.runner.academy.service.GpsLocationProcessor.pendingStepMeters]): saved as
      * the track's tail if the run stops before a fix closes it.
      */
-    val openStepMeters: Float = 0f
+    val openStepMeters: Float = 0f,
+    /** [currentTime] minus auto-pauses; the average speed and pace use it. */
+    val movingTime: Long = 0,
+    val autoPaused: Boolean = false,
+    /** Auto-pause has fired at least once in this run, so moving and elapsed time may differ. */
+    val everAutoPaused: Boolean = false,
+    /** The session clock behind [currentTime] and [movingTime]; the save path stops it. */
+    val clock: SessionClockState = SessionClockState()
 )
 
 enum class GpsStatus {

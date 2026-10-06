@@ -69,6 +69,8 @@
 
     <string name="workout_distance_label">Дистанция</string>
     <string name="workout_time_label">Время</string>
+    <string name="workout_moving_time_label">В движении</string>
+    <string name="workout_elapsed_time_label">Общее время</string>
     <string name="workout_pace_label_km">Темп мин/км</string>
     <string name="workout_pace_label_miles">Темп мин/милю</string>
     <string name="workout_summary_good">Хорошая тренировка…</string>
@@ -255,6 +257,7 @@
     <string name="statistics_total_workouts_label">Всего тренировок:</string>
     <string name="statistics_total_distance_label">Общая дистанция:</string>
     <string name="statistics_total_time_label">Общее время:</string>
+    <string name="statistics_total_moving_time_label">Время в движении:</string>
     <string name="statistics_total_calories_label">Всего калорий:</string>
     <string name="statistics_best_results">Лучшие результаты</string>
     <string name="statistics_best_pace">Лучший темп:</string>
