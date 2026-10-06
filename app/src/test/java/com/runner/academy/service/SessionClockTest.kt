@@ -3,6 +3,7 @@ package com.runner.academy.service
 import com.google.gson.Gson
 import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.PauseKind
+import com.runner.academy.data.SessionClockState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

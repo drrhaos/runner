@@ -1,10 +1,10 @@
 package com.runner.academy.ui.workout
 
+import android.view.View
 import com.runner.academy.R
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.MovingTimeDisplay
-import android.view.View
 import java.text.SimpleDateFormat
 import java.util.Locale
 

@@ -1,7 +1,6 @@
 package com.runner.academy.data
 
 import android.location.Location
-import com.runner.academy.service.SessionClockState
 import org.osmdroid.util.GeoPoint
 
 data class WorkoutSession(
