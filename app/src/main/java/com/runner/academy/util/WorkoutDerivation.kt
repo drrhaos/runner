@@ -59,7 +59,7 @@ object WorkoutDerivation {
      * Version of the algorithms below. Raising it makes the background pass recompute every
      * row (a changed algorithm or a new record distance needs no migration).
      */
-    const val CURRENT_METRICS_VERSION = 2 // 2: route preview
+    const val CURRENT_METRICS_VERSION = 3 // 2: route preview, 3: cadence
 
     fun derive(input: DerivationInput): Derived {
         // The track the details screen shows, so derived metrics agree with the map and splits
@@ -75,6 +75,7 @@ object WorkoutDerivation {
      */
     @Suppress("UNUSED_PARAMETER")
     private fun fromTrack(track: TrackData, input: DerivationInput): Derived = Derived(
+        avgCadence = TrackCadence.average(track.points, track.pauses),
         routePreview = RoutePreviews.of(track.points)?.let(RoutePreviewCodec::encode)
     )
 }

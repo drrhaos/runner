@@ -1,5 +1,6 @@
 package com.runner.academy.util
 
+import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutTemplateSegment
@@ -18,6 +19,12 @@ data class ElevationPoint(
     val distanceKm: Float,
     val altitudeMeters: Float,
     val trackPointIndex: Int
+)
+
+/** Single data point for cadence chart series. */
+data class CadencePoint(
+    val timeMinutes: Float,
+    val cadence: Float
 )
 
 /** Statistics for a 1 km / 1 mile (or plan) segment. */
@@ -104,6 +111,45 @@ object TrackChartBuilder {
             )
         }
         return result
+    }
+
+    /**
+     * The cadence line as runs of points: a point without cadence (sensor silence) or strictly
+     * inside a pause is left out, and the line breaks there, over a pause between two fixes
+     * and over a GPS gap (a bridge by steps keeps it). Never zero for a missing value.
+     */
+    fun buildCadenceSeries(points: List<TrackPoint>, pauses: List<PauseInterval>?): List<List<CadencePoint>> {
+        if (points.isEmpty()) return emptyList()
+        val startTime = points.first().timestamp
+        val runs = mutableListOf<List<CadencePoint>>()
+        var run = mutableListOf<CadencePoint>()
+        var last: TrackPoint? = null
+
+        fun closeRun() {
+            if (run.isNotEmpty()) runs.add(run)
+            run = mutableListOf()
+        }
+
+        for (point in points) {
+            val cadence = point.cadence?.takeIf { it.isFinite() }
+            if (cadence == null || TrackPauses.isInside(pauses, point.timestamp)) {
+                closeRun()
+                last = null
+                continue
+            }
+            val prev = last
+            if (prev != null && (
+                    TrackPauses.overlapMs(pauses, prev.timestamp, point.timestamp) > 0L ||
+                        (TrackGeometry.isTrackGapStep(prev, point) && !TrackGeometry.isBridgeStep(point))
+                    )
+            ) {
+                closeRun()
+            }
+            run.add(CadencePoint((point.timestamp - startTime) / SpeedPaceUnits.MS_PER_MINUTE, cadence))
+            last = point
+        }
+        closeRun()
+        return runs
     }
 
     /**

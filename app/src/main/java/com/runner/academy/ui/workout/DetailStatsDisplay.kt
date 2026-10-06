@@ -46,6 +46,28 @@ class DetailStatsDisplay(
         }
     }
 
+    /**
+     * The cadence tile: the stored value, "—" while the background pass has not reached a
+     * track with steps, hidden when there is no cadence (no sensor or permission, an older or
+     * manual workout) — an empty tile would explain nothing.
+     */
+    fun displayCadence(display: CadenceDisplay) {
+        binding.apply {
+            layoutDetailCadence.visibility = if (display == CadenceDisplay.None) View.GONE else View.VISIBLE
+            when (display) {
+                is CadenceDisplay.Value -> {
+                    textViewDetailCadence.text = display.spm.toString()
+                    layoutDetailCadence.contentDescription = CadenceText.averageA11y(context, display.spm)
+                }
+                CadenceDisplay.Pending -> {
+                    textViewDetailCadence.setText(R.string.metric_pending_placeholder)
+                    layoutDetailCadence.contentDescription = context.getString(R.string.workout_details_cadence_pending_a11y)
+                }
+                CadenceDisplay.None -> Unit
+            }
+        }
+    }
+
     private fun getWorkoutTypeDisplayName(type: WorkoutType): String {
         return when (type) {
             WorkoutType.EASY_RUN -> context.getString(R.string.workout_type_easy_run)

@@ -35,6 +35,8 @@ class WorkoutDetailFragment : Fragment() {
 
     private var currentWorkout: com.runner.academy.data.Workout? = null
     private var currentTrackData: TrackData? = null
+    /** The shown track has steps: a missing cadence is then "not computed yet", not "none". */
+    private var currentTrackHasSteps = false
     private var boundTrackRenderKey: Pair<com.runner.academy.data.WorkoutType, String>? = null
     private var userPreferences: com.runner.academy.util.UserPreferences? = null
     private var isDeleting = false
@@ -67,6 +69,12 @@ class WorkoutDetailFragment : Fragment() {
             segmentsChart = binding.chartSegments,
             textViewPaceSpeedValues = binding.textViewChartPaceSpeedHeartValues,
             textViewElevationValues = binding.textViewChartElevationValues,
+            cadence = CadenceChartViews(
+                card = binding.cardChartCadence,
+                chart = binding.chartCadence,
+                values = binding.textViewChartCadenceValues,
+                average = binding.textViewChartCadenceAvg
+            ),
             context = requireContext(),
             userPreferences = userPreferences,
             onPositionSelected = { point -> mapManager?.showPositionOnMap(point) },
@@ -191,6 +199,7 @@ class WorkoutDetailFragment : Fragment() {
                     _binding?.buttonShareDiagnostics?.visibility =
                         if (hasDiagnostics) View.VISIBLE else View.GONE
                     statsDisplay?.displayWorkout(workout)
+                    showCadence(workout)
                     chartRenderer?.intervalPlanSegments =
                         com.runner.academy.util.IntervalSegmentsJson.parse(workout.intervalSegmentsJson)
 
@@ -202,6 +211,8 @@ class WorkoutDetailFragment : Fragment() {
                         boundTrackRenderKey = renderKey
                         if (workout.trackData == null) {
                             currentTrackData = null
+                            currentTrackHasSteps = false
+                            showCadence(workout)
                             _binding?.progressBarMapLoading?.visibility = View.GONE
                         } else {
                             displayTrackOnMap(workout)
@@ -252,8 +263,13 @@ class WorkoutDetailFragment : Fragment() {
                     }
                     else -> {
                         currentTrackData = cleanedTrackData
+                        currentTrackHasSteps = withContext(Dispatchers.Default) {
+                            cleanedTrackData.points.any { it.steps != null }
+                        }
+                        if (_binding == null || !isAdded || isDetached) return@launch
                         mapManager?.displayTrack(cleanedTrackData)
                         chartRenderer?.updateAllCharts(cleanedTrackData)
+                        currentWorkout?.let { showCadence(it) }
                     }
                 }
             } catch (e: OutOfMemoryError) {
@@ -274,6 +290,13 @@ class WorkoutDetailFragment : Fragment() {
         }
     }
 
+    /** The tile and the chart title from the same stored cadence (see [CadenceDisplay]). */
+    private fun showCadence(workout: com.runner.academy.data.Workout) {
+        val display = CadenceDisplay.of(workout.avgCadence, workout.metricsVersion, currentTrackHasSteps)
+        statsDisplay?.displayCadence(display)
+        chartRenderer?.cadenceDisplay = display
+    }
+
     override fun onResume() {
         super.onResume()
         mapManager?.onResume()
@@ -290,6 +313,7 @@ class WorkoutDetailFragment : Fragment() {
         // Fragment stays in the back stack (e.g. while editing): the new view must redraw from scratch.
         boundTrackRenderKey = null
         currentTrackData = null
+        currentTrackHasSteps = false
         chartRenderer = null
         exportManager = null
         statsDisplay = null

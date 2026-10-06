@@ -16,10 +16,12 @@ import com.runner.academy.appContainer
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.FragmentStatisticsBinding
+import com.runner.academy.ui.workout.CadenceText
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.MovingTimeDisplay
 import com.runner.academy.util.ShareExports
 import com.google.android.material.color.MaterialColors
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -79,6 +81,7 @@ class StatisticsFragment : Fragment() {
                     longestDuration = data.longestDuration,
                     workoutsByType = data.workoutsByType,
                     distanceByType = data.distanceByType,
+                    averageCadence = data.averageCadence,
                     context = requireContext()
                 )
                 
@@ -160,6 +163,13 @@ class StatisticsFragment : Fragment() {
         }
         binding.textViewAverageDistance.text = String.format("%.2f %s", data.averageDistance, getString(R.string.unit_km))
         binding.textViewAverageDuration.text = FormatUtils.formatTime(data.averageDuration)
+        // Only over workouts with steps; hidden when none has them
+        val cadence = data.averageCadence?.roundToInt()
+        binding.layoutAverageCadence.visibility = if (cadence != null) View.VISIBLE else View.GONE
+        if (cadence != null) {
+            binding.textViewAverageCadence.text = getString(R.string.statistics_cadence_format, cadence)
+            binding.textViewAverageCadence.contentDescription = CadenceText.stepsPerMinute(requireContext(), cadence)
+        }
 
         // Активность
         binding.textViewWorkoutsThisWeek.text = data.workoutsThisWeek.toString()
