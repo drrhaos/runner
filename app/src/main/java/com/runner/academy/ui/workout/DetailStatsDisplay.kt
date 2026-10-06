@@ -7,7 +7,6 @@ import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.MovingTimeDisplay
 import java.text.SimpleDateFormat
 import java.util.Locale
-import kotlin.math.roundToInt
 
 /**
  * Handles statistics display for workout detail screen.
@@ -44,16 +43,27 @@ class DetailStatsDisplay(
             textViewDetailAvgSpeed.text = com.runner.academy.util.FormatUtils.formatSpeed(avgSpeed, true, context)
 
             textViewDetailCalories.text = com.runner.academy.util.FormatUtils.formatCalories(workout.calories ?: 0, context)
+        }
+    }
 
-            // No steps (no sensor or permission, an older or manual workout): no tile, not "—"
-            val cadence = workout.avgCadence?.takeIf { it.isFinite() }?.roundToInt()
-            layoutDetailCadence.visibility = if (cadence != null) View.VISIBLE else View.GONE
-            if (cadence != null) {
-                textViewDetailCadence.text = String.format(Locale.getDefault(), "%d", cadence)
-                layoutDetailCadence.contentDescription = context.getString(
-                    R.string.workout_details_cadence_a11y,
-                    context.resources.getQuantityString(R.plurals.cadence_steps_per_minute, cadence, cadence)
-                )
+    /**
+     * The cadence tile: the stored value, "—" while the background pass has not reached a
+     * track with steps, hidden when there is no cadence (no sensor or permission, an older or
+     * manual workout) — an empty tile would explain nothing.
+     */
+    fun displayCadence(display: CadenceDisplay) {
+        binding.apply {
+            layoutDetailCadence.visibility = if (display == CadenceDisplay.None) View.GONE else View.VISIBLE
+            when (display) {
+                is CadenceDisplay.Value -> {
+                    textViewDetailCadence.text = display.spm.toString()
+                    layoutDetailCadence.contentDescription = CadenceText.averageA11y(context, display.spm)
+                }
+                CadenceDisplay.Pending -> {
+                    textViewDetailCadence.setText(R.string.metric_pending_placeholder)
+                    layoutDetailCadence.contentDescription = context.getString(R.string.workout_details_cadence_pending_a11y)
+                }
+                CadenceDisplay.None -> Unit
             }
         }
     }

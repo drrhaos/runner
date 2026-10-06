@@ -474,6 +474,8 @@
     <string name="workout_details_cadence">Cadence spm</string>
     <string name="workout_details_cadence_title">Cadence</string>
     <string name="workout_details_cadence_a11y">Average cadence %1$s</string>
+    <string name="workout_details_cadence_pending_a11y">Cadence is still being calculated</string>
+    <string name="metric_pending_placeholder" translatable="false">—</string>
     <string name="chart_cadence_label">Cadence (spm)</string>
     <string name="chart_cadence_value">Cadence: %1$d spm</string>
     <string name="chart_cadence_avg_format">avg %1$d spm</string>
