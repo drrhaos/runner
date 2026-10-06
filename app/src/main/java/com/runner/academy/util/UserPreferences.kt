@@ -2,6 +2,7 @@ package com.runner.academy.util
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 /**
  * Управление настройками пользователя
@@ -159,7 +160,7 @@ class UserPreferences(context: Context) {
      */
     var autoPause: Boolean
         get() = prefs.getBoolean(KEY_AUTO_PAUSE, DEFAULT_AUTO_PAUSE)
-        set(value) = prefs.edit().putBoolean(KEY_AUTO_PAUSE, value).apply()
+        set(value) = prefs.edit { putBoolean(KEY_AUTO_PAUSE, value) }
 
     /** Разрешение ACTIVITY_RECOGNITION уже запрашивалось — повторно автоматически не спрашиваем. */
     var stepPermissionAsked: Boolean
