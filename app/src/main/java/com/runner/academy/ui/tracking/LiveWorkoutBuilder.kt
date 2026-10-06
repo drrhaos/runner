@@ -75,7 +75,8 @@ object LiveWorkoutBuilder {
         }
         val totalDistanceKm = totalDistanceMeters / 1000f
         val avgSpeedMps = if (totalDistanceMeters > 0f) {
-            SpeedPaceCalculator.averageSpeedMs(totalDistanceMeters, durationMs)
+            // Over moving time, like the pace and the live average speed
+            SpeedPaceCalculator.averageSpeedMs(totalDistanceMeters, movingDurationMs)
         } else {
             0f
         }

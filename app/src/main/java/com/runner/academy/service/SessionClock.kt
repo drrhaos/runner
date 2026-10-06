@@ -2,31 +2,8 @@ package com.runner.academy.service
 
 import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.PauseKind
-
-/**
- * Persisted state of a [SessionClock] (checkpoint, live session). Wall-clock ms; every field has
- * a default so Gson builds it through the no-arg constructor and an older or partial JSON reads.
- */
-data class SessionClockState(
-    /** Start of the session; 0 before [SessionClock.start]. */
-    val startedAt: Long = 0L,
-    /** The moment of Stop; null while the session runs. */
-    val stoppedAt: Long? = null,
-    /** Start of the open manual pause, if any. */
-    val manualPausedAt: Long? = null,
-    /** Start of the open auto-pause, if any. */
-    val autoPausedAt: Long? = null,
-    /**
-     * Last [SessionClock.resumeManual] / [SessionClock.exitAutoPause]: an auto-pause never starts
-     * before it.
-     */
-    val resumedAt: Long? = null,
-    /** Closed pauses, in order. */
-    val pauses: List<PauseInterval> = emptyList(),
-    /** Manual pause time of a checkpoint written before the clock existed (no intervals known). */
-    val legacyManualPauseMs: Long = 0L,
-    val everAutoPaused: Boolean = false
-)
+import com.runner.academy.data.SessionClockState
+import com.runner.academy.util.TrackPauses
 
 /**
  * The single owner of a session's time.
@@ -106,8 +83,7 @@ class SessionClock(state: SessionClockState = SessionClockState()) {
     /** Closed pauses in order; after [stop] that is every pause of the session. */
     fun pauses(): List<PauseInterval> = state.pauses
 
-    private fun sumOf(kind: PauseKind): Long =
-        state.pauses.filter { it.kind == kind }.sumOf { (it.end - it.start).coerceAtLeast(0L) }
+    private fun sumOf(kind: PauseKind): Long = TrackPauses.totalMs(state.pauses, kind)
 
     private fun closeAuto(from: SessionClockState, at: Long): SessionClockState {
         val pausedAt = from.autoPausedAt ?: return from
