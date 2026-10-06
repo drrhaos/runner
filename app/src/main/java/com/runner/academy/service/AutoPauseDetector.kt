@@ -43,7 +43,7 @@ sealed class AutoPauseEvent {
  *    from the first of them.
  *
  * Without steps (GPS only):
- *  - pause: usable fixes slower than [AutoPauseConfig.slowSpeedMps] for
+ *  - pause: usable fixes slower than [AutoPauseConfig.slowSpeedMps] spanning
  *    [AutoPauseConfig.gpsStillMs], from the first of them;
  *  - resume: usable fixes faster than [AutoPauseConfig.gpsResumeSpeedMps] for
  *    [AutoPauseConfig.gpsResumeMs], from the first of them;
@@ -63,8 +63,9 @@ class AutoPauseDetector(private val cfg: AutoPauseConfig = AutoPauseConfig(), pa
     private var lastFixEvidence = false
     /** Last usable fix at or over the slow speed: the runner moved then. */
     private var movingUntil: Long? = null
-    /** First usable slow fix after [movingUntil]. */
+    /** First usable slow fix after [movingUntil], and the last one of that streak. */
     private var slowSince: Long? = null
+    private var slowUntil: Long? = null
     /** First usable fast fix (over the GPS resume speed) of the current streak, and its last. */
     private var fastSince: Long? = null
     private var fastUntil: Long? = null
@@ -82,6 +83,7 @@ class AutoPauseDetector(private val cfg: AutoPauseConfig = AutoPauseConfig(), pa
         lastFixEvidence = false
         movingUntil = null
         slowSince = null
+        slowUntil = null
         fastSince = null
         fastUntil = null
         lastSteps = null
@@ -95,9 +97,11 @@ class AutoPauseDetector(private val cfg: AutoPauseConfig = AutoPauseConfig(), pa
         if (!lastFixEvidence || speedMps == null) return
         if (speedMps < cfg.slowSpeedMps) {
             if (slowSince == null) slowSince = atMono
+            slowUntil = atMono
         } else {
             movingUntil = atMono
             slowSince = null
+            slowUntil = null
         }
         if (speedMps > cfg.gpsResumeSpeedMps) {
             if (fastSince == null) fastSince = atMono
@@ -109,7 +113,10 @@ class AutoPauseDetector(private val cfg: AutoPauseConfig = AutoPauseConfig(), pa
     }
 
     fun tick(nowMono: Long, steps: Int?, gpsLost: Boolean): AutoPauseEvent? {
-        if (gpsLost) slowSince = null
+        if (gpsLost) {
+            slowSince = null
+            slowUntil = null
+        }
         if (steps != null) recordSteps(nowMono, steps) else forgetSteps()
 
         val event = when {
@@ -117,7 +124,7 @@ class AutoPauseDetector(private val cfg: AutoPauseConfig = AutoPauseConfig(), pa
             paused -> if (gpsLost) AutoPauseEvent.Resume(nowMono) else resumeByGps()
             steps != null -> pauseBySteps(nowMono)
             gpsLost -> null
-            else -> pauseByGps(nowMono)
+            else -> pauseByGps()
         }
         when (event) {
             is AutoPauseEvent.Pause -> {
@@ -179,9 +186,15 @@ class AutoPauseDetector(private val cfg: AutoPauseConfig = AutoPauseConfig(), pa
         return AutoPauseEvent.Resume(firstStep.first)
     }
 
-    private fun pauseByGps(now: Long): AutoPauseEvent? {
+    /**
+     * The slow fixes themselves must span [AutoPauseConfig.gpsStillMs]: one slow fix followed
+     * by silence is no evidence of standing. A lost GPS breaks the streak, so standing with
+     * fixes rarer than the lost timeout never enters (no "Auto-pause → Resuming" swing).
+     */
+    private fun pauseByGps(): AutoPauseEvent? {
         val since = slowSince ?: return null
-        return if (now - since >= cfg.gpsStillMs) AutoPauseEvent.Pause(since) else null
+        val until = slowUntil ?: return null
+        return if (until - since >= cfg.gpsStillMs) AutoPauseEvent.Pause(since) else null
     }
 
     private fun resumeByGps(): AutoPauseEvent? {

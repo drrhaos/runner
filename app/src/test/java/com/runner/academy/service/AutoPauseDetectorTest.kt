@@ -155,6 +155,17 @@ class AutoPauseDetectorTest {
     }
 
     @Test
+    fun `without steps the slow fixes themselves must cover 10 s`() {
+        events(0..60) { second(it, null, speed = 3f) }
+
+        // One slow fix, then nothing (not LOST yet): no evidence of 10 s of standing
+        assertNull(second(61, null, speed = 0.2f))
+        assertTrue(events(62..75) { second(it, null) }.isEmpty())
+        // The next slow fix 10 s after the first one completes the evidence
+        assertEquals(Pause(at(60.5)), second(76, null, speed = 0.2f))
+    }
+
+    @Test
     fun `without steps a 1,2 m per s walk never pauses`() {
         assertTrue(events(0..120) { second(it, null, speed = 1.2f) }.isEmpty())
     }
