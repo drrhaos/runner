@@ -391,7 +391,7 @@
     <string name="notification_interrupted_title">Workout interrupted</string>
     <string name="notification_interrupted_text">Open the app to continue</string>
 
-    <string name="csv_header">Date,Time,Workout type,Distance (km),Duration (min),Pace (min/km),Calories,Notes\n</string>
+    <string name="csv_header">Date,Time,Workout type,Distance (km),Duration (min),Pace (min/km),Calories,Moving time (min),Elevation gain (m),Elevation loss (m),Cadence (spm),Notes\n</string>
     <string name="csv_statistics_header">Workout statistics\n\nCategory,Value\n</string>
     <string name="csv_total_workouts">Total workouts</string>
     <string name="csv_total_distance">Total distance (km)</string>
@@ -400,6 +400,7 @@
     <string name="csv_average_pace">Average pace (min/km)</string>
     <string name="csv_average_distance">Average distance (km)</string>
     <string name="csv_average_time">Average time (minutes)</string>
+    <string name="csv_average_cadence">Average cadence (spm)</string>
     <string name="csv_best_pace">Best pace (min/km)</string>
     <string name="csv_max_distance">Maximum distance (km)</string>
     <string name="csv_longest_time">Longest workout (minutes)</string>
