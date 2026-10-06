@@ -3,6 +3,8 @@ package com.runner.academy.util
 import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.PauseKind
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TrackPausesTest {
@@ -40,6 +42,16 @@ class TrackPausesTest {
         // Reversed or empty span
         assertEquals(0L, TrackPauses.overlapMs(pauses, 800L, 500L))
         assertEquals(0L, TrackPauses.overlapMs(pauses, 600L, 600L))
+    }
+
+    @Test
+    fun `a moment is inside a pause strictly between its ends`() {
+        assertTrue(TrackPauses.isInside(pauses, 150L))
+        assertTrue(TrackPauses.isInside(pauses, 501L))
+        assertFalse(TrackPauses.isInside(pauses, 100L))
+        assertFalse(TrackPauses.isInside(pauses, 800L))
+        assertFalse(TrackPauses.isInside(pauses, 300L))
+        assertFalse(TrackPauses.isInside(null, 150L))
     }
 
     @Test
