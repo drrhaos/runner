@@ -97,6 +97,53 @@ class TrackCadenceTest {
     }
 
     @Test
+    fun `steps counted inside an auto-pause do not raise the average`() {
+        // Marching on the spot at a light: the step counter keeps going during the auto-pause
+        val atStand = 300 * 170 / 60
+        val points = fixes(0, 298, stepsAt = at170(0)) +
+            fixes(300, 358, stepsAt = { sec -> atStand + (sec - 300) * 3 }) +
+            fixes(360, 660, stepsAt = at170(360, atStand + 180))
+        val pauses = listOf(PauseInterval(at(300), at(360), PauseKind.AUTO))
+
+        assertCadence(170f, TrackCadence.average(points, pauses))
+    }
+
+    @Test
+    fun `a pair half inside a pause counts the steps of its moving half`() {
+        // 0..120 s at 170, then one 20 s pair whose second half is paused (its steps at 170 too)
+        val points = fixes(0, 120, stepsAt = at170(0)) + point(140, 120 * 170 / 60 + 20 * 170 / 60)
+        val pauses = listOf(PauseInterval(at(130), at(200), PauseKind.AUTO))
+
+        assertCadence(170f, TrackCadence.average(points, pauses))
+    }
+
+    @Test
+    fun `a pair into a manual pause keeps all its steps, the counter was off`() {
+        // Pause pressed 10 s into a 40 s pair: the step tracker drops the rest, 10 s of steps
+        val points = fixes(0, 120, stepsAt = at170(0)) + point(160, 120 * 170 / 60 + 10 * 170 / 60)
+        val pauses = listOf(PauseInterval(at(130), at(160), PauseKind.MANUAL))
+
+        assertCadence(170f, TrackCadence.average(points, pauses))
+    }
+
+    @Test
+    fun `steps that never grow give no cadence, not zero`() {
+        // The sensor is there but silent for the whole run
+        assertNull(TrackCadence.average(fixes(0, 600) { 25 }, null))
+    }
+
+    @Test
+    fun `overlapping pauses are not subtracted twice`() {
+        // 100 s of track, a manual pause on top of an auto-pause: 30 s paused (70 s moving), not 50
+        val pauses = listOf(
+            PauseInterval(at(10), at(40), PauseKind.AUTO),
+            PauseInterval(at(20), at(40), PauseKind.MANUAL)
+        )
+
+        assertCadence(170f, TrackCadence.average(fixes(0, 100, stepsAt = at170(0)), pauses), tolerance = 3f)
+    }
+
+    @Test
     fun `steps before the first fix are not counted`() {
         // The sensor counted 400 steps before the first fix: they have no time
         assertCadence(170f, TrackCadence.average(fixes(0, 300, stepsAt = at170(0, base = 400)), null))
