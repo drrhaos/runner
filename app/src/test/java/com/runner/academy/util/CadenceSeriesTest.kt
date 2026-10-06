@@ -9,6 +9,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import kotlin.math.roundToInt
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -21,8 +22,9 @@ class CadenceSeriesTest {
     private fun point(sec: Int, cadence: Float?, afterGap: Boolean = false) =
         TrackPoint(55.75, 37.60 + sec * 0.000045, at(sec), 5f, 3f, null, afterGap = afterGap, cadence = cadence)
 
+    /** The runs of the line as seconds from the start. */
     private fun runs(points: List<TrackPoint>, pauses: List<PauseInterval>? = null) =
-        TrackChartBuilder.buildCadenceSeries(points, pauses).map { run -> run.map { it.trackPointIndex } }
+        TrackChartBuilder.buildCadenceSeries(points, pauses).map { run -> run.map { (it.timeMinutes * 60f).roundToInt() } }
 
     @Test
     fun `a track with cadence is one line in minutes from the start`() {
@@ -30,8 +32,7 @@ class CadenceSeriesTest {
 
         val series = TrackChartBuilder.buildCadenceSeries(points, null)
 
-        assertEquals(1, series.size)
-        assertEquals((0..6).toList(), series.single().map { it.trackPointIndex })
+        assertEquals(listOf((0..60 step 10).toList()), runs(points))
         assertEquals(1f, series.single()[6].timeMinutes, 0.001f)
         assertEquals(230f, series.single()[6].cadence, 0.001f)
     }
@@ -46,7 +47,7 @@ class CadenceSeriesTest {
     fun `sensor silence breaks the line instead of drawing zero`() {
         val points = listOf(point(0, 170f), point(10, 172f), point(20, null), point(30, 168f), point(40, 170f))
 
-        assertEquals(listOf(listOf(0, 1), listOf(3, 4)), runs(points))
+        assertEquals(listOf(listOf(0, 10), listOf(30, 40)), runs(points))
     }
 
     @Test
@@ -55,7 +56,7 @@ class CadenceSeriesTest {
         val points = listOf(0, 10, 20, 30, 40, 50, 60).map { point(it, if (it in 21..49) 0f else 170f) }
         val pauses = listOf(PauseInterval(at(20), at(50), PauseKind.AUTO))
 
-        assertEquals(listOf(listOf(0, 1, 2), listOf(5, 6)), runs(points, pauses))
+        assertEquals(listOf(listOf(0, 10, 20), listOf(50, 60)), runs(points, pauses))
     }
 
     @Test
@@ -63,20 +64,20 @@ class CadenceSeriesTest {
         val points = listOf(point(0, 170f), point(10, 170f), point(70, 170f), point(80, 170f))
         val pauses = listOf(PauseInterval(at(15), at(65), PauseKind.MANUAL))
 
-        assertEquals(listOf(listOf(0, 1), listOf(2, 3)), runs(points, pauses))
+        assertEquals(listOf(listOf(0, 10), listOf(70, 80)), runs(points, pauses))
     }
 
     @Test
     fun `standing without an auto-pause stays on the line`() {
         val points = listOf(point(0, 170f), point(10, 0f), point(20, 0f), point(30, 170f))
 
-        assertEquals(listOf(listOf(0, 1, 2, 3)), runs(points))
+        assertEquals(listOf(listOf(0, 10, 20, 30)), runs(points))
     }
 
     @Test
     fun `a GPS gap breaks the line`() {
         val points = listOf(point(0, 170f), point(10, 170f), point(80, 170f, afterGap = true), point(90, 170f))
 
-        assertEquals(listOf(listOf(0, 1), listOf(2, 3)), runs(points))
+        assertEquals(listOf(listOf(0, 10), listOf(80, 90)), runs(points))
     }
 }

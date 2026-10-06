@@ -75,7 +75,12 @@ object StatisticsSummary {
         )
     }
 
-    /** Weighted by moving time, only over workouts with cadence (the rest are not zeros). */
+    /**
+     * Only over workouts with cadence (the rest are no data, not zeros), each weighted by its
+     * moving time. Approximate: a workout's cadence is over its moving time *with steps* (the
+     * stretches without steps are left out of it), which the stats rows do not carry, so a
+     * workout that lost its steps half-way weighs more than its share of steps.
+     */
     private fun averageCadence(rows: List<WorkoutStatsRow>): Float? {
         val withCadence = rows.filter { it.avgCadence?.isFinite() == true && it.movingDuration > 0L }
         val totalMs = withCadence.sumOf { it.movingDuration }

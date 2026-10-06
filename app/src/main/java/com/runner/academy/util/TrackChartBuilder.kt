@@ -24,8 +24,7 @@ data class ElevationPoint(
 /** Single data point for cadence chart series. */
 data class CadencePoint(
     val timeMinutes: Float,
-    val cadence: Float,
-    val trackPointIndex: Int
+    val cadence: Float
 )
 
 /** Statistics for a 1 km / 1 mile (or plan) segment. */
@@ -131,7 +130,7 @@ object TrackChartBuilder {
             run = mutableListOf()
         }
 
-        for ((i, point) in points.withIndex()) {
+        for (point in points) {
             val cadence = point.cadence?.takeIf { it.isFinite() }
             if (cadence == null || TrackPauses.isInside(pauses, point.timestamp)) {
                 closeRun()
@@ -146,7 +145,7 @@ object TrackChartBuilder {
             ) {
                 closeRun()
             }
-            run.add(CadencePoint((point.timestamp - startTime) / SpeedPaceUnits.MS_PER_MINUTE, cadence, i))
+            run.add(CadencePoint((point.timestamp - startTime) / SpeedPaceUnits.MS_PER_MINUTE, cadence))
             last = point
         }
         closeRun()
