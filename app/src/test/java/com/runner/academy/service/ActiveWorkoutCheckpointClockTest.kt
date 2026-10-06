@@ -100,6 +100,27 @@ class ActiveWorkoutCheckpointClockTest {
     }
 
     @Test
+    fun `a backdated auto-pause rolls the moving time back in the same snapshot as the flag`() {
+        val manager = WorkoutSessionManager()
+        manager.startNewSession(now = t0)
+        manager.tickElapsedTime(now = at(70))
+        val seen = mutableListOf<com.runner.academy.data.WorkoutSession>()
+        manager.onSessionChanged = { seen += it }
+
+        manager.enterAutoPause(at = at(60), now = at(70))
+
+        val paused = seen.single()
+        assertTrue(paused.autoPaused)
+        assertEquals(60_000L, paused.movingTime)
+        assertEquals(70_000L, paused.currentTime)
+
+        manager.exitAutoPause(at = at(100), now = at(102))
+        assertFalse(manager.getSession().autoPaused)
+        assertEquals(62_000L, manager.getSession().movingTime)
+        assertEquals(102_000L, manager.getSession().currentTime)
+    }
+
+    @Test
     fun `stop freezes the session time at the stop`() {
         val manager = WorkoutSessionManager()
         manager.startNewSession(now = t0)

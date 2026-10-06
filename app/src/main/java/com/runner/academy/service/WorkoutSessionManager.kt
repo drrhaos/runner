@@ -106,16 +106,20 @@ class WorkoutSessionManager {
         notifyChanged()
     }
 
-    /** Auto-pause from the detector; [at] may be backdated (see [SessionClock.enterAutoPause]). */
-    fun enterAutoPause(at: Long) {
+    /**
+     * Auto-pause from the detector; [at] may be backdated (see [SessionClock.enterAutoPause]).
+     * The times are refreshed at [now] in the same snapshot as the flag, so the screen rolls the
+     * timer back in the frame the chip appears.
+     */
+    fun enterAutoPause(at: Long, now: Long = System.currentTimeMillis()) {
         clock.enterAutoPause(at)
-        session = session.withClock()
+        session = session.withTimesAt(now).withClock()
         notifyChanged()
     }
 
-    fun exitAutoPause(at: Long) {
+    fun exitAutoPause(at: Long, now: Long = System.currentTimeMillis()) {
         clock.exitAutoPause(at)
-        session = session.withClock()
+        session = session.withTimesAt(now).withClock()
         notifyChanged()
     }
 
@@ -141,10 +145,7 @@ class WorkoutSessionManager {
      * used so the 1 Hz timer does not fan out voice/checkpoint/notification work.
      */
     fun tickElapsedTime(broadcast: Boolean = true, now: Long = System.currentTimeMillis()) {
-        session = session.copy(
-            currentTime = clock.elapsedMs(now),
-            movingTime = clock.movingMs(now)
-        ).withClock()
+        session = session.withTimesAt(now).withClock()
         if (broadcast) notifyChanged()
     }
 
@@ -284,6 +285,12 @@ class WorkoutSessionManager {
     // ------------------------------------------------------------------
     // Internal helpers
     // ------------------------------------------------------------------
+
+    /** Elapsed and moving time at [now]. */
+    private fun WorkoutSession.withTimesAt(now: Long): WorkoutSession {
+        val owner = this@WorkoutSessionManager.clock
+        return copy(currentTime = owner.elapsedMs(now), movingTime = owner.movingMs(now))
+    }
 
     /** Mirrors the clock's state into the session (the clock is the owner of the time). */
     private fun WorkoutSession.withClock(): WorkoutSession {

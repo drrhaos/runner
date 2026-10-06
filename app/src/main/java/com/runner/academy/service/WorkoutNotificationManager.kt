@@ -87,12 +87,18 @@ class WorkoutNotificationManager(private val service: Service) {
      * Build a notification with the current workout statistics.
      */
     fun buildNotification(session: WorkoutSession): Notification {
-        val timeText = FormatUtils.formatTime(session.currentTime)
+        // The big timer's time: moving (equal to the elapsed time without auto-pause)
+        val timeText = FormatUtils.formatTime(session.movingTime)
         val distanceText = String.format("%.2f %s", session.distance, service.getString(R.string.unit_km))
+        val format = when {
+            session.isPaused -> R.string.notification_workout_paused_format
+            session.autoPaused -> R.string.notification_workout_auto_paused_format
+            else -> R.string.notification_workout_format
+        }
 
         return NotificationCompat.Builder(service, WorkoutTrackingService.CHANNEL_ID)
             .setContentTitle(service.getString(R.string.app_name))
-            .setContentText(service.getString(R.string.notification_workout_format, timeText, distanceText))
+            .setContentText(service.getString(format, timeText, distanceText))
             .setSmallIcon(R.drawable.ic_menu_run)
             .setContentIntent(openTrackingIntent())
             .setOngoing(true)
