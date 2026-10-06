@@ -284,7 +284,7 @@
                         android:gravity="center_vertical"
                         android:maxLines="1"
                         android:ellipsize="end"
-                        android:textSize="12sp"
+                        android:textSize="@dimen/timer_state_chip_text"
                         android:visibility="gone"
                         tools:text="@string/track_info_state_auto_paused" />
                 </FrameLayout>
@@ -516,7 +516,7 @@
                         android:gravity="center_vertical"
                         android:maxLines="1"
                         android:ellipsize="end"
-                        android:textSize="12sp"
+                        android:textSize="@dimen/timer_state_chip_text"
                         android:visibility="gone"
                         tools:text="@string/track_info_state_auto_paused" />
                 </FrameLayout>
