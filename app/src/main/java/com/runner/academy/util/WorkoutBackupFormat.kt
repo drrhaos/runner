@@ -4,6 +4,7 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.runner.academy.data.PauseKind
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
 import java.util.Date
@@ -253,8 +254,10 @@ object WorkoutBackupFormat {
             ?: WorkoutType.EASY_RUN
         val distance = distanceKm.coerceAtLeast(0f)
         val duration = durationMs.coerceAtLeast(0L)
-        // Format 1 has no moving time; a value out of 0 < m ≤ duration is not trusted
-        val movingDuration = movingDurationMs?.takeIf { it in 1..duration } ?: duration
+        // Format 1 has no moving time; a value out of 0 < m ≤ duration is not trusted: then the
+        // track's auto-pauses tell it (none known → duration)
+        val movingDuration = movingDurationMs?.takeIf { it in 1..duration }
+            ?: movingFromPauses(duration, trackData)
         return Workout(
             id = 0,
             date = Date(dateMillis),
@@ -274,5 +277,12 @@ object WorkoutBackupFormat {
             maxHeartRate = maxHeartRate,
             metricsVersion = 0
         )
+    }
+
+    /** duration − Σ auto-pauses of the track, if that stays in 0 < m ≤ duration; else duration. */
+    private fun movingFromPauses(duration: Long, trackJson: String?): Long {
+        val pauses = trackJson?.takeIf { it.contains("pauses") }?.let { TrackDataJson.parse(it)?.pauses }
+        val moving = duration - TrackPauses.totalMs(pauses, PauseKind.AUTO)
+        return moving.takeIf { it in 1..duration } ?: duration
     }
 }
