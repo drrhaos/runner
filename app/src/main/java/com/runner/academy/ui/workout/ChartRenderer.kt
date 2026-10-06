@@ -7,14 +7,27 @@ import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.localizedTitle
 import com.runner.academy.util.SpeedPaceCalculator
+import com.runner.academy.util.TrackCadence
+import com.runner.academy.util.TrackChartBuilder
+import androidx.core.content.ContextCompat
 import com.github.mikephil.charting.charts.BarChart
 import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.components.LimitLine
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.components.YAxis
 import com.github.mikephil.charting.data.*
 import com.github.mikephil.charting.formatter.ValueFormatter
 import com.github.mikephil.charting.highlight.Highlight
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener
+import kotlin.math.roundToInt
+
+/** The cadence card: hidden as a whole, its chart, the tap values and the average in the title. */
+class CadenceChartViews(
+    val card: android.view.View,
+    val chart: LineChart,
+    val values: android.widget.TextView,
+    val average: android.widget.TextView
+)
 
 /**
  * Handles all chart configuration and rendering for workout detail screen.
@@ -26,6 +39,7 @@ class ChartRenderer(
     private val segmentsChart: BarChart,
     private val textViewPaceSpeedValues: android.widget.TextView,
     private val textViewElevationValues: android.widget.TextView,
+    private val cadence: CadenceChartViews,
     private val context: android.content.Context,
     private val userPreferences: com.runner.academy.util.UserPreferences?,
     private val onPositionSelected: (TrackPoint) -> Unit,
@@ -49,11 +63,13 @@ class ChartRenderer(
         if (trackData.points.isEmpty()) return
         try {
             updatePaceSpeedHeartChart(trackData)
+            updateCadenceChart(trackData)
             updateElevationChart(trackData)
             updateSegmentsChart(trackData)
         } catch (e: Throwable) {
             android.util.Log.e("ChartRenderer", "Failed to update charts", e)
             paceSpeedHeartChart.visibility = android.view.View.GONE
+            cadence.card.visibility = android.view.View.GONE
             elevationChart.visibility = android.view.View.GONE
             segmentsChart.visibility = android.view.View.GONE
         }
@@ -201,6 +217,101 @@ class ChartRenderer(
 
             override fun onNothingSelected() {
                 textViewPaceSpeedValues.visibility = android.view.View.GONE
+                onNothingSelected()
+            }
+        })
+
+        chart.invalidate()
+    }
+
+    /**
+     * One line, broken where there is no cadence (sensor silence, pauses), with the dashed
+     * average of moving time — the same [TrackCadence.average] as the stored avgCadence.
+     * No cadence in the points (or too little for an average): the card is hidden.
+     */
+    private fun updateCadenceChart(trackData: TrackData) {
+        val chart = cadence.chart
+        val points = trackData.points
+        val runs = TrackChartBuilder.buildCadenceSeries(points, trackData.pauses)
+        val average = TrackCadence.average(points, trackData.pauses)?.takeIf { it.isFinite() }
+        if (runs.isEmpty() || average == null) {
+            cadence.card.visibility = android.view.View.GONE
+            return
+        }
+
+        cadence.card.visibility = android.view.View.VISIBLE
+        chart.description.isEnabled = false
+        chart.setTouchEnabled(true)
+        chart.setDragEnabled(true)
+        chart.setScaleEnabled(true)
+        chart.setPinchZoom(true)
+        chart.legend.isEnabled = false
+
+        // Theme-aware resources: the series hue and the label/separator of the palette
+        val seriesColor = ContextCompat.getColor(context, R.color.chart_series_cadence)
+        val axisTextColor = ContextCompat.getColor(context, R.color.ios_label)
+        val gridColor = ContextCompat.getColor(context, R.color.ios_separator)
+        val label = context.getString(R.string.chart_cadence_label)
+
+        // One data set per run: MPAndroidChart joins every entry of a set
+        val dataSets = runs.map { run ->
+            LineDataSet(run.map { Entry(it.timeMinutes, it.cadence) }, label).apply {
+                color = seriesColor
+                lineWidth = 2f
+                // A lone point between breaks would draw nothing without its circle
+                setDrawCircles(run.size == 1)
+                setCircleColor(seriesColor)
+                circleRadius = 2f
+                setDrawCircleHole(false)
+                setDrawValues(false)
+            }
+        }
+        chart.data = LineData(dataSets)
+
+        configureXAxis(chart, axisTextColor, gridColor) { value ->
+            context.getString(R.string.chart_time_format, value.toInt())
+        }
+        val leftAxis = chart.axisLeft
+        leftAxis.setDrawGridLines(true)
+        leftAxis.gridColor = gridColor
+        leftAxis.textColor = axisTextColor
+        leftAxis.axisLineColor = axisTextColor
+        leftAxis.removeAllLimitLines()
+        val averageSpm = average.roundToInt()
+        leftAxis.addLimitLine(
+            LimitLine(average, context.getString(R.string.chart_cadence_limit_label, averageSpm)).apply {
+                lineColor = seriesColor
+                lineWidth = 1f
+                enableDashedLine(10f, 10f, 0f)
+                textColor = axisTextColor
+                textSize = 10f
+                labelPosition = LimitLine.LimitLabelPosition.RIGHT_TOP
+            }
+        )
+        leftAxis.setDrawLimitLinesBehindData(true)
+        chart.axisRight.isEnabled = false
+        chart.setDrawMarkers(false)
+
+        cadence.average.text = context.getString(R.string.chart_cadence_avg_format, averageSpm)
+        val values = runs.flatten().map { it.cadence.roundToInt() }
+        chart.contentDescription = context.getString(
+            R.string.chart_cadence_a11y, averageSpm, values.min(), values.max()
+        )
+
+        chart.setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
+            override fun onValueSelected(e: Entry?, h: Highlight?) {
+                if (e == null) return
+                cadence.values.text = context.getString(R.string.chart_time_format, e.x.toInt()) + "\n" +
+                    context.getString(R.string.chart_cadence_value, e.y.roundToInt())
+                cadence.values.visibility = android.view.View.VISIBLE
+                val pointIndex = SpeedPaceCalculator.findNearestPointIndexByTime(points, e.x)
+                if (pointIndex >= 0 && pointIndex < points.size) {
+                    onPositionSelected(points[pointIndex])
+                }
+            }
+
+            override fun onNothingSelected() {
+                cadence.values.visibility = android.view.View.GONE
                 onNothingSelected()
             }
         })

@@ -468,6 +468,25 @@
         <item quantity="other">%d километра в час</item>
     </plurals>
 
+    <plurals name="cadence_steps_per_minute">
+        <item quantity="one">%d шаг в минуту</item>
+        <item quantity="few">%d шага в минуту</item>
+        <item quantity="many">%d шагов в минуту</item>
+        <item quantity="other">%d шага в минуту</item>
+    </plurals>
+
+    <!-- Каденс -->
+    <string name="workout_details_cadence">Каденс шаг/мин</string>
+    <string name="workout_details_cadence_title">Каденс</string>
+    <string name="workout_details_cadence_a11y">Средний каденс %1$s</string>
+    <string name="chart_cadence_label">Каденс (шаг/мин)</string>
+    <string name="chart_cadence_value">Каденс: %1$d шаг/мин</string>
+    <string name="chart_cadence_avg_format">ср. %1$d шаг/мин</string>
+    <string name="chart_cadence_limit_label">ср. %1$d</string>
+    <string name="chart_cadence_a11y">График каденса: в среднем %1$d, от %2$d до %3$d шагов в минуту</string>
+    <string name="statistics_average_cadence_label">Средний каденс:</string>
+    <string name="statistics_cadence_format">%1$d шаг/мин</string>
+
     <!-- Планы тренировок -->
     <string name="menu_plans">Планы тренировок</string>
     <string name="menu_my_plan">Мой план</string>
