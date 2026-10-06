@@ -596,16 +596,9 @@ class WorkoutTrackingService : Service() {
             stepDistance = runStride?.estimator
         )
 
-        val restoredSession = checkpoint.toSession().copy(strideModelState = runStride?.state).let { session ->
-            // Recompute elapsed wall time after gap so the clock doesn't freeze at kill time
-            if (session.isTracking && !session.isPaused && session.startTime > 0L) {
-                val elapsed = (System.currentTimeMillis() - session.startTime - session.totalPauseDuration)
-                    .coerceAtLeast(session.currentTime)
-                session.copy(currentTime = elapsed)
-            } else {
-                session
-            }
-        }
+        // Elapsed recomputed after the gap so the clock doesn't freeze at kill time
+        val restoredSession = checkpoint.toRestoredSession(System.currentTimeMillis())
+            .copy(strideModelState = runStride?.state)
         sessionManager.restoreSession(restoredSession, checkpoint.lastUpdateTime)
         sessionManager.setOpenStepMeters(gpsProcessor.pendingStepMeters)
         rebuildIntervalEngineFromMetadata()

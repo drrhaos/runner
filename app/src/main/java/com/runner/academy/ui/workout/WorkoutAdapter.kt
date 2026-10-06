@@ -75,7 +75,8 @@ class WorkoutAdapter(
                     workout.distance,
                     context.getString(R.string.unit_km)
                 )
-                textViewDuration.text = FormatUtils.formatTime(workout.duration)
+                // Moving time: distance / time = pace adds up on the card
+                textViewDuration.text = FormatUtils.formatTime(workout.movingDuration)
                 textViewPace.text = formatPace(workout.avgPace)
                 updateFavoriteButton(workout)
                 bindRoutePreview(workout)

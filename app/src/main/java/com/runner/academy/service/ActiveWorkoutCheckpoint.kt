@@ -4,6 +4,7 @@ import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.runner.academy.data.GpsStatus
+import com.runner.academy.data.SessionClockState
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutType
@@ -55,8 +56,22 @@ data class ActiveWorkoutCheckpoint(
     /** Step distance of an open false-signal episode, already in [distance]. */
     val pendingStepMeters: Float = 0f,
     /** See [WorkoutSession.strideModelState]. */
-    val strideModelState: String? = null
+    val strideModelState: String? = null,
+    /** The session clock; null in checkpoints written before it (see [clockState]). */
+    val clock: SessionClockState? = null,
+    /** See [WorkoutSession.movingTime]; null in older checkpoints (= [currentTime]). */
+    val movingTime: Long? = null
 ) {
+    /**
+     * The clock to continue from. An older checkpoint knows only the summed manual pause time:
+     * elapsed stays now − start − [totalPauseDuration], as before; an open pause continues.
+     */
+    fun clockState(): SessionClockState = clock?.takeIf { it.startedAt > 0L } ?: SessionClockState(
+        startedAt = startTime,
+        manualPausedAt = pauseTime.takeIf { isPaused && it > 0L },
+        legacyManualPauseMs = totalPauseDuration
+    )
+
     fun intervalCursor(): IntervalCursor? {
         if (intervalSegmentsJson.isNullOrBlank()) return null
         return IntervalCursor(
@@ -99,7 +114,27 @@ data class ActiveWorkoutCheckpoint(
             trackDataPoints = trackDataPoints,
             rawTrackDataPoints = rawTrackDataPoints,
             currentLocation = location,
-            strideModelState = strideModelState
+            strideModelState = strideModelState,
+            movingTime = movingTime ?: currentTime,
+            clock = clockState()
+        ).let { session ->
+            val restoredClock = SessionClock(session.clock)
+            session.copy(autoPaused = restoredClock.autoPaused, everAutoPaused = restoredClock.everAutoPaused)
+        }
+    }
+
+    /**
+     * The session to continue at [now] after process death: a running clock goes on so the time
+     * does not freeze at the kill (the downtime counts, an open auto-pause stays open); a paused
+     * session keeps its time.
+     */
+    fun toRestoredSession(now: Long): WorkoutSession {
+        val session = toSession()
+        if (!session.isTracking || session.isPaused || session.startTime <= 0L) return session
+        val clock = SessionClock(session.clock)
+        return session.copy(
+            currentTime = clock.elapsedMs(now).coerceAtLeast(session.currentTime),
+            movingTime = clock.movingMs(now).coerceAtLeast(session.movingTime)
         )
     }
 
@@ -146,7 +181,9 @@ data class ActiveWorkoutCheckpoint(
             savedAt = System.currentTimeMillis(),
             steps = steps,
             pendingStepMeters = pendingStepMeters,
-            strideModelState = session.strideModelState
+            strideModelState = session.strideModelState,
+            clock = session.clock,
+            movingTime = session.movingTime
         )
     }
 }

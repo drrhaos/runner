@@ -1,8 +1,10 @@
 package com.runner.academy.ui.workout
 
+import android.view.View
 import com.runner.academy.R
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.util.MovingTimeDisplay
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -26,10 +28,18 @@ class DetailStatsDisplay(
             textViewDetailType.text = getWorkoutTypeDisplayName(workout.type)
 
             textViewDetailDistance.text = com.runner.academy.util.FormatUtils.formatDistance(workout.distance, context)
-            textViewDetailDuration.text = viewModel.formatDuration(workout.duration)
+            // The time next to the pace is the moving one; the elapsed time gets its own tile
+            // only when it differs (otherwise one "Time", as before)
+            textViewDetailDuration.text = viewModel.formatDuration(workout.movingDuration)
             textViewDetailPace.text = viewModel.formatPace(workout.avgPace, context)
+            val showsElapsed = MovingTimeDisplay.detailShowsElapsed(workout.duration, workout.movingDuration)
+            textViewDetailDurationLabel.setText(
+                if (showsElapsed) R.string.workout_moving_time_label else R.string.workout_time_label
+            )
+            layoutDetailThirdRow.visibility = if (showsElapsed) View.VISIBLE else View.GONE
+            textViewDetailElapsed.text = viewModel.formatDuration(workout.duration)
 
-            val avgSpeed = com.runner.academy.util.FormatUtils.calculateAverageSpeed(workout.distance, workout.duration)
+            val avgSpeed = com.runner.academy.util.FormatUtils.calculateAverageSpeed(workout.distance, workout.movingDuration)
             textViewDetailAvgSpeed.text = com.runner.academy.util.FormatUtils.formatSpeed(avgSpeed, true, context)
 
             textViewDetailCalories.text = com.runner.academy.util.FormatUtils.formatCalories(workout.calories ?: 0, context)

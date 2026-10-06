@@ -114,6 +114,31 @@
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
 
+                <!-- Время в движении: только когда сумма отличается от общего времени -->
+                <LinearLayout
+                    android:id="@+id/layoutTotalMovingDuration"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/statistics_total_moving_time_label"
+                        style="@style/RunnerStatisticsLabel" />
+
+                    <TextView
+                        android:id="@+id/textViewTotalMovingDuration"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        tools:text="@string/statistics_time_placeholder"
+                        style="@style/RunnerStatisticsValue" />
+                </LinearLayout>
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
