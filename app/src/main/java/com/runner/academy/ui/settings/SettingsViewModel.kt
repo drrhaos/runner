@@ -27,6 +27,7 @@ data class SettingsState(
     /** Steps really in use: enabled and permission granted (or not needed). */
     val stepsForDistance: Boolean = false,
     val hasStepSensor: Boolean = true,
+    val autoPause: Boolean = false,
     val themeMode: String = ThemeUtils.THEME_SYSTEM,
     val appLanguage: String = "en",
     val isFirstLaunch: Boolean = true,
@@ -58,6 +59,7 @@ class SettingsViewModel(
                 gpsDiagnostics = userPreferences.gpsDiagnostics,
                 stepsForDistance = StepTrackingAccess.isStepTrackingAllowed(context),
                 hasStepSensor = StepTrackingAccess.hasStepSensor(context),
+                autoPause = userPreferences.autoPause,
                 themeMode = userPreferences.themeMode,
                 appLanguage = userPreferences.appLanguage,
                 isFirstLaunch = userPreferences.isFirstLaunch,
@@ -126,6 +128,12 @@ class SettingsViewModel(
     fun updateVoiceFeedback(voiceFeedback: Boolean) {
         userPreferences.voiceFeedback = voiceFeedback
         _settingsState.value = _settingsState.value.copy(voiceFeedback = voiceFeedback)
+    }
+
+    /** No step permission is asked for: without steps auto-pause works by GPS alone. */
+    fun updateAutoPause(enabled: Boolean) {
+        userPreferences.autoPause = enabled
+        _settingsState.value = _settingsState.value.copy(autoPause = enabled)
     }
 
     fun updateThemeMode(themeMode: String) {
