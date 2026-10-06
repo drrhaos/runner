@@ -23,6 +23,7 @@ import com.google.android.material.color.MaterialColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 class StatisticsFragment : Fragment() {
 
@@ -160,6 +161,12 @@ class StatisticsFragment : Fragment() {
         }
         binding.textViewAverageDistance.text = String.format("%.2f %s", data.averageDistance, getString(R.string.unit_km))
         binding.textViewAverageDuration.text = FormatUtils.formatTime(data.averageDuration)
+        // Only over workouts with steps; hidden when none has them
+        val cadence = data.averageCadence?.roundToInt()
+        binding.layoutAverageCadence.visibility = if (cadence != null) View.VISIBLE else View.GONE
+        if (cadence != null) {
+            binding.textViewAverageCadence.text = getString(R.string.statistics_cadence_format, cadence)
+        }
 
         // Активность
         binding.textViewWorkoutsThisWeek.text = data.workoutsThisWeek.toString()

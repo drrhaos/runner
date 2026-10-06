@@ -349,6 +349,31 @@
                         android:text="@string/statistics_time_placeholder"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
+
+                <!-- Средний каденс: только по тренировкам с шагами, иначе скрыт -->
+                <LinearLayout
+                    android:id="@+id/layoutAverageCadence"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/statistics_average_cadence_label"
+                        style="@style/RunnerStatisticsLabel" />
+
+                    <TextView
+                        android:id="@+id/textViewAverageCadence"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        tools:text="168 шаг/мин"
+                        style="@style/RunnerStatisticsValue" />
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

@@ -4,6 +4,7 @@ import com.runner.academy.data.WorkoutStatsRow
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.PaceMath
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 import java.util.Date
 
@@ -53,6 +54,27 @@ class StatisticsSummaryTest {
 
         val broken = listOf(row(distance = Float.NaN, duration = 60_000L, moving = 60_000L, avgPace = 0f))
         assertEquals(0f, StatisticsSummary.of(broken, now).averagePace, 0f)
+    }
+
+    @Test
+    fun averageCadence_isWeightedByMovingTime_overWorkoutsWithCadence() {
+        val rows = listOf(
+            // 30 min at 180, 10 min at 160: (180·30 + 160·10) / 40 = 175
+            row(distance = 6f, duration = 1_900_000L, moving = 1_800_000L, avgPace = 5f).copy(avgCadence = 180f),
+            row(distance = 2f, duration = 600_000L, moving = 600_000L, avgPace = 5f).copy(avgCadence = 160f),
+            // No steps: left out, not counted as zero
+            row(distance = 10f, duration = 3_600_000L, moving = 3_600_000L, avgPace = 6f)
+        )
+
+        assertEquals(175f, StatisticsSummary.of(rows, now).averageCadence!!, 0.001f)
+    }
+
+    @Test
+    fun averageCadence_isNullWithoutWorkoutsWithCadence() {
+        val rows = listOf(row(distance = 10f, duration = 3_600_000L, moving = 3_600_000L, avgPace = 6f))
+
+        assertNull(StatisticsSummary.of(rows, now).averageCadence)
+        assertNull(StatisticsSummary.of(emptyList(), now).averageCadence)
     }
 
     @Test
