@@ -17,6 +17,7 @@ import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.FragmentStatisticsBinding
 import com.runner.academy.util.FormatUtils
+import com.runner.academy.util.MovingTimeDisplay
 import com.runner.academy.util.ShareExports
 import com.google.android.material.color.MaterialColors
 import kotlinx.coroutines.Dispatchers
@@ -136,6 +137,10 @@ class StatisticsFragment : Fragment() {
         binding.textViewTotalWorkouts.text = data.totalWorkouts.toString()
         binding.textViewTotalDistance.text = String.format("%.2f %s", data.totalDistance, getString(R.string.unit_km))
         binding.textViewTotalDuration.text = FormatUtils.formatTime(data.totalDuration)
+        // Hidden when equal to the total (no auto-pauses in the selection): no duplicate row
+        binding.layoutTotalMovingDuration.visibility =
+            if (MovingTimeDisplay.statisticsShowsMoving(data.totalDuration, data.totalMovingDuration)) View.VISIBLE else View.GONE
+        binding.textViewTotalMovingDuration.text = FormatUtils.formatTime(data.totalMovingDuration)
         binding.textViewTotalCalories.text = String.format("%s %s", data.totalCalories, getString(R.string.workout_details_calories))
 
         // Лучшие результаты

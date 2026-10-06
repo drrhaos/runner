@@ -79,6 +79,8 @@
 
     <string name="workout_distance_label">Distance</string>
     <string name="workout_time_label">Time</string>
+    <string name="workout_moving_time_label">Moving time</string>
+    <string name="workout_elapsed_time_label">Elapsed time</string>
     <string name="workout_pace_label_km">Pace min/km</string>
     <string name="workout_pace_label_miles">Pace min/mi</string>
     <string name="workout_summary_good">Good workout…</string>
@@ -268,6 +270,7 @@
     <string name="statistics_count_zero" translatable="false">0</string>
     <string name="statistics_total_distance_label">Total distance:</string>
     <string name="statistics_total_time_label">Total time:</string>
+    <string name="statistics_total_moving_time_label">Moving time:</string>
     <string name="statistics_total_calories_label">Total calories:</string>
     <string name="statistics_best_results">Best results</string>
     <string name="statistics_best_pace">Best pace:</string>
