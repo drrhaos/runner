@@ -112,7 +112,9 @@ class StepTracker(
         }
         accumulator.start(clockNanos(), initialSteps)
         val registered = try {
-            manager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL)
+            // No batching asked for: auto-pause resumes on the first steps. The 3-argument
+            // overload already means a latency of 0; stated explicitly so it stays that way.
+            manager.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_NORMAL, MAX_REPORT_LATENCY_US)
         } catch (e: SecurityException) {
             Log.w(TAG, "Step sensor refused: ${e.message}")
             false
@@ -167,5 +169,6 @@ class StepTracker(
 
     private companion object {
         const val TAG = "StepTracker"
+        const val MAX_REPORT_LATENCY_US = 0
     }
 }

@@ -42,6 +42,7 @@
     <string name="btn_stop_description">Stop</string>
     <string name="btn_start_description">Start</string>
     <string name="btn_pause_description">Pause</string>
+    <string name="btn_resume_description">Resume</string>
     <string name="btn_my_location_description">My location</string>
     <string name="stop_hold_hint_initial">To stop, hold for 3 sec.</string>
     <string name="stop_hold_hint">To stop, hold for %1$d sec.</string>
@@ -71,6 +72,8 @@
     <string name="save_without_distance">Save without distance</string>
     <string name="voice_gps_lost">GPS signal lost</string>
     <string name="voice_gps_recovered">GPS signal recovered</string>
+    <string name="voice_auto_pause">Auto-pause</string>
+    <string name="voice_auto_resume">Resuming</string>
     <string name="voice_gps_unreliable">GPS signal unreliable</string>
     <string name="kilometers_per_hour_float">%.1f km/h</string>
     <string name="miles_per_hour_float">%.1f mi/h</string>
@@ -153,6 +156,10 @@
     <string name="settings_label_steps_for_distance">Steps for distance when GPS is lost</string>
     <string name="settings_hint_steps_for_distance">Counts steps and cadence with the phone\'s step sensor to keep measuring distance in tunnels and dense streets. Needs the Physical activity permission.</string>
     <string name="settings_hint_steps_no_sensor">This device has no step sensor.</string>
+    <string name="settings_label_auto_pause">Auto-pause</string>
+    <string name="settings_hint_auto_pause">Stops the clock while you stand still — at a traffic light or a water stop. Pace uses moving time. Not used in interval workouts.</string>
+    <string name="settings_hint_auto_pause_gps_only">Without step access it relies on GPS alone and reacts a few seconds later.</string>
+    <string name="settings_hint_auto_pause_no_sensor">This device has no step sensor, so it relies on GPS alone and reacts a few seconds later.</string>
     <string name="settings_btn_reset">Reset settings</string>
     <string name="settings_weight_saved">Weight saved</string>
     <string name="settings_height_saved">Height saved</string>
@@ -190,6 +197,12 @@
     <string name="settings_language_changed">Language changed</string>
 
     <string name="track_info_time_label">Time (h:min:s)</string>
+    <string name="track_info_state_paused">Paused</string>
+    <string name="track_info_state_auto_paused">Auto-paused</string>
+    <string name="track_info_state_auto_paused_a11y">Auto-paused: the clock is stopped and resumes when you start running</string>
+    <string name="track_info_state_running_a11y">Clock running</string>
+    <string name="track_info_elapsed_time_format">Elapsed %1$s</string>
+    <string name="track_info_auto_pause_unavailable">Auto-pause is off in interval workouts</string>
     <string name="track_info_distance_label_km">Distance (km)</string>
     <string name="track_info_distance_label_miles">Distance (miles)</string>
     <string name="track_info_average_speed_label_km">Average speed (km/h)</string>
@@ -371,6 +384,8 @@
     <string name="notification_channel_name">Workout tracking</string>
     <string name="notification_channel_description">Active workout notifications</string>
     <string name="notification_workout_format">%1$s • %2$s</string>
+    <string name="notification_workout_paused_format">Paused • %1$s • %2$s</string>
+    <string name="notification_workout_auto_paused_format">Auto-paused • %1$s • %2$s</string>
     <string name="notification_interrupted_channel_name">Workout alerts</string>
     <string name="notification_interrupted_channel_description">Alerts when workout tracking stops unexpectedly</string>
     <string name="notification_interrupted_title">Workout interrupted</string>
