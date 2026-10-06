@@ -208,6 +208,7 @@
                         android:textColor="?attr/colorPrimary" />
 
                     <TextView
+                        android:id="@+id/textView_detail_duration_label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/workout_time_label"
@@ -294,6 +295,45 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/workout_details_calories"
+                        android:textSize="10sp"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Третий ряд: общее время, когда оно отличается от времени в движении -->
+            <LinearLayout
+                android:id="@+id/layout_detail_third_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="end"
+                android:weightSum="3"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <!-- Общее время -->
+                <LinearLayout
+                    android:id="@+id/layout_detail_elapsed"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <TextView
+                        android:id="@+id/textView_detail_elapsed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        tools:text="28:40"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorPrimary" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/workout_elapsed_time_label"
                         android:textSize="10sp"
                         android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
