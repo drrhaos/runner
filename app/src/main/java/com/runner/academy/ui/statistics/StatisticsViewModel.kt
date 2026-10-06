@@ -18,6 +18,8 @@ data class StatisticsData(
     val averagePace: Float = 0f,
     val averageDistance: Float = 0f,
     val averageDuration: Long = 0L,
+    /** Steps/min weighted by moving time over the workouts with cadence; null: none has it. */
+    val averageCadence: Float? = null,
     val totalCalories: Int = 0,
     val bestPace: Float = 0f,
     val longestDistance: Float = 0f,

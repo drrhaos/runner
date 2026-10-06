@@ -22,6 +22,7 @@ object StatisticsSummary {
         // Average time and pace are over moving time, like each workout's avgPace
         val averageDuration = if (totalWorkouts > 0) totalMovingDuration / totalWorkouts else 0L
         val averagePace = PaceMath.avgPace(totalDistance, totalMovingDuration)
+        val averageCadence = averageCadence(rows)
 
         // Находим лучшие результаты
         val bestPace = rows
@@ -60,6 +61,7 @@ object StatisticsSummary {
             averagePace = averagePace,
             averageDistance = averageDistance,
             averageDuration = averageDuration,
+            averageCadence = averageCadence,
             totalCalories = totalCalories,
             bestPace = bestPace,
             longestDistance = longestDistance,
@@ -71,6 +73,15 @@ object StatisticsSummary {
             weeklyData = weeklyData,
             monthlyData = monthlyData
         )
+    }
+
+    /** Weighted by moving time, only over workouts with cadence (the rest are not zeros). */
+    private fun averageCadence(rows: List<WorkoutStatsRow>): Float? {
+        val withCadence = rows.filter { it.avgCadence?.isFinite() == true && it.movingDuration > 0L }
+        val totalMs = withCadence.sumOf { it.movingDuration }
+        if (totalMs <= 0L) return null
+        val weighted = withCadence.sumOf { it.avgCadence!!.toDouble() * it.movingDuration }
+        return (weighted / totalMs).toFloat()
     }
 
     private fun generateWeeklyData(workouts: List<WorkoutStatsRow>, now: Date): List<WeeklyData> {
