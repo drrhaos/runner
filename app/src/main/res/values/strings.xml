@@ -478,7 +478,7 @@
     <string name="chart_cadence_value">Cadence: %1$d spm</string>
     <string name="chart_cadence_avg_format">avg %1$d spm</string>
     <string name="chart_cadence_limit_label">avg %1$d</string>
-    <string name="chart_cadence_a11y">Cadence chart: average %1$d, from %2$d to %3$d steps per minute</string>
+    <string name="chart_cadence_a11y">Cadence chart, steps per minute: average %1$d, from %2$d to %3$d</string>
     <string name="statistics_average_cadence_label">Average cadence:</string>
     <string name="statistics_cadence_format">%1$d spm</string>
 
