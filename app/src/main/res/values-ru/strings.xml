@@ -483,7 +483,7 @@
     <string name="chart_cadence_value">Каденс: %1$d шаг/мин</string>
     <string name="chart_cadence_avg_format">ср. %1$d шаг/мин</string>
     <string name="chart_cadence_limit_label">ср. %1$d</string>
-    <string name="chart_cadence_a11y">График каденса: в среднем %1$d, от %2$d до %3$d шагов в минуту</string>
+    <string name="chart_cadence_a11y">График каденса, шагов в минуту: в среднем %1$d, от %2$d до %3$d</string>
     <string name="statistics_average_cadence_label">Средний каденс:</string>
     <string name="statistics_cadence_format">%1$d шаг/мин</string>
 
