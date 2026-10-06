@@ -377,7 +377,7 @@
     <string name="notification_interrupted_title">Тренировка прервана</string>
     <string name="notification_interrupted_text">Откройте приложение, чтобы продолжить</string>
 
-    <string name="csv_header">Дата,Время,Тип тренировки,Дистанция (км),Длительность (мин),Темп (мин/км),Калории,Заметки\n</string>
+    <string name="csv_header">Дата,Время,Тип тренировки,Дистанция (км),Длительность (мин),Темп (мин/км),Калории,В движении (мин),Набор (м),Сброс (м),Каденс (шаг/мин),Заметки\n</string>
     <string name="csv_statistics_header">Статистика тренировок\n\nКатегория,Значение\n</string>
     <string name="csv_total_workouts">Всего тренировок</string>
     <string name="csv_total_distance">Общая дистанция (км)</string>
@@ -386,6 +386,7 @@
     <string name="csv_average_pace">Средний темп (мин/км)</string>
     <string name="csv_average_distance">Средняя дистанция (км)</string>
     <string name="csv_average_time">Среднее время (минуты)</string>
+    <string name="csv_average_cadence">Средний каденс (шаг/мин)</string>
     <string name="csv_best_pace">Лучший темп (мин/км)</string>
     <string name="csv_max_distance">Максимальная дистанция (км)</string>
     <string name="csv_longest_time">Самая длинная тренировка (минуты)</string>

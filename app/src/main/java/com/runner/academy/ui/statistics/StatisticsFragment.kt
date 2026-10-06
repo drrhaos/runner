@@ -81,6 +81,7 @@ class StatisticsFragment : Fragment() {
                     longestDuration = data.longestDuration,
                     workoutsByType = data.workoutsByType,
                     distanceByType = data.distanceByType,
+                    averageCadence = data.averageCadence,
                     context = requireContext()
                 )
                 
