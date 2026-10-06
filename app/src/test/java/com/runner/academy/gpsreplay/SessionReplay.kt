@@ -54,6 +54,8 @@ data class SessionReplayResult(
     /** The live distance at Stop. */
     val distanceM: Double,
     val pauses: List<PauseInterval>,
+    /** The session's track points at Stop, as the service recorded them (steps included). */
+    val livePoints: List<TrackPoint>,
     /** The row the save path builds from the stopped session. */
     val savedWorkout: Workout
 )
@@ -364,6 +366,7 @@ object SessionReplay {
                 movingMs = stopped.movingTime,
                 distanceM = stopped.distance * 1000.0,
                 pauses = stopped.clock.pauses,
+                livePoints = stopped.trackDataPoints,
                 savedWorkout = workout
             )
         }
