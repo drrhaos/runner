@@ -16,14 +16,15 @@ import com.runner.academy.appContainer
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.FragmentStatisticsBinding
+import com.runner.academy.ui.workout.CadenceText
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.MovingTimeDisplay
 import com.runner.academy.util.ShareExports
 import com.google.android.material.color.MaterialColors
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
 
 class StatisticsFragment : Fragment() {
 
@@ -166,6 +167,7 @@ class StatisticsFragment : Fragment() {
         binding.layoutAverageCadence.visibility = if (cadence != null) View.VISIBLE else View.GONE
         if (cadence != null) {
             binding.textViewAverageCadence.text = getString(R.string.statistics_cadence_format, cadence)
+            binding.textViewAverageCadence.contentDescription = CadenceText.stepsPerMinute(requireContext(), cadence)
         }
 
         // Активность
