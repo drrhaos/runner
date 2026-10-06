@@ -221,6 +221,7 @@ class WorkoutTrackingFragment : Fragment() {
             onModeApplied = {
                 intervalController?.updatePreview()
                 intervalController?.maybeStartForActiveSession()
+                updateAutoPauseUnavailable()
             }
         )
         intervalController = IntervalTrackingController(
@@ -266,7 +267,8 @@ class WorkoutTrackingFragment : Fragment() {
             layoutExpandedInfo = binding.layoutExpandedInfo,
             textViewWorkoutTime = binding.textViewWorkoutTime,
             textViewWorkoutDistance = binding.textViewWorkoutDistance,
-            textViewWorkoutTimeLabel = binding.textViewWorkoutTimeLabel,
+            // The whole caption (label or pause chip) hides with the collapsed timer
+            textViewWorkoutTimeLabel = binding.layoutTimerCaption,
             textViewWorkoutDistanceLabel = binding.textViewWorkoutDistanceLabel,
         ))
         panelStateManager?.setupGesture(requireContext())
@@ -286,6 +288,17 @@ class WorkoutTrackingFragment : Fragment() {
                 buttonStart = binding.buttonStart,
                 buttonPause = binding.buttonPause,
                 buttonStop = binding.buttonStop,
+                timerCaption = MetricsDisplayManager.TimerCaption(
+                    container = binding.layoutTimerCaption,
+                    label = binding.textViewWorkoutTimeLabel,
+                    chip = binding.textViewTimerStateChip
+                ),
+                timerCaptionExpanded = MetricsDisplayManager.TimerCaption(
+                    container = binding.layoutTimerCaptionExpanded,
+                    label = binding.textViewWorkoutTimeLabelExpanded,
+                    chip = binding.textViewTimerStateChipExpanded
+                ),
+                textViewElapsedTimeExpanded = binding.textViewElapsedTimeExpanded,
             ),
             viewModel
         ) { expanded ->
@@ -475,6 +488,7 @@ class WorkoutTrackingFragment : Fragment() {
                     viewModel.workoutState.collect { state ->
                         if (isAdded && !isDetached) {
                             metricsDisplayManager?.updateButtonStates(state)
+                            updateAutoPauseUnavailable()
                             if (state == WorkoutState.RUNNING || state == WorkoutState.PAUSED) {
                                 modeController?.syncFromViewModel()
                                 intervalController?.maybeStartForActiveSession()
@@ -559,6 +573,18 @@ class WorkoutTrackingFragment : Fragment() {
         }
 
         mapManager?.autoCenterIfNeeded(session)
+    }
+
+    /**
+     * Before the start only: auto-pause is on but the chosen mode has segments, where it does
+     * not apply. Gone once the workout runs (no auto-pause chip in an interval workout either).
+     */
+    private fun updateAutoPauseUnavailable() {
+        if (_binding == null) return
+        val idle = viewModel.workoutState.value == WorkoutState.NOT_STARTED
+        val withSegments = modeController?.selectedMode?.hasIntervals() == true
+        val show = idle && withSegments && requireContext().appContainer().userPreferences.autoPause
+        binding.textViewAutoPauseUnavailable.visibility = if (show) View.VISIBLE else View.GONE
     }
 
     private fun updateGpsBanner(session: WorkoutSession) {
@@ -902,6 +928,8 @@ class WorkoutTrackingFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         mapManager?.onResume()
+        // The setting may have changed meanwhile
+        updateAutoPauseUnavailable()
     }
 
     override fun onPause() {

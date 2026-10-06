@@ -31,6 +31,7 @@
     <string name="btn_stop_description">Стоп</string>
     <string name="btn_start_description">Старт</string>
     <string name="btn_pause_description">Пауза</string>
+    <string name="btn_resume_description">Продолжить</string>
     <string name="btn_my_location_description">Мое местоположение</string>
     <string name="stop_hold_hint_initial">Удерживайте 3 сек. для остановки</string>
     <string name="stop_hold_hint">Удерживайте %1$d сек. для остановки</string>
@@ -60,6 +61,8 @@
     <string name="save_without_distance">Сохранить без дистанции</string>
     <string name="voice_gps_lost">Сигнал GPS потерян</string>
     <string name="voice_gps_recovered">Сигнал GPS восстановлен</string>
+    <string name="voice_auto_pause">Автопауза</string>
+    <string name="voice_auto_resume">Продолжаем</string>
     <string name="voice_gps_unreliable">Сигнал GPS ненадёжен</string>
 
     <string name="kilometers_per_hour_float">%.1f км/ч</string>
@@ -143,6 +146,10 @@
     <string name="settings_label_steps_for_distance">Шаги для дистанции при потере GPS</string>
     <string name="settings_hint_steps_for_distance">Считает шаги и каденс датчиком телефона, чтобы дистанция шла и в тоннелях, и среди плотной застройки. Нужно разрешение «Физическая активность».</string>
     <string name="settings_hint_steps_no_sensor">На этом устройстве нет датчика шагов.</string>
+    <string name="settings_label_auto_pause">Автопауза</string>
+    <string name="settings_hint_auto_pause">Останавливает время, когда вы стоите — на светофоре или у воды. Темп считается по времени в движении. В интервальных тренировках не действует.</string>
+    <string name="settings_hint_auto_pause_gps_only">Без доступа к шагам срабатывает только по GPS — на несколько секунд позже.</string>
+    <string name="settings_hint_auto_pause_no_sensor">На этом устройстве нет датчика шагов — срабатывает только по GPS, на несколько секунд позже.</string>
     <string name="settings_btn_reset">Сбросить настройки</string>
     <string name="settings_weight_saved">Вес сохранен</string>
     <string name="settings_height_saved">Рост сохранен</string>
@@ -180,6 +187,12 @@
     <string name="settings_language_changed">Язык изменён</string>
 
     <string name="track_info_time_label">Время (ч:мин:с)</string>
+    <string name="track_info_state_paused">Пауза</string>
+    <string name="track_info_state_auto_paused">Автопауза</string>
+    <string name="track_info_state_auto_paused_a11y">Автопауза: время остановлено, продолжится, когда вы побежите</string>
+    <string name="track_info_state_running_a11y">Время идёт</string>
+    <string name="track_info_elapsed_time_format">Общее время %1$s</string>
+    <string name="track_info_auto_pause_unavailable">Автопауза в интервальных тренировках не работает</string>
     <string name="track_info_distance_label_km">Дистанция (км)</string>
     <string name="track_info_distance_label_miles">Дистанция (миль)</string>
     <string name="track_info_average_speed_label_km">Средняя скорость (км/ч)</string>
@@ -357,6 +370,8 @@
     <string name="notification_channel_name">Трекинг тренировок</string>
     <string name="notification_channel_description">Уведомления о активной тренировке</string>
     <string name="notification_workout_format">%1$s • %2$s</string>
+    <string name="notification_workout_paused_format">Пауза • %1$s • %2$s</string>
+    <string name="notification_workout_auto_paused_format">Автопауза • %1$s • %2$s</string>
     <string name="notification_interrupted_channel_name">Оповещения о тренировке</string>
     <string name="notification_interrupted_channel_description">Оповещения, когда запись тренировки неожиданно останавливается</string>
     <string name="notification_interrupted_title">Тренировка прервана</string>

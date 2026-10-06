@@ -7,6 +7,7 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import com.runner.academy.R
 import com.runner.academy.data.WorkoutSession
+import com.runner.academy.service.AutoPauseEvent
 import com.runner.academy.util.FormatUtils
 
 /**
@@ -79,6 +80,14 @@ class VoiceFeedbackManager(
         }
     }
 
+    fun notifyAutoPause(event: AutoPauseEvent, autoPauseDurationMs: Long) {
+        when (AutoPauseVoiceTransition.announcement(event, autoPauseDurationMs)) {
+            AutoPauseAnnouncement.PAUSED -> speak(context.getString(R.string.voice_auto_pause), "auto_pause")
+            AutoPauseAnnouncement.RESUMED -> speak(context.getString(R.string.voice_auto_resume), "auto_resume")
+            null -> Unit
+        }
+    }
+
     fun notifyDistance(session: WorkoutSession) {
         val completedKm = kotlin.math.floor(session.distance.toDouble()).toInt()
         if (completedKm < 1) return
@@ -87,7 +96,8 @@ class VoiceFeedbackManager(
         lastDistanceKmVoiceSpoken = completedKm
 
         val distanceTTS = FormatUtils.formatDistanceForTTS(session.distance, context)
-        val timeTTS = FormatUtils.formatTimeForTTS(session.currentTime, context)
+        // The time on the big timer (equal to the elapsed time without auto-pause)
+        val timeTTS = FormatUtils.formatTimeForTTS(session.movingTime, context)
         val paceTTS = FormatUtils.formatPaceForTTS(session.avgPace, context)
 
         val notification = context.getString(R.string.voice_notif_text_each_km, distanceTTS, timeTTS, paceTTS)

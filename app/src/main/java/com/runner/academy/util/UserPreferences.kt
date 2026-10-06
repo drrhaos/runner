@@ -2,6 +2,7 @@ package com.runner.academy.util
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 /**
  * Управление настройками пользователя
@@ -29,7 +30,8 @@ class UserPreferences(context: Context) {
         private const val KEY_STEPS_FOR_DISTANCE = "steps_for_distance"
         private const val KEY_STEP_PERMISSION_ASKED = "step_permission_asked"
         private const val KEY_STRIDE_MODEL = "stride_model"
-        
+        private const val KEY_AUTO_PAUSE = "auto_pause"
+
         // Значения по умолчанию
         private const val DEFAULT_WEIGHT = 70f
         private const val DEFAULT_HEIGHT = 175f
@@ -39,6 +41,7 @@ class UserPreferences(context: Context) {
         private const val DEFAULT_VOICE_FEEDBACK = false
         private const val DEFAULT_GPS_DIAGNOSTICS = false
         private const val DEFAULT_STEPS_FOR_DISTANCE = true
+        private const val DEFAULT_AUTO_PAUSE = false
         private const val DEFAULT_FIRST_LAUNCH = true
         private val DEFAULT_THEME_MODE = ThemeUtils.THEME_SYSTEM
         private const val DEFAULT_APP_LANGUAGE = "en"
@@ -150,6 +153,14 @@ class UserPreferences(context: Context) {
     var stepsForDistanceEnabled: Boolean
         get() = prefs.getBoolean(KEY_STEPS_FOR_DISTANCE, DEFAULT_STEPS_FOR_DISTANCE)
         set(value) = prefs.edit().putBoolean(KEY_STEPS_FOR_DISTANCE, value).apply()
+
+    /**
+     * Автопауза: часы «в движении» встают, когда бегун стоит. По умолчанию выключено;
+     * в тренировках с отрезками не действует.
+     */
+    var autoPause: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_PAUSE, DEFAULT_AUTO_PAUSE)
+        set(value) = prefs.edit { putBoolean(KEY_AUTO_PAUSE, value) }
 
     /** Разрешение ACTIVITY_RECOGNITION уже запрашивалось — повторно автоматически не спрашиваем. */
     var stepPermissionAsked: Boolean
