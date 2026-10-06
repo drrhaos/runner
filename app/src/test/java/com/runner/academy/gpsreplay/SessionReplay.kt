@@ -7,8 +7,7 @@ import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.service.ActiveWorkoutCheckpoint
-import com.runner.academy.service.AutoPauseDetector
-import com.runner.academy.service.AutoPauseEvent
+import com.runner.academy.service.AutoPauseController
 import com.runner.academy.service.GpsLocationProcessor
 import com.runner.academy.service.GpsStatusWatchdog
 import com.runner.academy.service.WorkoutSessionManager
@@ -43,6 +42,9 @@ sealed class ReplayEvent {
      * (fixes and steps in between are lost).
      */
     data class KillAndRestore(val atSec: Int, val downSec: Int = 0) : ReplayEvent()
+
+    /** The auto-pause setting switched to [on] at [atSec] mid-run. */
+    data class AutoPauseSetting(val atSec: Int, val on: Boolean) : ReplayEvent()
 }
 
 data class SessionReplayResult(
@@ -58,7 +60,8 @@ data class SessionReplayResult(
 
 /**
  * Replays a [SyntheticRun] through the service's session glue on simulated time: the 1 s timer
- * (silence by steps, the [AutoPauseDetector] tick, clock tick), the per-fix branch of
+ * (silence by steps, the [AutoPauseController] tick — the service's own glue, setting changes
+ * mid-run included — clock tick), the per-fix branch of
  * `WorkoutTrackingService.updateLocation` into [WorkoutSessionManager] and the detector, the
  * periodic GPS watchdog ([GpsStatusWatchdog], screen on: every 2 s, lost after 3 × 5 s), manual
  * pause / resume (GPS off, steps dropped by the step tracker, the detector reset), a process
@@ -91,6 +94,7 @@ object SessionReplay {
         val pauseStarts = pauses.map { it.first }.toSet()
         val pauseEnds = pauses.map { it.second }.toSet()
         val kills = events.filterIsInstance<ReplayEvent.KillAndRestore>().associateBy { it.atSec }
+        val settingChanges = events.filterIsInstance<ReplayEvent.AutoPauseSetting>().associateBy { it.atSec }
         val fixes = ArrayDeque(run.rawPoints())
 
         val live = Live(run, settings)
@@ -110,6 +114,8 @@ object SessionReplay {
                 sec > 0 && live.tracking -> live.tick(now)
             }
             if (sec == stopSec) break
+            // The setting is read by the next tick, like the service reads the preference
+            settingChanges[sec]?.let { live.autoPauseOn = it.on }
             if (sec in pauseEnds && live.paused) live.resume(now)
             if (sec in pauseStarts && live.tracking) live.pause(now)
             val kill = kills[sec]
@@ -125,7 +131,8 @@ object SessionReplay {
             }
             while (fixes.isNotEmpty() && fixes.first().timestamp < now + TICK_MS) {
                 val fix = fixes.removeFirst()
-                if (live.tracking) live.onFix(fix)
+                // Delivered without batching: received in the second of its own time
+                if (live.tracking) live.onFix(fix, receivedAt = maxOf(now, fix.timestamp))
             }
         }
         return live.stop(start + stopSec * TICK_MS)
@@ -139,10 +146,12 @@ object SessionReplay {
     private class Live(private val run: SyntheticRun, private val settings: ReplaySettings) {
         var manager = WorkoutSessionManager()
         var processor = GpsLocationProcessor()
-        var detector = AutoPauseDetector()
+        var autoPause = AutoPauseController()
         /** `isCurrentlyTracking`: running and not paused. */
         var tracking = false
         val paused: Boolean get() = manager.getSession().isPaused
+        /** `userPreferences.autoPause`, may change mid-run. */
+        var autoPauseOn = settings.autoPause
 
         /** Sensor steps the step tracker never counted (pauses, a dead process). */
         private var droppedSteps = 0
@@ -163,7 +172,7 @@ object SessionReplay {
             lastGoodFixMs = 0L
             lastAnyFixMs = 0L
             watchdogTicks = 0
-            detector.reset()
+            autoPause.reset()
             processor.reset(workoutType = settings.type, stepDistance = settings.stepDistance)
             manager.startNewSession(initialGpsStatus = GpsStatus.SEARCHING, now = now)
             tracking = true
@@ -196,21 +205,23 @@ object SessionReplay {
             manager.updateGpsStatus(next)
         }
 
-        /** `tickAutoPause()`: mono and wall are the same clock here. */
+        /**
+         * `tickAutoPause()`: mono and wall are the same clock here. The voice, the notification
+         * and the forced checkpoint of a transition are not modelled: a kill here always saves
+         * the live state at that moment.
+         */
         private fun tickAutoPause(now: Long) {
-            val session = manager.getSession()
-            if (!session.isTracking || session.isPaused) return
-            if (!settings.autoPause || settings.intervals) return
-            val gpsLost = session.gpsStatus == GpsStatus.LOST || session.gpsStatus == GpsStatus.DENIED
-            when (val event = detector.tick(now, trackerSteps(now)?.first, gpsLost)) {
-                is AutoPauseEvent.Pause -> manager.enterAutoPause(event.atMono, now)
-                is AutoPauseEvent.Resume -> manager.exitAutoPause(event.atMono, now)
-                null -> Unit
-            }
+            autoPause.tick(
+                manager = manager,
+                enabled = autoPauseOn && !settings.intervals,
+                steps = trackerSteps(now)?.first,
+                nowMono = now,
+                nowWall = now
+            )
         }
 
-        /** The tracking branch of `updateLocation`. */
-        fun onFix(fix: TrackPoint) {
+        /** The tracking branch of `updateLocation`, the fix received at [receivedAt]. */
+        fun onFix(fix: TrackPoint, receivedAt: Long) {
             val session = manager.getSession()
             val location = TrackSanitizer.toLocation(fix)
             val steps = if (settings.stepsAvailable) fix.steps?.let { it - droppedSteps } else null
@@ -229,9 +240,10 @@ object SessionReplay {
                 is GpsLocationProcessor.ProcessResult.Accepted -> true
                 is GpsLocationProcessor.ProcessResult.Rejected -> result.refreshGapClock
             }
-            lastAnyFixMs = fix.timestamp
-            if (good) lastGoodFixMs = fix.timestamp
-            detector.onFix(fix.timestamp, if (location.hasSpeed()) location.speed else null, usable = good)
+            // The watchdog's clocks take the time of receipt, the detector the fix's own time
+            lastAnyFixMs = receivedAt
+            if (good) lastGoodFixMs = receivedAt
+            autoPause.onFix(fix.timestamp, if (location.hasSpeed()) location.speed else null, usable = good)
             when (result) {
                 is GpsLocationProcessor.ProcessResult.Accepted -> manager.updateMetricsFromLocation(
                     segmentDistanceMeters = result.distanceDeltaMeters,
@@ -279,7 +291,7 @@ object SessionReplay {
             if (before != null && after != null) droppedSteps += after - before
             stepsAtPause = null
             processor.onResume()
-            detector.reset()
+            autoPause.reset()
             manager.resume(now)
             // The watchdog's grace after the pause, and its loop restarts
             if (lastGoodFixMs != 0L) lastGoodFixMs = now
@@ -328,7 +340,7 @@ object SessionReplay {
                 setOpenStepMeters(processor.pendingStepMeters)
             }
             // An open auto-pause stays open: the new detector waits for fresh steps or speed
-            detector = AutoPauseDetector(paused = restored.autoPaused)
+            autoPause = AutoPauseController().apply { reset(autoPaused = restored.autoPaused, restored = true) }
             lastGoodFixMs = checkpoint.lastLocationTime
             lastAnyFixMs = checkpoint.lastLocationTime
             watchdogTicks = 0
