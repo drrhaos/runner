@@ -67,6 +67,9 @@
     <!-- AppBar — frosted iOS nav bar -->
     <color name="app_bar_background">#F2F9F9F9</color>
 
+    <!-- Chart series (the palette entry already differs per theme) -->
+    <color name="chart_series_cadence">@color/ios_purple</color>
+
     <!-- Route picker mini-preview -->
     <color name="route_preview_background">#FFF2F2F7</color>
     <color name="route_preview_track">#FFFF3B30</color>

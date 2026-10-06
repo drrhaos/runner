@@ -377,7 +377,7 @@
     <string name="notification_interrupted_title">Тренировка прервана</string>
     <string name="notification_interrupted_text">Откройте приложение, чтобы продолжить</string>
 
-    <string name="csv_header">Дата,Время,Тип тренировки,Дистанция (км),Длительность (мин),Темп (мин/км),Калории,Заметки\n</string>
+    <string name="csv_header">Дата,Время,Тип тренировки,Дистанция (км),Длительность (мин),Темп (мин/км),Калории,В движении (мин),Набор (м),Сброс (м),Каденс (шаг/мин),Заметки\n</string>
     <string name="csv_statistics_header">Статистика тренировок\n\nКатегория,Значение\n</string>
     <string name="csv_total_workouts">Всего тренировок</string>
     <string name="csv_total_distance">Общая дистанция (км)</string>
@@ -386,6 +386,7 @@
     <string name="csv_average_pace">Средний темп (мин/км)</string>
     <string name="csv_average_distance">Средняя дистанция (км)</string>
     <string name="csv_average_time">Среднее время (минуты)</string>
+    <string name="csv_average_cadence">Средний каденс (шаг/мин)</string>
     <string name="csv_best_pace">Лучший темп (мин/км)</string>
     <string name="csv_max_distance">Максимальная дистанция (км)</string>
     <string name="csv_longest_time">Самая длинная тренировка (минуты)</string>
@@ -467,6 +468,26 @@
         <item quantity="many">%d километров в час</item>
         <item quantity="other">%d километра в час</item>
     </plurals>
+
+    <plurals name="cadence_steps_per_minute">
+        <item quantity="one">%d шаг в минуту</item>
+        <item quantity="few">%d шага в минуту</item>
+        <item quantity="many">%d шагов в минуту</item>
+        <item quantity="other">%d шага в минуту</item>
+    </plurals>
+
+    <!-- Каденс -->
+    <string name="workout_details_cadence">Каденс шаг/мин</string>
+    <string name="workout_details_cadence_title">Каденс</string>
+    <string name="workout_details_cadence_a11y">Средний каденс %1$s</string>
+    <string name="workout_details_cadence_pending_a11y">Каденс ещё считается</string>
+    <string name="chart_cadence_label">Каденс (шаг/мин)</string>
+    <string name="chart_cadence_value">Каденс: %1$d шаг/мин</string>
+    <string name="chart_cadence_avg_format">ср. %1$d шаг/мин</string>
+    <string name="chart_cadence_limit_label">ср. %1$d</string>
+    <string name="chart_cadence_a11y">График каденса, шагов в минуту: в среднем %1$d, от %2$d до %3$d</string>
+    <string name="statistics_average_cadence_label">Средний каденс:</string>
+    <string name="statistics_cadence_format">%1$d шаг/мин</string>
 
     <!-- Планы тренировок -->
     <string name="menu_plans">Планы тренировок</string>
