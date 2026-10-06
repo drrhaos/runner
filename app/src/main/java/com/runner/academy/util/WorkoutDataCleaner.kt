@@ -5,6 +5,7 @@ import android.util.Log
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.data.knownAltitude
 import com.runner.academy.data.maxReasonableGpsSpeedMps
 
 /**
@@ -61,7 +62,8 @@ object WorkoutDataCleaner {
                     timestamp = filteredLocation.time,
                     accuracy = filteredLocation.accuracy,
                     speed = filteredLocation.speed,
-                    altitude = filteredLocation.altitude,
+                    // The altitude is not cleaned here: a missing one stays missing, not 0.0
+                    altitude = trackPoint.altitude,
                     afterGap = afterGap
                 )
                 cleanedPoints.add(cleanedTrackPoint)
@@ -91,7 +93,8 @@ object WorkoutDataCleaner {
         location.accuracy = trackPoint.accuracy ?: 100f
         location.speed = trackPoint.speed ?: 0f
         location.time = trackPoint.timestamp
-        trackPoint.altitude?.let { altitude ->
+        // The old 0.0 for "no altitude" must not look like a 150 m cliff to the outlier filter
+        trackPoint.knownAltitude()?.let { altitude ->
             location.altitude = altitude
         }
         return location

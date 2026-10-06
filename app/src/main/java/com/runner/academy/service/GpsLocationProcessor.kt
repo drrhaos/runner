@@ -110,7 +110,7 @@ class GpsLocationProcessor {
             timestamp = if (location.time > 0) location.time else System.currentTimeMillis(),
             accuracy = location.accuracy,
             speed = location.speed,
-            altitude = location.altitude,
+            altitude = if (location.hasAltitude()) location.altitude else null,
             afterGap = false,
             source = LocationSource.GPS.name,
             steps = steps,
@@ -199,7 +199,7 @@ class GpsLocationProcessor {
             timestamp = if (location.time > 0) location.time else System.currentTimeMillis(),
             accuracy = location.accuracy,
             speed = location.speed,
-            altitude = location.altitude,
+            altitude = if (location.hasAltitude()) location.altitude else null,
             afterGap = false,
             source = LocationSource.GPS.name
         )

@@ -75,4 +75,17 @@ class WorkoutDataCleanerTest {
         assertEquals(true, cleaned.timeSynthetic)
         assertEquals(ElevationSource.GPS, cleaned.elevationSource)
     }
+
+    @Test
+    fun `cleaning keeps a missing altitude missing`() {
+        val noAltitude = points.mapIndexed { i, p -> if (i % 2 == 0) p.copy(altitude = null) else p }
+        val outlier = noAltitude.last().copy(longitude = 37.70)
+        val track = TrackData(noAltitude.dropLast(1) + outlier, 0f, 0L, 0f, 0f, 0L, null)
+
+        val cleaned = WorkoutDataCleaner.cleanTrackData(track, WorkoutType.EASY_RUN)
+
+        assertTrue("cleaning rebuilt the track", cleaned.points.size < track.points.size)
+        assertTrue("no 0.0 for a missing altitude", cleaned.points.none { it.altitude == 0.0 })
+        assertEquals(noAltitude.dropLast(1).map { it.altitude }, cleaned.points.map { it.altitude })
+    }
 }

@@ -122,6 +122,50 @@ class GpsLocationProcessorTest {
     }
 
     @Test
+    fun processLocation_fixWithoutAltitude_storesNullNotZero() {
+        val first = process(location(55.7558, 37.6173, time = 1_000_000L))
+        val second = process(location(55.7559, 37.6173, time = 1_002_000L), first) as GpsLocationProcessor.ProcessResult.Accepted
+
+        assertTrue(second.trackDataPoints.all { it.altitude == null })
+        assertTrue(second.rawTrackDataPoints.all { it.altitude == null })
+    }
+
+    @Test
+    fun processLocation_fixWithAltitude_storesIt() {
+        val withAltitude = location(55.7558, 37.6173, time = 1_000_000L).apply { altitude = 152.5 }
+
+        val result = process(withAltitude) as GpsLocationProcessor.ProcessResult.Accepted
+
+        assertEquals(152.5, result.trackDataPoints.single().altitude!!, 0.0)
+        assertEquals(152.5, result.rawTrackDataPoints.single().altitude!!, 0.0)
+    }
+
+    @Test
+    fun processLocationWhenNotTracking_fixWithoutAltitude_storesNullNotZero() {
+        val (raw, _) = processor.processLocationWhenNotTracking(
+            location(55.7558, 37.6173, time = 1_000_000L), emptyList(), isCurrentlyTracking = true
+        )
+
+        assertEquals(null, raw.single().altitude)
+    }
+
+    @Test
+    fun sanitize_pointWithoutAltitude_staysWithoutAltitude() {
+        val raw = (0 until 10).map { i ->
+            com.runner.academy.data.TrackPoint(
+                55.7558 + i * 0.0001, 37.6173, 1_000_000L + i * 2_000L, 10f, 3f,
+                altitude = if (i % 2 == 0) null else 150.0
+            )
+        }
+
+        val saved = com.runner.academy.util.TrackSanitizer.sanitize(raw, com.runner.academy.data.WorkoutType.EASY_RUN)
+
+        assertTrue(saved.size >= 2)
+        assertTrue("no 0.0 for a missing altitude", saved.none { it.altitude == 0.0 })
+        assertTrue(saved.any { it.altitude == null } && saved.any { it.altitude == 150.0 })
+    }
+
+    @Test
     fun reset_startsANewRunWithoutAnchor() {
         process(location(55.7558, 37.6173, time = 1_000_000L))
         assertNotNull(processor.anchor)
