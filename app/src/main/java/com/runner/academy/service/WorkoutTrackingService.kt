@@ -116,6 +116,8 @@ class WorkoutTrackingService : Service() {
     private var strideLearner: StrideLearner? = null
     private var strideSamplesAtStart = 0
     private val unreliableLatch = UnreliableSignalLatch()
+    /** Fed every processed fix; ticked on the workout timer while auto-pause applies. */
+    private val autoPause = AutoPauseController()
 
     // Location provider bindings
     private var gpsClient: GpsLocationClient? = null
@@ -339,6 +341,11 @@ class WorkoutTrackingService : Service() {
                 is GpsLocationProcessor.ProcessResult.Rejected -> result.refreshGapClock
             }
             val unreliable = unreliableLatch.onFix(gpsProcessor.inFalseSignal, good, location.time)
+            autoPause.onFix(
+                atMono = monoTimeOf(location),
+                speedMps = if (location.hasSpeed()) location.speed else null,
+                usable = good && !unreliable
+            )
             // Leaving UNRELIABLE needs a status change even on a fix that keeps the old one
             val statusOverride = when {
                 unreliable -> GpsStatus.UNRELIABLE
@@ -466,6 +473,7 @@ class WorkoutTrackingService : Service() {
         lastAnyFixTime = 0L
         lastProcessedFixTimeMs = 0L
         unreliableLatch.reset()
+        autoPause.reset()
         val runStride = startSteps(initialSteps = 0, frozenState = null)
         gpsProcessor.reset(workoutType = selectedWorkoutType, stepDistance = runStride?.estimator)
         screenInteractive = isDisplayInteractive()
@@ -509,6 +517,8 @@ class WorkoutTrackingService : Service() {
         isCurrentlyTracking = true
         stepTracker?.resume()
         gpsProcessor.onResume()
+        // A new auto-pause needs a fresh 10 s of standing after the resume
+        autoPause.reset()
         sessionManager.resume()
         // Grace after the pause: no fixes were processed, so the watchdog must not flag the
         // whole pause as a GPS loss before the first fix arrives
@@ -601,6 +611,9 @@ class WorkoutTrackingService : Service() {
             .copy(strideModelState = runStride?.state)
         sessionManager.restoreSession(restoredSession, checkpoint.lastUpdateTime)
         sessionManager.setOpenStepMeters(gpsProcessor.pendingStepMeters)
+        // An open auto-pause stays open: the detector waits for fresh steps or speed, and the
+        // resume that ends it is not announced
+        autoPause.reset(autoPaused = restoredSession.autoPaused, restored = true)
         rebuildIntervalEngineFromMetadata()
         prepareVoiceForWorkout()
         if (!resumeTrackingAfterRestore(restoredSession)) return false
@@ -1162,6 +1175,7 @@ class WorkoutTrackingService : Service() {
                 withContext(Dispatchers.Main) {
                     if (++ticks % WAKE_LOCK_RENEW_EVERY_TICKS == 0) acquireWakeLock()
                     countSilenceBySteps()
+                    tickAutoPause()
                     // Advance clock without fan-out to voice/checkpoint; UI + notification only
                     sessionManager.tickElapsedTime(broadcast = false)
                     val session = sessionManager.getSession()
@@ -1184,6 +1198,34 @@ class WorkoutTrackingService : Service() {
         sessionManager.setOpenStepMeters(gpsProcessor.pendingStepMeters)
         sessionManager.addStepDistance(added, userPreferences.userWeight)
     }
+
+    /**
+     * Auto-pause applies to a running workout without interval segments when the setting is on.
+     * The detector only decides; GPS, the watchdog and the step tracker go on untouched (the
+     * track and the distance keep growing), only the moving clock stops. Steps are whatever the
+     * running step tracker counts (GPS alone without it). The rules live in
+     * [AutoPauseController], shared with the bench.
+     */
+    private fun tickAutoPause() {
+        val transition = autoPause.tick(
+            manager = sessionManager,
+            enabled = userPreferences.autoPause && intervalSegmentsJson.isNullOrBlank(),
+            steps = stepTracker?.takeIf { it.isRunning }?.steps,
+            nowMono = SystemClock.elapsedRealtime(),
+            nowWall = System.currentTimeMillis()
+        ) ?: return
+        if (transition.announce && userPreferences.voiceFeedback) {
+            if (voiceFeedback == null) prepareVoiceForWorkout()
+            voiceFeedback?.notifyAutoPause(transition.event, transition.closedAutoPauseMs)
+        }
+        val session = sessionManager.getSession()
+        notificationManager.updateNotification(session, force = true)
+        maybeSaveCheckpoint(session, force = true)
+    }
+
+    /** A fix's monotonic time in ms (now if the provider left it unset). */
+    private fun monoTimeOf(location: Location): Long =
+        location.elapsedRealtimeNanos.takeIf { it > 0L }?.let { it / 1_000_000L } ?: SystemClock.elapsedRealtime()
 
     private fun stopWorkoutTimer() {
         workoutTimerJob?.cancel()

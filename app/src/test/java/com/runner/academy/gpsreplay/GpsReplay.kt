@@ -124,6 +124,9 @@ data class SyntheticRun(
     val accuracyM: Float = 6f,
     /** Seconds (from start) with no fixes at all — tunnel / indoor. */
     val gapSec: IntRange? = null,
+    /** Seconds (from start) with a fix only every [sparseEverySec] seconds — a weak receiver. */
+    val sparseSec: IntRange? = null,
+    val sparseEverySec: Int = 20,
     /** Seconds at which a single fix jumps [outlierOffsetM] off the route. */
     val outlierAtSec: Set<Int> = emptySet(),
     val outlierOffsetM: Double = 300.0,
@@ -286,7 +289,9 @@ data class SyntheticRun(
             errY = noiseDecay * errY + gaussian(random) * noiseInnovationM
             val second = t.toInt()
             val onManualPause = spanAt(t)?.phase is Phase.ManualPause
-            if ((gapSec == null || second !in gapSec) && !onManualPause) {
+            val skippedBySparse = sparseSec != null && second in sparseSec &&
+                (second - sparseSec.first) % sparseEverySec != 0
+            if ((gapSec == null || second !in gapSec) && !onManualPause && !skippedBySparse) {
                 val spoofed = spoofedPosition(t)
                 val (x, y) = spoofed ?: positionAt(movedAt(t))
                 val noisy = spoofed == null || spoof?.noisy == true
