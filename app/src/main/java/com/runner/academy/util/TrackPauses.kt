@@ -17,6 +17,10 @@ object TrackPauses {
         }
     }
 
+    /** True when [timeMs] falls strictly inside a pause of any kind (its ends are not). */
+    fun isInside(pauses: List<PauseInterval>?, timeMs: Long): Boolean =
+        pauses.orEmpty().any { timeMs > it.start && timeMs < it.end }
+
     /** Sum of the intervals of [kind]. */
     fun totalMs(pauses: List<PauseInterval>?, kind: PauseKind): Long =
         pauses.orEmpty().filter { it.kind == kind }.sumOf { (it.end - it.start).coerceAtLeast(0L) }
