@@ -67,6 +67,12 @@ class WorkoutDetailFragment : Fragment() {
             segmentsChart = binding.chartSegments,
             textViewPaceSpeedValues = binding.textViewChartPaceSpeedHeartValues,
             textViewElevationValues = binding.textViewChartElevationValues,
+            cadence = CadenceChartViews(
+                card = binding.cardChartCadence,
+                chart = binding.chartCadence,
+                values = binding.textViewChartCadenceValues,
+                average = binding.textViewChartCadenceAvg
+            ),
             context = requireContext(),
             userPreferences = userPreferences,
             onPositionSelected = { point -> mapManager?.showPositionOnMap(point) },

@@ -465,6 +465,23 @@
         <item quantity="other">%d kilometers per hour</item>
     </plurals>
 
+    <plurals name="cadence_steps_per_minute">
+        <item quantity="one">%d step per minute</item>
+        <item quantity="other">%d steps per minute</item>
+    </plurals>
+
+    <!-- Cadence -->
+    <string name="workout_details_cadence">Cadence spm</string>
+    <string name="workout_details_cadence_title">Cadence</string>
+    <string name="workout_details_cadence_a11y">Average cadence %1$s</string>
+    <string name="chart_cadence_label">Cadence (spm)</string>
+    <string name="chart_cadence_value">Cadence: %1$d spm</string>
+    <string name="chart_cadence_avg_format">avg %1$d spm</string>
+    <string name="chart_cadence_limit_label">avg %1$d</string>
+    <string name="chart_cadence_a11y">Cadence chart: average %1$d, from %2$d to %3$d steps per minute</string>
+    <string name="statistics_average_cadence_label">Average cadence:</string>
+    <string name="statistics_cadence_format">%1$d spm</string>
+
     <!-- Training plans -->
     <string name="menu_plans">Training plans</string>
     <string name="menu_my_plan">My plan</string>
