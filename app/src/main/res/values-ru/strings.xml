@@ -479,6 +479,7 @@
     <string name="workout_details_cadence">Каденс шаг/мин</string>
     <string name="workout_details_cadence_title">Каденс</string>
     <string name="workout_details_cadence_a11y">Средний каденс %1$s</string>
+    <string name="workout_details_cadence_pending_a11y">Каденс ещё считается</string>
     <string name="chart_cadence_label">Каденс (шаг/мин)</string>
     <string name="chart_cadence_value">Каденс: %1$d шаг/мин</string>
     <string name="chart_cadence_avg_format">ср. %1$d шаг/мин</string>
