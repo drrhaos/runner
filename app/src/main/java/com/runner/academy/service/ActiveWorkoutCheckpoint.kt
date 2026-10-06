@@ -122,6 +122,21 @@ data class ActiveWorkoutCheckpoint(
         }
     }
 
+    /**
+     * The session to continue at [now] after process death: a running clock goes on so the time
+     * does not freeze at the kill (the downtime counts, an open auto-pause stays open); a paused
+     * session keeps its time.
+     */
+    fun toRestoredSession(now: Long): WorkoutSession {
+        val session = toSession()
+        if (!session.isTracking || session.isPaused || session.startTime <= 0L) return session
+        val clock = SessionClock(session.clock)
+        return session.copy(
+            currentTime = clock.elapsedMs(now).coerceAtLeast(session.currentTime),
+            movingTime = clock.movingMs(now).coerceAtLeast(session.movingTime)
+        )
+    }
+
     fun resolvedWorkoutType(): WorkoutType =
         WorkoutType.entries.find { it.name == workoutType } ?: WorkoutType.EASY_RUN
 
