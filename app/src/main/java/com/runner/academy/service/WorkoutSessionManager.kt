@@ -110,17 +110,25 @@ class WorkoutSessionManager {
      * Auto-pause from the detector; [at] may be backdated (see [SessionClock.enterAutoPause]).
      * The times are refreshed at [now] in the same snapshot as the flag, so the screen rolls the
      * timer back in the frame the chip appears.
+     * @return false if the clock refused it (see the rules of [SessionClock]).
      */
-    fun enterAutoPause(at: Long, now: Long = System.currentTimeMillis()) {
+    fun enterAutoPause(at: Long, now: Long = System.currentTimeMillis()): Boolean {
+        val wasAutoPaused = clock.autoPaused
         clock.enterAutoPause(at)
         session = session.withTimesAt(now).withClock()
         notifyChanged()
+        return !wasAutoPaused && clock.autoPaused
     }
 
-    fun exitAutoPause(at: Long, now: Long = System.currentTimeMillis()) {
+    /** @return The length of the auto-pause just closed, or null if the clock refused the exit. */
+    fun exitAutoPause(at: Long, now: Long = System.currentTimeMillis()): Long? {
+        val wasAutoPaused = clock.autoPaused
         clock.exitAutoPause(at)
         session = session.withTimesAt(now).withClock()
         notifyChanged()
+        if (!wasAutoPaused || clock.autoPaused) return null
+        val closed = clock.pauses().last()
+        return closed.end - closed.start
     }
 
     /** Stops the clock: open pauses close and the time freezes at [now]. */

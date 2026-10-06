@@ -151,14 +151,14 @@ class AutoPauseReplayTest {
 
     @Test
     fun `without steps GPS lost during an auto-pause ends it, the time counts`() {
-        // Standing at the light: 5 s of slow fixes, then the signal is gone until after the light
-        val run = trafficLight(standSec = 60, gapSec = 405..470)
+        // Standing at the light: 12 s of slow fixes, then the signal is gone until after the light
+        val run = trafficLight(standSec = 60, gapSec = 412..470)
         val result = SessionReplay.run(run, gpsOnly)
 
         val pause = autoPauses(result).single()
         assertNear("pause start", at(400), pause.start)
-        // Lost after 3 × 5 s without a good fix (the last at 404), seen by the 2 s watchdog
-        assertNear("pause end at LOST", at(420), pause.end)
+        // Lost after 3 × 5 s without a good fix (the last at 411), seen by the 2 s watchdog
+        assertNear("pause end at LOST", at(427), pause.end)
         assertNear("moving", result.elapsedMs - (pause.end - pause.start), result.movingMs, toleranceMs = 0L)
         assertSameDistanceAsWithout(run, gpsOnly, result)
         assertLiveEqualsSaved(result)
@@ -229,6 +229,56 @@ class AutoPauseReplayTest {
             assertNear("down $downSec s: pause start", at(400), pause.start)
             assertNear("down $downSec s: pause end", at(460), pause.end)
             assertLiveEqualsSaved(restarted)
+        }
+    }
+
+    @Test
+    fun `turned on while standing, the auto-pause starts no earlier than the switch`() {
+        val run = trafficLight(standSec = 60)
+        val cases = listOf(
+            // GPS only: slow fixes from 400 s while off
+            gpsOnly.copy(autoPause = false) to listOf(ReplayEvent.AutoPauseSetting(atSec = 430, on = true)),
+            // With steps: on, off from 300 s (steps last grew then), on again while standing
+            withSteps to listOf(
+                ReplayEvent.AutoPauseSetting(atSec = 300, on = false),
+                ReplayEvent.AutoPauseSetting(atSec = 430, on = true)
+            )
+        )
+        for ((settings, events) in cases) {
+            val result = SessionReplay.run(run, settings, events)
+            val label = "steps ${settings.stepsAvailable}"
+
+            val pause = autoPauses(result).single()
+            assertTrue("$label: starts at ${pause.start - start} ms", pause.start >= at(430))
+            assertNear("$label: moving", result.elapsedMs - (pause.end - pause.start), result.movingMs, toleranceMs = 0L)
+            assertTrue("$label: at most the stand after the switch", result.elapsedMs - result.movingMs <= 31_000L)
+            assertLiveEqualsSaved(result)
+        }
+    }
+
+    @Test
+    fun `turned off during an auto-pause, the clock runs again from the switch`() {
+        val run = trafficLight(standSec = 60)
+        val result = SessionReplay.run(run, withSteps, listOf(ReplayEvent.AutoPauseSetting(atSec = 420, on = false)))
+
+        val pause = autoPauses(result).single()
+        assertNear("pause start", at(400), pause.start)
+        assertNear("pause end at the switch", at(421), pause.end, toleranceMs = 1_000L)
+        assertLiveEqualsSaved(result)
+    }
+
+    @Test
+    fun `without steps a stand with fixes rarer than the LOST timeout does not swing in and out`() {
+        for (everySec in 16..25) {
+            // 2 min at the light, a fix only every [everySec] s
+            val run = trafficLight(standSec = 120).copy(sparseSec = 400..519, sparseEverySec = everySec)
+            val result = SessionReplay.run(run, gpsOnly)
+
+            assertTrue(
+                "every $everySec s: auto-pauses ${autoPauses(result).map { (it.start - start) / 1000 to (it.end - start) / 1000 }}",
+                autoPauses(result).size <= 1
+            )
+            assertLiveEqualsSaved(result)
         }
     }
 

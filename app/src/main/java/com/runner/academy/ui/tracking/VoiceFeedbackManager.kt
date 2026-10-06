@@ -7,6 +7,7 @@ import android.speech.tts.TextToSpeech
 import android.util.Log
 import com.runner.academy.R
 import com.runner.academy.data.WorkoutSession
+import com.runner.academy.service.AutoPauseEvent
 import com.runner.academy.util.FormatUtils
 
 /**
@@ -79,7 +80,7 @@ class VoiceFeedbackManager(
         }
     }
 
-    fun notifyAutoPause(event: com.runner.academy.service.AutoPauseEvent, autoPauseDurationMs: Long) {
+    fun notifyAutoPause(event: AutoPauseEvent, autoPauseDurationMs: Long) {
         when (AutoPauseVoiceTransition.announcement(event, autoPauseDurationMs)) {
             AutoPauseAnnouncement.PAUSED -> speak(context.getString(R.string.voice_auto_pause), "auto_pause")
             AutoPauseAnnouncement.RESUMED -> speak(context.getString(R.string.voice_auto_resume), "auto_resume")
