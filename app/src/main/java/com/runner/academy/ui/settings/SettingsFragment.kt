@@ -112,6 +112,13 @@ class SettingsFragment : Fragment() {
             viewModel.updateVoiceFeedback(isChecked)
         }
 
+        // Автопауза: нажатие на всю строку переключает свитч
+        binding.rowAutoPause.setOnClickListener { binding.switchAutoPause.toggle() }
+        binding.switchAutoPause.setOnCheckedChangeListener { _, isChecked ->
+            if (bindingState) return@setOnCheckedChangeListener
+            viewModel.updateAutoPause(isChecked)
+        }
+
         // Диагностика GPS
         binding.switchGpsDiagnostics.setOnCheckedChangeListener { _, isChecked ->
             viewModel.updateGpsDiagnostics(isChecked)
@@ -159,6 +166,19 @@ class SettingsFragment : Fragment() {
             if (settings.hasStepSensor) R.string.settings_hint_steps_for_distance
             else R.string.settings_hint_steps_no_sensor
         )
+        bindingState = true
+        binding.switchAutoPause.isChecked = settings.autoPause
+        bindingState = false
+        binding.textViewAutoPauseHint.text = autoPauseHint(settings)
+    }
+
+    /** Without steps the detector relies on GPS alone: say so under the setting. */
+    private fun autoPauseHint(settings: SettingsState): String = buildString {
+        append(getString(R.string.settings_hint_auto_pause))
+        when {
+            !settings.hasStepSensor -> append('\n').append(getString(R.string.settings_hint_auto_pause_no_sensor))
+            !settings.stepsForDistance -> append('\n').append(getString(R.string.settings_hint_auto_pause_gps_only))
+        }
     }
 
     override fun onResume() {
