@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -102,6 +103,24 @@ class RecordsRepositoryTest {
         repository.insertWorkout(workout(day = 1, speedMps = 3.3, trackJson = null))
 
         assertNull(kmRecord())
+    }
+
+    @Test
+    fun onlyManualWorkouts_followsSavesAndDeletions() = runBlocking {
+        val onlyManual = repository.observeOnlyManualWorkouts()
+        assertFalse("no workouts at all", onlyManual.first())
+
+        val manual = repository.insertWorkout(workout(day = 1, speedMps = 3.3, trackJson = null))
+        assertTrue(onlyManual.first())
+
+        val tracked = repository.insertWorkout(workout(day = 2, speedMps = 3.3))
+        assertFalse(onlyManual.first())
+
+        repository.deleteWorkout(repository.getWorkoutById(tracked).first()!!)
+        assertTrue(onlyManual.first())
+
+        repository.deleteWorkout(repository.getWorkoutById(manual).first()!!)
+        assertFalse(onlyManual.first())
     }
 
     @Test

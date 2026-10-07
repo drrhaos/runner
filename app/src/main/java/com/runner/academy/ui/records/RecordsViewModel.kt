@@ -13,28 +13,26 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /** The records screen: the record book, its recalculation and the empty state. */
-@OptIn(ExperimentalCoroutinesApi::class)
 class RecordsViewModel(
-    private val repository: WorkoutRepository,
+    repository: WorkoutRepository,
     backfillProgress: Flow<BackfillState>
 ) : ViewModel() {
 
     /** Null until the record book is read the first time. */
     val state: StateFlow<RecordsScreenState?> =
-        combine(repository.observeRecordBook(), repository.observeRecordsPending(), backfillProgress) { book, pending, progress ->
-            RecordsScreen.state(book, pending, progress, manualOnly = false)
+        combine(
+            repository.observeRecordBook(),
+            repository.observeRecordsPending(),
+            backfillProgress,
+            repository.observeOnlyManualWorkouts()
+        ) { book, pending, progress, onlyManual ->
+            RecordsScreen.state(book, pending, progress, manualOnly = onlyManual)
         }
             .distinctUntilChanged()
-            .mapLatest { state ->
-                // Asked only for the empty state: workouts saved, none with a track
-                if (state.empty && hasOnlyManualWorkouts()) state.copy(manualOnly = true) else state
-            }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), null)
 
     private val _expanded = MutableStateFlow<Set<RecordDistance>>(emptySet())
@@ -46,12 +44,8 @@ class RecordsViewModel(
         _expanded.update { if (distance in it) it - distance else it + distance }
     }
 
-    private suspend fun hasOnlyManualWorkouts(): Boolean =
-        repository.getTotalWorkouts() > 0 && repository.countRoutes(excludeId = NO_WORKOUT) == 0
-
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
-        const val NO_WORKOUT = -1L
     }
 }
 
