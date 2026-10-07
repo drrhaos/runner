@@ -59,7 +59,7 @@ class WorkoutRepositoryImportTest {
 
     @Test
     fun gpxImport_computesMetricsBeforeSaving() = runBlocking {
-        val ids = repository.importGpx(listOf(imported(1)))
+        val ids = repository.importGpx(listOf(imported(1))).ids
 
         assertEquals(1, ids.size)
         assertEquals(listOf(WorkoutDerivation.CURRENT_METRICS_VERSION), storedVersions())

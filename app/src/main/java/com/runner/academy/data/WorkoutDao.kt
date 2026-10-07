@@ -77,6 +77,10 @@ abstract class WorkoutDao {
     @Query("SELECT COUNT(*) FROM workouts WHERE metricsVersion < :version")
     abstract suspend fun countWithMetricsBelow(version: Int): Int
 
+    /** True while some workout with a track still waits for its best efforts below [version]. */
+    @Query("SELECT EXISTS(SELECT 1 FROM workouts WHERE metricsVersion < :version AND trackData IS NOT NULL)")
+    abstract fun observeTrackedWithMetricsBelow(version: Int): Flow<Boolean>
+
     /** Only what the metrics are derived from: one track in memory at a time. */
     @Query("SELECT id, trackData, type, duration FROM workouts WHERE id = :id")
     abstract suspend fun getMetricsSource(id: Long): MetricsSourceRow?
