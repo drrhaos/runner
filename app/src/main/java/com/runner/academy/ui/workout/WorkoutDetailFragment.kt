@@ -192,7 +192,7 @@ class WorkoutDetailFragment : Fragment() {
         binding.switchExcludeRecords.isChecked = workout.excludeFromRecords
         bindingExcludeSwitch = false
         binding.rowExcludeRecords.visibility = if (excludeRow.visible) View.VISIBLE else View.GONE
-        binding.layoutRecordsAutoExcluded.visibility = if (excludeRow.autoExcluded) View.VISIBLE else View.GONE
+        binding.textViewRecordsAutoExcluded.visibility = if (excludeRow.autoExcluded) View.VISIBLE else View.GONE
     }
 
     private fun setupClickListeners() {
