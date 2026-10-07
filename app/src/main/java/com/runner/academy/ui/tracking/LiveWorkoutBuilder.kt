@@ -1,9 +1,11 @@
 package com.runner.academy.ui.tracking
 
+import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.data.hasAltitude
 import com.runner.academy.service.SessionClock
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.PaceMath
@@ -97,7 +99,9 @@ object LiveWorkoutBuilder {
                     startTime = session.startTime,
                     endTime = endTime,
                     // Open pauses are closed by the Stop; null only without a clock (unknown)
-                    pauses = if (clockStarted) clock.pauses() else null
+                    pauses = if (clockStarted) clock.pauses() else null,
+                    // The fixes' own altitudes (the barometer branch declares BAROMETER here)
+                    elevationSource = if (sanitizedPoints.hasAltitude()) ElevationSource.GPS else null
                 )
             )
         } else {

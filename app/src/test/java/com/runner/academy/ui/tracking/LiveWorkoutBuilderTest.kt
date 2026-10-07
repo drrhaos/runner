@@ -1,5 +1,6 @@
 package com.runner.academy.ui.tracking
 
+import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.PauseKind
 import com.runner.academy.data.TrackPoint
@@ -9,6 +10,7 @@ import com.runner.academy.service.SessionClock
 import com.runner.academy.util.TrackDataJson
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -85,5 +87,25 @@ class LiveWorkoutBuilderTest {
         assertEquals(100_000L, workout.duration)
         assertEquals(100_000L, workout.movingDuration)
         assertNull(TrackDataJson.parse(workout.trackData)!!.pauses)
+    }
+
+    @Test
+    fun `a recording with altitudes declares them GPS`() {
+        val workout = build(session(SessionClock().apply { start(t0) }, 100_000L), stopAt = at(100))
+
+        assertEquals(ElevationSource.GPS, TrackDataJson.parse(workout.trackData)!!.elevationSource)
+    }
+
+    @Test
+    fun `a recording without altitudes stores none, not zeros`() {
+        val session = session(SessionClock().apply { start(t0) }, 100_000L).let { s ->
+            s.copy(rawTrackDataPoints = s.rawTrackDataPoints.map { it.copy(altitude = null) })
+        }
+
+        val track = TrackDataJson.parse(build(session, stopAt = at(100)).trackData)!!
+
+        assertNull(track.elevationSource)
+        assertEquals(ElevationSource.NONE, ElevationSource.of(track))
+        assertTrue(track.points.all { it.altitude == null })
     }
 }

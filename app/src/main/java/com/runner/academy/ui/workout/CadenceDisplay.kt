@@ -36,7 +36,7 @@ sealed interface CadenceDisplay {
             val stored = avgCadence?.takeIf { it.isFinite() }
             return when {
                 stored != null -> Value(stored.roundToInt())
-                metricsVersion < WorkoutDerivation.CURRENT_METRICS_VERSION && trackHasSteps -> Pending
+                WorkoutDerivation.isPending(metricsVersion, trackHasSteps) -> Pending
                 else -> None
             }
         }

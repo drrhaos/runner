@@ -277,6 +277,29 @@ class WorkoutImportTest {
         assertNotNull(workout.trackData)
         assertEquals("Imported from test.gpx", workout.notes)
         assertNull("every point has its time", TrackDataJson.parse(workout.trackData)!!.timeSynthetic)
+        val track = TrackDataJson.parse(workout.trackData)!!
+        assertEquals(com.runner.academy.data.ElevationSource.FILE, track.elevationSource)
+        assertEquals(com.runner.academy.data.ElevationSource.FILE, com.runner.academy.data.ElevationSource.of(track))
+        assertEquals(listOf(150.0, 151.0, 152.0), track.points.map { it.altitude })
+    }
+
+    @Test
+    fun parseGpx_withoutEleHasNoElevationSource() {
+        val gpx = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">
+              <trk><trkseg>
+                <trkpt lat="55.7558" lon="37.6176"><time>2024-01-01T10:00:00Z</time></trkpt>
+                <trkpt lat="55.7568" lon="37.6186"><time>2024-01-01T10:05:00Z</time></trkpt>
+              </trkseg></trk>
+            </gpx>
+        """.trimIndent()
+
+        val track = TrackDataJson.parse(GpxImporter.parseGpx(gpx).trackData)!!
+
+        assertNull(track.elevationSource)
+        assertTrue(track.points.all { it.altitude == null })
+        assertEquals(com.runner.academy.data.ElevationSource.NONE, com.runner.academy.data.ElevationSource.of(track))
     }
 
     @Test

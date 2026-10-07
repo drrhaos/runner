@@ -12,6 +12,7 @@ import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.data.TrackData
+import com.runner.academy.data.hasAltitude
 import com.runner.academy.databinding.FragmentWorkoutDetailBinding
 import com.runner.academy.util.DisplayTrack
 import com.runner.academy.util.ErrorHandler
@@ -37,6 +38,8 @@ class WorkoutDetailFragment : Fragment() {
     private var currentTrackData: TrackData? = null
     /** The shown track has steps: a missing cadence is then "not computed yet", not "none". */
     private var currentTrackHasSteps = false
+    /** The shown track has altitudes: missing gain and loss are then "not computed yet". */
+    private var currentTrackHasAltitude = false
     private var boundTrackRenderKey: Pair<com.runner.academy.data.WorkoutType, String>? = null
     private var userPreferences: com.runner.academy.util.UserPreferences? = null
     private var isDeleting = false
@@ -65,10 +68,15 @@ class WorkoutDetailFragment : Fragment() {
         mapManager = DetailMapManager(binding.mapViewDetail, requireContext()).apply { initialize() }
         chartRenderer = ChartRenderer(
             paceSpeedHeartChart = binding.chartPaceSpeedHeart,
-            elevationChart = binding.chartElevation,
+            elevation = ElevationChartViews(
+                card = binding.cardChartElevation,
+                chart = binding.chartElevation,
+                values = binding.textViewChartElevationValues,
+                summary = binding.textViewElevationChartSummary,
+                source = binding.textViewElevationChartSource
+            ),
             segmentsChart = binding.chartSegments,
             textViewPaceSpeedValues = binding.textViewChartPaceSpeedHeartValues,
-            textViewElevationValues = binding.textViewChartElevationValues,
             cadence = CadenceChartViews(
                 card = binding.cardChartCadence,
                 chart = binding.chartCadence,
@@ -200,6 +208,7 @@ class WorkoutDetailFragment : Fragment() {
                         if (hasDiagnostics) View.VISIBLE else View.GONE
                     statsDisplay?.displayWorkout(workout)
                     showCadence(workout)
+                    showElevation(workout)
                     chartRenderer?.intervalPlanSegments =
                         com.runner.academy.util.IntervalSegmentsJson.parse(workout.intervalSegmentsJson)
 
@@ -212,7 +221,9 @@ class WorkoutDetailFragment : Fragment() {
                         if (workout.trackData == null) {
                             currentTrackData = null
                             currentTrackHasSteps = false
+                            currentTrackHasAltitude = false
                             showCadence(workout)
+                            showElevation(workout)
                             _binding?.progressBarMapLoading?.visibility = View.GONE
                         } else {
                             displayTrackOnMap(workout)
@@ -262,14 +273,20 @@ class WorkoutDetailFragment : Fragment() {
                         Toast.makeText(context, getString(R.string.route_empty), Toast.LENGTH_SHORT).show()
                     }
                     else -> {
-                        currentTrackData = cleanedTrackData
-                        currentTrackHasSteps = withContext(Dispatchers.Default) {
-                            cleanedTrackData.points.any { it.steps != null }
+                        // Scanned off the main thread, the fragment's fields set back on it
+                        val (hasSteps, hasAltitude) = withContext(Dispatchers.Default) {
+                            cleanedTrackData.points.any { it.steps != null } to cleanedTrackData.points.hasAltitude()
                         }
                         if (_binding == null || !isAdded || isDetached) return@launch
+                        currentTrackData = cleanedTrackData
+                        currentTrackHasSteps = hasSteps
+                        currentTrackHasAltitude = hasAltitude
                         mapManager?.displayTrack(cleanedTrackData)
                         chartRenderer?.updateAllCharts(cleanedTrackData)
-                        currentWorkout?.let { showCadence(it) }
+                        currentWorkout?.let {
+                            showCadence(it)
+                            showElevation(it)
+                        }
                     }
                 }
             } catch (e: OutOfMemoryError) {
@@ -297,6 +314,29 @@ class WorkoutDetailFragment : Fragment() {
         chartRenderer?.cadenceDisplay = display
     }
 
+    /** The tiles and the chart title from the same stored gain and loss (see [ElevationDisplay]). */
+    private fun showElevation(workout: com.runner.academy.data.Workout) {
+        val display = ElevationDisplay.of(
+            workout.elevationGain,
+            workout.elevationLoss,
+            workout.elevationSource,
+            workout.metricsVersion,
+            currentTrackHasAltitude
+        )
+        statsDisplay?.displayElevation(display) { source -> showElevationSourceDialog(source) }
+        chartRenderer?.elevationDisplay = display
+    }
+
+    /** Why GPS (or a file's) elevation is approximate. */
+    private fun showElevationSourceDialog(source: com.runner.academy.data.ElevationSource) {
+        val texts = ElevationText.sourceTexts(source) ?: return
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle(texts.dialogTitle)
+            .setMessage(texts.dialogMessage)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
+    }
+
     override fun onResume() {
         super.onResume()
         mapManager?.onResume()
@@ -314,6 +354,7 @@ class WorkoutDetailFragment : Fragment() {
         boundTrackRenderKey = null
         currentTrackData = null
         currentTrackHasSteps = false
+        currentTrackHasAltitude = false
         chartRenderer = null
         exportManager = null
         statsDisplay = null

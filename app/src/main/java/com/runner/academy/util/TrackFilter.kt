@@ -98,7 +98,8 @@ class TrackFilter(
                 longitude = location.longitude,
                 accuracy = location.accuracy,
                 speed = location.speed,
-                altitude = location.altitude,
+                // A fix without altitude stays without one (never 0.0, see knownAltitude)
+                altitude = if (location.hasAltitude()) location.altitude else null,
                 afterGap = afterGap,
                 bridgeMeters = when {
                     afterGap -> bridgeMeters ?: from.bridgeMeters

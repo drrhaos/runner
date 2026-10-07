@@ -37,12 +37,65 @@ class WorkoutDerivationTest {
         metricsVersion = WorkoutDerivation.CURRENT_METRICS_VERSION
     )
 
+    /** A flat track at 150 m: computed, nothing climbed. */
+    private val flatElevation = nothingDerived.copy(
+        elevationGain = 0f,
+        elevationLoss = 0f,
+        elevationSource = ElevationSource.GPS
+    )
+
     @Test
     fun `a track is derived with the current version`() {
         val derived = WorkoutDerivation.derive(DerivationInput(trackJson, WorkoutType.EASY_RUN, 57_000L))
 
         // The other metrics are added by their own release-3 branches
-        assertEquals(nothingDerived.copy(routePreview = derived.routePreview), derived)
+        assertEquals(flatElevation.copy(routePreview = derived.routePreview), derived)
+    }
+
+    private fun json(points: List<TrackPoint>, source: ElevationSource? = null) = TrackDataJson.toJson(
+        TrackData(points, 0f, 0L, 0f, 0f, points.first().timestamp, null, elevationSource = source)
+    )
+
+    /** One fix a second for 10 min, 15 m up over the first 5 min and back down. */
+    private val climbPoints = (0..600).map { sec ->
+        val alt = 150.0 + 15.0 * minOf(sec, 600 - sec) / 300.0
+        TrackPoint(55.75, 37.60 + sec * 0.00005, 1_000_000L + sec * 1_000L, 5f, 3f, alt)
+    }
+
+    @Test
+    fun `a track with altitudes gets the gain and loss of its display track`() {
+        val input = DerivationInput(json(climbPoints), WorkoutType.EASY_RUN, 600_000L)
+
+        val derived = WorkoutDerivation.derive(input)
+
+        val track = DisplayTrack.of(input.trackJson, WorkoutType.EASY_RUN)!!
+        val expected = ElevationGain.compute(track.points, ElevationSource.GPS)!!
+        // The moving average rounds the sharp top off a little
+        assertEquals(15f, derived.elevationGain!!, 2.5f)
+        assertEquals(expected.gainM, derived.elevationGain)
+        assertEquals(expected.lossM, derived.elevationLoss)
+        assertEquals(ElevationSource.GPS, derived.elevationSource)
+    }
+
+    @Test
+    fun `the source a file declared is kept`() {
+        val derived = WorkoutDerivation.derive(DerivationInput(json(climbPoints, ElevationSource.FILE), WorkoutType.EASY_RUN, 600_000L))
+
+        assertEquals(ElevationSource.FILE, derived.elevationSource)
+        assertEquals(15f, derived.elevationGain!!, 2.5f)
+    }
+
+    @Test
+    fun `a track without altitudes has no gain and the source none`() {
+        for (alt in listOf(null, 0.0)) {
+            val points = climbPoints.map { it.copy(altitude = alt) }
+
+            val derived = WorkoutDerivation.derive(DerivationInput(json(points), WorkoutType.EASY_RUN, 600_000L))
+
+            assertNull(derived.elevationGain)
+            assertNull(derived.elevationLoss)
+            assertEquals(ElevationSource.NONE, derived.elevationSource)
+        }
     }
 
     @Test
@@ -60,7 +113,7 @@ class WorkoutDerivationTest {
             TrackData(listOf(TrackPoint(55.75, 37.60, 1_000_000L, 5f, 3f, 150.0)), 0f, 0L, 0f, 0f, 1_000_000L, null)
         )
 
-        assertEquals(nothingDerived, WorkoutDerivation.derive(DerivationInput(onePoint, WorkoutType.EASY_RUN, 0L)))
+        assertEquals(flatElevation, WorkoutDerivation.derive(DerivationInput(onePoint, WorkoutType.EASY_RUN, 0L)))
     }
 
     @Test
@@ -92,7 +145,7 @@ class WorkoutDerivationTest {
 
     @Test
     fun `no or broken track is marked computed with nothing derived`() {
-        assertEquals(3, WorkoutDerivation.CURRENT_METRICS_VERSION)
+        assertEquals(4, WorkoutDerivation.CURRENT_METRICS_VERSION)
         for (json in listOf(null, "", "{broken", "[1,2]")) {
             assertEquals(json, nothingDerived, WorkoutDerivation.derive(DerivationInput(json, WorkoutType.EASY_RUN, 0L)))
         }
