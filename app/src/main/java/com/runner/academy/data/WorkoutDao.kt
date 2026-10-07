@@ -87,6 +87,13 @@ abstract class WorkoutDao {
     )
     abstract fun observeTrackedWithMetricsBelow(version: Int): Flow<Boolean>
 
+    /** True while there are workouts and none of them has a track (all added by hand). */
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM workouts LIMIT 1) " +
+            "AND NOT EXISTS(SELECT 1 FROM workouts WHERE $HAS_TRACK LIMIT 1)"
+    )
+    abstract fun observeOnlyManualWorkouts(): Flow<Boolean>
+
     /** Only what the metrics are derived from: one track in memory at a time. */
     @Query("SELECT id, trackData, type, duration FROM workouts WHERE id = :id")
     abstract suspend fun getMetricsSource(id: Long): MetricsSourceRow?
@@ -140,7 +147,7 @@ abstract class WorkoutDao {
                 "(trackData IS NOT NULL) AS hasTrack, routePreview, metricsVersion"
 
         /** A workout usable as a route: it has a track and is not the one being edited. */
-        private const val ROUTE_FILTER =
-            "trackData IS NOT NULL AND TRIM(trackData) != '' AND id != :excludeId"
+        private const val HAS_TRACK = "trackData IS NOT NULL AND TRIM(trackData) != ''"
+        private const val ROUTE_FILTER = "$HAS_TRACK AND id != :excludeId"
     }
 }
