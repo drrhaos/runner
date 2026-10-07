@@ -436,7 +436,7 @@
 
             <!-- Пометка источника высоты (GPS, файл): открывает пояснение -->
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/textView_elevation_source_note"
+                android:id="@+id/button_elevation_source_note"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

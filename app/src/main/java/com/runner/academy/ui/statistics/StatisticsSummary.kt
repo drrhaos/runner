@@ -25,11 +25,14 @@ object StatisticsSummary {
         val averagePace = PaceMath.avgPace(totalDistance, totalMovingDuration)
         val averageCadence = averageCadence(rows)
         // Workouts without elevation are no data: they neither count nor zero the sum
-        val withElevation = rows.filter {
-            it.elevationGain?.isFinite() == true && it.elevationSource != null && it.elevationSource != ElevationSource.NONE
+        val withElevation = rows.mapNotNull { row ->
+            val gain = row.elevationGain?.takeIf { it.isFinite() }
+            val source = row.elevationSource?.takeIf { it != ElevationSource.NONE }
+            if (gain != null && source != null) gain to source else null
         }
-        val totalElevationGain = if (withElevation.isEmpty()) null else withElevation.sumOf { it.elevationGain!!.toDouble() }.toFloat()
-        val elevationApproximate = withElevation.any { it.elevationSource != ElevationSource.BAROMETER }
+        val totalElevationGain = if (withElevation.isEmpty()) null else withElevation.sumOf { it.first.toDouble() }.toFloat()
+        // As the footnote says: "≈" when part of the sum is from GPS
+        val elevationApproximate = withElevation.any { it.second == ElevationSource.GPS }
 
         // Находим лучшие результаты
         val bestPace = rows

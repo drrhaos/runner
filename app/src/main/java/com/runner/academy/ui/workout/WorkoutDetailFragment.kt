@@ -12,7 +12,7 @@ import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.data.TrackData
-import com.runner.academy.data.knownAltitude
+import com.runner.academy.data.hasAltitude
 import com.runner.academy.databinding.FragmentWorkoutDetailBinding
 import com.runner.academy.util.DisplayTrack
 import com.runner.academy.util.ErrorHandler
@@ -273,12 +273,14 @@ class WorkoutDetailFragment : Fragment() {
                         Toast.makeText(context, getString(R.string.route_empty), Toast.LENGTH_SHORT).show()
                     }
                     else -> {
-                        currentTrackData = cleanedTrackData
-                        withContext(Dispatchers.Default) {
-                            currentTrackHasSteps = cleanedTrackData.points.any { it.steps != null }
-                            currentTrackHasAltitude = cleanedTrackData.points.any { it.knownAltitude() != null }
+                        // Scanned off the main thread, the fragment's fields set back on it
+                        val (hasSteps, hasAltitude) = withContext(Dispatchers.Default) {
+                            cleanedTrackData.points.any { it.steps != null } to cleanedTrackData.points.hasAltitude()
                         }
                         if (_binding == null || !isAdded || isDetached) return@launch
+                        currentTrackData = cleanedTrackData
+                        currentTrackHasSteps = hasSteps
+                        currentTrackHasAltitude = hasAltitude
                         mapManager?.displayTrack(cleanedTrackData)
                         chartRenderer?.updateAllCharts(cleanedTrackData)
                         currentWorkout?.let {
@@ -327,10 +329,10 @@ class WorkoutDetailFragment : Fragment() {
 
     /** Why GPS (or a file's) elevation is approximate. */
     private fun showElevationSourceDialog(source: com.runner.academy.data.ElevationSource) {
-        val (title, message) = ElevationText.sourceDialog(source) ?: return
+        val texts = ElevationText.sourceTexts(source) ?: return
         com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-            .setTitle(title)
-            .setMessage(message)
+            .setTitle(texts.dialogTitle)
+            .setMessage(texts.dialogMessage)
             .setPositiveButton(android.R.string.ok, null)
             .show()
     }

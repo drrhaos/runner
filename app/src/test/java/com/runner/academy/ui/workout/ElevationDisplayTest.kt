@@ -1,8 +1,10 @@
 package com.runner.academy.ui.workout
 
+import com.runner.academy.R
 import com.runner.academy.data.ElevationSource
 import com.runner.academy.util.WorkoutDerivation
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ElevationDisplayTest {
@@ -25,6 +27,14 @@ class ElevationDisplayTest {
     fun `not computed yet with altitudes in the track is pending`() {
         assertEquals(ElevationDisplay.Pending, ElevationDisplay.of(null, null, null, current - 1, trackHasAltitude = true))
         assertEquals(ElevationDisplay.Pending, ElevationDisplay.of(null, null, null, 0, trackHasAltitude = true))
+    }
+
+    @Test
+    fun `GPS and a file get a note and an explanation, the barometer none`() {
+        assertEquals(R.string.workout_elevation_source_gps, ElevationText.sourceTexts(ElevationSource.GPS)!!.note)
+        assertEquals(R.string.workout_elevation_source_file_short, ElevationText.sourceTexts(ElevationSource.FILE)!!.chartSubtitle)
+        assertNull(ElevationText.sourceTexts(ElevationSource.BAROMETER))
+        assertNull(ElevationText.sourceTexts(ElevationSource.NONE))
     }
 
     @Test

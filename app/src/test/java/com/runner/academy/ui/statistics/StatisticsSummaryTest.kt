@@ -43,11 +43,12 @@ class StatisticsSummaryTest {
     }
 
     @Test
-    fun elevationGain_fromFileIsApproximateToo_barometerAloneIsNot() {
+    fun elevationGain_isApproximateOnlyWithGps_asTheFootnoteSays() {
         val file = StatisticsSummary.of(listOf(withElevation(10f, com.runner.academy.data.ElevationSource.FILE)), now)
         val baro = StatisticsSummary.of(listOf(withElevation(10f, com.runner.academy.data.ElevationSource.BAROMETER)), now)
 
-        assertEquals(true, file.elevationApproximate)
+        assertEquals(10f, file.totalElevationGain!!, 0f)
+        assertEquals(false, file.elevationApproximate)
         assertEquals(false, baro.elevationApproximate)
     }
 
