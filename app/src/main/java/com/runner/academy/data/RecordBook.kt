@@ -44,9 +44,14 @@ class RecordBook private constructor(
         return entries.takeIf { it.isNotEmpty() }?.let(::RecordCard)
     }
 
-    companion object {
-        val EMPTY = RecordBook(emptyMap())
+    /**
+     * Distances whose current record belongs to one of [workoutIds]: the N of "Records updated:
+     * N" for a batch (an import, a background pass), whatever else was saved meanwhile.
+     */
+    fun distancesHeldBy(workoutIds: Set<Long>): Int =
+        RecordDistance.entries.count { current(it)?.effort?.workoutId in workoutIds }
 
+    companion object {
         fun from(rows: List<EffortRow>): RecordBook {
             val chains = rows
                 .groupBy { RecordDistance.ofMeters(it.effort.distanceM) }
@@ -63,18 +68,6 @@ class RecordBook private constructor(
             }
             return chain
         }
-
-        /**
-         * Distances whose current record is another effort in [after] than in [before] (a
-         * new, a faster or a fallen record): the N of "Records updated: N" after an import or
-         * the background pass.
-         */
-        fun changedDistances(before: RecordBook, after: RecordBook): Int =
-            RecordDistance.entries.count { distance ->
-                before.current(distance)?.effort?.key() != after.current(distance)?.effort?.key()
-            }
-
-        private fun BestEffort.key() = workoutId to elapsedMs
     }
 }
 

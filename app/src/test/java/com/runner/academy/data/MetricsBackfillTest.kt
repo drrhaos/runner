@@ -267,61 +267,123 @@ class MetricsBackfillTest {
             listOf(BackfillState.Running(0, 3), BackfillState.Running(1, 3), BackfillState.Running(2, 3)),
             seen
         )
-        // The fake efforts set a first 1 km record
-        assertEquals(BackfillState.Done(changedDistances = 1), pass.progress.value)
+        // Not after an import (a raised version, the app start): the fake efforts hold the 1 km
+        assertEquals(BackfillState.Done(changedDistances = 1, afterImport = false), pass.progress.value)
     }
 
+    private fun effort(workoutId: Long, meters: Int, elapsedMs: Long) =
+        BestEffort(workoutId, meters, elapsedMs, 0L, elapsedMs, 0f)
+
+    /** A row saved computed meanwhile (live recording, the form), with its [bestEfforts]. */
+    private suspend fun insertComputed(n: Int, vararg bestEfforts: Pair<Int, Long>): Long {
+        val id = insert(n, version = WorkoutDerivation.CURRENT_METRICS_VERSION)
+        efforts.replaceForWorkout(id, bestEfforts.map { (meters, ms) -> effort(id, meters, ms) })
+        return id
+    }
+
+    /** Efforts by the row's duration in minutes: row n → [byMinutes] (n). */
+    private fun deriveBy(byMinutes: Map<Int, List<Effort>>): (DerivationInput) -> Derived = { input ->
+        Derived(efforts = byMinutes[(input.durationMs / 60_000L).toInt()].orEmpty())
+    }
+
+    private fun e(meters: Int, ms: Long) = Effort(meters, ms, 0L, ms, 0f)
+
     @Test
-    fun done_countsTheDistancesWhoseRecordChanged() = runBlocking {
-        val old = insert(1, version = WorkoutDerivation.CURRENT_METRICS_VERSION)
-        efforts.replaceForWorkout(
-            old,
-            listOf(
-                BestEffort(old, 1_000, 300_000L, 0L, 300_000L, 0f),
-                BestEffort(old, 5_000, 1_600_000L, 0L, 1_600_000L, 0f)
+    fun done_countsTheDistancesWhoseRecordTheImportHolds() = runBlocking {
+        insertComputed(1, 1_000 to 300_000L, 5_000 to 1_600_000L)
+        // An import of two runs: a faster 1 km and a slower 5 km, then a first half marathon
+        val imported = listOf(insert(2), insert(3))
+        val pass = backfill(
+            derive = deriveBy(
+                mapOf(2 to listOf(e(1_000, 290_000L), e(5_000, 1_700_000L)), 3 to listOf(e(21_097, 7_000_000L)))
             )
         )
-        // An import of two runs: a faster 1 km and a slower 5 km, then a first half marathon
-        insert(2)
-        insert(3)
-        val pass = backfill(derive = { input ->
-            Derived(
-                efforts = if (input.durationMs == 2 * 60_000L) {
-                    listOf(Effort(1_000, 290_000L, 0L, 290_000L, 0f), Effort(5_000, 1_700_000L, 0L, 1_700_000L, 0f))
-                } else {
-                    listOf(Effort(21_097, 7_000_000L, 0L, 7_000_000L, 0f))
-                }
-            )
-        })
+        pass.markImported(imported)
 
         val report = pass.runOnce()
 
         assertEquals(2, report.changedDistances)
-        assertEquals(BackfillState.Done(changedDistances = 2), pass.progress.value)
+        assertEquals(BackfillState.Done(changedDistances = 2, afterImport = true), pass.progress.value)
     }
 
     @Test
-    fun aPausedPass_countsChangesFromWhereItBegan() = runBlocking {
-        insert(1)
-        insert(2)
+    fun aRunSavedWhileThePassWaits_isNotCountedForTheImport() = runBlocking {
+        val imported = listOf(insert(1), insert(2))
         var active = false
-        var derived = 0
-        // The newest row (computed first) sets a 1 km record, the older one has no efforts
         val pass = backfill(
             derive = { input ->
-                if (++derived == 1) active = true
-                if (input.durationMs == 2 * 60_000L) derive(input) else Derived()
+                active = true // a workout starts after the first row
+                deriveBy(mapOf(1 to listOf(e(1_000, 300_000L)), 2 to listOf(e(1_000, 320_000L))))(input)
             },
             isWorkoutActive = { active }
         )
+        pass.markImported(imported)
 
         assertTrue(pass.runOnce().pausedForWorkout)
+        // The workout is saved: a first 5 km and a faster 1 km than the import's
+        insertComputed(9, 1_000 to 250_000L, 5_000 to 1_500_000L)
         active = false
         val report = pass.runOnce()
 
-        // The 1 km computed before the pause is part of the change
+        assertEquals(0, report.changedDistances)
+        assertEquals(BackfillState.Done(changedDistances = 0, afterImport = true), pass.progress.value)
+    }
+
+    @Test
+    fun aRaisedVersion_isNoImport() = runBlocking {
+        // Every row computed by an older version: records are rebuilt, not "updated by an import"
+        (1..2).forEach { insert(it, version = WorkoutDerivation.CURRENT_METRICS_VERSION - 1) }
+        val pass = backfill()
+
+        val report = pass.runOnce()
+
+        assertEquals(BackfillState.Done(changedDistances = 1, afterImport = false), pass.progress.value)
         assertEquals(1, report.changedDistances)
-        assertEquals(BackfillState.Done(changedDistances = 1), pass.progress.value)
+    }
+
+    @Test
+    fun anExclusionDuringThePass_spoilsNoLaterCount() = runBlocking {
+        val first = listOf(insert(1), insert(2))
+        var active = false
+        var derived = 0
+        val pass = backfill(
+            derive = { input ->
+                if (++derived == 1) active = true // a workout starts after the first row
+                deriveBy(
+                    mapOf(1 to listOf(e(1_000, 300_000L)), 2 to listOf(e(1_000, 280_000L)), 3 to listOf(e(1_000, 310_000L)))
+                )(input)
+            },
+            isWorkoutActive = { active }
+        )
+        pass.markImported(first)
+
+        assertTrue(pass.runOnce().pausedForWorkout) // the faster row 2 is computed
+        workouts.setExcludeFromRecords(first[1], true)
+        active = false
+        // Row 1 holds the 1 km now: still the import's
+        assertEquals(1, pass.runOnce().changedDistances)
+
+        // A later import of a slower run changes nothing
+        val second = listOf(insert(3))
+        pass.markImported(second)
+        val report = pass.runOnce()
+        assertFalse(report.pausedForWorkout)
+        assertEquals(0, report.changedDistances)
+        assertEquals(BackfillState.Done(changedDistances = 0, afterImport = true), pass.progress.value)
+    }
+
+    @Test
+    fun theImportBatch_isReportedOnce() = runBlocking {
+        val pass = backfill()
+        pass.markImported(listOf(insert(1)))
+
+        val report = pass.runOnce()
+
+        assertEquals(1, report.changedDistances)
+        assertEquals(BackfillState.Done(changedDistances = 1, afterImport = true), pass.progress.value)
+        // Spent: the next pass with nothing to do is idle
+        pass.runOnce()
+        assertEquals(BackfillState.Idle, pass.progress.value)
     }
 
     @Test

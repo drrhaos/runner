@@ -122,17 +122,19 @@ class RecordBookTest {
     }
 
     @Test
-    fun `changed distances count where the current record is another`() {
-        val afterRows = rows.filter { it.effort.workoutId != 4L } +
-            row(6, day = 60, elapsedMs = min(4, 0), distance = RecordDistance.KM_1) +
-            row(7, day = 70, elapsedMs = min(60, 0), distance = RecordDistance.KM_10) +
-            // Slower than the current 5 km: no change there from it
-            row(8, day = 80, elapsedMs = min(30, 0))
+    fun `distances held count the current records of a batch of workouts`() {
+        val book = RecordBook.from(
+            rows +
+                row(6, day = 60, elapsedMs = min(4, 0), distance = RecordDistance.KM_1) +
+                row(7, day = 70, elapsedMs = min(60, 0), distance = RecordDistance.KM_10) +
+                // Slower than the current 5 km
+                row(8, day = 80, elapsedMs = min(30, 0))
+        )
 
-        // 5 km (back to 26:18), 1 km and 10 km (new)
-        assertEquals(3, RecordBook.changedDistances(RecordBook.from(rows), RecordBook.from(afterRows)))
-        assertEquals(0, RecordBook.changedDistances(RecordBook.from(afterRows), RecordBook.from(afterRows.reversed())))
-        assertEquals(0, RecordBook.changedDistances(RecordBook.EMPTY, RecordBook.EMPTY))
+        assertEquals(2, book.distancesHeldBy(setOf(6L, 7L, 8L)))
+        assertEquals(1, book.distancesHeldBy(setOf(4L)))
+        assertEquals(0, book.distancesHeldBy(setOf(1L, 3L, 8L)))
+        assertEquals(0, RecordBook.from(emptyList()).distancesHeldBy(setOf(1L)))
     }
 
     private companion object {

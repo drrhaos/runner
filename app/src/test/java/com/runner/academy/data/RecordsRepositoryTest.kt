@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.runner.academy.gpsreplay.SyntheticRun
 import com.runner.academy.util.RouteTimeAligner
 import com.runner.academy.util.TrackDataJson
+import com.runner.academy.util.WorkoutDerivation
 import com.runner.academy.util.WorkoutTrackRebuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -116,17 +117,39 @@ class RecordsRepositoryTest {
 
     @Test
     fun aBackupImport_getsItsRecordsFromTheBackgroundPass() = runBlocking {
+        val backfill = MetricsBackfill(database, scope)
+        val repository = WorkoutRepository(database, onDeferredSaved = backfill::markImported)
         val ids = repository.importBackup(listOf(workout(day = 1, speedMps = 3.0), workout(day = 2, speedMps = 3.5)))
         assertNull(kmRecord())
         assertTrue(repository.observeRecordsPending().first())
         assertNull(repository.observeRecordCard(ids[1], justSaved = false).first())
 
-        val report = MetricsBackfill(database, scope).runOnce()
+        val report = backfill.runOnce()
 
         assertEquals(1, report.changedDistances)
+        assertEquals(BackfillState.Done(changedDistances = 1, afterImport = true), backfill.progress.value)
         assertEquals(ids, kmHistory())
         assertEquals(false, repository.observeRecordsPending().first())
         assertEquals(RecordStatus.Current, repository.observeRecordCard(ids[1], justSaved = false).first()!!.entries.single().status)
+    }
+
+    @Test
+    fun aGpxImportDuringTheBackgroundPass_isCountedOnce() = runBlocking {
+        var gpx: GpxImport? = null
+        // The GPX import lands while the pass derives the backup's row
+        val backfill = MetricsBackfill(database, scope, derive = { input ->
+            if (gpx == null) gpx = runBlocking { repository.importGpx(listOf(workout(day = 3, speedMps = 3.5))) }
+            WorkoutDerivation.derive(input)
+        })
+        val importing = WorkoutRepository(database, onDeferredSaved = backfill::markImported)
+        importing.importBackup(listOf(workout(day = 1, speedMps = 3.0)))
+
+        val report = backfill.runOnce()
+
+        // The 1 km is the GPX run's: counted by the GPX import, not again by the backup's pass
+        assertEquals(1, gpx!!.changedRecordDistances)
+        assertEquals(0, report.changedDistances)
+        assertEquals(BackfillState.Done(changedDistances = 0, afterImport = true), backfill.progress.value)
     }
 
     @Test
