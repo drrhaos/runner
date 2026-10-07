@@ -6,6 +6,7 @@ import com.runner.academy.data.TrackData
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
+import com.runner.academy.data.knownAltitude
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -63,8 +64,8 @@ object GpxExporter {
             builder.append("      <trkpt lat=\"").append(point.latitude)
                 .append("\" lon=\"").append(point.longitude).append("\">\n")
             
-            // Высота
-            point.altitude?.let { altitude ->
+            // Высота: только известная (старое 0.0 значит «нет высоты», а не уровень моря)
+            point.knownAltitude()?.let { altitude ->
                 builder.append("        <ele>").append(altitude).append("</ele>\n")
             }
             
