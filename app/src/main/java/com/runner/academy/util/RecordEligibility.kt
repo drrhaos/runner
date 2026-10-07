@@ -25,7 +25,8 @@ object RecordEligibility {
      * False when the point times were made up: [TrackData.timeSynthetic] (GPX without `<time>`,
      * route time from the form), or, on older tracks without the flag, a constant speed over
      * every step: the signature of [RouteTimeAligner.distributeByDistance], which a real GPS
-     * never has. The details screen states the reason next to the "exclude from records" switch.
+     * never has. False is also the reason a UI can give for a track left out of the records
+     * ("route time computed").
      */
     fun isTrusted(track: TrackData): Boolean =
         track.timeSynthetic != true && !hasUniformSpeed(track.points)
