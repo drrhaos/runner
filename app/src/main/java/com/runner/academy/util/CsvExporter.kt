@@ -79,6 +79,8 @@ object CsvExporter {
         distanceByType: Map<WorkoutType, Float>,
         /** Null: no workout has cadence, the line is left out. */
         averageCadence: Float?,
+        /** Null: no workout has elevation, the line is left out. */
+        totalElevationGain: Float?,
         context: Context
     ): String {
         val builder = StringBuilder()
@@ -88,6 +90,9 @@ object CsvExporter {
         builder.append("${context.getString(R.string.csv_total_distance)},${String.format(Locale.US, "%.2f", totalDistance)}\n")
         builder.append("${context.getString(R.string.csv_total_time)},${String.format(Locale.US, "%.2f", totalDuration / 3600000.0)}\n")
         builder.append("${context.getString(R.string.csv_total_calories)},$totalCalories\n")
+        whole(totalElevationGain).takeIf { it.isNotEmpty() }?.let { gain ->
+            builder.append("${context.getString(R.string.csv_total_elevation_gain)},$gain\n")
+        }
         builder.append("${context.getString(R.string.csv_average_pace)},${if (averagePace > 0) FormatUtils.formatPace(averagePace, context) else "--:--"}\n")
         builder.append("${context.getString(R.string.csv_average_distance)},${String.format(Locale.US, "%.2f", averageDistance)}\n")
         builder.append("${context.getString(R.string.csv_average_time)},${String.format(Locale.US, "%.2f", averageDuration / 60000.0)}\n")

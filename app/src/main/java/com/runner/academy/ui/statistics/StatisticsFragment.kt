@@ -17,6 +17,7 @@ import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.FragmentStatisticsBinding
 import com.runner.academy.ui.workout.CadenceText
+import com.runner.academy.ui.workout.ElevationText
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.MovingTimeDisplay
 import com.runner.academy.util.ShareExports
@@ -82,6 +83,7 @@ class StatisticsFragment : Fragment() {
                     workoutsByType = data.workoutsByType,
                     distanceByType = data.distanceByType,
                     averageCadence = data.averageCadence,
+                    totalElevationGain = data.totalElevationGain,
                     context = requireContext()
                 )
                 
@@ -145,6 +147,17 @@ class StatisticsFragment : Fragment() {
             if (MovingTimeDisplay.statisticsShowsMoving(data.totalDuration, data.totalMovingDuration)) View.VISIBLE else View.GONE
         binding.textViewTotalMovingDuration.text = FormatUtils.formatTime(data.totalMovingDuration)
         binding.textViewTotalCalories.text = String.format("%s %s", data.totalCalories, getString(R.string.workout_details_calories))
+        // Only over workouts with elevation; hidden when none has it, "≈" when part is GPS or a file
+        val gain = data.totalElevationGain?.roundToInt()
+        binding.layoutTotalElevationGain.visibility = if (gain != null) View.VISIBLE else View.GONE
+        binding.textViewElevationApproxNote.visibility =
+            if (gain != null && data.elevationApproximate) View.VISIBLE else View.GONE
+        if (gain != null) {
+            val meters = getString(R.string.statistics_elevation_format, gain)
+            binding.textViewTotalElevationGain.text =
+                if (data.elevationApproximate) getString(R.string.statistics_elevation_approx_format, meters) else meters
+            binding.textViewTotalElevationGain.contentDescription = ElevationText.meters(requireContext(), gain)
+        }
 
         // Лучшие результаты
         binding.textViewBestPace.text = if (data.bestPace > 0) {
