@@ -80,25 +80,26 @@ class DetailStatsDisplay(
             val visibility = if (display == ElevationDisplay.None) View.GONE else View.VISIBLE
             layoutDetailElevationGain.visibility = visibility
             layoutDetailElevationLoss.visibility = visibility
-            textViewElevationSourceNote.visibility = View.GONE
+            buttonElevationSourceNote.visibility = View.GONE
             when (display) {
                 is ElevationDisplay.Value -> {
                     textViewDetailElevationGain.text = context.getString(R.string.workout_elevation_gain_value, display.gainM)
                     textViewDetailElevationLoss.text = context.getString(R.string.workout_elevation_loss_value, display.lossM)
                     layoutDetailElevationGain.contentDescription = ElevationText.gainA11y(context, display.gainM)
                     layoutDetailElevationLoss.contentDescription = ElevationText.lossA11y(context, display.lossM)
-                    ElevationText.sourceNote(display.source)?.let { note ->
-                        textViewElevationSourceNote.setText(note)
-                        textViewElevationSourceNote.visibility = View.VISIBLE
-                        textViewElevationSourceNote.setOnClickListener { onSourceNoteClick(display.source) }
+                    ElevationText.sourceTexts(display.source)?.let { texts ->
+                        buttonElevationSourceNote.setText(texts.note)
+                        buttonElevationSourceNote.visibility = View.VISIBLE
+                        buttonElevationSourceNote.setOnClickListener { onSourceNoteClick(display.source) }
                     }
                 }
                 ElevationDisplay.Pending -> {
                     textViewDetailElevationGain.setText(R.string.metric_pending_placeholder)
                     textViewDetailElevationLoss.setText(R.string.metric_pending_placeholder)
-                    val pending = context.getString(R.string.workout_elevation_pending_a11y)
-                    layoutDetailElevationGain.contentDescription = pending
-                    layoutDetailElevationLoss.contentDescription = pending
+                    layoutDetailElevationGain.contentDescription =
+                        context.getString(R.string.workout_elevation_gain_pending_a11y)
+                    layoutDetailElevationLoss.contentDescription =
+                        context.getString(R.string.workout_elevation_loss_pending_a11y)
                 }
                 ElevationDisplay.None -> Unit
             }

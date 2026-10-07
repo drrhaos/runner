@@ -452,9 +452,8 @@ class ChartRenderer(
                     context.getString(R.string.workout_elevation_summary_format, display.gainM, display.lossM)
                 val gain = ElevationText.meters(context, display.gainM)
                 val loss = ElevationText.meters(context, display.lossM)
-                elevation.summary.contentDescription =
-                    ElevationText.gainA11y(context, display.gainM) + ", " + ElevationText.lossA11y(context, display.lossM)
-                val source = ElevationText.sourceShort(display.source)
+                elevation.summary.contentDescription = ElevationText.summaryA11y(context, display.gainM, display.lossM)
+                val source = ElevationText.sourceTexts(display.source)?.chartSubtitle
                 elevation.source.visibility = if (source != null) android.view.View.VISIBLE else android.view.View.GONE
                 source?.let { elevation.source.setText(it) }
                 chart.contentDescription = context.getString(R.string.chart_elevation_a11y, gain, loss, from, to)
@@ -462,7 +461,7 @@ class ChartRenderer(
             ElevationDisplay.Pending -> {
                 elevation.summary.visibility = android.view.View.VISIBLE
                 elevation.summary.setText(R.string.metric_pending_placeholder)
-                elevation.summary.contentDescription = context.getString(R.string.workout_elevation_pending_a11y)
+                elevation.summary.contentDescription = ElevationText.pendingA11y(context)
                 elevation.source.visibility = android.view.View.GONE
                 chart.contentDescription = context.getString(R.string.chart_elevation_range_a11y, from, to)
             }

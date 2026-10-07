@@ -400,9 +400,7 @@
     <string name="csv_average_pace">Average pace (min/km)</string>
     <string name="csv_average_distance">Average distance (km)</string>
     <string name="csv_average_time">Average time (minutes)</string>
-    <string name="csv_average_cadence">Average cadence (spm)</string>
-    <string name="csv_total_elevation_gain">Elevation gain (m)</string>
-    <string name="csv_best_pace">Best pace (min/km)</string>
+    <string name="csv_average_cadence">Average cadence (spm)</string>    <string name="csv_best_pace">Best pace (min/km)</string>
     <string name="csv_max_distance">Maximum distance (km)</string>
     <string name="csv_longest_time">Longest workout (minutes)</string>
     <string name="csv_breakdown_header">\nDistribution by workout type\nType,Count,Distance (km)\n</string>
@@ -496,18 +494,21 @@
     <string name="workout_elevation_source_file">Elevation from the file</string>
     <string name="workout_elevation_source_file_short">from the file</string>
     <string name="workout_elevation_source_dialog_title">Elevation from GPS</string>
-    <string name="workout_elevation_source_dialog_message">This phone has no barometer, so elevation comes from GPS. GPS measures height less accurately than position — errors of 10–20 m are common. We smooth it and ignore small changes, but the gain may differ from reality.</string>
+    <string name="workout_elevation_source_dialog_message">This elevation comes from GPS. GPS measures height less accurately than position — errors of 10–20 m are common. We smooth it and ignore small changes, so the gain may differ from reality; short climbs may be missed.</string>
     <string name="workout_elevation_source_file_dialog_title">Elevation from the file</string>
     <string name="workout_elevation_source_file_dialog_message">The elevation was taken from the imported file as it is. We smooth it and ignore small changes, like GPS elevation, so the gain may differ from what the device that recorded the file showed.</string>
     <string name="workout_elevation_summary_format">↑ %1$d m  ↓ %2$d m</string>
     <string name="workout_elevation_gain_a11y">Elevation gain %1$s</string>
     <string name="workout_elevation_loss_a11y">Elevation loss %1$s</string>
-    <string name="workout_elevation_pending_a11y">Elevation gain is still being calculated</string>
+    <string name="workout_elevation_summary_a11y">%1$s, %2$s</string>
+    <string name="workout_elevation_gain_pending_a11y">Elevation gain is still being calculated</string>
+    <string name="workout_elevation_loss_pending_a11y">Elevation loss is still being calculated</string>
     <string name="chart_elevation_a11y">Elevation chart: gain %1$s, loss %2$s, from %3$s to %4$s</string>
     <string name="chart_elevation_range_a11y">Elevation chart: from %1$s to %2$s</string>
     <string name="statistics_total_elevation_gain_label">Elevation gain:</string>
     <string name="statistics_elevation_format">%1$,d m</string>
     <string name="statistics_elevation_approx_format">≈ %1$s</string>
+    <string name="statistics_elevation_approx_a11y">approximately %1$s</string>
     <string name="statistics_elevation_approx_note">≈ — some elevation comes from GPS and is approximate</string>
 
     <!-- Training plans -->

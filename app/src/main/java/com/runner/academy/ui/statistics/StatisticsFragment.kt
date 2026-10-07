@@ -83,7 +83,6 @@ class StatisticsFragment : Fragment() {
                     workoutsByType = data.workoutsByType,
                     distanceByType = data.distanceByType,
                     averageCadence = data.averageCadence,
-                    totalElevationGain = data.totalElevationGain,
                     context = requireContext()
                 )
                 
@@ -147,16 +146,22 @@ class StatisticsFragment : Fragment() {
             if (MovingTimeDisplay.statisticsShowsMoving(data.totalDuration, data.totalMovingDuration)) View.VISIBLE else View.GONE
         binding.textViewTotalMovingDuration.text = FormatUtils.formatTime(data.totalMovingDuration)
         binding.textViewTotalCalories.text = String.format("%s %s", data.totalCalories, getString(R.string.workout_details_calories))
-        // Only over workouts with elevation; hidden when none has it, "≈" when part is GPS or a file
+        // Only over workouts with elevation; hidden when none has it, "≈" when part is from GPS
         val gain = data.totalElevationGain?.roundToInt()
         binding.layoutTotalElevationGain.visibility = if (gain != null) View.VISIBLE else View.GONE
         binding.textViewElevationApproxNote.visibility =
             if (gain != null && data.elevationApproximate) View.VISIBLE else View.GONE
         if (gain != null) {
             val meters = getString(R.string.statistics_elevation_format, gain)
-            binding.textViewTotalElevationGain.text =
-                if (data.elevationApproximate) getString(R.string.statistics_elevation_approx_format, meters) else meters
-            binding.textViewTotalElevationGain.contentDescription = ElevationText.meters(requireContext(), gain)
+            val spoken = ElevationText.meters(requireContext(), gain)
+            if (data.elevationApproximate) {
+                binding.textViewTotalElevationGain.text = getString(R.string.statistics_elevation_approx_format, meters)
+                binding.textViewTotalElevationGain.contentDescription =
+                    getString(R.string.statistics_elevation_approx_a11y, spoken)
+            } else {
+                binding.textViewTotalElevationGain.text = meters
+                binding.textViewTotalElevationGain.contentDescription = spoken
+            }
         }
 
         // Лучшие результаты

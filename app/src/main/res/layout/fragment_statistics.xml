@@ -205,7 +205,7 @@
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
 
-                <!-- Сноска к «≈»: часть высоты по GPS или из файла -->
+                <!-- Сноска к «≈»: часть высоты посчитана по GPS -->
                 <TextView
                     android:id="@+id/textViewElevationApproxNote"
                     android:layout_width="match_parent"

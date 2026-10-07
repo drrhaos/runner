@@ -7,8 +7,37 @@ import com.runner.academy.data.ElevationSource
 import com.runner.academy.util.WorkoutDerivation
 import kotlin.math.roundToInt
 
+/**
+ * The texts of an approximate elevation source: the note under the tiles, the subtitle of the
+ * chart card and the explanation behind the note.
+ */
+data class ElevationSourceTexts(
+    @StringRes val note: Int,
+    @StringRes val chartSubtitle: Int,
+    @StringRes val dialogTitle: Int,
+    @StringRes val dialogMessage: Int
+)
+
 /** Elevation for TalkBack: the arrows would be read as "up arrow", "m" letter by letter. */
 object ElevationText {
+
+    /** Per source; none for the barometer (exact enough) and for no source. */
+    private val sourceTexts = mapOf(
+        ElevationSource.GPS to ElevationSourceTexts(
+            note = R.string.workout_elevation_source_gps,
+            chartSubtitle = R.string.workout_elevation_source_gps_short,
+            dialogTitle = R.string.workout_elevation_source_dialog_title,
+            dialogMessage = R.string.workout_elevation_source_dialog_message
+        ),
+        ElevationSource.FILE to ElevationSourceTexts(
+            note = R.string.workout_elevation_source_file,
+            chartSubtitle = R.string.workout_elevation_source_file_short,
+            dialogTitle = R.string.workout_elevation_source_file_dialog_title,
+            dialogMessage = R.string.workout_elevation_source_file_dialog_message
+        )
+    )
+
+    fun sourceTexts(source: ElevationSource): ElevationSourceTexts? = sourceTexts[source]
 
     /** "124 metres", declined. */
     fun meters(context: Context, meters: Int): String =
@@ -20,30 +49,15 @@ object ElevationText {
     fun lossA11y(context: Context, meters: Int): String =
         context.getString(R.string.workout_elevation_loss_a11y, meters(context, meters))
 
-    /** The note under the tiles; null: no note (the barometer is exact enough). */
-    @StringRes
-    fun sourceNote(source: ElevationSource): Int? = when (source) {
-        ElevationSource.GPS -> R.string.workout_elevation_source_gps
-        ElevationSource.FILE -> R.string.workout_elevation_source_file
-        ElevationSource.BAROMETER, ElevationSource.NONE -> null
-    }
+    /** "Elevation gain 124 metres, elevation loss 118 metres". */
+    fun summaryA11y(context: Context, gainM: Int, lossM: Int): String =
+        context.getString(R.string.workout_elevation_summary_a11y, gainA11y(context, gainM), lossA11y(context, lossM))
 
-    /** The subtitle of the chart card; null: none. */
-    @StringRes
-    fun sourceShort(source: ElevationSource): Int? = when (source) {
-        ElevationSource.GPS -> R.string.workout_elevation_source_gps_short
-        ElevationSource.FILE -> R.string.workout_elevation_source_file_short
-        ElevationSource.BAROMETER, ElevationSource.NONE -> null
-    }
-
-    /** Title and message of the explanation behind the note. */
-    fun sourceDialog(source: ElevationSource): Pair<Int, Int>? = when (source) {
-        ElevationSource.GPS ->
-            R.string.workout_elevation_source_dialog_title to R.string.workout_elevation_source_dialog_message
-        ElevationSource.FILE ->
-            R.string.workout_elevation_source_file_dialog_title to R.string.workout_elevation_source_file_dialog_message
-        ElevationSource.BAROMETER, ElevationSource.NONE -> null
-    }
+    fun pendingA11y(context: Context): String = context.getString(
+        R.string.workout_elevation_summary_a11y,
+        context.getString(R.string.workout_elevation_gain_pending_a11y),
+        context.getString(R.string.workout_elevation_loss_pending_a11y)
+    )
 }
 
 /**
@@ -73,7 +87,7 @@ sealed interface ElevationDisplay {
             return when {
                 storedGain != null && storedLoss != null && source != null && source != ElevationSource.NONE ->
                     Value(storedGain.roundToInt(), storedLoss.roundToInt(), source)
-                metricsVersion < WorkoutDerivation.CURRENT_METRICS_VERSION && trackHasAltitude -> Pending
+                WorkoutDerivation.isPending(metricsVersion, trackHasAltitude) -> Pending
                 else -> None
             }
         }
