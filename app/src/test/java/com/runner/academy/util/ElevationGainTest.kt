@@ -109,10 +109,66 @@ class ElevationGainTest {
     }
 
     @Test
-    fun `points without altitude inside a piece are skipped`() {
-        val result = gps(points(toSec = 600) { sec -> if (sec % 3 == 0) null else 150.0 + sec / 20.0 })!!
+    fun `a point without altitude breaks the piece, the climbs on both sides still count`() {
+        // +20 m over 600 s, +20 m again after one fix without altitude
+        val result = gps(points(toSec = 1_201) { sec ->
+            when {
+                sec < 600 -> 150.0 + sec / 30.0
+                sec == 600 -> null
+                else -> 170.0 + (sec - 601) / 30.0
+            }
+        })!!
 
-        assertEquals(30.0, result.gainM.toDouble(), 3.0)
+        assertEquals(40.0, result.gainM.toDouble(), 4.0)
+        assertEquals(0f, result.lossM)
+    }
+
+    @Test
+    fun `a step across fixes without altitude counts nothing`() {
+        val result = gps(points(toSec = 700) { sec ->
+            when {
+                sec < 300 -> 150.0
+                sec < 400 -> null
+                else -> 200.0
+            }
+        })!!
+
+        assertEquals(0f, result.gainM)
+        assertEquals(0f, result.lossM)
+    }
+
+    /** No smoothing and no outlier window: one fix every 5 min, so each value is taken as it is. */
+    private val raw = ElevationConfig(smoothingWindowMs = 0L, hysteresisM = 10.0)
+
+    private fun sparse(vararg altitudes: Double) = altitudes.mapIndexed { i, alt ->
+        TrackPoint(55.75, 37.60 + i * 0.001, START + i * 300_000L, 5f, 3f, alt)
+    }
+
+    @Test
+    fun `before the first turn the anchor follows the lowest and the highest value`() {
+        // Down 5 m (inside the band), then up to 112: the climb is from 95, not from 100
+        val up = ElevationGain.compute(sparse(100.0, 95.0, 112.0), ElevationSource.GPS, raw)!!
+        assertEquals(17f, up.gainM)
+        assertEquals(0f, up.lossM)
+
+        val down = ElevationGain.compute(sparse(100.0, 105.0, 88.0), ElevationSource.GPS, raw)!!
+        assertEquals(0f, down.gainM)
+        assertEquals(17f, down.lossM)
+    }
+
+    @Test
+    fun `many pieces each keep their own anchor`() {
+        // 20 pieces of +12 m, each starting 50 m above the end of the one before
+        val track = (0 until 20).flatMap { piece ->
+            val base = 150.0 + piece * 62.0
+            sparse(base, base - 3.0, base + 9.0).mapIndexed { i, p ->
+                p.copy(timestamp = START + piece * 1_000_000L + i * 300_000L, afterGap = i == 0 && piece > 0)
+            }
+        }
+
+        val result = ElevationGain.compute(track, ElevationSource.GPS, raw)!!
+
+        assertEquals(20 * 12f, result.gainM)
         assertEquals(0f, result.lossM)
     }
 
@@ -140,13 +196,12 @@ class ElevationGainTest {
     }
 
     @Test
-    fun `a file is smoothed like GPS and the barometer finer`() {
-        assertEquals(ElevationConfig.forSource(ElevationSource.GPS), ElevationConfig.forSource(ElevationSource.FILE))
-        assertEquals(ElevationConfig.forSource(ElevationSource.GPS), ElevationConfig.forSource(ElevationSource.NONE))
-        val gps = ElevationConfig.forSource(ElevationSource.GPS)
-        val baro = ElevationConfig.forSource(ElevationSource.BAROMETER)
-        assertTrue(baro.smoothingWindowMs < gps.smoothingWindowMs)
-        assertTrue(baro.hysteresisM < gps.hysteresisM)
+    fun `a file is smoothed like GPS, with the tuned GPS parameters`() {
+        assertEquals(ElevationConfig.GPS, ElevationConfig.forSource(ElevationSource.GPS))
+        assertEquals(ElevationConfig.GPS, ElevationConfig.forSource(ElevationSource.FILE))
+        assertEquals(ElevationConfig.GPS, ElevationConfig.forSource(ElevationSource.NONE))
+        assertEquals(60_000L, ElevationConfig.GPS.smoothingWindowMs)
+        assertEquals(10.0, ElevationConfig.GPS.hysteresisM, 0.0)
     }
 
     // --- ElevationSource.of ---

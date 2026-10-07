@@ -61,6 +61,42 @@ class ElevationReplayTest {
         assertTrue("worst error ${worst * 100} %", worst <= 0.15)
     }
 
+    /**
+     * Short rollers: 6 hills of 15 m and then 3 of 8 m, each up 200 m and down 200 m (7.5 % and
+     * 4 %), 100 m flat between them: 114 m of true gain.
+     */
+    private val rollers: (Double) -> Double = { d ->
+        val hills = List(6) { 15.0 } + List(3) { 8.0 }
+        val period = 500.0
+        val i = (d / period).toInt()
+        val local = d - i * period
+        val height = hills.getOrNull(i) ?: 0.0
+        if (local >= 400.0) 150.0 else 150.0 + height * (1 - cos(2 * PI * local / 400.0)) / 2
+    }
+
+    /**
+     * The known cost of 60 s / 10 m: a hill passed in about two minutes is averaged down to
+     * about two thirds of its height, so the 15 m ones hover at the 10 m band and the 8 m ones
+     * fall under it. Measured over the 20 noises: 40–80 m of the true 114 (30–65 % short).
+     * The bound pins that behaviour; a change of the parameters shows here.
+     */
+    @Test
+    fun `short rollers of 15 and 8 m lose a part of their gain`() {
+        val gains = NOISES.map { (seed, decay) ->
+            derived(
+                SyntheticRun(
+                    route = street, elevation = rollers,
+                    altitudeNoiseM = NOISE_M, altitudeNoiseDecay = decay, seed = seed
+                )
+            ).elevationGain!!.toDouble()
+        }
+
+        println("ElevationReplay rollers (true 114 m): gains=${gains.map { it.toInt() }} min=${gains.min().toInt()} max=${gains.max().toInt()}")
+        // Never more than the truth, and at least a third of it
+        assertTrue("gains $gains", gains.all { it in 35.0..114.0 })
+        assertTrue("average ${gains.average()}", gains.average() in 50.0..70.0)
+    }
+
     @Test
     fun `a flat 5 km round a stadium gains at most 15 m`() {
         val gains = NOISES.map { (seed, decay) ->

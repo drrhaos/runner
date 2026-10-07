@@ -34,28 +34,28 @@ data class ElevationConfig(
          */
         val GPS = ElevationConfig(smoothingWindowMs = 60_000L, hysteresisM = 10.0)
 
-        /** Pressure altitude: smooth, drifts slowly with the weather. */
-        val BAROMETER = ElevationConfig(smoothingWindowMs = 5_000L, hysteresisM = 1.5)
-
-        /** A file's `<ele>` may be anything, so it is treated like GPS. */
+        /**
+         * A file's `<ele>` may be anything, so it is treated like GPS. No writer declares the
+         * barometer yet: the barometer branch adds its own (finer) preset here.
+         */
         fun forSource(source: ElevationSource): ElevationConfig = when (source) {
-            ElevationSource.BAROMETER -> BAROMETER
-            ElevationSource.GPS, ElevationSource.FILE, ElevationSource.NONE -> GPS
+            ElevationSource.BAROMETER, ElevationSource.GPS, ElevationSource.FILE, ElevationSource.NONE -> GPS
         }
     }
 }
 
 /**
  * Elevation gain and loss from the point altitudes. Per continuous piece of the track (cut at
- * every [TrackPoint.afterGap]: a gap or a bridge has no reliable altitude, so the climb across
- * it is not counted; the tail and a lead-in have no points at all):
+ * every [TrackPoint.afterGap] and at every point without a known altitude — [knownAltitude]:
+ * null or the old 0.0: a gap, a bridge or a missing altitude has no reliable height, so the
+ * climb across it is not counted; the tail and a lead-in have no points at all):
  *  1. false fixes out — Hampel filter: a point further than max(k·MAD, floor) from the median
  *     of its time window is replaced by that median;
  *  2. a centred moving average over time;
  *  3. hysteresis: the anchor follows the climb (or descent) under way and a turn counts only
- *     once the altitude went [ElevationConfig.hysteresisM] back from it. The anchor is the
- *     piece's own, so nothing is counted across a break.
- * Points without a known altitude ([knownAltitude]: null or the old 0.0) are skipped.
+ *     once the altitude went [ElevationConfig.hysteresisM] back from it; before the first
+ *     turn the climb starts at the piece's lowest value and the descent at its highest. The
+ *     anchor is the piece's own, so nothing is counted across a break.
  */
 object ElevationGain {
 
@@ -80,18 +80,23 @@ object ElevationGain {
         return if (anyAltitude) ElevationResult(gain.toFloat(), loss.toFloat()) else null
     }
 
-    /** (time, altitude) runs between breaks, only points with a known altitude; never empty. */
+    /**
+     * (time, altitude) runs between breaks — a gap, a bridge or a point without altitude, as the
+     * elevation chart draws them ([TrackChartBuilder.buildElevationRuns]); never empty.
+     */
     private fun pieces(points: List<TrackPoint>): List<List<Pair<Long, Double>>> {
         val pieces = mutableListOf<List<Pair<Long, Double>>>()
         var piece = mutableListOf<Pair<Long, Double>>()
-        for (point in points) {
-            if (point.afterGap && piece.isNotEmpty()) {
-                pieces += piece
-                piece = mutableListOf()
-            }
-            point.knownAltitude()?.let { piece += point.timestamp to it }
+        fun close() {
+            if (piece.isNotEmpty()) pieces += piece
+            piece = mutableListOf()
         }
-        if (piece.isNotEmpty()) pieces += piece
+        for (point in points) {
+            if (point.afterGap) close()
+            val altitude = point.knownAltitude()
+            if (altitude == null) close() else piece += point.timestamp to altitude
+        }
+        close()
         return pieces
     }
 
@@ -139,18 +144,39 @@ object ElevationGain {
         if (values.isEmpty()) return 0.0 to 0.0
         var gain = 0.0
         var loss = 0.0
+        // Before the first turn the direction is unknown: the climb starts at the lowest value
+        // so far and the descent at the highest, whichever leaves the band first
+        var lowest = values[0]
+        var highest = values[0]
         var anchor = values[0]
         var direction = 0 // +1 climbing, -1 descending, 0 not known yet
         for (value in values) {
+            if (direction == 0) {
+                lowest = minOf(lowest, value)
+                highest = maxOf(highest, value)
+                when {
+                    value - lowest >= threshold -> {
+                        gain += value - lowest
+                        anchor = value
+                        direction = 1
+                    }
+                    highest - value >= threshold -> {
+                        loss += highest - value
+                        anchor = value
+                        direction = -1
+                    }
+                }
+                continue
+            }
             val delta = value - anchor
             when {
                 // The climb under way goes on: every metre above the anchor counts
-                direction > 0 && delta > 0 || direction <= 0 && delta >= threshold -> {
+                direction > 0 && delta > 0 || direction < 0 && delta >= threshold -> {
                     gain += delta
                     anchor = value
                     direction = 1
                 }
-                direction < 0 && delta < 0 || direction >= 0 && -delta >= threshold -> {
+                direction < 0 && delta < 0 || direction > 0 && -delta >= threshold -> {
                     loss -= delta
                     anchor = value
                     direction = -1
