@@ -271,6 +271,35 @@ class MetricsBackfillTest {
         assertEquals(BackfillState.Done(changedDistances = 1, afterImport = false), pass.progress.value)
     }
 
+    @Test
+    fun acknowledge_returnsTheShownDoneToIdle() = runBlocking {
+        insert(1)
+        val pass = backfill()
+        pass.runOnce()
+        val done = pass.progress.value as BackfillState.Done
+
+        pass.acknowledge(done)
+
+        assertEquals("a shown Done is not shown again (rotation)", BackfillState.Idle, pass.progress.value)
+    }
+
+    @Test
+    fun acknowledge_ofAnOlderDone_keepsTheCurrentState() = runBlocking {
+        insert(2)
+        val pass = backfill()
+        pass.runOnce()
+        val shown = pass.progress.value as BackfillState.Done
+        pass.acknowledge(shown)
+        // The next pass ends with an equal Done (a faster 1 km): it is a change again, not merged into the first
+        insert(1)
+        pass.runOnce()
+        assertEquals(shown, pass.progress.value)
+
+        pass.acknowledge(BackfillState.Done(changedDistances = 7, afterImport = true))
+
+        assertEquals("only the Done that was shown is acknowledged", shown, pass.progress.value)
+    }
+
     private fun effort(workoutId: Long, meters: Int, elapsedMs: Long) =
         BestEffort(workoutId, meters, elapsedMs, 0L, elapsedMs, 0f)
 

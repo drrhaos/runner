@@ -30,6 +30,25 @@ class FormatUtilsTest {
     }
 
     @Test
+    fun formatRecordTime_hasNoLeadingZeroAndHoursOnlyFromAnHour() {
+        assertEquals("3:58", FormatUtils.formatRecordTime(238_000L))
+        assertEquals("24:31", FormatUtils.formatRecordTime(1_471_999L))
+        assertEquals("0:42", FormatUtils.formatRecordTime(42_000L))
+        assertEquals("59:59", FormatUtils.formatRecordTime(3_599_999L))
+        assertEquals("1:00:00", FormatUtils.formatRecordTime(3_600_000L))
+        assertEquals("1:52:07", FormatUtils.formatRecordTime(6_727_000L))
+        assertEquals("0:00", FormatUtils.formatRecordTime(-5L))
+    }
+
+    @Test
+    fun formatRecordDelta_isTheDifferenceOfTheShownTimes() {
+        // 25:13.2 and 24:31.9 are shown as 25:13 and 24:31: the difference shown is 0:42, not 0:41
+        assertEquals("0:42", FormatUtils.formatRecordDelta(1_513_200L, 1_471_900L))
+        assertEquals("1:05", FormatUtils.formatRecordDelta(1_578_000L, 1_513_000L))
+        assertEquals(42_000L, FormatUtils.recordDeltaMs(1_513_200L, 1_471_900L))
+    }
+
+    @Test
     fun format_speed_should_format_speed_correctly() {
         // Given
         val speed1 = 5.0f // 5 m/s
