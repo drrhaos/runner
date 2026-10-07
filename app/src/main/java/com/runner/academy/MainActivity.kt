@@ -21,7 +21,10 @@ import com.runner.academy.data.BackfillState
 import com.runner.academy.databinding.ActivityMainBinding
 import com.runner.academy.ui.records.RecordsAnnouncement
 import com.runner.academy.ui.records.RecordsUpdatedSnackbar
+import com.runner.academy.service.ActiveWorkoutStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.runner.academy.util.PowerSaveCheck
 
 class MainActivity : AppCompatActivity() {
@@ -66,15 +69,21 @@ class MainActivity : AppCompatActivity() {
      */
     private fun announceRecordsUpdatedAfterImport() {
         val backfill = appContainer().metricsBackfill
+        val activeWorkout = ActiveWorkoutStore(applicationContext)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 backfill.progress.collect { state ->
                     if (state !is BackfillState.Done) return@collect
                     RecordsAnnouncement.afterBackfill(state)?.let { count ->
+                        val navController = findNavController(R.id.nav_host_fragment_content_main)
+                        val destination = navController.currentDestination?.id
+                        val workoutActive = destination == R.id.nav_tracking &&
+                            withContext(Dispatchers.IO) { activeWorkout.isWorkoutActive() }
                         RecordsUpdatedSnackbar.show(
                             view = binding.appBarMain.root,
-                            navController = findNavController(R.id.nav_host_fragment_content_main),
-                            count = count
+                            navController = navController,
+                            count = count,
+                            offerOpen = RecordsAnnouncement.offersOpen(destination, workoutActive)
                         )
                     }
                     backfill.acknowledge(state)
