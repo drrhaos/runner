@@ -42,6 +42,7 @@ data class BackfillReport(
     val skippedEdited: Int,
     /** The pass stopped because a workout is being recorded; rows are left for later. */
     val pausedForWorkout: Boolean,
+    /** Record distances whose current record the pass changed; 0 while paused. */
     val changedDistances: Int = 0
 )
 
@@ -68,6 +69,12 @@ class MetricsBackfill(
     private val lock = Any()
     private var job: Job? = null
     private var rerun = false
+
+    /**
+     * The records when the pass began, kept while it waits for a workout to end (guarded by
+     * [mutex]), to tell how many distances it changed ("Records updated: N").
+     */
+    private var recordsBefore: RecordBook? = null
 
     /**
      * Runs the pass in [scope] unless it is running; a call during a pass makes it look for
@@ -117,12 +124,14 @@ class MetricsBackfill(
         var unreadable = 0
         var skipped = 0
         var done = 0
-        fun report(paused: Boolean) = BackfillReport(computed, unreadable, skipped, paused)
+        fun report(paused: Boolean, changedDistances: Int = 0) =
+            BackfillReport(computed, unreadable, skipped, paused, changedDistances)
 
         try {
             while (true) {
                 val ids = dao.idsWithMetricsBelow(version, BATCH_SIZE)
                 if (ids.isEmpty()) break
+                if (recordsBefore == null) recordsBefore = recordBook()
                 val total = done + dao.countWithMetricsBelow(version)
                 _progress.value = BackfillState.Running(done, total)
                 for (id in ids) {
@@ -143,10 +152,13 @@ class MetricsBackfill(
             throw e
         }
         // A pass with nothing to compute changed no records: no "Records updated" signal
-        // TODO(r3-records-core): count distances whose current record changed during the pass
-        _progress.value = if (done == 0) BackfillState.Idle else BackfillState.Done(changedDistances = 0)
-        report(paused = false)
+        val changed = recordsBefore?.let { RecordBook.changedDistances(it, recordBook()) } ?: 0
+        recordsBefore = null
+        _progress.value = if (done == 0) BackfillState.Idle else BackfillState.Done(changed)
+        report(paused = false, changedDistances = changed)
     }
+
+    private suspend fun recordBook() = RecordBook.from(database.bestEffortDao().getEligibleEfforts())
 
     private enum class Outcome { COMPUTED, UNREADABLE, SKIPPED }
 

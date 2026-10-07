@@ -267,7 +267,61 @@ class MetricsBackfillTest {
             listOf(BackfillState.Running(0, 3), BackfillState.Running(1, 3), BackfillState.Running(2, 3)),
             seen
         )
-        assertEquals(BackfillState.Done(changedDistances = 0), pass.progress.value)
+        // The fake efforts set a first 1 km record
+        assertEquals(BackfillState.Done(changedDistances = 1), pass.progress.value)
+    }
+
+    @Test
+    fun done_countsTheDistancesWhoseRecordChanged() = runBlocking {
+        val old = insert(1, version = WorkoutDerivation.CURRENT_METRICS_VERSION)
+        efforts.replaceForWorkout(
+            old,
+            listOf(
+                BestEffort(old, 1_000, 300_000L, 0L, 300_000L, 0f),
+                BestEffort(old, 5_000, 1_600_000L, 0L, 1_600_000L, 0f)
+            )
+        )
+        // An import of two runs: a faster 1 km and a slower 5 km, then a first half marathon
+        insert(2)
+        insert(3)
+        val pass = backfill(derive = { input ->
+            Derived(
+                efforts = if (input.durationMs == 2 * 60_000L) {
+                    listOf(Effort(1_000, 290_000L, 0L, 290_000L, 0f), Effort(5_000, 1_700_000L, 0L, 1_700_000L, 0f))
+                } else {
+                    listOf(Effort(21_097, 7_000_000L, 0L, 7_000_000L, 0f))
+                }
+            )
+        })
+
+        val report = pass.runOnce()
+
+        assertEquals(2, report.changedDistances)
+        assertEquals(BackfillState.Done(changedDistances = 2), pass.progress.value)
+    }
+
+    @Test
+    fun aPausedPass_countsChangesFromWhereItBegan() = runBlocking {
+        insert(1)
+        insert(2)
+        var active = false
+        var derived = 0
+        // The newest row (computed first) sets a 1 km record, the older one has no efforts
+        val pass = backfill(
+            derive = { input ->
+                if (++derived == 1) active = true
+                if (input.durationMs == 2 * 60_000L) derive(input) else Derived()
+            },
+            isWorkoutActive = { active }
+        )
+
+        assertTrue(pass.runOnce().pausedForWorkout)
+        active = false
+        val report = pass.runOnce()
+
+        // The 1 km computed before the pause is part of the change
+        assertEquals(1, report.changedDistances)
+        assertEquals(BackfillState.Done(changedDistances = 1), pass.progress.value)
     }
 
     @Test

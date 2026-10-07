@@ -8,6 +8,7 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.runner.academy.data.GpxImport
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutListItem
 import com.runner.academy.data.WorkoutRepository
@@ -94,8 +95,14 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     /** Imports a backup as new workouts (metrics follow in background). Returns inserted count. */
     suspend fun importBackup(workouts: List<Workout>): Int = import(workouts, repository::importBackup)
 
-    /** Imports workouts read from GPX files as new workouts. Returns inserted count. */
-    suspend fun importGpx(workouts: List<Workout>): Int = import(workouts, repository::importGpx)
+    /**
+     * Imports workouts read from GPX files as new workouts. Returns the new ids and the record
+     * distances changed (for "Records updated: N").
+     */
+    suspend fun importGpx(workouts: List<Workout>): GpxImport {
+        if (workouts.isEmpty()) return GpxImport(emptyList(), changedRecordDistances = 0)
+        return repository.importGpx(workouts).also { loadStatistics() }
+    }
 
     private suspend fun import(workouts: List<Workout>, insert: suspend (List<Workout>) -> List<Long>): Int {
         if (workouts.isEmpty()) return 0
