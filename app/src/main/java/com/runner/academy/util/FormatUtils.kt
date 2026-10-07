@@ -31,6 +31,30 @@ object FormatUtils {
         }
     }
 
+    /** A record time: "3:58", "24:31", "1:52:07" (no leading zero, whole seconds). */
+    fun formatRecordTime(milliseconds: Long): String {
+        val totalSeconds = (milliseconds / 1000).coerceAtLeast(0L)
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        return if (hours > 0) {
+            String.format(Locale.ROOT, "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format(Locale.ROOT, "%d:%02d", minutes, seconds)
+        }
+    }
+
+    /**
+     * How much faster [recordMs] is than [previousMs], as the two times are shown (whole
+     * seconds): "25:13" → "24:31" is 0:42 even when the exact difference is 41.3 s.
+     */
+    fun recordDeltaMs(previousMs: Long, recordMs: Long): Long =
+        ((previousMs / 1000) - (recordMs / 1000)).coerceAtLeast(0L) * 1000
+
+    /** [recordDeltaMs] in the format of [formatRecordTime]. */
+    fun formatRecordDelta(previousMs: Long, recordMs: Long): String =
+        formatRecordTime(recordDeltaMs(previousMs, recordMs))
+
     fun formatTimeForTTS(milliseconds: Long, context: Context): String {
         val totalSeconds = (milliseconds / 1000).coerceAtLeast(0L).toInt()
         val hours = totalSeconds / 3600
