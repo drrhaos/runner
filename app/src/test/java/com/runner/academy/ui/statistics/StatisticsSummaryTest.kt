@@ -22,6 +22,42 @@ class StatisticsSummaryTest {
         type = WorkoutType.EASY_RUN
     )
 
+    private fun withElevation(gain: Float?, source: com.runner.academy.data.ElevationSource?) =
+        row(distance = 5f, duration = 1_800_000L, moving = 1_800_000L, avgPace = 6f)
+            .copy(elevationGain = gain, elevationSource = source)
+
+    @Test
+    fun elevationGain_sumsOnlyWorkoutsWithIt_approximateWithGps() {
+        val data = StatisticsSummary.of(
+            listOf(
+                withElevation(100f, com.runner.academy.data.ElevationSource.BAROMETER),
+                withElevation(20.6f, com.runner.academy.data.ElevationSource.GPS),
+                withElevation(null, com.runner.academy.data.ElevationSource.NONE),
+                withElevation(null, null)
+            ),
+            now
+        )
+
+        assertEquals(120.6f, data.totalElevationGain!!, 0.01f)
+        assertEquals(true, data.elevationApproximate)
+    }
+
+    @Test
+    fun elevationGain_fromFileIsApproximateToo_barometerAloneIsNot() {
+        val file = StatisticsSummary.of(listOf(withElevation(10f, com.runner.academy.data.ElevationSource.FILE)), now)
+        val baro = StatisticsSummary.of(listOf(withElevation(10f, com.runner.academy.data.ElevationSource.BAROMETER)), now)
+
+        assertEquals(true, file.elevationApproximate)
+        assertEquals(false, baro.elevationApproximate)
+    }
+
+    @Test
+    fun elevationGain_nullWhenNoWorkoutHasIt() {
+        val data = StatisticsSummary.of(listOf(withElevation(null, null), withElevation(null, com.runner.academy.data.ElevationSource.NONE)), now)
+
+        assertNull(data.totalElevationGain)
+    }
+
     @Test
     fun paceFromMovingTime_longestByTotalTime() {
         val rows = listOf(

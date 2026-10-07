@@ -20,6 +20,10 @@ data class StatisticsData(
     val averageDuration: Long = 0L,
     /** Steps/min weighted by moving time over the workouts with cadence; null: none has it. */
     val averageCadence: Float? = null,
+    /** Σ elevation gain over the workouts that have it, metres; null: none has it. */
+    val totalElevationGain: Float? = null,
+    /** Part of [totalElevationGain] is from GPS or a file (not a barometer): shown with "≈". */
+    val elevationApproximate: Boolean = false,
     val totalCalories: Int = 0,
     val bestPace: Float = 0f,
     val longestDistance: Float = 0f,

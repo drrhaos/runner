@@ -58,12 +58,19 @@ class CsvExporterTest {
         assertEquals("n", row[11])
     }
 
-    private fun statistics(averageCadence: Float?) = CsvExporter.exportStatisticsToCsv(
+    private fun statistics(averageCadence: Float?, totalElevationGain: Float? = null) = CsvExporter.exportStatisticsToCsv(
         totalWorkouts = 2, totalDistance = 10f, totalDuration = 3_600_000L, totalCalories = 600,
         averagePace = 6f, averageDistance = 5f, averageDuration = 1_800_000L, bestPace = 5.5f,
         longestDistance = 6f, longestDuration = 2_000_000L, workoutsByType = emptyMap(),
-        distanceByType = emptyMap(), averageCadence = averageCadence, context = context
+        distanceByType = emptyMap(), averageCadence = averageCadence,
+        totalElevationGain = totalElevationGain, context = context
     )
+
+    @Test
+    fun `the statistics carry the elevation gain only when some workout has it`() {
+        assertTrue(statistics(null, 3_420.4f).lines().contains("Elevation gain (m),3420"))
+        assertTrue(statistics(null).lines().none { it.startsWith("Elevation gain") })
+    }
 
     @Test
     fun `the statistics carry the average cadence only when some workout has it`() {

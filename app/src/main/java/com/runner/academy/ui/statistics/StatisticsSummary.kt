@@ -1,5 +1,6 @@
 package com.runner.academy.ui.statistics
 
+import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.WorkoutStatsRow
 import com.runner.academy.util.PaceMath
 import java.util.Calendar
@@ -23,6 +24,12 @@ object StatisticsSummary {
         val averageDuration = if (totalWorkouts > 0) totalMovingDuration / totalWorkouts else 0L
         val averagePace = PaceMath.avgPace(totalDistance, totalMovingDuration)
         val averageCadence = averageCadence(rows)
+        // Workouts without elevation are no data: they neither count nor zero the sum
+        val withElevation = rows.filter {
+            it.elevationGain?.isFinite() == true && it.elevationSource != null && it.elevationSource != ElevationSource.NONE
+        }
+        val totalElevationGain = if (withElevation.isEmpty()) null else withElevation.sumOf { it.elevationGain!!.toDouble() }.toFloat()
+        val elevationApproximate = withElevation.any { it.elevationSource != ElevationSource.BAROMETER }
 
         // Находим лучшие результаты
         val bestPace = rows
@@ -62,6 +69,8 @@ object StatisticsSummary {
             averageDistance = averageDistance,
             averageDuration = averageDuration,
             averageCadence = averageCadence,
+            totalElevationGain = totalElevationGain,
+            elevationApproximate = elevationApproximate,
             totalCalories = totalCalories,
             bestPace = bestPace,
             longestDistance = longestDistance,
