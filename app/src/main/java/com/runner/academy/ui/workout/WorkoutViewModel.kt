@@ -9,6 +9,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.runner.academy.data.GpxImport
+import com.runner.academy.data.RecordCard
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutListItem
 import com.runner.academy.data.WorkoutRepository
@@ -163,6 +164,20 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             }
         }
     }
+
+    /** Takes workout [id] out of the records or back; the record card follows by itself. */
+    fun setExcludeFromRecords(id: Long, exclude: Boolean) {
+        viewModelScope.launch {
+            try {
+                repository.setExcludeFromRecords(id, exclude)
+            } catch (e: Exception) {
+                android.util.Log.e("WorkoutViewModel", "Error excluding from records: ${e.message}", e)
+            }
+        }
+    }
+
+    /** The record card of workout [id]; see [WorkoutRepository.observeRecordCard]. */
+    fun observeRecordCard(id: Long, justSaved: Boolean): Flow<RecordCard?> = repository.observeRecordCard(id, justSaved)
 
     fun getWorkoutById(id: Long): Flow<Workout?> {
         return repository.getWorkoutById(id)
