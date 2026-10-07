@@ -61,6 +61,13 @@ object WorkoutDerivation {
      */
     const val CURRENT_METRICS_VERSION = 4 // 2: route preview, 3: cadence, 4: elevation (GPS/file)
 
+    /**
+     * A derived column that is empty is "not computed yet" (shown as "—") rather than "no data"
+     * when the row is behind [CURRENT_METRICS_VERSION] and its track has the data for it.
+     */
+    fun isPending(metricsVersion: Int, trackHasData: Boolean): Boolean =
+        metricsVersion < CURRENT_METRICS_VERSION && trackHasData
+
     fun derive(input: DerivationInput): Derived {
         // The track the details screen shows, so derived metrics agree with the map and splits
         val track = DisplayTrack.of(input.trackJson, input.type)

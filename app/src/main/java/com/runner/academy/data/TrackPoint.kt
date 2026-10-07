@@ -62,6 +62,9 @@ data class TrackPoint(
  */
 fun TrackPoint.knownAltitude(): Double? = altitude?.takeIf { it.isFinite() && it != 0.0 }
 
+/** Some point has a [knownAltitude]: the track has elevation at all. */
+fun List<TrackPoint>.hasAltitude(): Boolean = any { it.knownAltitude() != null }
+
 data class TrackData(
     @SerializedName("points")
     val points: List<TrackPoint>,

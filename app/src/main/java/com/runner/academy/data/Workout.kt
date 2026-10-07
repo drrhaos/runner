@@ -64,7 +64,7 @@ enum class ElevationSource {
          * the writer declared, else GPS (tracks recorded before the source was stored).
          */
         fun of(track: TrackData): ElevationSource {
-            if (track.points.none { it.knownAltitude() != null }) return NONE
+            if (!track.points.hasAltitude()) return NONE
             track.elevationSource?.let { return it }
             // The barometer branch (≥ 80 % of points with a pressure altitude) goes here
             return GPS
