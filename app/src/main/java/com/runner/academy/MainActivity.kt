@@ -41,6 +41,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_my_plan,
                 R.id.nav_plans,
                 R.id.nav_statistics,
+                R.id.nav_records,
                 R.id.nav_settings
             ), drawerLayout
         )
