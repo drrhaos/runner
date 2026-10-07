@@ -35,6 +35,9 @@ interface BestEffortDao {
     suspend fun getEligibleEfforts(): List<EffortRow>
 }
 
+/** The records now: [BestEffortDao.getEligibleEfforts] as a [RecordBook]. */
+suspend fun BestEffortDao.recordBook(): RecordBook = RecordBook.from(getEligibleEfforts())
+
 private const val ELIGIBLE_EFFORTS = """
     SELECT b.*, w.date, w.type
     FROM best_efforts b JOIN workouts w ON w.id = b.workoutId

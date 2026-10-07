@@ -5,11 +5,12 @@ import com.runner.academy.util.WorkoutDerivation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
-/** New rows of a GPX import and the record distances it changed ("Records updated: N"). */
+/** New rows of a GPX import and the record distances they hold now ("Records updated: N"). */
 data class GpxImport(val ids: List<Long>, val changedRecordDistances: Int)
 
 /**
@@ -21,7 +22,7 @@ class WorkoutRepository(
     database: WorkoutDatabase,
     private val diagnosticsStore: GpsDiagnosticsStore? = null,
     /** Starts the background metrics pass after rows were saved uncomputed. */
-    onDeferredSaved: () -> Unit = {}
+    onDeferredSaved: (List<Long>) -> Unit = {}
 ) {
     private val workoutDao: WorkoutDao = database.workoutDao()
     private val bestEffortDao: BestEffortDao = database.bestEffortDao()
@@ -72,12 +73,12 @@ class WorkoutRepository(
 
     /**
      * Imports GPX workouts as new rows (new ids), with their metrics computed before saving.
-     * The records change silently: the result tells how many distances got another record.
+     * The records change silently: the result tells on how many distances one of the imported
+     * workouts holds the record now (whatever else is saved meanwhile is not counted).
      */
     suspend fun importGpx(workouts: List<Workout>): GpxImport {
-        val before = recordBook()
         val ids = importAsNew(workouts, WorkoutStore.Mode.INLINE)
-        return GpxImport(ids, RecordBook.changedDistances(before, recordBook()))
+        return GpxImport(ids, recordBook().distancesHeldBy(ids.toSet()))
     }
 
     private suspend fun importAsNew(workouts: List<Workout>, mode: WorkoutStore.Mode): List<Long> =
@@ -101,32 +102,34 @@ class WorkoutRepository(
 
     /**
      * Records and their history, live: any save, deletion, exclusion, date change or background
-     * pass re-emits it (Room invalidates on `best_efforts` and `workouts`).
+     * pass re-emits it (Room invalidates on `best_efforts` and `workouts`). Built again only when
+     * the eligible efforts changed: a favourite toggled or a row without efforts is no change.
      */
     fun observeRecordBook(): Flow<RecordBook> =
-        bestEffortDao.observeEligibleEfforts().map(RecordBook::from).flowOn(Dispatchers.Default)
+        bestEffortDao.observeEligibleEfforts()
+            .distinctUntilChanged()
+            .map(RecordBook::from)
+            .flowOn(Dispatchers.Default)
 
-    /** The records once, e.g. before and after an import. */
-    suspend fun recordBook(): RecordBook = withContext(Dispatchers.IO) {
-        RecordBook.from(bestEffortDao.getEligibleEfforts())
-    }
+    /** The records once. */
+    suspend fun recordBook(): RecordBook = withContext(Dispatchers.IO) { bestEffortDao.recordBook() }
 
     /**
      * True while workouts with a track are not yet computed by the current algorithms (after an
      * update or a backup import): the records are incomplete until the background pass ends.
      */
     fun observeRecordsPending(): Flow<Boolean> =
-        workoutDao.observeTrackedWithMetricsBelow(WorkoutDerivation.CURRENT_METRICS_VERSION)
+        workoutDao.observeTrackedWithMetricsBelow(WorkoutDerivation.CURRENT_METRICS_VERSION).distinctUntilChanged()
 
     /**
      * The record card of a workout's details ([RecordBook.cardFor]); null when it set no
      * record, and while [observeRecordsPending]: the first run right after an update would
-     * otherwise "beat" records not computed yet.
+     * otherwise "beat" records not computed yet. Emits only when the card changes.
      */
     fun observeRecordCard(workoutId: Long, justSaved: Boolean): Flow<RecordCard?> =
         combine(observeRecordBook(), observeRecordsPending()) { book, pending ->
             if (pending) null else book.cardFor(workoutId, justSaved)
-        }
+        }.distinctUntilChanged()
 
     /**
      * Delete a workout.
