@@ -331,8 +331,8 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Третий ряд: общее время, когда оно отличается от времени в движении
-                 (плитки набора и сброса высоты встанут перед ним) -->
+            <!-- Третий ряд: набор и сброс высоты (когда в треке есть высоты) и общее время
+                 (когда оно отличается от времени в движении) -->
             <LinearLayout
                 android:id="@+id/layout_detail_third_row"
                 android:layout_width="match_parent"
@@ -343,8 +343,69 @@
                 android:baselineAligned="false"
                 android:layout_marginBottom="16dp"
                 android:visibility="gone"
-                tools:visibility="visible"
-                tools:ignore="UselessParent">
+                tools:visibility="visible">
+
+                <!-- Набор высоты -->
+                <LinearLayout
+                    android:id="@+id/layout_detail_elevation_gain"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:id="@+id/textView_detail_elevation_gain"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        tools:text="↑ 124 м"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorPrimary"
+                        android:importantForAccessibility="no" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/workout_elevation_gain_label"
+                        android:textSize="12sp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:importantForAccessibility="no" />
+                </LinearLayout>
+
+                <!-- Сброс высоты -->
+                <LinearLayout
+                    android:id="@+id/layout_detail_elevation_loss"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:id="@+id/textView_detail_elevation_loss"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        tools:text="↓ 118 м"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorPrimary"
+                        android:importantForAccessibility="no" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/workout_elevation_loss_label"
+                        android:textSize="12sp"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:importantForAccessibility="no" />
+                </LinearLayout>
 
                 <!-- Общее время -->
                 <LinearLayout
@@ -372,6 +433,31 @@
                         android:textColor="?attr/colorOnSurfaceVariant" />
                 </LinearLayout>
             </LinearLayout>
+
+            <!-- Пометка источника высоты (GPS, файл): открывает пояснение -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/textView_elevation_source_note"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:layout_marginTop="-8dp"
+                android:layout_marginBottom="8dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="8dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:letterSpacing="0"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                app:icon="@drawable/ic_info_outline"
+                app:iconSize="16dp"
+                app:iconPadding="6dp"
+                app:iconTint="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                tools:text="@string/workout_elevation_source_gps"
+                tools:visibility="visible" />
 
             <!-- Кнопки действий -->
             <LinearLayout
@@ -579,11 +665,14 @@
 
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- График высоты -->
+    <!-- График высоты: скрыт целиком, когда высот в точках нет -->
     <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_chart_elevation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
+        android:visibility="gone"
+        tools:visibility="visible"
         app:cardCornerRadius="12dp"
         app:cardElevation="0dp">
 
@@ -593,14 +682,45 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/workout_details_height_title"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="?attr/colorOnSurface"
-                android:layout_marginBottom="8dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:baselineAligned="false">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/workout_details_height_title"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <TextView
+                    android:id="@+id/textView_elevation_chart_summary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="↑ 124 м  ↓ 118 м"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/textView_elevation_chart_source"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="@string/workout_elevation_source_gps_short"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="8dp" />
 
             <FrameLayout
                 android:layout_width="match_parent"

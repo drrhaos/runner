@@ -1,6 +1,7 @@
 package com.runner.academy.ui.workout
 
 import android.view.View
+import androidx.core.view.isVisible
 import com.runner.academy.R
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
@@ -36,7 +37,8 @@ class DetailStatsDisplay(
             textViewDetailDurationLabel.setText(
                 if (showsElapsed) R.string.workout_moving_time_label else R.string.workout_time_label
             )
-            layoutDetailThirdRow.visibility = if (showsElapsed) View.VISIBLE else View.GONE
+            layoutDetailElapsed.visibility = if (showsElapsed) View.VISIBLE else View.GONE
+            updateThirdRow()
             textViewDetailElapsed.text = viewModel.formatDuration(workout.duration)
 
             val avgSpeed = com.runner.academy.util.FormatUtils.calculateAverageSpeed(workout.distance, workout.movingDuration)
@@ -65,6 +67,55 @@ class DetailStatsDisplay(
                 }
                 CadenceDisplay.None -> Unit
             }
+        }
+    }
+
+    /**
+     * The gain and loss tiles: the stored values, "—" (without a source note) while the
+     * background pass has not reached a track with altitudes, hidden without altitudes. Under
+     * them the source note for GPS and file altitudes; a tap calls [onSourceNoteClick].
+     */
+    fun displayElevation(display: ElevationDisplay, onSourceNoteClick: (com.runner.academy.data.ElevationSource) -> Unit) {
+        binding.apply {
+            val visibility = if (display == ElevationDisplay.None) View.GONE else View.VISIBLE
+            layoutDetailElevationGain.visibility = visibility
+            layoutDetailElevationLoss.visibility = visibility
+            textViewElevationSourceNote.visibility = View.GONE
+            when (display) {
+                is ElevationDisplay.Value -> {
+                    textViewDetailElevationGain.text = context.getString(R.string.workout_elevation_gain_value, display.gainM)
+                    textViewDetailElevationLoss.text = context.getString(R.string.workout_elevation_loss_value, display.lossM)
+                    layoutDetailElevationGain.contentDescription = ElevationText.gainA11y(context, display.gainM)
+                    layoutDetailElevationLoss.contentDescription = ElevationText.lossA11y(context, display.lossM)
+                    ElevationText.sourceNote(display.source)?.let { note ->
+                        textViewElevationSourceNote.setText(note)
+                        textViewElevationSourceNote.visibility = View.VISIBLE
+                        textViewElevationSourceNote.setOnClickListener { onSourceNoteClick(display.source) }
+                    }
+                }
+                ElevationDisplay.Pending -> {
+                    textViewDetailElevationGain.setText(R.string.metric_pending_placeholder)
+                    textViewDetailElevationLoss.setText(R.string.metric_pending_placeholder)
+                    val pending = context.getString(R.string.workout_elevation_pending_a11y)
+                    layoutDetailElevationGain.contentDescription = pending
+                    layoutDetailElevationLoss.contentDescription = pending
+                }
+                ElevationDisplay.None -> Unit
+            }
+        }
+        updateThirdRow()
+    }
+
+    /**
+     * The third row shows when any of its tiles does. Its tiles keep the columns of the rows
+     * above: the elapsed time alone sits under the third column, the elevation tiles start left.
+     */
+    private fun updateThirdRow() {
+        binding.apply {
+            val elevationShown = layoutDetailElevationGain.isVisible
+            val elapsedShown = layoutDetailElapsed.isVisible
+            layoutDetailThirdRow.visibility = if (elevationShown || elapsedShown) View.VISIBLE else View.GONE
+            layoutDetailThirdRow.gravity = if (elevationShown) android.view.Gravity.START else android.view.Gravity.END
         }
     }
 

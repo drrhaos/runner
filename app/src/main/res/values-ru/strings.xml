@@ -387,6 +387,7 @@
     <string name="csv_average_distance">Средняя дистанция (км)</string>
     <string name="csv_average_time">Среднее время (минуты)</string>
     <string name="csv_average_cadence">Средний каденс (шаг/мин)</string>
+    <string name="csv_total_elevation_gain">Набор высоты (м)</string>
     <string name="csv_best_pace">Лучший темп (мин/км)</string>
     <string name="csv_max_distance">Максимальная дистанция (км)</string>
     <string name="csv_longest_time">Самая длинная тренировка (минуты)</string>
@@ -488,6 +489,30 @@
     <string name="chart_cadence_a11y">График каденса, шагов в минуту: в среднем %1$d, от %2$d до %3$d</string>
     <string name="statistics_average_cadence_label">Средний каденс:</string>
     <string name="statistics_cadence_format">%1$d шаг/мин</string>
+
+    <!-- Набор и сброс высоты -->
+    <string name="workout_elevation_gain_label">Набор высоты</string>
+    <string name="workout_elevation_loss_label">Сброс высоты</string>
+    <string name="workout_elevation_gain_value">↑ %1$d м</string>
+    <string name="workout_elevation_loss_value">↓ %1$d м</string>
+    <string name="workout_elevation_source_gps">Высота по GPS — приблизительно</string>
+    <string name="workout_elevation_source_gps_short">по GPS, приблизительно</string>
+    <string name="workout_elevation_source_file">Высота из файла</string>
+    <string name="workout_elevation_source_file_short">из файла</string>
+    <string name="workout_elevation_source_dialog_title">Высота по GPS</string>
+    <string name="workout_elevation_source_dialog_message">В этом телефоне нет барометра, поэтому высота взята из GPS. GPS определяет высоту хуже, чем положение: ошибка в 10–20 м — обычное дело. Мы сглаживаем её и не считаем мелкие колебания, но набор высоты может отличаться от реального.</string>
+    <string name="workout_elevation_source_file_dialog_title">Высота из файла</string>
+    <string name="workout_elevation_source_file_dialog_message">Высота взята из импортированного файла как есть. Мы сглаживаем её и не считаем мелкие колебания, как высоту по GPS, поэтому набор может отличаться от того, что показало устройство, записавшее файл.</string>
+    <string name="workout_elevation_summary_format">↑ %1$d м  ↓ %2$d м</string>
+    <string name="workout_elevation_gain_a11y">Набор высоты %1$s</string>
+    <string name="workout_elevation_loss_a11y">Сброс высоты %1$s</string>
+    <string name="workout_elevation_pending_a11y">Набор высоты ещё считается</string>
+    <string name="chart_elevation_a11y">График высоты: набор %1$s, сброс %2$s, от %3$s до %4$s</string>
+    <string name="chart_elevation_range_a11y">График высоты: от %1$s до %2$s</string>
+    <string name="statistics_total_elevation_gain_label">Набор высоты:</string>
+    <string name="statistics_elevation_format">%1$,d м</string>
+    <string name="statistics_elevation_approx_format">≈ %1$s</string>
+    <string name="statistics_elevation_approx_note">≈ — часть высоты посчитана по GPS и приблизительна</string>
 
     <!-- Планы тренировок -->
     <string name="menu_plans">Планы тренировок</string>
