@@ -341,7 +341,7 @@ class WorkoutListFragment : Fragment() {
                     return@launch
                 }
                 val count = if (workouts.isNotEmpty()) {
-                    viewModel.importGpx(workouts)
+                    viewModel.importGpx(workouts).ids.size
                 } else {
                     0
                 }

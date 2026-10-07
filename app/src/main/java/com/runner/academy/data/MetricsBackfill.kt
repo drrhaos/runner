@@ -26,8 +26,13 @@ sealed interface BackfillState {
     data object Idle : BackfillState
     data class Running(val done: Int, val total: Int) : BackfillState
 
-    /** [changedDistances]: record distances whose current record changed (for "Records updated: N"). */
-    data class Done(val changedDistances: Int) : BackfillState
+    /**
+     * The pass ended. [afterImport]: it computed rows of a backup import, and [changedDistances]
+     * is the number of record distances one of them holds now ("Records updated: N", shown only
+     * then). Otherwise (the app start, a raised metrics version) [changedDistances] counts the
+     * distances held by the rows this pass computed, and nothing is to be announced.
+     */
+    data class Done(val changedDistances: Int, val afterImport: Boolean) : BackfillState
 }
 
 data class BackfillReport(
@@ -42,7 +47,9 @@ data class BackfillReport(
     val skippedEdited: Int,
     /** The pass stopped because a workout is being recorded; rows are left for later. */
     val pausedForWorkout: Boolean,
-    val changedDistances: Int = 0
+    /** See [BackfillState.Done]; 0 while paused. */
+    val changedDistances: Int = 0,
+    val afterImport: Boolean = false
 )
 
 /**
@@ -69,11 +76,24 @@ class MetricsBackfill(
     private var job: Job? = null
     private var rerun = false
 
+    /** Rows computed by the pass so far, kept while it waits for a workout to end (guarded by [mutex]). */
+    private val computedIds = mutableSetOf<Long>()
+
+    /** Rows of backup imports not reported yet (guarded by [lock]). */
+    private val importedIds = mutableSetOf<Long>()
+
+    /** Remembers [ids] as a backup import, so the pass that computes them reports it. */
+    fun markImported(ids: Collection<Long>) {
+        synchronized(lock) { importedIds += ids }
+    }
+
     /**
      * Runs the pass in [scope] unless it is running; a call during a pass makes it look for
-     * new rows once more (an import while the pass finishes is not missed).
+     * new rows once more (an import while the pass finishes is not missed). [importedIds]: the
+     * rows of a backup import the pass is started for.
      */
-    fun start() {
+    fun start(importedIds: Collection<Long> = emptyList()) {
+        markImported(importedIds)
         synchronized(lock) {
             if (job != null) {
                 rerun = true
@@ -117,7 +137,8 @@ class MetricsBackfill(
         var unreadable = 0
         var skipped = 0
         var done = 0
-        fun report(paused: Boolean) = BackfillReport(computed, unreadable, skipped, paused)
+        fun report(paused: Boolean, changedDistances: Int = 0, afterImport: Boolean = false) =
+            BackfillReport(computed, unreadable, skipped, paused, changedDistances, afterImport)
 
         try {
             while (true) {
@@ -128,7 +149,10 @@ class MetricsBackfill(
                 for (id in ids) {
                     if (isWorkoutActive()) return@withLock report(paused = true)
                     when (recompute(id)) {
-                        Outcome.COMPUTED -> computed++
+                        Outcome.COMPUTED -> {
+                            computed++
+                            computedIds += id
+                        }
                         Outcome.UNREADABLE -> unreadable++
                         Outcome.SKIPPED -> skipped++
                     }
@@ -142,10 +166,32 @@ class MetricsBackfill(
             _progress.value = BackfillState.Idle
             throw e
         }
-        // A pass with nothing to compute changed no records: no "Records updated" signal
-        // TODO(r3-records-core): count distances whose current record changed during the pass
-        _progress.value = if (done == 0) BackfillState.Idle else BackfillState.Done(changedDistances = 0)
-        report(paused = false)
+        // The batch is the import's rows computed by now, or else the rows of this pass: what
+        // else was saved meanwhile (a run, a GPX import) is never counted for it
+        val imported = takeComputedImports()
+        val batch = imported.ifEmpty { computedIds.toSet() }
+        computedIds.clear()
+        if (done == 0 && imported.isEmpty()) {
+            // A pass with nothing to compute changed no records: no "Records updated" signal
+            _progress.value = BackfillState.Idle
+            return@withLock report(paused = false)
+        }
+        val changed = database.bestEffortDao().recordBook().distancesHeldBy(batch)
+        val afterImport = imported.isNotEmpty()
+        _progress.value = BackfillState.Done(changed, afterImport)
+        report(paused = false, changedDistances = changed, afterImport = afterImport)
+    }
+
+    /** Imported rows that are computed now (or deleted), no longer waiting to be reported. */
+    private suspend fun takeComputedImports(): Set<Long> {
+        val marked = synchronized(lock) { importedIds.toList() }
+        if (marked.isEmpty()) return emptySet()
+        val waiting = marked.chunked(SQL_VARIABLES_CHUNK)
+            .flatMap { database.workoutDao().idsAmongWithMetricsBelow(it, version) }
+            .toSet()
+        val reported = marked.filterNot { it in waiting }.toSet()
+        synchronized(lock) { importedIds -= reported }
+        return reported
     }
 
     private enum class Outcome { COMPUTED, UNREADABLE, SKIPPED }
@@ -203,6 +249,9 @@ class MetricsBackfill(
     companion object {
         private const val TAG = "MetricsBackfill"
         private const val BATCH_SIZE = 50
+
+        /** Ids per `IN (…)` query, under SQLite's 999 variables of older devices. */
+        private const val SQL_VARIABLES_CHUNK = 500
         private const val WORKOUT_POLL_MS = 60_000L
 
         /** Native message of a row that does not fit the cursor window before API 28. */

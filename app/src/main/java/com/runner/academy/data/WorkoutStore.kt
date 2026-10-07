@@ -14,8 +14,11 @@ import kotlinx.coroutines.withContext
 class WorkoutStore(
     private val database: WorkoutDatabase,
     private val derive: (DerivationInput) -> Derived = WorkoutDerivation::derive,
-    /** Called after a [Mode.DEFERRED] save: starts the background metrics pass. */
-    private val onDeferredSaved: () -> Unit = {}
+    /**
+     * Called with the new ids after a [Mode.DEFERRED] save: starts the background metrics pass,
+     * which reports the records of these rows ("Records updated: N").
+     */
+    private val onDeferredSaved: (List<Long>) -> Unit = {}
 ) {
     enum class Mode {
         /** Live recording, the form, GPX import: metrics are computed before the row is written. */
@@ -46,7 +49,7 @@ class WorkoutStore(
             }
             Mode.DEFERRED -> {
                 val ids = workoutDao.insertWorkouts(workouts.map { it.copy(metricsVersion = 0) })
-                onDeferredSaved()
+                onDeferredSaved(ids)
                 ids
             }
         }

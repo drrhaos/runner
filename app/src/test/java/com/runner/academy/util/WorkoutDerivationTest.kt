@@ -138,6 +138,23 @@ class WorkoutDerivationTest {
         assertEquals(TrackCadence.average(track.points, track.pauses), derived.avgCadence)
     }
 
+    /** 1.5 km east, one fix every 3 s, 9–11 m apart (a recorded run is never at one speed). */
+    private val kmTrack = TrackData(
+        (0..150).map { TrackPoint(55.75, 37.60 + it * 0.00016 + (it % 2) * 0.000016, 1_000_000L + it * 3_000L, 5f, 3f, null) },
+        0f, 0L, 0f, 0f, 1_000_000L, null
+    )
+
+    @Test
+    fun `a track gets its best efforts, a made-up time none`() {
+        val efforts = WorkoutDerivation.derive(DerivationInput(TrackDataJson.toJson(kmTrack), WorkoutType.EASY_RUN, 450_000L)).efforts
+
+        assertEquals(listOf(1_000), efforts.map { it.distanceM })
+        assertEquals(300_000.0, efforts.single().elapsedMs.toDouble(), 3_000.0)
+
+        val synthetic = TrackDataJson.toJson(kmTrack.copy(timeSynthetic = true))
+        assertEquals(emptyList<Effort>(), WorkoutDerivation.derive(DerivationInput(synthetic, WorkoutType.EASY_RUN, 450_000L)).efforts)
+    }
+
     @Test
     fun `a track without steps has no cadence`() {
         assertNull(WorkoutDerivation.derive(DerivationInput(trackJson, WorkoutType.EASY_RUN, 57_000L)).avgCadence)
@@ -145,7 +162,7 @@ class WorkoutDerivationTest {
 
     @Test
     fun `no or broken track is marked computed with nothing derived`() {
-        assertEquals(4, WorkoutDerivation.CURRENT_METRICS_VERSION)
+        assertEquals(5, WorkoutDerivation.CURRENT_METRICS_VERSION)
         for (json in listOf(null, "", "{broken", "[1,2]")) {
             assertEquals(json, nothingDerived, WorkoutDerivation.derive(DerivationInput(json, WorkoutType.EASY_RUN, 0L)))
         }

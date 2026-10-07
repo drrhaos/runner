@@ -25,7 +25,7 @@ class AppContainer(context: Context) {
     val database: WorkoutDatabase by lazy { WorkoutDatabase.getDatabase(appContext) }
 
     val workoutRepository: WorkoutRepository by lazy {
-        WorkoutRepository(database, gpsDiagnosticsStore, onDeferredSaved = { metricsBackfill.start() })
+        WorkoutRepository(database, gpsDiagnosticsStore, onDeferredSaved = { ids -> metricsBackfill.start(importedIds = ids) })
     }
 
     /** Derived metrics of rows saved without them; started on app start and after an import. */
