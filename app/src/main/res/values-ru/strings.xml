@@ -666,4 +666,55 @@
     <string name="voice_interval_goal_pace">Темп %1$s</string>
     <string name="chart_interval_n">Инт %1$d</string>
 
+    <!-- Личные рекорды -->
+    <string name="menu_records">Рекорды</string>
+    <string name="records_title">Рекорды</string>
+    <string name="records_subtitle">Лучшее время на дистанции внутри любой тренировки с GPS-треком</string>
+    <string name="records_distance_1k">1 км</string>
+    <string name="records_distance_5k">5 км</string>
+    <string name="records_distance_10k">10 км</string>
+    <string name="records_distance_half">Полумарафон</string>
+    <string name="records_distance_marathon">Марафон</string>
+    <string name="records_distance_1k_a11y">1 километр</string>
+    <string name="records_distance_5k_a11y">5 километров</string>
+    <string name="records_distance_10k_a11y">10 километров</string>
+    <string name="records_meta_format">%1$s · %2$s · %3$s</string>
+    <string name="records_steps_note">≈ часть дистанции посчитана по шагам</string>
+    <string name="records_history_toggle">История улучшений (%1$d)</string>
+    <string name="records_history_first">первый</string>
+    <string name="records_history_delta">−%1$s</string>
+    <string name="records_history_expanded">развёрнуто</string>
+    <string name="records_history_collapsed">свёрнуто</string>
+    <string name="records_not_reached_value">—</string>
+    <string name="records_not_reached_hint">Пробегите %1$s за одну тренировку</string>
+    <string name="records_empty_title">Пока нет рекордов</string>
+    <string name="records_empty_message">Рекорды появятся после первой пробежки с GPS: лучшие 1 км, 5 км, 10 км, полумарафон и марафон.</string>
+    <string name="records_empty_manual_only">Ручные тренировки без трека в рекордах не учитываются.</string>
+    <string name="records_empty_start">Начать тренировку</string>
+    <string name="records_recalc_progress">Пересчитываем рекорды: %1$d из %2$d</string>
+    <string name="records_recalc_indeterminate">Пересчитываем рекорды…</string>
+    <string name="records_open_all">Все рекорды</string>
+    <string name="records_item_a11y">%1$s: %2$s, %3$s. Открыть тренировку</string>
+    <string name="records_item_not_reached_a11y">%1$s: пока нет результата</string>
+    <string name="records_history_item_a11y">%1$s, %2$s, быстрее на %3$s</string>
+    <string name="records_history_first_a11y">%1$s, %2$s, первый результат</string>
+    <string name="records_congrats_title">Новый личный рекорд!</string>
+    <string name="records_congrats_title_plural">Новые личные рекорды!</string>
+    <string name="records_congrats_line">%1$s — %2$s, на %3$s быстрее</string>
+    <string name="records_first_result_title">Первый результат</string>
+    <string name="records_first_result_line">Первый результат: %1$s — %2$s</string>
+    <string name="records_badge_current">Личный рекорд: %1$s</string>
+    <string name="records_badge_former">Был рекордом: %1$s (до %2$s)</string>
+    <string name="records_pair_format">%1$s — %2$s</string>
+    <string name="records_approx_time">≈%1$s</string>
+    <string name="records_exclude_label">Не учитывать в рекордах</string>
+    <string name="records_auto_excluded">Не учитывается в рекордах: время маршрута рассчитано</string>
+    <string name="records_updated_open">Открыть</string>
+    <plurals name="records_updated">
+        <item quantity="one">Обновлён %d рекорд</item>
+        <item quantity="few">Обновлены %d рекорда</item>
+        <item quantity="many">Обновлено %d рекордов</item>
+        <item quantity="other">Обновлено %d рекорда</item>
+    </plurals>
+
 </resources>
