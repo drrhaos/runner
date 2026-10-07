@@ -1,19 +1,29 @@
 package com.runner.academy.ui.workout
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.view.AccessibilityDelegateCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.appContainer
+import com.google.android.material.color.MaterialColors
+import com.runner.academy.data.RecordCard
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.hasAltitude
 import com.runner.academy.databinding.FragmentWorkoutDetailBinding
+import com.runner.academy.databinding.ItemRecordCardLineBinding
+import com.runner.academy.ui.records.ExcludeFromRecordsRow
+import com.runner.academy.ui.records.RecordCardText
+import com.runner.academy.ui.records.SavedRunCongratulation
 import com.runner.academy.util.DisplayTrack
 import com.runner.academy.util.ErrorHandler
 import com.runner.academy.util.ShareExports
@@ -30,6 +40,12 @@ class WorkoutDetailFragment : Fragment() {
     private val workoutId: Long by lazy {
         arguments?.getLong("workoutId", -1L) ?: -1L
     }
+
+    /** Opened right after saving the run: the record card congratulates once (per view, from the arguments). */
+    private var congratulation: SavedRunCongratulation? = null
+
+    /** True while the switch is set from the row, not by the user. */
+    private var bindingExcludeSwitch = false
     private val viewModel: WorkoutViewModel by viewModels {
         WorkoutViewModelFactory(requireContext().appContainer().workoutRepository)
     }
@@ -40,6 +56,8 @@ class WorkoutDetailFragment : Fragment() {
     private var currentTrackHasSteps = false
     /** The shown track has altitudes: missing gain and loss are then "not computed yet". */
     private var currentTrackHasAltitude = false
+    /** "Don't count in records" for the shown track; hidden until it is read. */
+    private var excludeRow = ExcludeFromRecordsRow.Hidden
     private var boundTrackRenderKey: Pair<com.runner.academy.data.WorkoutType, String>? = null
     private var userPreferences: com.runner.academy.util.UserPreferences? = null
     private var isDeleting = false
@@ -93,7 +111,91 @@ class WorkoutDetailFragment : Fragment() {
         statsDisplay = DetailStatsDisplay(binding, requireContext(), viewModel)
 
         setupClickListeners()
+        setupRecords()
         loadWorkout()
+    }
+
+    private fun setupRecords() {
+        ViewCompat.setAccessibilityHeading(binding.textViewRecordsTitle, true)
+        binding.buttonRecordsOpenAll.setOnClickListener {
+            findNavController().navigate(R.id.nav_all_records)
+        }
+
+        // The row is one switch for TalkBack: its label read with the switch state
+        binding.rowExcludeRecords.setOnClickListener { binding.switchExcludeRecords.toggle() }
+        ViewCompat.setAccessibilityDelegate(binding.rowExcludeRecords, object : AccessibilityDelegateCompat() {
+            override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
+                super.onInitializeAccessibilityNodeInfo(host, info)
+                info.className = android.widget.Switch::class.java.name
+                info.isCheckable = true
+                info.isChecked = _binding?.switchExcludeRecords?.isChecked == true
+            }
+        })
+        // The switch keeps no saved state (saveEnabled=false in the layout): it is always set from
+        // the row, and only a change by the user that differs from the row is written
+        binding.switchExcludeRecords.setOnCheckedChangeListener { _, isChecked ->
+            if (bindingExcludeSwitch) return@setOnCheckedChangeListener
+            val workout = currentWorkout ?: return@setOnCheckedChangeListener
+            if (workout.excludeFromRecords == isChecked) return@setOnCheckedChangeListener
+            currentWorkout = workout.copy(excludeFromRecords = isChecked)
+            viewModel.setExcludeFromRecords(workout.id, isChecked)
+        }
+
+        val congratulation = SavedRunCongratulation(arguments).also { congratulation = it }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.observeRecordCard(workoutId, congratulation.justSaved).collect { card -> showRecordCard(card) }
+        }
+    }
+
+    /** The card is rebuilt only when it changed (the flow emits distinct cards): no flicker. */
+    private fun showRecordCard(card: RecordCard?) {
+        val binding = _binding ?: return
+        val cardView = binding.cardRecords
+        val content = card?.let { RecordCardText.of(requireContext(), it) }
+        if (content == null) {
+            cardView.visibility = View.GONE
+            ViewCompat.setAccessibilityLiveRegion(cardView, ViewCompat.ACCESSIBILITY_LIVE_REGION_NONE)
+            return
+        }
+        val (background, foreground) = when (content.tone) {
+            RecordCardText.Tone.CONGRATULATION ->
+                com.google.android.material.R.attr.colorTertiaryContainer to com.google.android.material.R.attr.colorOnTertiaryContainer
+            RecordCardText.Tone.NEUTRAL ->
+                com.google.android.material.R.attr.colorSurfaceVariant to com.google.android.material.R.attr.colorOnSurfaceVariant
+        }
+        val textColor = MaterialColors.getColor(cardView, foreground)
+        cardView.setCardBackgroundColor(MaterialColors.getColor(cardView, background))
+        binding.imageViewRecordsIcon.imageTintList = ColorStateList.valueOf(textColor)
+        binding.textViewRecordsTitle.text = content.title
+        binding.textViewRecordsTitle.setTextColor(textColor)
+        val lines = binding.layoutRecordsLines
+        lines.removeAllViews()
+        val inflater = LayoutInflater.from(requireContext())
+        for (line in content.lines) {
+            val lineView = ItemRecordCardLineBinding.inflate(inflater, lines, false).root
+            lineView.text = line
+            lineView.setTextColor(textColor)
+            lines.addView(lineView)
+        }
+        binding.textViewRecordsStepsNote.visibility = if (content.stepsNote) View.VISIBLE else View.GONE
+        binding.textViewRecordsStepsNote.setTextColor(textColor)
+        // Announced by TalkBack once: the congratulation the first time it is shown after saving
+        val announce = congratulation?.onCardShown() == true
+        ViewCompat.setAccessibilityLiveRegion(
+            cardView,
+            if (announce) ViewCompat.ACCESSIBILITY_LIVE_REGION_POLITE else ViewCompat.ACCESSIBILITY_LIVE_REGION_NONE
+        )
+        cardView.visibility = View.VISIBLE
+    }
+
+    /** "Don't count in records": its value from the row, shown only with a track ([ExcludeFromRecordsRow]). */
+    private fun showExcludeFromRecords(workout: com.runner.academy.data.Workout) {
+        val binding = _binding ?: return
+        bindingExcludeSwitch = true
+        binding.switchExcludeRecords.isChecked = workout.excludeFromRecords
+        bindingExcludeSwitch = false
+        binding.rowExcludeRecords.visibility = if (excludeRow.visible) View.VISIBLE else View.GONE
+        binding.textViewRecordsAutoExcluded.visibility = if (excludeRow.autoExcluded) View.VISIBLE else View.GONE
     }
 
     private fun setupClickListeners() {
@@ -209,6 +311,7 @@ class WorkoutDetailFragment : Fragment() {
                     statsDisplay?.displayWorkout(workout)
                     showCadence(workout)
                     showElevation(workout)
+                    showExcludeFromRecords(workout)
                     chartRenderer?.intervalPlanSegments =
                         com.runner.academy.util.IntervalSegmentsJson.parse(workout.intervalSegmentsJson)
 
@@ -222,8 +325,10 @@ class WorkoutDetailFragment : Fragment() {
                             currentTrackData = null
                             currentTrackHasSteps = false
                             currentTrackHasAltitude = false
+                            excludeRow = ExcludeFromRecordsRow.Hidden
                             showCadence(workout)
                             showElevation(workout)
+                            showExcludeFromRecords(workout)
                             _binding?.progressBarMapLoading?.visibility = View.GONE
                         } else {
                             displayTrackOnMap(workout)
@@ -274,18 +379,24 @@ class WorkoutDetailFragment : Fragment() {
                     }
                     else -> {
                         // Scanned off the main thread, the fragment's fields set back on it
-                        val (hasSteps, hasAltitude) = withContext(Dispatchers.Default) {
-                            cleanedTrackData.points.any { it.steps != null } to cleanedTrackData.points.hasAltitude()
+                        val scan = withContext(Dispatchers.Default) {
+                            TrackScan(
+                                hasSteps = cleanedTrackData.points.any { it.steps != null },
+                                hasAltitude = cleanedTrackData.points.hasAltitude(),
+                                excludeRow = ExcludeFromRecordsRow.of(cleanedTrackData)
+                            )
                         }
                         if (_binding == null || !isAdded || isDetached) return@launch
                         currentTrackData = cleanedTrackData
-                        currentTrackHasSteps = hasSteps
-                        currentTrackHasAltitude = hasAltitude
+                        currentTrackHasSteps = scan.hasSteps
+                        currentTrackHasAltitude = scan.hasAltitude
+                        excludeRow = scan.excludeRow
                         mapManager?.displayTrack(cleanedTrackData)
                         chartRenderer?.updateAllCharts(cleanedTrackData)
                         currentWorkout?.let {
                             showCadence(it)
                             showElevation(it)
+                            showExcludeFromRecords(it)
                         }
                     }
                 }
@@ -355,6 +466,8 @@ class WorkoutDetailFragment : Fragment() {
         currentTrackData = null
         currentTrackHasSteps = false
         currentTrackHasAltitude = false
+        excludeRow = ExcludeFromRecordsRow.Hidden
+        congratulation = null
         chartRenderer = null
         exportManager = null
         statsDisplay = null
@@ -415,6 +528,9 @@ class WorkoutDetailFragment : Fragment() {
             .setIcon(android.R.drawable.ic_dialog_alert)
             .show()
     }
+
+    /** What the details read from the shown track besides drawing it. */
+    private class TrackScan(val hasSteps: Boolean, val hasAltitude: Boolean, val excludeRow: ExcludeFromRecordsRow)
 
     private fun deleteWorkout() {
         currentWorkout?.let { workout ->

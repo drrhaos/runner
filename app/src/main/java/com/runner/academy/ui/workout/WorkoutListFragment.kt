@@ -17,8 +17,11 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
 import com.runner.academy.appContainer
+import com.runner.academy.data.GpxImport
 import com.runner.academy.data.Workout
 import com.runner.academy.databinding.FragmentWorkoutListBinding
+import com.runner.academy.ui.records.RecordsAnnouncement
+import com.runner.academy.ui.records.RecordsUpdatedSnackbar
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.GpxImporter
 import com.runner.academy.util.ShareExports
@@ -340,12 +343,16 @@ class WorkoutListFragment : Fragment() {
                     ).show()
                     return@launch
                 }
-                val count = if (workouts.isNotEmpty()) {
-                    viewModel.importGpx(workouts).ids.size
+                val result = if (workouts.isNotEmpty()) {
+                    viewModel.importGpx(workouts)
                 } else {
-                    0
+                    GpxImport(emptyList(), changedRecordDistances = 0)
                 }
-                showImportResult(count, failed)
+                showImportResult(
+                    result.ids.size,
+                    failed,
+                    recordsUpdated = RecordsAnnouncement.afterGpxImport(result.changedRecordDistances)
+                )
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "GPX folder import failed: ${e.message}", e)
                 Toast.makeText(
@@ -411,13 +418,28 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
-    private fun showImportResult(imported: Int, failed: Int) {
+    /** The import result; with [recordsUpdated] a snackbar that also offers the records. */
+    private fun showImportResult(imported: Int, failed: Int, recordsUpdated: Int? = null) {
         val message = when {
             imported == 0 && failed == 0 -> getString(R.string.workout_list_import_empty)
             failed > 0 -> getString(R.string.workout_list_import_partial, imported, failed)
             else -> getString(R.string.workout_list_import_success, imported)
         }
-        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+        val binding = _binding
+        if (recordsUpdated != null && binding != null) {
+            val navController = findNavController()
+            RecordsUpdatedSnackbar.show(
+                view = binding.root,
+                navController = navController,
+                count = recordsUpdated,
+                offerOpen = RecordsAnnouncement.offersOpen(navController.currentDestination?.id, workoutActive = false),
+                message = message,
+                // The import button lives in the closed speed dial: the main button is what stays on screen
+                anchor = binding.fabMain
+            )
+        } else {
+            Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun observeViewModel() {

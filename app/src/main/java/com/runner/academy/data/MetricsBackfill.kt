@@ -82,6 +82,15 @@ class MetricsBackfill(
     /** Rows of backup imports not reported yet (guarded by [lock]). */
     private val importedIds = mutableSetOf<Long>()
 
+    /**
+     * The UI has shown [done] ("Records updated: N"): the state returns to [BackfillState.Idle],
+     * so a screen created again (a rotation) does not show it twice and the next equal Done is
+     * still a change. A newer state (another pass started meanwhile) is kept.
+     */
+    fun acknowledge(done: BackfillState.Done) {
+        _progress.compareAndSet(done, BackfillState.Idle)
+    }
+
     /** Remembers [ids] as a backup import, so the pass that computes them reports it. */
     fun markImported(ids: Collection<Long>) {
         synchronized(lock) { importedIds += ids }

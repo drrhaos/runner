@@ -14,7 +14,17 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.runner.academy.data.BackfillState
 import com.runner.academy.databinding.ActivityMainBinding
+import com.runner.academy.ui.records.RecordsAnnouncement
+import com.runner.academy.ui.records.RecordsUpdatedSnackbar
+import com.runner.academy.service.ActiveWorkoutStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.runner.academy.util.PowerSaveCheck
 
 class MainActivity : AppCompatActivity() {
@@ -41,6 +51,7 @@ class MainActivity : AppCompatActivity() {
                 R.id.nav_my_plan,
                 R.id.nav_plans,
                 R.id.nav_statistics,
+                R.id.nav_records,
                 R.id.nav_settings
             ), drawerLayout
         )
@@ -48,6 +59,37 @@ class MainActivity : AppCompatActivity() {
         navView.setupWithNavController(navController)
 
         handleOpenTrackingIntent(intent)
+        announceRecordsUpdatedAfterImport()
+    }
+
+    /**
+     * A backup import is computed in the background: when its pass ends, "Records updated: N"
+     * is shown wherever the user is. Each Done is acknowledged once shown (or found nothing to
+     * announce), so a recreated activity does not show it again.
+     */
+    private fun announceRecordsUpdatedAfterImport() {
+        val backfill = appContainer().metricsBackfill
+        val activeWorkout = ActiveWorkoutStore(applicationContext)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                backfill.progress.collect { state ->
+                    if (state !is BackfillState.Done) return@collect
+                    RecordsAnnouncement.afterBackfill(state)?.let { count ->
+                        val navController = findNavController(R.id.nav_host_fragment_content_main)
+                        val destination = navController.currentDestination?.id
+                        val workoutActive = destination == R.id.nav_tracking &&
+                            withContext(Dispatchers.IO) { activeWorkout.isWorkoutActive() }
+                        RecordsUpdatedSnackbar.show(
+                            view = binding.appBarMain.root,
+                            navController = navController,
+                            count = count,
+                            offerOpen = RecordsAnnouncement.offersOpen(destination, workoutActive)
+                        )
+                    }
+                    backfill.acknowledge(state)
+                }
+            }
+        }
     }
 
     override fun onStart() {

@@ -122,6 +122,12 @@ class WorkoutRepository(
         workoutDao.observeTrackedWithMetricsBelow(WorkoutDerivation.CURRENT_METRICS_VERSION).distinctUntilChanged()
 
     /**
+     * True while workouts exist and none has a track: why the records are empty ("manually
+     * added workouts don't count"). Follows every save and deletion.
+     */
+    fun observeOnlyManualWorkouts(): Flow<Boolean> = workoutDao.observeOnlyManualWorkouts().distinctUntilChanged()
+
+    /**
      * The record card of a workout's details ([RecordBook.cardFor]); null when it set no
      * record, and while [observeRecordsPending]: the first run right after an update would
      * otherwise "beat" records not computed yet. Emits only when the card changes.
