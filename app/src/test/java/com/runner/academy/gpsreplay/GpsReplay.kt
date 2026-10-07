@@ -142,7 +142,17 @@ data class SyntheticRun(
      * The run as a sequence of phases along [route]; set, it replaces [speedMps] and the
      * stand-still fields as the timeline. Null: the single-speed run (older scenarios).
      */
-    val phases: List<Phase>? = null
+    val phases: List<Phase>? = null,
+    /** True altitude by the distance moved, metres; null: flat at [ALTITUDE_M]. */
+    val elevation: ((Double) -> Double)? = null,
+    /**
+     * GPS altitude error, the same AR(1) model as the position ([altitudeNoiseDecay]) with this
+     * standard deviation, metres; its own random stream, so the positions do not change.
+     */
+    val altitudeNoiseM: Double = 0.0,
+    val altitudeNoiseDecay: Double = 0.95,
+    /** Seconds (from start) whose fixes have no altitude. */
+    val missingAltitude: IntRange? = null
 ) {
     /** One stretch of a phased run. Steps grow only while moving (stride [strideM]). */
     sealed class Phase {
@@ -277,16 +287,24 @@ data class SyntheticRun(
             to - from
         } ?: 0.0
 
+    /** True altitude after [distance] metres. */
+    fun trueAltitudeAt(distance: Double): Double = elevation?.invoke(distance) ?: ALTITUDE_M
+
     fun rawPoints(): List<TrackPoint> {
         val random = Random(seed)
+        val altitudeRandom = Random(seed * 31 + 7)
+        // Innovation for the stationary standard deviation [altitudeNoiseM]
+        val altitudeInnovation = altitudeNoiseM * sqrt(1 - altitudeNoiseDecay * altitudeNoiseDecay)
         var errX = 0.0
         var errY = 0.0
+        var errZ = altitudeNoiseM * gaussian(altitudeRandom)
         val points = mutableListOf<TrackPoint>()
         val stepSec = intervalMs / 1000.0
         var t = 0.0
         while (t <= durationSec) {
             errX = noiseDecay * errX + gaussian(random) * noiseInnovationM
             errY = noiseDecay * errY + gaussian(random) * noiseInnovationM
+            errZ = altitudeNoiseDecay * errZ + gaussian(altitudeRandom) * altitudeInnovation
             val second = t.toInt()
             val onManualPause = spanAt(t)?.phase is Phase.ManualPause
             val skippedBySparse = sparseSec != null && second in sparseSec &&
@@ -303,7 +321,11 @@ data class SyntheticRun(
                     y + (if (noisy) errY else 0.0),
                     timeMs = START_TIME + (t * 1000).toLong(),
                     speed = burst?.speedMps ?: if (moving && noisy) speedAt(t).toFloat() else 0f,
-                    altitude = burst?.altitudeM ?: ALTITUDE_M
+                    altitude = when {
+                        burst != null -> burst.altitudeM
+                        missingAltitude != null && second in missingAltitude -> null
+                        else -> trueAltitudeAt(movedAt(t)) + errZ
+                    }
                 ).let { p ->
                     val (steps, cadence) = stepsAndCadence(t) ?: return@let p
                     p.copy(steps = steps, cadence = cadence)
@@ -391,7 +413,7 @@ data class SyntheticRun(
         return route.last()
     }
 
-    private fun point(x: Double, y: Double, timeMs: Long, speed: Float, altitude: Double) = TrackPoint(
+    private fun point(x: Double, y: Double, timeMs: Long, speed: Float, altitude: Double?) = TrackPoint(
         latitude = LAT0 + y / M_PER_DEG,
         longitude = LON0 + x / (M_PER_DEG * cos(Math.toRadians(LAT0))),
         timestamp = timeMs,

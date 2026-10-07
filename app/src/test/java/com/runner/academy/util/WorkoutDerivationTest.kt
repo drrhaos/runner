@@ -70,7 +70,8 @@ class WorkoutDerivationTest {
 
         val track = DisplayTrack.of(input.trackJson, WorkoutType.EASY_RUN)!!
         val expected = ElevationGain.compute(track.points, ElevationSource.GPS)!!
-        assertEquals(15f, derived.elevationGain!!, 1.5f)
+        // The moving average rounds the sharp top off a little
+        assertEquals(15f, derived.elevationGain!!, 2.5f)
         assertEquals(expected.gainM, derived.elevationGain)
         assertEquals(expected.lossM, derived.elevationLoss)
         assertEquals(ElevationSource.GPS, derived.elevationSource)
@@ -81,7 +82,7 @@ class WorkoutDerivationTest {
         val derived = WorkoutDerivation.derive(DerivationInput(json(climbPoints, ElevationSource.FILE), WorkoutType.EASY_RUN, 600_000L))
 
         assertEquals(ElevationSource.FILE, derived.elevationSource)
-        assertEquals(15f, derived.elevationGain!!, 1.5f)
+        assertEquals(15f, derived.elevationGain!!, 2.5f)
     }
 
     @Test

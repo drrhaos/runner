@@ -26,8 +26,13 @@ data class ElevationConfig(
     val hysteresisM: Double
 ) {
     companion object {
-        /** GPS altitude: noise of 10–20 m between fixes, so a long average and a wide band. */
-        val GPS = ElevationConfig(smoothingWindowMs = 20_000L, hysteresisM = 5.0)
+        /**
+         * GPS altitude: noise of 10–20 m between fixes, so a long average and a wide band.
+         * Tuned on the bench (AR(1) noise σ 2.5 m, i.e. ±5 m): the spec's starting 20 s / 5 m
+         * counted up to 50 m on a flat 5 km; 60 s / 10 m gives 0 m there and a 3 × 40 m hill
+         * within 10 %. A climb is still counted in full (the band only delays a turn).
+         */
+        val GPS = ElevationConfig(smoothingWindowMs = 60_000L, hysteresisM = 10.0)
 
         /** Pressure altitude: smooth, drifts slowly with the weather. */
         val BAROMETER = ElevationConfig(smoothingWindowMs = 5_000L, hysteresisM = 1.5)
