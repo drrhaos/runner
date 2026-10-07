@@ -86,7 +86,8 @@ object BestEfforts {
         fun consider(window: Window) {
             fastestAny = minOf(fastestAny, window.elapsed)
             if (window.stepsM / meters > MAX_STEPS_SHARE + SHARE_EPSILON) return
-            if (best == null || window.elapsed < best!!.elapsed) best = window
+            val current = best
+            if (current == null || window.elapsed < current.elapsed) best = window
         }
 
         // Start on point i; the end is the first moment the distance reaches d[i] + meters
@@ -95,8 +96,8 @@ object BestEfforts {
             val target = track.d[i] + meters
             if (target > track.d[n - 1]) break
             while (track.d[j] < target) j++
-            val (endT, endS) = at(track, j - 1, target)
-            consider(Window(track.t[i], endT, endS - track.s[i]))
+            val end = at(track, j - 1, target)
+            consider(Window(track.t[i], end.t, end.stepsM - track.s[i]))
         }
         // End on point j; the start is the last moment the distance was d[j] - meters
         var i = 0
@@ -104,8 +105,8 @@ object BestEfforts {
             val target = track.d[k] - meters
             if (target < 0.0) continue
             while (track.d[i + 1] <= target) i++
-            val (startT, startS) = at(track, i, target)
-            consider(Window(startT, track.t[k], track.s[k] - startS))
+            val start = at(track, i, target)
+            consider(Window(start.t, track.t[k], track.s[k] - start.stepsM))
         }
 
         val window = best ?: return null
@@ -121,10 +122,13 @@ object BestEfforts {
         )
     }
 
-    /** Time and step metres where the distance reaches [target] within the step from point [i] to i + 1. */
-    private fun at(track: Cumulative, i: Int, target: Double): Pair<Double, Double> {
+    /** A moment inside a step: its time [t] and the metres bridged by steps up to it. */
+    private data class At(val t: Double, val stepsM: Double)
+
+    /** Where the distance reaches [target] within the step from point [i] to i + 1. */
+    private fun at(track: Cumulative, i: Int, target: Double): At {
         val span = track.d[i + 1] - track.d[i]
         val f = if (span > 0.0) ((target - track.d[i]) / span).coerceIn(0.0, 1.0) else 0.0
-        return track.t[i] + f * (track.t[i + 1] - track.t[i]) to track.s[i] + f * (track.s[i + 1] - track.s[i])
+        return At(track.t[i] + f * (track.t[i + 1] - track.t[i]), track.s[i] + f * (track.s[i + 1] - track.s[i]))
     }
 }

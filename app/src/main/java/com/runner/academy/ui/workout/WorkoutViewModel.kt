@@ -93,22 +93,22 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     }
 
     /** Imports a backup as new workouts (metrics follow in background). Returns inserted count. */
-    suspend fun importBackup(workouts: List<Workout>): Int = import(workouts, repository::importBackup)
+    suspend fun importBackup(workouts: List<Workout>): Int =
+        import(workouts, nothing = 0) { repository.importBackup(it).size }
 
     /**
      * Imports workouts read from GPX files as new workouts. Returns the new ids and the record
-     * distances changed (for "Records updated: N").
+     * distances they hold (for "Records updated: N").
      */
-    suspend fun importGpx(workouts: List<Workout>): GpxImport {
-        if (workouts.isEmpty()) return GpxImport(emptyList(), changedRecordDistances = 0)
-        return repository.importGpx(workouts).also { loadStatistics() }
-    }
+    suspend fun importGpx(workouts: List<Workout>): GpxImport =
+        import(workouts, nothing = GpxImport(emptyList(), changedRecordDistances = 0), insert = repository::importGpx)
 
-    private suspend fun import(workouts: List<Workout>, insert: suspend (List<Workout>) -> List<Long>): Int {
-        if (workouts.isEmpty()) return 0
-        val count = insert(workouts).size
+    /** [insert]s [workouts] and refreshes the statistics; [nothing] for an empty list. */
+    private suspend fun <R> import(workouts: List<Workout>, nothing: R, insert: suspend (List<Workout>) -> R): R {
+        if (workouts.isEmpty()) return nothing
+        val result = insert(workouts)
         loadStatistics()
-        return count
+        return result
     }
 
     /**
