@@ -14,7 +14,14 @@ import androidx.navigation.ui.setupWithNavController
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.runner.academy.data.BackfillState
 import com.runner.academy.databinding.ActivityMainBinding
+import com.runner.academy.ui.records.RecordsAnnouncement
+import com.runner.academy.ui.records.RecordsUpdatedSnackbar
+import kotlinx.coroutines.launch
 import com.runner.academy.util.PowerSaveCheck
 
 class MainActivity : AppCompatActivity() {
@@ -49,6 +56,31 @@ class MainActivity : AppCompatActivity() {
         navView.setupWithNavController(navController)
 
         handleOpenTrackingIntent(intent)
+        announceRecordsUpdatedAfterImport()
+    }
+
+    /**
+     * A backup import is computed in the background: when its pass ends, "Records updated: N"
+     * is shown wherever the user is. Each Done is acknowledged once shown (or found nothing to
+     * announce), so a recreated activity does not show it again.
+     */
+    private fun announceRecordsUpdatedAfterImport() {
+        val backfill = appContainer().metricsBackfill
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                backfill.progress.collect { state ->
+                    if (state !is BackfillState.Done) return@collect
+                    RecordsAnnouncement.afterBackfill(state)?.let { count ->
+                        RecordsUpdatedSnackbar.show(
+                            view = binding.appBarMain.root,
+                            navController = findNavController(R.id.nav_host_fragment_content_main),
+                            count = count
+                        )
+                    }
+                    backfill.acknowledge(state)
+                }
+            }
+        }
     }
 
     override fun onStart() {
