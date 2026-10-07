@@ -31,11 +31,12 @@ object RecordCardText {
         val stepsNote: Boolean
     )
 
-    fun of(context: Context, card: RecordCard): Content {
+    /** Null for a card without entries (never built by [com.runner.academy.data.RecordBook]). */
+    fun of(context: Context, card: RecordCard): Content? {
         val entries = card.entries
         val news = entries.count { it.status is RecordStatus.New }
+        // Just saved: the congratulation and the first results only, as the card after a run
         val justSaved = entries.filter { it.status is RecordStatus.New || it.status == RecordStatus.First }
-        val badges = badgeLines(context, card)
         val stepsNote = entries.any { it.effort.stepsShare > 0f }
 
         if (justSaved.isNotEmpty()) {
@@ -45,7 +46,7 @@ object RecordCardText {
                 else -> R.string.records_first_result_title
             }
             val lines = justSaved.map { entry ->
-                val name = context.getString(RecordsText.nameRes(entry.distance))
+                val name = RecordsText.name(context, entry.distance)
                 val time = RecordsText.time(context, entry.effort)
                 when (val status = entry.status) {
                     is RecordStatus.New -> context.getString(
@@ -54,15 +55,18 @@ object RecordCardText {
                         time,
                         FormatUtils.formatRecordDelta(entry.effort.elapsedMs + status.improvementMs, entry.effort.elapsedMs)
                     )
-                    else -> context.getString(R.string.records_first_result_line, name, time)
+                    // Under the "First result" title the line does not repeat it
+                    else -> if (news == 0) pair(context, entry) else context.getString(R.string.records_first_result_line, name, time)
                 }
             }
             val tone = if (news > 0) Tone.CONGRATULATION else Tone.NEUTRAL
-            return Content(context.getString(title), lines + badges, tone, stepsNote)
+            return Content(context.getString(title), lines, tone, stepsNote)
         }
 
+        val badges = badgeLines(context, card)
+        val title = badges.firstOrNull() ?: return null
         val tone = if (entries.any { it.status == RecordStatus.Current }) Tone.CONGRATULATION else Tone.NEUTRAL
-        return Content(badges.first(), badges.drop(1), tone, stepsNote)
+        return Content(title, badges.drop(1), tone, stepsNote)
     }
 
     /** "Personal record: …" for the records still standing, then "Former record: …" per date beaten. */
@@ -81,11 +85,13 @@ object RecordCardText {
 
     /** "5 km — 24:31, 1 km — 3:58". */
     private fun pairs(context: Context, entries: List<RecordCard.Entry>): String =
-        entries.joinToString(", ") { entry ->
-            context.getString(
-                R.string.records_pair_format,
-                context.getString(RecordsText.nameRes(entry.distance)),
-                RecordsText.time(context, entry.effort)
-            )
-        }
+        entries.joinToString(", ") { pair(context, it) }
+
+    /** "5 km — 24:31". */
+    private fun pair(context: Context, entry: RecordCard.Entry): String =
+        context.getString(
+            R.string.records_pair_format,
+            RecordsText.name(context, entry.distance),
+            RecordsText.time(context, entry.effort)
+        )
 }
