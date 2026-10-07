@@ -687,6 +687,7 @@
     <string name="records_history_collapsed">свёрнуто</string>
     <string name="records_not_reached_value">—</string>
     <string name="records_not_reached_hint">Пробегите %1$s за одну тренировку</string>
+    <string name="records_distance_km">%1$s км</string>
     <string name="records_empty_title">Пока нет рекордов</string>
     <string name="records_empty_message">Рекорды появятся после первой пробежки с GPS: лучшие 1 км, 5 км, 10 км, полумарафон и марафон.</string>
     <string name="records_empty_manual_only">Ручные тренировки без трека в рекордах не учитываются.</string>

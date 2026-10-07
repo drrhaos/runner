@@ -37,8 +37,8 @@ class RecordsAdapter(
         fun bind(item: Item) {
             val context = binding.root.context
             val row = item.row
-            val name = context.getString(RecordsText.nameRes(row.distance))
-            val spokenName = context.getString(RecordsText.spokenNameRes(row.distance))
+            val name = RecordsText.name(context, row.distance)
+            val spokenName = RecordsText.spokenName(context, row.distance)
             binding.textViewRecordDistance.text = name
 
             val record = row.record

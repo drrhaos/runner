@@ -664,7 +664,7 @@
 
     <!-- Personal records -->
     <string name="menu_records">Records</string>
-    <string name="records_title">Personal records</string>
+    <string name="records_title">Records</string>
     <string name="records_subtitle">Best time over each distance within any workout with a GPS track</string>
     <string name="records_distance_1k">1 km</string>
     <string name="records_distance_5k">5 km</string>
@@ -683,6 +683,7 @@
     <string name="records_history_collapsed">collapsed</string>
     <string name="records_not_reached_value">—</string>
     <string name="records_not_reached_hint">Run %1$s in one workout</string>
+    <string name="records_distance_km">%1$s km</string>
     <string name="records_empty_title">No records yet</string>
     <string name="records_empty_message">Records appear after your first run with GPS: best 1 km, 5 km, 10 km, half marathon and marathon.</string>
     <string name="records_empty_manual_only">Manually added workouts without a track don’t count.</string>

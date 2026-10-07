@@ -10,6 +10,7 @@ import com.runner.academy.ui.records.RecordCardText.Tone
 import com.runner.academy.util.FormatUtils
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -26,7 +27,7 @@ class RecordCardTextTest {
     private fun entry(distance: RecordDistance, elapsedMs: Long, status: RecordStatus, stepsShare: Float = 0f) =
         RecordCard.Entry(distance, BestEffort(1L, distance.meters, elapsedMs, 0L, elapsedMs, stepsShare), status)
 
-    private fun text(vararg entries: RecordCard.Entry) = RecordCardText.of(context, RecordCard(entries.toList()))
+    private fun text(vararg entries: RecordCard.Entry) = RecordCardText.of(context, RecordCard(entries.toList()))!!
 
     @Test
     fun `one new record is a congratulation with its improvement`() {
@@ -62,8 +63,39 @@ class RecordCardTextTest {
         )
 
         assertEquals("First result", content.title)
-        assertEquals(listOf("First result: 1 km — 3:58", "First result: 5 km — 26:38"), content.lines)
+        assertEquals("the title says it once", listOf("1 km — 3:58", "5 km — 26:38"), content.lines)
         assertEquals(Tone.NEUTRAL, content.tone)
+    }
+
+    @Test
+    fun `just saved, a record beaten by a later-dated workout gets no badge beside the congratulation`() {
+        val content = text(
+            entry(RecordDistance.KM_1, 238_000L, RecordStatus.New(improvementMs = 5_000L)),
+            entry(RecordDistance.KM_5, 1_471_000L, RecordStatus.Former(Date(1_790_000_000_000L)))
+        )
+
+        assertEquals("New personal record!", content.title)
+        assertEquals(listOf("1 km — 3:58, 0:05 faster"), content.lines)
+    }
+
+    @Test
+    fun `an empty card has no texts`() {
+        assertNull(RecordCardText.of(context, RecordCard(emptyList())))
+    }
+
+    @Test
+    fun `the distance to run has no needless decimal`() {
+        assertEquals("1 km", RecordsText.distanceToRun(context, RecordDistance.KM_1))
+        assertEquals("10 km", RecordsText.distanceToRun(context, RecordDistance.KM_10))
+        assertEquals("21.1 km", RecordsText.distanceToRun(context, RecordDistance.HALF_MARATHON))
+        assertEquals("42.2 km", RecordsText.distanceToRun(context, RecordDistance.MARATHON))
+    }
+
+    @Test
+    @Config(qualifiers = "ru")
+    fun `the distance to run in russian`() {
+        assertEquals("5 км", RecordsText.distanceToRun(context, RecordDistance.KM_5))
+        assertEquals("21,1 км", RecordsText.distanceToRun(context, RecordDistance.HALF_MARATHON))
     }
 
     @Test
