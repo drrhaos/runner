@@ -17,6 +17,7 @@ import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.FragmentStatisticsBinding
 import com.runner.academy.ui.workout.CadenceText
+import com.runner.academy.ui.workout.ElevationText
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.MovingTimeDisplay
 import com.runner.academy.util.ShareExports
@@ -145,6 +146,23 @@ class StatisticsFragment : Fragment() {
             if (MovingTimeDisplay.statisticsShowsMoving(data.totalDuration, data.totalMovingDuration)) View.VISIBLE else View.GONE
         binding.textViewTotalMovingDuration.text = FormatUtils.formatTime(data.totalMovingDuration)
         binding.textViewTotalCalories.text = String.format("%s %s", data.totalCalories, getString(R.string.workout_details_calories))
+        // Only over workouts with elevation; hidden when none has it, "≈" when part is from GPS
+        val gain = data.totalElevationGain?.roundToInt()
+        binding.layoutTotalElevationGain.visibility = if (gain != null) View.VISIBLE else View.GONE
+        binding.textViewElevationApproxNote.visibility =
+            if (gain != null && data.elevationApproximate) View.VISIBLE else View.GONE
+        if (gain != null) {
+            val meters = getString(R.string.statistics_elevation_format, gain)
+            val spoken = ElevationText.meters(requireContext(), gain)
+            if (data.elevationApproximate) {
+                binding.textViewTotalElevationGain.text = getString(R.string.statistics_elevation_approx_format, meters)
+                binding.textViewTotalElevationGain.contentDescription =
+                    getString(R.string.statistics_elevation_approx_a11y, spoken)
+            } else {
+                binding.textViewTotalElevationGain.text = meters
+                binding.textViewTotalElevationGain.contentDescription = spoken
+            }
+        }
 
         // Лучшие результаты
         binding.textViewBestPace.text = if (data.bestPace > 0) {

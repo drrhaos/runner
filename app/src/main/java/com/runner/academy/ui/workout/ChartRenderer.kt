@@ -30,15 +30,26 @@ class CadenceChartViews(
 )
 
 /**
+ * The elevation card: hidden as a whole, its chart, the tap values, gain and loss in the title
+ * and the source under it.
+ */
+class ElevationChartViews(
+    val card: android.view.View,
+    val chart: LineChart,
+    val values: android.widget.TextView,
+    val summary: android.widget.TextView,
+    val source: android.widget.TextView
+)
+
+/**
  * Handles all chart configuration and rendering for workout detail screen.
  * Manages elevation profile, speed/pace charts, and segment bar charts.
  */
 class ChartRenderer(
     private val paceSpeedHeartChart: LineChart,
-    private val elevationChart: LineChart,
+    private val elevation: ElevationChartViews,
     private val segmentsChart: BarChart,
     private val textViewPaceSpeedValues: android.widget.TextView,
-    private val textViewElevationValues: android.widget.TextView,
     private val cadence: CadenceChartViews,
     private val context: android.content.Context,
     private val userPreferences: com.runner.academy.util.UserPreferences?,
@@ -66,6 +77,17 @@ class ChartRenderer(
     /** Min and max of the drawn cadence line; null: nothing to draw. */
     private var cadenceRange: Pair<Int, Int>? = null
 
+    /** The stored gain and loss of the workout, as the tiles show them; set on every row update. */
+    var elevationDisplay: ElevationDisplay = ElevationDisplay.None
+        set(value) {
+            if (field == value) return
+            field = value
+            applyElevationDisplay()
+        }
+
+    /** Min and max of the drawn elevation line, whole metres; null: nothing to draw. */
+    private var elevationRange: Pair<Int, Int>? = null
+
     enum class SegmentsDisplayMode {
         PACE, SPEED
     }
@@ -81,7 +103,7 @@ class ChartRenderer(
             android.util.Log.e("ChartRenderer", "Failed to update charts", e)
             paceSpeedHeartChart.visibility = android.view.View.GONE
             cadence.card.visibility = android.view.View.GONE
-            elevationChart.visibility = android.view.View.GONE
+            elevation.card.visibility = android.view.View.GONE
             segmentsChart.visibility = android.view.View.GONE
         }
     }
@@ -304,48 +326,50 @@ class ChartRenderer(
         chart.invalidate()
     }
 
+    /**
+     * One line over distance, broken where there is no altitude and over gaps and dropped
+     * stretches (never drawn at zero). Gain, loss and the source in the title follow
+     * [elevationDisplay] — the stored values, like the tiles.
+     */
     private fun updateElevationChart(trackData: TrackData) {
-        val chart = elevationChart
+        val chart = elevation.chart
+        val textViewElevationValues = elevation.values
         val points = trackData.points
 
-        if (points.isEmpty() || points.all { it.altitude == null }) {
-            chart.visibility = android.view.View.GONE
+        val runs = TrackChartBuilder.buildElevationRuns(points)
+        elevationRange = runs.flatten().map { it.altitudeMeters.roundToInt() }.let { values ->
+            if (values.isEmpty()) null else values.min() to values.max()
+        }
+        if (elevationRange == null) {
+            applyElevationDisplay()
             return
         }
 
-        chart.visibility = android.view.View.VISIBLE
         configureInteraction(chart, legend = false)
 
         val isDark = isDarkTheme()
         val textColor = if (isDark) Color.WHITE else Color.BLACK
         val gridColor = if (isDark) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
+        val seriesColor = Color.parseColor("#4CAF50")
+        val label = context.getString(R.string.chart_elevation_title)
 
-        val elevationSeries = SpeedPaceCalculator.buildElevationSeries(points)
-        if (elevationSeries.isEmpty()) {
-            chart.visibility = android.view.View.GONE
-            return
+        // One data set per run: MPAndroidChart joins every entry of a set
+        val dataSets = runs.map { run ->
+            LineDataSet(run.map { Entry(it.distanceKm, it.altitudeMeters) }, label).apply {
+                color = seriesColor
+                lineWidth = 2f
+                // A lone point between breaks would draw nothing without its circle
+                setDrawCircles(run.size == 1)
+                setCircleColor(seriesColor)
+                circleRadius = 2f
+                setDrawCircleHole(false)
+                setDrawValues(false)
+                setDrawFilled(true)
+                fillColor = seriesColor
+                fillAlpha = 50
+            }
         }
-
-        val entries = elevationSeries.map {
-            Entry(
-                it.distanceKm.takeIf { v -> v.isFinite() } ?: 0f,
-                it.altitudeMeters.takeIf { v -> v.isFinite() } ?: 0f
-            )
-        }
-
-        val dataSet = LineDataSet(entries, context.getString(R.string.chart_elevation_title)).apply {
-            color = Color.parseColor("#4CAF50")
-            lineWidth = 2f
-            setCircleColor(Color.parseColor("#4CAF50"))
-            setDrawCircles(false)
-            setDrawValues(false)
-            setDrawFilled(true)
-            fillColor = Color.parseColor("#4CAF50")
-            fillAlpha = 50
-        }
-
-        val lineData = LineData(dataSet)
-        chart.data = lineData
+        chart.data = LineData(dataSets)
 
         chart.xAxis.position = XAxis.XAxisPosition.BOTTOM
         chart.xAxis.setDrawGridLines(true)
@@ -404,6 +428,49 @@ class ChartRenderer(
             }
         })
 
+        applyElevationDisplay()
+    }
+
+    /**
+     * Card visibility, gain/loss in the title, the source under it and the TalkBack summary,
+     * from the drawn line and [elevationDisplay]. The card shows whenever there is a line.
+     */
+    private fun applyElevationDisplay() {
+        val range = elevationRange
+        if (range == null) {
+            elevation.card.visibility = android.view.View.GONE
+            return
+        }
+        elevation.card.visibility = android.view.View.VISIBLE
+        val chart = elevation.chart
+        val from = ElevationText.meters(context, range.first)
+        val to = ElevationText.meters(context, range.second)
+        when (val display = elevationDisplay) {
+            is ElevationDisplay.Value -> {
+                elevation.summary.visibility = android.view.View.VISIBLE
+                elevation.summary.text =
+                    context.getString(R.string.workout_elevation_summary_format, display.gainM, display.lossM)
+                val gain = ElevationText.meters(context, display.gainM)
+                val loss = ElevationText.meters(context, display.lossM)
+                elevation.summary.contentDescription = ElevationText.summaryA11y(context, display.gainM, display.lossM)
+                val source = ElevationText.sourceTexts(display.source)?.chartSubtitle
+                elevation.source.visibility = if (source != null) android.view.View.VISIBLE else android.view.View.GONE
+                source?.let { elevation.source.setText(it) }
+                chart.contentDescription = context.getString(R.string.chart_elevation_a11y, gain, loss, from, to)
+            }
+            ElevationDisplay.Pending -> {
+                elevation.summary.visibility = android.view.View.VISIBLE
+                elevation.summary.setText(R.string.metric_pending_placeholder)
+                elevation.summary.contentDescription = ElevationText.pendingA11y(context)
+                elevation.source.visibility = android.view.View.GONE
+                chart.contentDescription = context.getString(R.string.chart_elevation_range_a11y, from, to)
+            }
+            ElevationDisplay.None -> {
+                elevation.summary.visibility = android.view.View.GONE
+                elevation.source.visibility = android.view.View.GONE
+                chart.contentDescription = context.getString(R.string.chart_elevation_range_a11y, from, to)
+            }
+        }
         chart.invalidate()
     }
 

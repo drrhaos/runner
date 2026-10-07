@@ -278,6 +278,28 @@ class SpeedPaceCalculatorTest {
     }
 
     @Test
+    fun `the elevation line breaks where there is no altitude, never drawing zero`() {
+        val altitudes = listOf(100.0, 101.0, null, 103.0, 0.0, 0.0, 106.0, 107.0)
+        val points = altitudes.mapIndexed { i, alt -> point(55.75, 37.60 + i * 0.0016, i * 10_000L, altitude = alt) }
+
+        val runs = TrackChartBuilder.buildElevationRuns(points)
+
+        assertEquals(listOf(listOf(100f, 101f), listOf(103f), listOf(106f, 107f)), runs.map { run -> run.map { it.altitudeMeters } })
+        assertTrue(SpeedPaceCalculator.buildElevationSeries(points).none { it.altitudeMeters == 0f })
+    }
+
+    @Test
+    fun `the elevation line breaks over a gap and a bridge but keeps the distance`() {
+        val points = trackWithBridge(count = 6, bridgeAt = 2, bridgeM = 500f)
+            .mapIndexed { i, p -> if (i == 4) p.copy(afterGap = true) else p }
+
+        val runs = TrackChartBuilder.buildElevationRuns(points)
+
+        assertEquals(listOf(2, 2, 2), runs.map { it.size })
+        assertEquals(0.5f + 0.1f, runs[1].first().distanceKm, 0.01f)
+    }
+
+    @Test
     fun `buildSegmentsFromPlan counts a bridge towards a distance goal`() {
         val points = trackWithBridge(count = 12, bridgeAt = 3, bridgeM = 100f)
         val plan = listOf(

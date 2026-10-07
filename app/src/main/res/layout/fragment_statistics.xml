@@ -160,6 +160,31 @@
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
 
+                <!-- Набор высоты: скрыт, когда ни у одной тренировки нет высоты -->
+                <LinearLayout
+                    android:id="@+id/layoutTotalElevationGain"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="8dp"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/statistics_total_elevation_gain_label"
+                        style="@style/RunnerStatisticsLabel" />
+
+                    <TextView
+                        android:id="@+id/textViewTotalElevationGain"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        tools:text="≈ 3 420 м"
+                        style="@style/RunnerStatisticsValue" />
+                </LinearLayout>
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -179,6 +204,18 @@
                         tools:text="0 ккал"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
+
+                <!-- Сноска к «≈»: часть высоты посчитана по GPS -->
+                <TextView
+                    android:id="@+id/textViewElevationApproxNote"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/statistics_elevation_approx_note"
+                    android:textSize="13sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
