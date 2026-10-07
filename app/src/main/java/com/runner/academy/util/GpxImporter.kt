@@ -8,7 +8,7 @@ import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
-import com.runner.academy.data.knownAltitude
+import com.runner.academy.data.hasAltitude
 import org.xmlpull.v1.XmlPullParser
 import java.io.InputStream
 import java.io.StringReader
@@ -44,7 +44,7 @@ object GpxImporter {
             // A point without <time> got a made-up one: the track is no record candidate
             timeSynthetic = if (timeMissing) true else null,
             // <ele> is whatever the recording device wrote: shown as "from the file"
-            elevationSource = if (points.any { it.knownAltitude() != null }) ElevationSource.FILE else null
+            elevationSource = if (points.hasAltitude()) ElevationSource.FILE else null
         )
         val distanceKm = SpeedPaceCalculator.metersToKm(metrics.distanceMeters)
 
