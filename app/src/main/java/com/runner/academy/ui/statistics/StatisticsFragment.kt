@@ -58,7 +58,7 @@ class StatisticsFragment : Fragment() {
             exportStatisticsToCsv()
         }
         binding.buttonAllRecords.setOnClickListener {
-            findNavController().navigate(R.id.nav_records)
+            findNavController().navigate(R.id.nav_all_records)
         }
     }
     

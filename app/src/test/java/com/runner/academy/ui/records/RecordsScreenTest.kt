@@ -1,5 +1,6 @@
 package com.runner.academy.ui.records
 
+import com.runner.academy.R
 import com.runner.academy.data.BackfillState
 import com.runner.academy.data.BestEffort
 import com.runner.academy.data.EffortRow
@@ -144,6 +145,16 @@ class RecordsScreenTest {
     fun `records updated is announced after a GPX import that changed some`() {
         assertEquals(3, RecordsAnnouncement.afterGpxImport(3))
         assertNull(RecordsAnnouncement.afterGpxImport(0))
+    }
+
+    @Test
+    fun `open is offered unless the records are shown or a run is being recorded`() {
+        assertTrue(RecordsAnnouncement.offersOpen(R.id.nav_workouts, workoutActive = false))
+        assertTrue(RecordsAnnouncement.offersOpen(R.id.nav_workouts, workoutActive = true))
+        assertTrue("the start screen before a run", RecordsAnnouncement.offersOpen(R.id.nav_tracking, workoutActive = false))
+        assertFalse(RecordsAnnouncement.offersOpen(R.id.nav_tracking, workoutActive = true))
+        assertFalse(RecordsAnnouncement.offersOpen(R.id.nav_records, workoutActive = false))
+        assertFalse(RecordsAnnouncement.offersOpen(R.id.nav_all_records, workoutActive = false))
     }
 
     private fun point(i: Int, timestamp: Long) =

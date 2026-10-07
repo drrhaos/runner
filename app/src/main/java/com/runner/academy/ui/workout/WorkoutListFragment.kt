@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
 import com.runner.academy.appContainer
+import com.runner.academy.data.GpxImport
 import com.runner.academy.data.Workout
 import com.runner.academy.databinding.FragmentWorkoutListBinding
 import com.runner.academy.ui.records.RecordsAnnouncement
@@ -342,7 +343,11 @@ class WorkoutListFragment : Fragment() {
                     ).show()
                     return@launch
                 }
-                val result = viewModel.importGpx(workouts)
+                val result = if (workouts.isNotEmpty()) {
+                    viewModel.importGpx(workouts)
+                } else {
+                    GpxImport(emptyList(), changedRecordDistances = 0)
+                }
                 showImportResult(
                     result.ids.size,
                     failed,
@@ -422,10 +427,12 @@ class WorkoutListFragment : Fragment() {
         }
         val binding = _binding
         if (recordsUpdated != null && binding != null) {
+            val navController = findNavController()
             RecordsUpdatedSnackbar.show(
                 view = binding.root,
-                navController = findNavController(),
+                navController = navController,
                 count = recordsUpdated,
+                offerOpen = RecordsAnnouncement.offersOpen(navController.currentDestination?.id, workoutActive = false),
                 message = message,
                 // The import button lives in the closed speed dial: the main button is what stays on screen
                 anchor = binding.fabMain

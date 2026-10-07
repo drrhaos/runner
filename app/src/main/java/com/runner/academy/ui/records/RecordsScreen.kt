@@ -1,5 +1,6 @@
 package com.runner.academy.ui.records
 
+import com.runner.academy.R
 import com.runner.academy.data.BackfillState
 import com.runner.academy.data.EffortRow
 import com.runner.academy.data.RecordBook
@@ -87,6 +88,16 @@ object RecordsAnnouncement {
 
     /** N of a GPX import, or null when it changed no record. */
     fun afterGpxImport(changedRecordDistances: Int): Int? = changedRecordDistances.takeIf { it > 0 }
+
+    /**
+     * "Open" goes to the records unless they are shown already, and never takes the user off
+     * the tracking screen while a run is being recorded.
+     */
+    fun offersOpen(currentDestination: Int?, workoutActive: Boolean): Boolean = when (currentDestination) {
+        R.id.nav_records, R.id.nav_all_records -> false
+        R.id.nav_tracking -> !workoutActive
+        else -> true
+    }
 }
 
 /** "Don't count in records" on the details: only with a track, explained when left out automatically. */
