@@ -59,7 +59,7 @@ object WorkoutDerivation {
      * Version of the algorithms below. Raising it makes the background pass recompute every
      * row (a changed algorithm or a new record distance needs no migration).
      */
-    const val CURRENT_METRICS_VERSION = 4 // 2: route preview, 3: cadence, 4: elevation (GPS/file)
+    const val CURRENT_METRICS_VERSION = 5 // 2: route preview, 3: cadence, 4: elevation (GPS/file), 5: best efforts
 
     /**
      * A derived column that is empty is "not computed yet" (shown as "—") rather than "no data"
@@ -89,7 +89,9 @@ object WorkoutDerivation {
             elevationLoss = elevation?.lossM,
             elevationSource = if (elevation == null) ElevationSource.NONE else source,
             avgCadence = TrackCadence.average(track.points, track.pauses),
-            routePreview = RoutePreviews.of(track.points)?.let(RoutePreviewCodec::encode)
+            routePreview = RoutePreviews.of(track.points)?.let(RoutePreviewCodec::encode),
+            // On the shown track, so a record window agrees with the splits and the map
+            efforts = BestEfforts.compute(track)
         )
     }
 }
