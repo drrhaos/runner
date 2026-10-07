@@ -830,7 +830,7 @@ class WorkoutTrackingFragment : Fragment() {
                     if (isAdded && !isDetached) {
                         findNavController().navigate(
                             R.id.nav_workout_detail,
-                            WorkoutDetailFragmentArgs(workoutId = workoutId).toBundle()
+                            WorkoutDetailFragmentArgs(workoutId = workoutId, justSaved = true).toBundle()
                         )
                     }
                 } else if (_binding != null && isAdded) {

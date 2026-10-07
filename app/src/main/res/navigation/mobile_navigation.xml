@@ -36,6 +36,11 @@
             android:name="workoutId"
             app:argType="long"
             android:defaultValue="-1L" />
+        <!-- Opened right after saving: a record is a congratulation -->
+        <argument
+            android:name="justSaved"
+            app:argType="boolean"
+            android:defaultValue="false" />
     </fragment>
 
     <fragment
@@ -43,6 +48,20 @@
         android:name="com.runner.academy.ui.statistics.StatisticsFragment"
         android:label="@string/menu_statistics"
         tools:layout="@layout/fragment_statistics" />
+
+    <!-- Records from the drawer: a top-level screen -->
+    <fragment
+        android:id="@+id/nav_records"
+        android:name="com.runner.academy.ui.records.RecordsFragment"
+        android:label="@string/menu_records"
+        tools:layout="@layout/fragment_records" />
+
+    <!-- The same screen opened from Statistics, the details or "Records updated": with Up -->
+    <fragment
+        android:id="@+id/nav_all_records"
+        android:name="com.runner.academy.ui.records.RecordsFragment"
+        android:label="@string/menu_records"
+        tools:layout="@layout/fragment_records" />
 
     <fragment
         android:id="@+id/nav_my_plan"

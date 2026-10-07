@@ -662,4 +662,54 @@
     <string name="voice_interval_goal_pace">Pace %1$s</string>
     <string name="chart_interval_n">Int %1$d</string>
 
+    <!-- Personal records -->
+    <string name="menu_records">Records</string>
+    <string name="records_title">Records</string>
+    <string name="records_subtitle">Best time over each distance within any workout with a GPS track</string>
+    <string name="records_distance_1k">1 km</string>
+    <string name="records_distance_5k">5 km</string>
+    <string name="records_distance_10k">10 km</string>
+    <string name="records_distance_half">Half marathon</string>
+    <string name="records_distance_marathon">Marathon</string>
+    <string name="records_distance_1k_a11y">1 kilometer</string>
+    <string name="records_distance_5k_a11y">5 kilometers</string>
+    <string name="records_distance_10k_a11y">10 kilometers</string>
+    <string name="records_meta_format">%1$s · %2$s · %3$s</string>
+    <string name="records_steps_note">≈ part of the distance was counted from steps</string>
+    <string name="records_history_toggle">Improvement history (%1$d)</string>
+    <string name="records_history_first">first</string>
+    <string name="records_history_delta">−%1$s</string>
+    <string name="records_history_expanded">expanded</string>
+    <string name="records_history_collapsed">collapsed</string>
+    <string name="records_not_reached_value">—</string>
+    <string name="records_not_reached_hint">Run %1$s in one workout</string>
+    <string name="records_distance_km">%1$s km</string>
+    <string name="records_empty_title">No records yet</string>
+    <string name="records_empty_message">Records appear after your first run with GPS: best 1 km, 5 km, 10 km, half marathon and marathon.</string>
+    <string name="records_empty_manual_only">Manually added workouts without a track don’t count.</string>
+    <string name="records_empty_start">Start workout</string>
+    <string name="records_recalc_progress">Recalculating records: %1$d of %2$d</string>
+    <string name="records_recalc_indeterminate">Recalculating records…</string>
+    <string name="records_open_all">All records</string>
+    <string name="records_item_a11y">%1$s: %2$s, %3$s. Open workout</string>
+    <string name="records_item_not_reached_a11y">%1$s: no result yet</string>
+    <string name="records_history_item_a11y">%1$s, %2$s, faster by %3$s</string>
+    <string name="records_history_first_a11y">%1$s, %2$s, first result</string>
+    <string name="records_congrats_title">New personal record!</string>
+    <string name="records_congrats_title_plural">New personal records!</string>
+    <string name="records_congrats_line">%1$s — %2$s, %3$s faster</string>
+    <string name="records_first_result_title">First result</string>
+    <string name="records_first_result_line">First result: %1$s — %2$s</string>
+    <string name="records_badge_current">Personal record: %1$s</string>
+    <string name="records_badge_former">Former record: %1$s (until %2$s)</string>
+    <string name="records_pair_format">%1$s — %2$s</string>
+    <string name="records_approx_time">≈%1$s</string>
+    <string name="records_exclude_label">Don’t count in records</string>
+    <string name="records_auto_excluded">Not counted in records: route time was calculated</string>
+    <string name="records_updated_open">Open</string>
+    <plurals name="records_updated">
+        <item quantity="one">%d record updated</item>
+        <item quantity="other">%d records updated</item>
+    </plurals>
+
 </resources>

@@ -301,6 +301,19 @@
                         android:text="@string/statistics_time_placeholder"
                         style="@style/RunnerStatisticsValue" />
                 </LinearLayout>
+
+                <!-- Все рекорды: экран «Рекорды» -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/buttonAllRecords"
+                    style="@style/Widget.Runner.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_gravity="start"
+                    android:text="@string/records_open_all"
+                    app:icon="@drawable/ic_chevron_right"
+                    app:iconGravity="textEnd"
+                    app:iconTint="@color/ios_blue" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

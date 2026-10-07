@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.data.WorkoutType
@@ -55,6 +56,9 @@ class StatisticsFragment : Fragment() {
     private fun setupClickListeners() {
         binding.buttonExportCsv.setOnClickListener {
             exportStatisticsToCsv()
+        }
+        binding.buttonAllRecords.setOnClickListener {
+            findNavController().navigate(R.id.nav_all_records)
         }
     }
     
