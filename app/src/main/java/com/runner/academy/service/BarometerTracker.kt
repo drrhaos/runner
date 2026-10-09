@@ -21,12 +21,14 @@ import android.util.Log
  * permission is needed.
  *
  * Sensor events arrive on the main looper; accessors are synchronised so any thread may read.
- * The event's own timestamp is used when it lies on the [clockNanos] clock (positive, within
- * the history before now), else the time of delivery — the clock base differs on some devices.
+ * The clock of the events' own timestamps is decided on the first event after [start] and kept
+ * until [stop] ([SensorClock]): elapsed realtime ([clockNanos]) or uptime ([uptimeNanos]),
+ * moved onto elapsed realtime; on neither, the time of delivery.
  */
 class BarometerTracker(
     context: Context,
-    private val clockNanos: () -> Long = SystemClock::elapsedRealtimeNanos
+    private val clockNanos: () -> Long = SystemClock::elapsedRealtimeNanos,
+    private val uptimeNanos: () -> Long = { SystemClock.uptimeMillis() * 1_000_000L }
 ) {
 
     private val sensorManager = context.applicationContext.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -35,13 +37,20 @@ class BarometerTracker(
     })
     private var registeredSensor: Sensor? = null
 
+    /** The clock of the event stamps, decided on the first event after [start]. */
+    private var eventClock: SensorClock? = null
+
     private val listener = object : SensorEventListener {
         override fun onSensorChanged(event: SensorEvent) {
             val now = clockNanos()
-            val time = event.timestamp
-                .takeIf { it > 0L && it in (now - PressureAltitudeHistory.DEFAULT_HISTORY_NANOS)..now } ?: now
+            val uptime = uptimeNanos()
             synchronized(this@BarometerTracker) {
                 if (registeredSensor == null) return
+                val clock = eventClock ?: SensorClock.detect(event.timestamp, now, uptime).also {
+                    eventClock = it
+                    Log.i(TAG, "Barometer event clock: $it")
+                }
+                val time = clock.toElapsed(event.timestamp, now, uptime)
                 event.values.firstOrNull()?.let { history.add(time, it) }
             }
         }
@@ -90,7 +99,7 @@ class BarometerTracker(
         return true
     }
 
-    /** Unregisters the sensor and forgets the readings. */
+    /** Unregisters the sensor, forgets the readings and the event clock. */
     @Synchronized
     fun stop() {
         stopListening()
@@ -105,6 +114,7 @@ class BarometerTracker(
             }
         }
         registeredSensor = null
+        eventClock = null
         history.clear()
     }
 
