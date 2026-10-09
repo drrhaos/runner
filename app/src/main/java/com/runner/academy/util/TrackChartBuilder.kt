@@ -1,5 +1,6 @@
 package com.runner.academy.util
 
+import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.TrackPoint
@@ -95,9 +96,14 @@ object TrackChartBuilder {
      * The elevation line over distance as runs of points: it breaks at a point without altitude
      * ([knownAltitude]: null or the old 0.0, never drawn as zero) and at every
      * [TrackPoint.afterGap] — a gap or a dropped stretch has no altitude, as in [ElevationGain].
-     * The distance still counts a bridge, like the total.
+     * The distance still counts a bridge, like the total. The altitudes are those of [source]
+     * ([ElevationSeries]: the barometer's lifted to the GPS scale).
      */
-    fun buildElevationRuns(points: List<TrackPoint>): List<List<ElevationPoint>> {
+    fun buildElevationRuns(
+        points: List<TrackPoint>,
+        source: ElevationSource = ElevationSource.GPS
+    ): List<List<ElevationPoint>> {
+        val altitudes = ElevationSeries.of(points, source)
         val runs = mutableListOf<List<ElevationPoint>>()
         var run = mutableListOf<ElevationPoint>()
         var cumulativeKm = 0f
@@ -115,7 +121,7 @@ object TrackChartBuilder {
                 )
                 if (points[i].afterGap) closeRun()
             }
-            val altitude = points[i].knownAltitude()?.toFloat()
+            val altitude = altitudes[i]?.toFloat()
             if (altitude == null || !altitude.isFinite() || !cumulativeKm.isFinite()) {
                 closeRun()
                 continue
