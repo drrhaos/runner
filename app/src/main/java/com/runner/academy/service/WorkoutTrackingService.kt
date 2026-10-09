@@ -580,8 +580,9 @@ class WorkoutTrackingService : Service() {
             if (!isCurrentlyTracking && !existing.isPaused) {
                 // Session flags say running but timers not started — re-arm
                 resumeStepsAfterAbandon(existing)
+                if (!resumeTrackingAfterRestore(existing)) return false
                 ensureBarometer()
-                return resumeTrackingAfterRestore(existing)
+                return true
             } else if (existing.isPaused) {
                 return ensureForegroundNotification()
             }
@@ -611,8 +612,6 @@ class WorkoutTrackingService : Service() {
             ?: checkpoint.strideModelState?.let { state ->
                 RunStride(StrideModel.frozenEstimatorOf(state, userPreferences.userHeight), state)
             }
-        // Afresh: no calibration to carry, the pressure altitudes go on from the same scale
-        barometerTracker?.start()
         // The gap clock is not checkpointed: it falls back to the anchor's own time
         gpsProcessor.reset(
             workoutType = selectedWorkoutType,
@@ -633,6 +632,9 @@ class WorkoutTrackingService : Service() {
         rebuildIntervalEngineFromMetadata()
         prepareVoiceForWorkout()
         if (!resumeTrackingAfterRestore(restoredSession)) return false
+        // Only once the restore holds (a refused one never starts it). Afresh: no calibration
+        // to carry, the pressure altitudes go on from the same scale
+        barometerTracker?.start()
         android.util.Log.i(
             "WorkoutTrackingService",
             "Restored workout checkpoint: distance=${restoredSession.distance}, time=${restoredSession.currentTime}"
