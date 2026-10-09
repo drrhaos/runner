@@ -310,6 +310,14 @@ class ElevationGainTest {
     }
 
     @Test
+    fun `the points alone give barometer, GPS or none`() {
+        val gps = points(toSec = 9) { 150.0 }
+        assertEquals(ElevationSource.BAROMETER, ElevationSource.ofPoints(gps.withBaro { 100.0 }))
+        assertEquals(ElevationSource.GPS, ElevationSource.ofPoints(gps))
+        assertEquals(ElevationSource.NONE, ElevationSource.ofPoints(points(toSec = 9) { 0.0 }))
+    }
+
+    @Test
     fun `a declared barometer without pressure altitudes falls back to GPS`() {
         val gps = points(toSec = 9) { 150.0 }
         assertEquals(ElevationSource.GPS, ElevationSource.of(track(gps, ElevationSource.BAROMETER)))

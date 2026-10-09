@@ -26,14 +26,10 @@ object ElevationSeries {
     }
 
     /** Median of (GPS altitude − barometric altitude) over the points with both; 0 without any. */
-    private fun barometerOffset(points: List<TrackPoint>): Double {
-        val differences = points.mapNotNull { point ->
+    private fun barometerOffset(points: List<TrackPoint>): Double =
+        points.mapNotNull { point ->
             val gps = point.knownAltitude() ?: return@mapNotNull null
             val baro = point.knownBaroAltitude() ?: return@mapNotNull null
             gps - baro
-        }.sorted()
-        if (differences.isEmpty()) return 0.0
-        val mid = differences.size / 2
-        return if (differences.size % 2 == 1) differences[mid] else (differences[mid - 1] + differences[mid]) / 2
-    }
+        }.median() ?: 0.0
 }

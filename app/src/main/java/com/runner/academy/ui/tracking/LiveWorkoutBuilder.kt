@@ -5,8 +5,6 @@ import com.runner.academy.data.TrackData
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutType
-import com.runner.academy.data.hasAltitude
-import com.runner.academy.data.isBarometric
 import com.runner.academy.service.SessionClock
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.PaceMath
@@ -102,11 +100,7 @@ object LiveWorkoutBuilder {
                     // Open pauses are closed by the Stop; null only without a clock (unknown)
                     pauses = if (clockStarted) clock.pauses() else null,
                     // The barometer when it worked through the run, else the fixes' own altitudes
-                    elevationSource = when {
-                        sanitizedPoints.isBarometric() -> ElevationSource.BAROMETER
-                        sanitizedPoints.hasAltitude() -> ElevationSource.GPS
-                        else -> null
-                    }
+                    elevationSource = ElevationSource.ofPoints(sanitizedPoints).takeIf { it != ElevationSource.NONE }
                 )
             )
         } else {

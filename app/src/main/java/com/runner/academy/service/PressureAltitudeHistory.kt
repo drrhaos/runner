@@ -1,5 +1,7 @@
 package com.runner.academy.service
 
+import com.runner.academy.util.median
+import kotlin.math.abs
 import kotlin.math.pow
 
 /**
@@ -40,15 +42,13 @@ class PressureAltitudeHistory(
     }
 
     /** Median altitude of the readings within ±[halfWindowNanos] of [timeNanos]; null without any. */
-    fun altitudeAt(timeNanos: Long): Float? {
-        val window = samples.filter { kotlin.math.abs(it.timeNanos - timeNanos) <= halfWindowNanos }
-            .map { it.altitudeM }
-            .sorted()
-        if (window.isEmpty()) return null
-        val mid = window.size / 2
-        return if (window.size % 2 == 1) window[mid] else (window[mid - 1] + window[mid]) / 2
-    }
+    fun altitudeAt(timeNanos: Long): Float? =
+        samples.filter { abs(it.timeNanos - timeNanos) <= halfWindowNanos }
+            .map { it.altitudeM.toDouble() }
+            .median()
+            ?.toFloat()
 
+    /** Forgets every reading (a new run starts with none). */
     fun clear() {
         samples.clear()
     }

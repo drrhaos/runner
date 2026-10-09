@@ -66,18 +66,23 @@ enum class ElevationSource {
          * before the source was stored), else none.
          */
         fun of(track: TrackData): ElevationSource {
-            val barometric = track.points.isBarometric()
-            val withAltitude = track.points.hasAltitude()
             when (track.elevationSource) {
-                BAROMETER -> if (barometric) return BAROMETER
-                GPS, FILE -> if (withAltitude) return track.elevationSource
+                BAROMETER -> if (track.points.isBarometric()) return BAROMETER
+                GPS, FILE -> if (track.points.hasAltitude()) return track.elevationSource
                 NONE, null -> Unit
             }
-            return when {
-                barometric -> BAROMETER
-                withAltitude -> GPS
-                else -> NONE
-            }
+            return ofPoints(track.points)
+        }
+
+        /**
+         * The source recorded [points] have, nothing declared: the barometer when it worked
+         * through the run ([isBarometric]), else GPS when some point has a known altitude,
+         * else none. The recording declares this; [of] falls back on it.
+         */
+        fun ofPoints(points: List<TrackPoint>): ElevationSource = when {
+            points.isBarometric() -> BAROMETER
+            points.hasAltitude() -> GPS
+            else -> NONE
         }
     }
 }
