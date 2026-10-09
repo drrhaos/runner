@@ -68,6 +68,7 @@
     <string name="kilometers_per_hour_float">%.1f км/ч</string>
     <string name="miles_per_hour_float">%.1f миль/ч</string>
     <string name="per_km">на километр</string>
+    <string name="per_mile">на милю</string>
     <string name="voice_notif_text_each_km">Дистанция: %1$s, время: %2$s, средний темп: %3$s.</string>
 
     <string name="workout_distance_label">Дистанция</string>
@@ -524,11 +525,12 @@
     <string name="workout_details_pace_unknown_a11y">Средний темп неизвестен</string>
     <string name="workout_details_average_speed_a11y">Средняя скорость %1$s</string>
     <string name="workout_details_calories_a11y">Калории %1$s</string>
-    <string name="per_mile">на милю</string>
     <string name="kilometers_per_hour_fraction_a11y">%1$.1f километра в час</string>
     <string name="miles_per_hour_fraction_a11y">%1$.1f мили в час</string>
     <string name="chart_pace_a11y">График темпа: средний %1$s, лучший %2$s, худший %3$s</string>
-    <string name="chart_segments_a11y">График по отрезкам: %1$s, быстрее всего — отрезок %2$d, %3$s, медленнее всего — отрезок %4$d, %5$s</string>
+    <string name="chart_segments_a11y">График по отрезкам: %1$s, быстрее всего — %2$s, %3$s, медленнее всего — %4$s, %5$s</string>
+    <string name="chart_segment_n_a11y">отрезок %1$d</string>
+    <string name="chart_segment_titled_a11y">%1$s, %2$s</string>
     <string name="chart_segments_single_a11y">График по отрезкам: один отрезок, %1$s</string>
 
     <plurals name="kilocalories">

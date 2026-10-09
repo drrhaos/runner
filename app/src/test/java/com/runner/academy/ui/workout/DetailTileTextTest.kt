@@ -2,9 +2,8 @@ package com.runner.academy.ui.workout
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.runner.academy.util.SegmentStats
+import com.runner.academy.util.FormatUtils
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -12,14 +11,9 @@ import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
-class DetailA11yTextTest {
+class DetailTileTextTest {
 
     private val context: Context get() = ApplicationProvider.getApplicationContext()
-
-    private fun segment(paceMin: Float, speed: Float = 60f / paceMin) =
-        SegmentStats(paceMin, speed, 1f, (paceMin * 60_000).toLong(), 0, 0)
-
-    // Tiles
 
     @Test
     fun `the distance is read in whole kilometres and metres as shown`() {
@@ -60,6 +54,13 @@ class DetailA11yTextTest {
     }
 
     @Test
+    fun `a pace that is not a number is not spoken`() {
+        assertEquals("", FormatUtils.formatPaceForTTS(Float.NaN, context))
+        assertEquals("", FormatUtils.formatPaceForTTS(Float.POSITIVE_INFINITY, context, metric = false))
+        assertEquals("5 minutes per mile", FormatUtils.formatPaceForTTS(5f, context, metric = false))
+    }
+
+    @Test
     @Config(qualifiers = "ru")
     fun `the pace in russian`() {
         assertEquals("Средний темп 5 минут 30 секунд на километр", DetailTileText.paceA11y(context, 5.5f))
@@ -93,80 +94,5 @@ class DetailA11yTextTest {
         assertEquals("Калории 300 килокалорий", DetailTileText.caloriesA11y(context, 300))
         assertEquals("Калории 22 килокалории", DetailTileText.caloriesA11y(context, 22))
         assertEquals("Калории 1 килокалория", DetailTileText.caloriesA11y(context, 1))
-    }
-
-    // Charts
-
-    @Test
-    fun `the pace chart reads the average, the best and the worst split`() {
-        assertEquals(
-            "Pace chart: average 5 minutes 30 seconds per kilometer, best 5 minutes per kilometer, " +
-                "worst 6 minutes per kilometer",
-            ChartSummaryText.paceA11y(context, listOf(segment(5f), segment(6f)), metric = true)
-        )
-    }
-
-    @Test
-    fun `the pace chart in imperial units reads per mile`() {
-        val mile = SegmentStats(8f, 7.5f, 1.60934f, 480_000L, 0, 0)
-        assertEquals(
-            "Pace chart: average 8 minutes per mile, best 8 minutes per mile, worst 8 minutes per mile",
-            ChartSummaryText.paceA11y(context, listOf(mile), metric = false)
-        )
-    }
-
-    @Test
-    fun `a chart without a pace has no summary`() {
-        assertNull(ChartSummaryText.paceA11y(context, emptyList(), metric = true))
-        assertNull(ChartSummaryText.segmentsA11y(context, listOf(segment(0f, 0f)), metric = true, speed = false))
-    }
-
-    @Test
-    fun `the segment chart names the fastest and the slowest bar in the shown unit`() {
-        val segments = listOf(segment(5.5f), segment(5f), segment(6f, 10f))
-        assertEquals(
-            "Chart by segment: 3 segments, fastest — segment 2, 5 minutes per kilometer, " +
-                "slowest — segment 3, 6 minutes per kilometer",
-            ChartSummaryText.segmentsA11y(context, segments, metric = true, speed = false)
-        )
-        assertEquals(
-            "Chart by segment: 3 segments, fastest — segment 2, 12 kilometers per hour, " +
-                "slowest — segment 3, 10 kilometers per hour",
-            ChartSummaryText.segmentsA11y(context, segments, metric = true, speed = true)
-        )
-        assertEquals(
-            "Chart by segment: 3 segments, fastest — segment 2, 12 miles per hour, " +
-                "slowest — segment 3, 10 miles per hour",
-            ChartSummaryText.segmentsA11y(context, segments, metric = false, speed = true)
-        )
-    }
-
-    @Test
-    fun `one segment is read once`() {
-        assertEquals(
-            "Chart by segment: one segment, 5 minutes per kilometer",
-            ChartSummaryText.segmentsA11y(context, listOf(segment(5f)), metric = true, speed = false)
-        )
-    }
-
-    @Test
-    @Config(qualifiers = "ru")
-    fun `the chart summaries in russian`() {
-        assertEquals(
-            "График темпа: средний 5 минут 30 секунд на километр, лучший 5 минут на километр, " +
-                "худший 6 минут на километр",
-            ChartSummaryText.paceA11y(context, listOf(segment(5f), segment(6f)), metric = true)
-        )
-        assertEquals(
-            "График по отрезкам: 2 отрезка, быстрее всего — отрезок 1, 12 километров в час, " +
-                "медленнее всего — отрезок 2, 10,5 километра в час",
-            ChartSummaryText.segmentsA11y(context, listOf(segment(5f), segment(6f, 10.5f)), metric = true, speed = true)
-        )
-        assertEquals(
-            "в милях",
-            "График по отрезкам: 2 отрезка, быстрее всего — отрезок 1, 5 минут на милю, " +
-                "медленнее всего — отрезок 2, 6 минут на милю",
-            ChartSummaryText.segmentsA11y(context, listOf(segment(5f), segment(6f)), metric = false, speed = false)
-        )
     }
 }

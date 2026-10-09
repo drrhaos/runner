@@ -50,6 +50,24 @@ class SegmentSummaryTest {
     }
 
     @Test
+    fun `only the rated segments compete for fastest and slowest`() {
+        // A fast warm-up stride and a slow recovery jog are not what the runner asks about
+        val segments = listOf(segment(4f), segment(5f), segment(8f), segment(5.5f))
+        val summary = SegmentSummary.of(segments, metric = true, rated = { it == 1 || it == 3 })!!
+
+        assertEquals(1, summary.fastestIndex)
+        assertEquals(3, summary.slowestIndex)
+    }
+
+    @Test
+    fun `without a rated segment with a pace all of them count`() {
+        val summary = SegmentSummary.of(listOf(segment(4f), segment(0f), segment(6f)), metric = true, rated = { it == 1 })!!
+
+        assertEquals(0, summary.fastestIndex)
+        assertEquals(2, summary.slowestIndex)
+    }
+
+    @Test
     fun `no segment with a pace has no summary`() {
         assertNull(SegmentSummary.of(emptyList(), metric = true))
         assertNull(SegmentSummary.of(listOf(segment(0f)), metric = true))

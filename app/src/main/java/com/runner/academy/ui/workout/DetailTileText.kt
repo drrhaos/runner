@@ -3,39 +3,10 @@ package com.runner.academy.ui.workout
 import android.content.Context
 import com.runner.academy.R
 import com.runner.academy.util.FormatUtils
-import com.runner.academy.util.SegmentStats
-import com.runner.academy.util.SpeedPaceCalculator
 import kotlin.math.roundToInt
 
-/**
- * The pace splits a chart summary reads: the average over all of them and the bars (0-based
- * indices into the list) of the lowest and the highest pace. Bars without a pace are skipped.
- */
-data class SegmentSummary(val averagePace: Float, val fastestIndex: Int, val slowestIndex: Int) {
-    companion object {
-        /** Null when no segment has a pace. The average is per km, or per mile without [metric]. */
-        fun of(segments: List<SegmentStats>, metric: Boolean): SegmentSummary? {
-            val timed = segments.withIndex().filter { (_, segment) ->
-                segment.paceMinPerUnit.isFinite() && segment.paceMinPerUnit > 0f
-            }
-            if (timed.isEmpty()) return null
-            // The whole time over the whole distance, as the tile's average; not a mean of paces
-            val averagePace = SpeedPaceCalculator.segmentPaceMetric(
-                timed.sumOf { it.value.durationMs },
-                timed.sumOf { it.value.distanceKm.toDouble() }.toFloat(),
-                metric
-            )
-            return SegmentSummary(
-                averagePace = averagePace,
-                fastestIndex = timed.minBy { it.value.paceMinPerUnit }.index,
-                slowestIndex = timed.maxBy { it.value.paceMinPerUnit }.index
-            )
-        }
-    }
-}
-
 /** Metrics as TalkBack should read them: "5:30" would be "five colon thirty", "km/h" letter by letter. */
-private object MetricSpeech {
+internal object MetricSpeech {
 
     /** "5 kilometers 20 meters" — to the 10 m the two decimals of the tile show. */
     fun distance(context: Context, distanceKm: Float): String {
@@ -100,49 +71,4 @@ object DetailTileText {
         R.string.workout_details_calories_a11y,
         context.resources.getQuantityString(R.plurals.kilocalories, calories, calories)
     )
-}
-
-/**
- * Summaries of the detail charts for TalkBack, which cannot see inside MPAndroidChart: the
- * `contentDescription` of the chart view. Both read the distance or plan splits of the track.
- */
-object ChartSummaryText {
-
-    /** "Pace chart: average …, best …, worst …"; null without a split with a pace. */
-    fun paceA11y(context: Context, segments: List<SegmentStats>, metric: Boolean): String? {
-        val summary = SegmentSummary.of(segments, metric) ?: return null
-        return context.getString(
-            R.string.chart_pace_a11y,
-            MetricSpeech.pace(context, summary.averagePace, metric),
-            MetricSpeech.pace(context, segments[summary.fastestIndex].paceMinPerUnit, metric),
-            MetricSpeech.pace(context, segments[summary.slowestIndex].paceMinPerUnit, metric)
-        )
-    }
-
-    /**
-     * The bar chart: how many bars, the fastest and the slowest one (numbered from 1, as drawn)
-     * in what the bars show — pace, or speed with [speed]. Null without a bar with a pace.
-     */
-    fun segmentsA11y(context: Context, segments: List<SegmentStats>, metric: Boolean, speed: Boolean): String? {
-        val summary = SegmentSummary.of(segments, metric) ?: return null
-        fun value(index: Int): String {
-            val segment = segments[index]
-            return if (speed) {
-                MetricSpeech.speed(context, segment.speedDisplay, metric)
-            } else {
-                MetricSpeech.pace(context, segment.paceMinPerUnit, metric)
-            }
-        }
-        if (segments.size == 1) {
-            return context.getString(R.string.chart_segments_single_a11y, value(0))
-        }
-        return context.getString(
-            R.string.chart_segments_a11y,
-            context.resources.getQuantityString(R.plurals.chart_segments_count, segments.size, segments.size),
-            summary.fastestIndex + 1,
-            value(summary.fastestIndex),
-            summary.slowestIndex + 1,
-            value(summary.slowestIndex)
-        )
-    }
 }
