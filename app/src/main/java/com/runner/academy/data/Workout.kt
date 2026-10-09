@@ -60,14 +60,24 @@ enum class ElevationSource {
     companion object {
         /**
          * The source of [track]'s altitudes, derived from the track alone (so the column can
-         * always be recomputed): none without a known altitude ([knownAltitude]), else what
-         * the writer declared, else GPS (tracks recorded before the source was stored).
+         * always be recomputed): what the writer declared when the track has that data, else
+         * the barometer when ≥ 80 % of the points carry a pressure altitude ([isBarometric]),
+         * else GPS when some point has a known altitude ([knownAltitude]; tracks recorded
+         * before the source was stored), else none.
          */
         fun of(track: TrackData): ElevationSource {
-            if (!track.points.hasAltitude()) return NONE
-            track.elevationSource?.let { return it }
-            // The barometer branch (≥ 80 % of points with a pressure altitude) goes here
-            return GPS
+            val barometric = track.points.isBarometric()
+            val withAltitude = track.points.hasAltitude()
+            when (track.elevationSource) {
+                BAROMETER -> if (barometric) return BAROMETER
+                GPS, FILE -> if (withAltitude) return track.elevationSource
+                NONE, null -> Unit
+            }
+            return when {
+                barometric -> BAROMETER
+                withAltitude -> GPS
+                else -> NONE
+            }
         }
     }
 }

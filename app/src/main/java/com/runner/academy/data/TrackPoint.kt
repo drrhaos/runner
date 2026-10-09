@@ -53,7 +53,13 @@ data class TrackPoint(
      * the straight line from the previous point crosses the pause (not run).
      */
     @SerializedName("after_pause")
-    val afterPause: Boolean? = null
+    val afterPause: Boolean? = null,
+    /**
+     * Barometric altitude at this fix's moment (standard atmosphere, uncalibrated: only its
+     * differences mean something); null without a barometer and on older tracks.
+     */
+    @SerializedName("baro_m")
+    val baroM: Float? = null
 )
 
 /**
@@ -64,6 +70,19 @@ fun TrackPoint.knownAltitude(): Double? = altitude?.takeIf { it.isFinite() && it
 
 /** Some point has a [knownAltitude]: the track has elevation at all. */
 fun List<TrackPoint>.hasAltitude(): Boolean = any { it.knownAltitude() != null }
+
+/** The barometric altitude of this point ([TrackPoint.baroM]), null when it has none. */
+fun TrackPoint.knownBaroAltitude(): Double? = baroM?.takeIf { it.isFinite() }?.toDouble()
+
+/** Share of points with a [knownBaroAltitude] that makes the track's elevation barometric. */
+const val BAROMETER_MIN_SHARE = 0.8
+
+/**
+ * At least [BAROMETER_MIN_SHARE] of the points have a [knownBaroAltitude]: the barometer worked
+ * through the run (a few fixes without readings around them do not change that).
+ */
+fun List<TrackPoint>.isBarometric(): Boolean =
+    isNotEmpty() && count { it.knownBaroAltitude() != null } >= BAROMETER_MIN_SHARE * size
 
 data class TrackData(
     @SerializedName("points")
