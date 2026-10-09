@@ -70,6 +70,21 @@ class TrackDataJsonTest {
     }
 
     @Test
+    fun `the pressure altitude of a point survives a round trip, a missing one stays null`() {
+        val points = listOf(
+            TrackPoint(55.0, 37.0, 1L, 5f, 3f, 150.0, baroM = 112.25f),
+            TrackPoint(55.01, 37.0, 2L, 5f, 3f, 150.0)
+        )
+
+        val json = TrackDataJson.toJson(track(points))
+        val parsed = TrackDataJson.parse(json)!!
+
+        assertTrue(json.contains("\"baro_m\":112.25"))
+        assertEquals(points, parsed.points)
+        assertNull(parsed.points[1].baroM)
+    }
+
+    @Test
     fun `old tracks without the release 3 fields read as null`() {
         val json = """{"points":[{"latitude":55.0,"longitude":37.0,"timestamp":1}],
             "total_distance":0,"total_duration":0,"avg_speed":0,"max_speed":0,"start_time":0}"""
@@ -79,7 +94,9 @@ class TrackDataJsonTest {
         assertNull(parsed.pauses)
         assertNull(parsed.timeSynthetic)
         assertNull(parsed.elevationSource)
+        assertNull(parsed.points.single().baroM)
         assertFalse(TrackDataJson.toJson(parsed).contains("pauses"))
+        assertFalse(TrackDataJson.toJson(parsed).contains("baro_m"))
     }
 
     @Test
