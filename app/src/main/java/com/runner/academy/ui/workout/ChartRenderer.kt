@@ -192,13 +192,13 @@ class ChartRenderer(
             context.getString(R.string.chart_time_format, minutes)
         }
 
+        // Axis labels are text: the neutral colour, not the series hue (the legend tells them apart)
         configureLeftAxis(chart, textColor, gridColor)
-        chart.axisLeft.textColor = paceColor
 
         val rightAxis = chart.axisRight
         rightAxis.isEnabled = true
         rightAxis.setDrawGridLines(false)
-        rightAxis.textColor = speedColor
+        rightAxis.textColor = textColor
         rightAxis.axisLineColor = textColor
 
         chart.legend.textColor = textColor
