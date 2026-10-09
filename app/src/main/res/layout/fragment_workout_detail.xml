@@ -248,79 +248,64 @@
 
                 <!-- Дистанция -->
                 <LinearLayout
+                    android:id="@+id/layout_detail_distance"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:focusable="true">
 
                     <TextView
                         android:id="@+id/textView_detail_distance"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:text="5.0 км"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary" />
+                        style="@style/RunnerDetailMetricValue"
+                        tools:text="5.0 км" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_distance_label"
-                        android:textSize="12sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_distance_label" />
                 </LinearLayout>
 
                 <!-- Время -->
                 <LinearLayout
+                    android:id="@+id/layout_detail_duration"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:focusable="true">
 
                     <TextView
                         android:id="@+id/textView_detail_duration"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        style="@style/RunnerDetailMetricValue"
                         android:text="@string/track_info_time_placeholder"
-                        tools:text="25:30"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary" />
+                        tools:text="25:30" />
 
                     <TextView
                         android:id="@+id/textView_detail_duration_label"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_time_label"
-                        android:textSize="12sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_time_label" />
                 </LinearLayout>
 
                 <!-- Средний темп -->
                 <LinearLayout
+                    android:id="@+id/layout_detail_pace"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:focusable="true">
 
                     <TextView
                         android:id="@+id/textView_detail_pace"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:text="5:06"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary" />
+                        style="@style/RunnerDetailMetricValue"
+                        tools:text="5:06" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_pace_label_km"
-                        android:textSize="12sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_pace_label_km" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -333,52 +318,42 @@
 
                 <!-- Средняя скорость -->
                 <LinearLayout
+                    android:id="@+id/layout_detail_avg_speed"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:focusable="true">
 
                     <TextView
                         android:id="@+id/textView_detail_avg_speed"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:text="11.8 км/ч"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary" />
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="11.8 км/ч" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_details_average_speed"
-                        android:textSize="10sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_details_average_speed" />
                 </LinearLayout>
 
                 <!-- Калории -->
                 <LinearLayout
+                    android:id="@+id/layout_detail_calories"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:focusable="true">
 
                     <TextView
                         android:id="@+id/textView_detail_calories"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:text="300 ккал"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary" />
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="300 ккал" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_details_calories"
-                        android:textSize="10sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_details_calories" />
                 </LinearLayout>
 
                 <!-- Каденс: скрыт, когда шагов нет -->
@@ -395,21 +370,12 @@
 
                     <TextView
                         android:id="@+id/textView_detail_cadence"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:text="172"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary"
-                        android:importantForAccessibility="no" />
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="172" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_details_cadence"
-                        android:textSize="10sp"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:importantForAccessibility="no" />
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_details_cadence" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -441,21 +407,12 @@
 
                     <TextView
                         android:id="@+id/textView_detail_elevation_gain"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:text="↑ 124 м"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary"
-                        android:importantForAccessibility="no" />
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="↑ 124 м" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_elevation_gain_label"
-                        android:textSize="12sp"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:importantForAccessibility="no" />
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_elevation_gain_label" />
                 </LinearLayout>
 
                 <!-- Сброс высоты -->
@@ -472,21 +429,12 @@
 
                     <TextView
                         android:id="@+id/textView_detail_elevation_loss"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:text="↓ 118 м"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary"
-                        android:importantForAccessibility="no" />
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="↓ 118 м" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_elevation_loss_label"
-                        android:textSize="12sp"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:importantForAccessibility="no" />
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_elevation_loss_label" />
                 </LinearLayout>
 
                 <!-- Общее время -->
@@ -496,23 +444,17 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:focusable="true">
 
                     <TextView
                         android:id="@+id/textView_detail_elapsed"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:text="28:40"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary" />
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="28:40" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_elapsed_time_label"
-                        android:textSize="12sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_elapsed_time_label" />
                 </LinearLayout>
             </LinearLayout>
 

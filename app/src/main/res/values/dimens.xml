@@ -7,6 +7,12 @@
     <dimen name="timer_state_chip_text">12sp</dimen>
     <dimen name="workout_item_metric_caption">12sp</dimen>
     <dimen name="workout_list_stat_caption">12sp</dimen>
+    <!-- Detail tiles: the caption under every value, the values of the first and the other rows -->
+    <dimen name="workout_detail_metric_caption">12sp</dimen>
+    <dimen name="workout_detail_metric_value">24sp</dimen>
+    <dimen name="workout_detail_metric_value_secondary">18sp</dimen>
+    <!-- How far a value shrinks before it is cut, at a large font scale on a narrow screen -->
+    <dimen name="workout_detail_metric_value_min">14sp</dimen>
     <dimen name="stop_hold_countdown_text">48sp</dimen>
     <dimen name="nav_header_vertical_spacing">8dp</dimen>
     <dimen name="nav_header_height">176dp</dimen>

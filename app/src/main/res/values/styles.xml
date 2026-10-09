@@ -29,5 +29,37 @@
         <item name="android:textSize">17sp</item>
         <item name="android:textColor">@color/ios_secondary_label</item>
     </style>
+
+    <!-- Detail tiles: a value on one line that shrinks to fit (three tiles a row at 200 % font),
+         a caption that wraps to two. The tile is one TalkBack group, so neither is read alone. -->
+    <style name="RunnerDetailMetricValue">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:autoSizeTextType">uniform</item>
+        <item name="android:autoSizeMinTextSize">@dimen/workout_detail_metric_value_min</item>
+        <item name="android:autoSizeMaxTextSize">@dimen/workout_detail_metric_value</item>
+        <item name="android:textSize">@dimen/workout_detail_metric_value</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?attr/colorPrimary</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <style name="RunnerDetailMetricValue.Secondary">
+        <item name="android:autoSizeMaxTextSize">@dimen/workout_detail_metric_value_secondary</item>
+        <item name="android:textSize">@dimen/workout_detail_metric_value_secondary</item>
+    </style>
+
+    <style name="RunnerDetailMetricCaption">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">2</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textSize">@dimen/workout_detail_metric_caption</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
 </resources>
 
