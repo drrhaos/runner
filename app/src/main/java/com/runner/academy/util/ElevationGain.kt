@@ -116,19 +116,14 @@ object ElevationGain {
             if (hi < i) hi = i
             while (hi + 1 < values.size && times[hi + 1] - times[i] <= cfg.outlierHalfWindowMs) hi++
             val window = values.copyOfRange(lo, hi + 1)
-            val median = median(window)
-            val mad = median(DoubleArray(window.size) { abs(window[it] - median) })
+            // The window always holds the point itself: never empty
+            val median = window.median() ?: continue
+            val mad = DoubleArray(window.size) { abs(window[it] - median) }.median() ?: continue
             if (abs(values[i] - median) > maxOf(cfg.outlierMadFactor * mad, cfg.outlierMinCutoffM)) {
                 result[i] = median
             }
         }
         return result
-    }
-
-    private fun median(values: DoubleArray): Double {
-        values.sort()
-        val mid = values.size / 2
-        return if (values.size % 2 == 1) values[mid] else (values[mid - 1] + values[mid]) / 2
     }
 
     /** Mean of the values within ±window/2 of each point's time. */
