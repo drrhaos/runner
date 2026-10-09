@@ -1,5 +1,6 @@
 package com.runner.academy.util
 
+import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutTemplateSegment
@@ -286,6 +287,22 @@ class SpeedPaceCalculatorTest {
 
         assertEquals(listOf(listOf(100f, 101f), listOf(103f), listOf(106f, 107f)), runs.map { run -> run.map { it.altitudeMeters } })
         assertTrue(SpeedPaceCalculator.buildElevationSeries(points).none { it.altitudeMeters == 0f })
+    }
+
+    @Test
+    fun `a barometric track draws the pressure altitude on the GPS scale`() {
+        // GPS jumps around 150 m, the barometer climbs smoothly from 100 m: drawn from 150 m up
+        val gps = listOf(150.0, 147.0, 156.0, 149.0, null)
+        val points = gps.mapIndexed { i, alt ->
+            point(55.75, 37.60 + i * 0.0016, i * 10_000L, altitude = alt).copy(baroM = 100f + i)
+        }
+
+        val runs = TrackChartBuilder.buildElevationRuns(points, ElevationSource.BAROMETER)
+
+        // GPS − baro: 50, 46, 54, 46 → median 48
+        assertEquals(listOf(listOf(148f, 149f, 150f, 151f, 152f)), runs.map { run -> run.map { it.altitudeMeters } })
+        // The GPS line of the same track (the default) is unchanged
+        assertEquals(4, TrackChartBuilder.buildElevationRuns(points).flatten().size)
     }
 
     @Test

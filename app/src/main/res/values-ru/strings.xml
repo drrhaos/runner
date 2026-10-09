@@ -499,7 +499,7 @@
     <string name="workout_elevation_source_file">Высота из файла</string>
     <string name="workout_elevation_source_file_short">из файла</string>
     <string name="workout_elevation_source_dialog_title">Высота по GPS</string>
-    <string name="workout_elevation_source_dialog_message">Эта высота взята из GPS. GPS определяет высоту хуже, чем положение: ошибка в 10–20 м — обычное дело. Мы сглаживаем её и не считаем мелкие колебания, поэтому набор высоты может отличаться от реального, а короткие подъёмы — не попасть в него.</string>
+    <string name="workout_elevation_source_dialog_message">Эта высота взята из GPS: в телефоне нет барометра, или он не работал во время этой тренировки, или она записана до того, как приложение стало его использовать. GPS определяет высоту хуже, чем положение: ошибка в 10–20 м — обычное дело. Мы сглаживаем её и не считаем мелкие колебания, поэтому набор высоты может отличаться от реального, а короткие подъёмы — не попасть в него.</string>
     <string name="workout_elevation_source_file_dialog_title">Высота из файла</string>
     <string name="workout_elevation_source_file_dialog_message">Высота взята из импортированного файла как есть. Мы сглаживаем её и не считаем мелкие колебания, как высоту по GPS, поэтому набор может отличаться от того, что показало устройство, записавшее файл.</string>
     <string name="workout_elevation_summary_format">↑ %1$d м  ↓ %2$d м</string>
