@@ -57,6 +57,7 @@ import kotlinx.coroutines.withContext
  *  - [VoiceFeedbackManager] for distance / GPS / interval audio (works without UI)
  *  - [StepTracker] for steps (distance over false-signal stretches) and [StrideLearner] to
  *    teach the stride model on good GPS stretches
+ *  - [BarometerTracker] for the pressure altitude of each fix (elevation gain)
  *
  * The service itself handles:
  *  - Android Service lifecycle (onCreate, onDestroy, onBind)
@@ -115,6 +116,8 @@ class WorkoutTrackingService : Service() {
     private var learningStrideModel: StrideModel? = null
     private var strideLearner: StrideLearner? = null
     private var strideSamplesAtStart = 0
+    /** Pressure altitude for each fix's `baro_m`; listens from the start to the stop of a run. */
+    private var barometerTracker: BarometerTracker? = null
     private val unreliableLatch = UnreliableSignalLatch()
     /** Fed every processed fix; ticked on the workout timer while auto-pause applies. */
     private val autoPause = AutoPauseController()
@@ -220,6 +223,7 @@ class WorkoutTrackingService : Service() {
         activeWorkoutStore = ActiveWorkoutStore(this)
         gpsClient = GpsLocationClient(this)
         stepTracker = StepTracker(this)
+        barometerTracker = BarometerTracker(this)
         diagnostics = GpsDiagnosticsRecorder(
             this,
             (applicationContext as com.runner.academy.RunnerApplication).container.gpsDiagnosticsStore
@@ -286,6 +290,7 @@ class WorkoutTrackingService : Service() {
         // Mid-workout destroy: the checkpoint resumes later (steps continue from it); what the
         // run taught the stride model so far is kept, a restore reloads it
         stopSteps(saveLearned = true)
+        barometerTracker?.stop()
         diagnostics.release()
         serviceJob.cancel()
     }
@@ -313,6 +318,8 @@ class WorkoutTrackingService : Service() {
             val tracker = stepTracker?.takeIf { it.isRunning }
             val steps = tracker?.stepsAt(location.elapsedRealtimeNanos)
             val cadence = tracker?.cadence
+            // The pressure altitude of the fix's own moment too
+            val baroM = barometerTracker?.altitudeAt(location.elapsedRealtimeNanos)
 
             val result = gpsProcessor.processLocation(
                 location,
@@ -321,7 +328,8 @@ class WorkoutTrackingService : Service() {
                 session.rawTrackDataPoints.toMutableList(),
                 resumeAfterGap = resumeAfterGap,
                 steps = steps,
-                cadence = cadence
+                cadence = cadence,
+                baroM = baroM
             )
             lastAnyFixTime = System.currentTimeMillis()
             lastProcessedFixTimeMs = maxOf(lastProcessedFixTimeMs, location.time)
@@ -475,6 +483,8 @@ class WorkoutTrackingService : Service() {
         unreliableLatch.reset()
         autoPause.reset()
         val runStride = startSteps(initialSteps = 0, frozenState = null)
+        // No barometer: false, the points carry no baro_m and the elevation stays GPS
+        barometerTracker?.start()
         gpsProcessor.reset(workoutType = selectedWorkoutType, stepDistance = runStride?.estimator)
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
@@ -516,6 +526,8 @@ class WorkoutTrackingService : Service() {
         diagnostics.recordEvent(DiagEvent.RESUME)
         isCurrentlyTracking = true
         stepTracker?.resume()
+        // Kept listening over the pause; re-armed if an abandoned restore stopped it
+        ensureBarometer()
         gpsProcessor.onResume()
         // A new auto-pause needs a fresh 10 s of standing after the resume
         autoPause.reset()
@@ -541,6 +553,7 @@ class WorkoutTrackingService : Service() {
         turningDensifyActive = false
         sessionManager.stop()
         stopSteps(saveLearned = true)
+        barometerTracker?.stop()
         activeWorkoutStore.clear()
         modeSelectionKey = null
         intervalSegmentsJson = null
@@ -567,6 +580,7 @@ class WorkoutTrackingService : Service() {
             if (!isCurrentlyTracking && !existing.isPaused) {
                 // Session flags say running but timers not started — re-arm
                 resumeStepsAfterAbandon(existing)
+                ensureBarometer()
                 return resumeTrackingAfterRestore(existing)
             } else if (existing.isPaused) {
                 return ensureForegroundNotification()
@@ -597,6 +611,8 @@ class WorkoutTrackingService : Service() {
             ?: checkpoint.strideModelState?.let { state ->
                 RunStride(StrideModel.frozenEstimatorOf(state, userPreferences.userHeight), state)
             }
+        // Afresh: no calibration to carry, the pressure altitudes go on from the same scale
+        barometerTracker?.start()
         // The gap clock is not checkpointed: it falls back to the anchor's own time
         gpsProcessor.reset(
             workoutType = selectedWorkoutType,
@@ -684,6 +700,7 @@ class WorkoutTrackingService : Service() {
         maybeSaveCheckpoint(sessionManager.getSession(), force = true)
         // The checkpoint keeps the steps; the next restore continues from them
         stopSteps(saveLearned = false)
+        barometerTracker?.stop()
         diagnostics.stop(DiagEvent.RESTORE_FAILED)
         notificationManager.showInterruptedNotification()
     }
@@ -761,6 +778,12 @@ class WorkoutTrackingService : Service() {
             session.rawTrackDataPoints.lastOrNull()?.steps ?: 0
         )
         startSteps(initialSteps = savedSteps, frozenState = session.strideModelState)
+    }
+
+    /** Starts the barometer unless it already listens (a no-op without one). */
+    private fun ensureBarometer() {
+        val tracker = barometerTracker ?: return
+        if (!tracker.isRunning) tracker.start()
     }
 
     /** Stops counting steps; with [saveLearned] the model keeps what this run taught it. */
