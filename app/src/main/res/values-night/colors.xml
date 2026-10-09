@@ -19,7 +19,6 @@
     <color name="ios_label">#FFFFFFFF</color>
     <color name="ios_secondary_label">#99EBEBF5</color>
     <color name="ios_tertiary_label">#4DEBEBF5</color>
-    <color name="ios_separator">#99545458</color>
     <color name="ios_opaque_separator">#FF38383A</color>
     <color name="ios_grouped_background">#FF000000</color>
     <color name="ios_secondary_grouped_background">#FF1C1C1E</color>
@@ -62,6 +61,14 @@
 
     <!-- AppBar -->
     <color name="app_bar_background">#E01C1C1E</color>
+
+    <!-- Detail charts: the brighter hues where the light theme needs darker ones; contrasts in
+         values/colors.xml. Speed, cadence and axis text in values/. -->
+    <color name="chart_series_pace">#FFFF9800</color>
+    <color name="chart_series_elevation">#FF4CAF50</color>
+    <color name="chart_grid">#40FFFFFF</color>
+    <color name="chart_values_background">#E0FFFFFF</color>
+    <color name="chart_values_text">@color/black</color>
 
     <!-- Route picker mini-preview -->
     <color name="route_preview_background">#FF1C1C1E</color>

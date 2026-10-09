@@ -108,10 +108,11 @@ object FormatUtils {
         }
     }
 
-    fun formatPaceForTTS(paceMinutesPerKm: Float, context: Context): String {
-        if (paceMinutesPerKm <= 0) return ""
+    /** "5 minutes 6 seconds per kilometer"; with [metric] false the pace is per mile. */
+    fun formatPaceForTTS(paceMinPerUnit: Float, context: Context, metric: Boolean = true): String {
+        if (!paceMinPerUnit.isFinite() || paceMinPerUnit <= 0f) return ""
 
-        val (minutes, seconds) = SpeedPaceCalculator.paceToMinutesSeconds(paceMinutesPerKm)
+        val (minutes, seconds) = SpeedPaceCalculator.paceToMinutesSeconds(paceMinPerUnit)
         val parts = mutableListOf<String>()
         if (minutes > 0) {
             parts += context.resources.getQuantityString(R.plurals.minutes, minutes, minutes)
@@ -119,7 +120,7 @@ object FormatUtils {
         if (seconds > 0 || parts.isEmpty()) {
             parts += context.resources.getQuantityString(R.plurals.seconds, seconds, seconds)
         }
-        parts += context.getString(R.string.per_km)
+        parts += context.getString(if (metric) R.string.per_km else R.string.per_mile)
         return parts.joinToString(" ")
     }
     
