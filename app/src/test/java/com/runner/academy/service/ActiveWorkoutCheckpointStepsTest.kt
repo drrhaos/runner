@@ -40,6 +40,27 @@ class ActiveWorkoutCheckpointStepsTest {
     }
 
     @Test
+    fun `the pressure altitudes of the points survive a restore, an older point has none`() {
+        val session = WorkoutSession(
+            isTracking = true,
+            trackDataPoints = listOf(TrackPoint(55.0, 37.0, 1L, 5f, 3f, 150.0, baroM = 101.5f)),
+            rawTrackDataPoints = listOf(TrackPoint(55.0, 37.0, 1L, 5f, 3f, 150.0, baroM = 101.5f))
+        )
+        val checkpoint = ActiveWorkoutCheckpoint.fromSession(
+            session, WorkoutType.EASY_RUN, null, null, null,
+            lastLocationTime = 1L, lastUpdateTime = 1L, steps = null, pendingStepMeters = 0f
+        )
+
+        val restored = gson.fromJson(gson.toJson(checkpoint), ActiveWorkoutCheckpoint::class.java).toSession()
+
+        assertEquals(101.5f, restored.trackDataPoints.single().baroM!!, 0f)
+        assertEquals(101.5f, restored.rawTrackDataPoints.single().baroM!!, 0f)
+
+        val older = """{"isTracking":true,"trackDataPoints":[{"latitude":55.0,"longitude":37.0,"timestamp":1}],"rawTrackDataPoints":[]}"""
+        assertNull(gson.fromJson(older, ActiveWorkoutCheckpoint::class.java).toSession().trackDataPoints.single().baroM)
+    }
+
+    @Test
     fun `an older checkpoint without steps restores without them`() {
         val json = """{"isTracking":true,"distance":1.0,"trackDataPoints":[],"rawTrackDataPoints":[]}"""
 
