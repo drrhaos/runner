@@ -16,9 +16,9 @@ import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.google.android.material.color.MaterialColors
+import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.RecordCard
 import com.runner.academy.data.TrackData
-import com.runner.academy.data.hasAltitude
 import com.runner.academy.databinding.FragmentWorkoutDetailBinding
 import com.runner.academy.databinding.ItemRecordCardLineBinding
 import com.runner.academy.ui.records.ExcludeFromRecordsRow
@@ -382,7 +382,8 @@ class WorkoutDetailFragment : Fragment() {
                         val scan = withContext(Dispatchers.Default) {
                             TrackScan(
                                 hasSteps = cleanedTrackData.points.any { it.steps != null },
-                                hasAltitude = cleanedTrackData.points.hasAltitude(),
+                                // GPS, file or barometer altitudes: a barometric track may have no GPS ones
+                                hasAltitude = ElevationSource.of(cleanedTrackData) != ElevationSource.NONE,
                                 excludeRow = ExcludeFromRecordsRow.of(cleanedTrackData)
                             )
                         }
@@ -439,7 +440,7 @@ class WorkoutDetailFragment : Fragment() {
     }
 
     /** Why GPS (or a file's) elevation is approximate. */
-    private fun showElevationSourceDialog(source: com.runner.academy.data.ElevationSource) {
+    private fun showElevationSourceDialog(source: ElevationSource) {
         val texts = ElevationText.sourceTexts(source) ?: return
         com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
             .setTitle(texts.dialogTitle)

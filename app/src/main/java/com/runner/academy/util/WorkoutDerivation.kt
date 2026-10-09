@@ -59,7 +59,7 @@ object WorkoutDerivation {
      * Version of the algorithms below. Raising it makes the background pass recompute every
      * row (a changed algorithm or a new record distance needs no migration).
      */
-    const val CURRENT_METRICS_VERSION = 5 // 2: route preview, 3: cadence, 4: elevation (GPS/file), 5: best efforts
+    const val CURRENT_METRICS_VERSION = 6 // 2: route preview, 3: cadence, 4: elevation (GPS/file), 5: best efforts, 6: barometer
 
     /**
      * A derived column that is empty is "not computed yet" (shown as "—") rather than "no data"

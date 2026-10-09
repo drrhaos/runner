@@ -19,6 +19,8 @@ import kotlin.math.cos
 /**
  * Elevation gain on the bench (release acceptance, `product.md`): a hill of known height within
  * 15 %, a flat 5 km within 15 m by GPS, nothing counted across a dropped stretch or a gap.
+ * The same profiles by the barometer (`baro_m`: the truth off by the weather, drifting 8 m/h,
+ * σ 0.3 m), and GPS whenever the barometer is missing or covers too few fixes.
  * Each scenario runs over [SEEDS] noise realisations through the whole save path (session →
  * saved track → derivation), so the tuned [com.runner.academy.util.ElevationConfig] is not
  * fitted to one lucky seed.
@@ -167,6 +169,88 @@ class ElevationReplayTest {
         assertEquals(null, d.elevationGain)
     }
 
+    // --- Barometer: the true profile in baro_m, off by the weather, drifting 8 m/h ---
+
+    /** [run] (with its GPS noise) and a barometer on every fix. */
+    private fun withBarometer(run: SyntheticRun) = run.copy(barometer = SyntheticRun.Barometer())
+
+    @Test
+    fun `three hills of 40 m by the barometer gain 120 m within 5 percent`() {
+        val gains = NOISES.map { (seed, decay) ->
+            val d = derived(
+                withBarometer(
+                    SyntheticRun(
+                        route = street, elevation = threeHills(40.0),
+                        altitudeNoiseM = NOISE_M, altitudeNoiseDecay = decay, seed = seed
+                    )
+                )
+            )
+            assertEquals(ElevationSource.BAROMETER, d.elevationSource)
+            d.elevationGain!!.toDouble()
+        }
+
+        val worst = gains.maxOf { abs(it - 120.0) / 120.0 }
+        println("ElevationReplay barometer hill: gains=${gains.map { "%.1f".format(it) }} worst error=${"%.1f".format(worst * 100)} %")
+        assertTrue("worst error ${worst * 100} %", worst <= BARO_HILL_MAX_ERROR)
+    }
+
+    @Test
+    fun `short rollers by the barometer keep nearly all their gain`() {
+        val gains = NOISES.map { (seed, decay) ->
+            derived(
+                withBarometer(
+                    SyntheticRun(
+                        route = street, elevation = rollers,
+                        altitudeNoiseM = NOISE_M, altitudeNoiseDecay = decay, seed = seed
+                    )
+                )
+            ).elevationGain!!.toDouble()
+        }
+
+        val worst = gains.maxOf { abs(it - 114.0) / 114.0 }
+        println("ElevationReplay barometer rollers (true 114 m): gains=${gains.map { "%.1f".format(it) }} worst error=${"%.1f".format(worst * 100)} %")
+        assertTrue("worst error ${worst * 100} %", worst <= BARO_ROLLERS_MAX_ERROR)
+        // GPS keeps 40–80 m of these (see above): every 8 m hill counts here
+        assertTrue("gains $gains", gains.all { it >= 105.0 })
+    }
+
+    @Test
+    fun `a flat 5 km round a stadium by the barometer gains at most 15 m`() {
+        val gains = NOISES.map { (seed, decay) ->
+            derived(
+                withBarometer(
+                    SyntheticRun(route = stadium(laps = 13), altitudeNoiseM = NOISE_M, altitudeNoiseDecay = decay, seed = seed)
+                )
+            ).elevationGain!!.toDouble()
+        }
+
+        println("ElevationReplay barometer stadium: gains=${gains.map { "%.1f".format(it) }} worst=${"%.1f".format(gains.max())} m")
+        // Measured 3.8–4.3 m: only the drift of the run counts (8 m/h over ~25 min) and the
+        // noise at the turns; the bound is the spec's
+        assertTrue("worst gain ${gains.max()} m", gains.max() <= 15.0)
+    }
+
+    @Test
+    fun `a phone without a barometer records GPS elevation`() {
+        val d = derived(
+            withBarometer(SyntheticRun(route = street, elevation = threeHills(40.0), altitudeNoiseM = NOISE_M)),
+            ReplaySettings(barometerAvailable = false)
+        )
+
+        assertEquals(ElevationSource.GPS, d.elevationSource)
+        assertNotNull(d.elevationGain)
+    }
+
+    @Test
+    fun `a barometer on too few fixes leaves the elevation to GPS`() {
+        val run = SyntheticRun(route = street, elevation = threeHills(40.0), altitudeNoiseM = NOISE_M)
+        // No readings for the last 30 % of the run
+        val from = (run.durationSec * 0.7).toInt()
+        val d = derived(run.copy(barometer = SyntheticRun.Barometer(missingSec = from..run.durationSec)))
+
+        assertEquals(ElevationSource.GPS, d.elevationSource)
+    }
+
     /** A 400 m running track (two 100 m straights, two half circles of 100 m), [laps] times. */
     private fun stadium(laps: Int): List<Pair<Double, Double>> {
         val r = 100.0 / PI
@@ -188,5 +272,14 @@ class ElevationReplayTest {
 
         /** GPS altitude noise "±5 m": standard deviation 2.5 m of the AR(1) error (±2σ). */
         const val NOISE_M = 2.5
+
+        /**
+         * Measured over the 20 noises (barometer σ 0.3 m, drift 8 m/h, 5 s / 1.5 m): the hill
+         * 122.7–123.3 m of 120 (+2.8 % at worst), the rollers 118.3–120.4 m of 114 (+5.6 %),
+         * the stadium 3.8–4.3 m. The surplus is the drift (~4 m over the 30 min run) climbing
+         * with the runner; the bounds leave about twice that room.
+         */
+        const val BARO_HILL_MAX_ERROR = 0.05
+        const val BARO_ROLLERS_MAX_ERROR = 0.10
     }
 }

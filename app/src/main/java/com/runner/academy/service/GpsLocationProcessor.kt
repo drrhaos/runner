@@ -89,6 +89,8 @@ class GpsLocationProcessor {
      *
      * @param resumeAfterGap When true (e.g. session was [com.runner.academy.data.GpsStatus.LOST]),
      *   the first valid fix re-anchors the track with zero segment distance.
+     * @param baroM Barometric altitude at the fix's own time ([BarometerTracker.altitudeAt]);
+     *   null without a barometer. Stored on the point as it is (`baro_m`).
      */
     fun processLocation(
         location: Location,
@@ -97,7 +99,8 @@ class GpsLocationProcessor {
         existingRawTrackDataPoints: MutableList<TrackPoint>,
         resumeAfterGap: Boolean = false,
         steps: Int? = null,
-        cadence: Float? = null
+        cadence: Float? = null,
+        baroM: Float? = null
     ): ProcessResult {
         val newTrackPoints = existingTrackPoints.toMutableList()
         val newTrackDataPoints = existingTrackDataPoints.toMutableList()
@@ -115,7 +118,8 @@ class GpsLocationProcessor {
             source = LocationSource.GPS.name,
             steps = steps,
             cadence = cadence,
-            afterPause = if (nextFixAfterPause) true else null
+            afterPause = if (nextFixAfterPause) true else null,
+            baroM = baroM
         )
         nextFixAfterPause = false
         newRawTrackDataPoints.add(rawTrackPoint)

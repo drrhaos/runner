@@ -1,5 +1,6 @@
 package com.runner.academy.util
 
+import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutTemplateSegment
@@ -224,7 +225,7 @@ class SpeedPaceCalculatorTest {
         val p2 = point(55.75, 37.6016, 10_000L, altitude = 110.0)
         val p3 = point(55.75, 37.6032, 20_000L, altitude = 105.0)
 
-        val series = SpeedPaceCalculator.buildElevationSeries(listOf(p1, p2, p3))
+        val series = SpeedPaceCalculator.buildElevationSeries(listOf(p1, p2, p3), ElevationSource.GPS)
         assertEquals(3, series.size)
         assertEquals(0f, series[0].distanceKm, 0.001f)
         assertTrue(series[1].distanceKm > 0f)
@@ -236,7 +237,7 @@ class SpeedPaceCalculatorTest {
     fun `buildElevationSeries empty when no altitudes`() {
         val p1 = point(55.75, 37.60, 0L, altitude = null)
         val p2 = point(55.75, 37.6016, 10_000L, altitude = null)
-        assertTrue(SpeedPaceCalculator.buildElevationSeries(listOf(p1, p2)).isEmpty())
+        assertTrue(SpeedPaceCalculator.buildElevationSeries(listOf(p1, p2), ElevationSource.GPS).isEmpty())
     }
 
     /** 100 m steps east every 50 s; the step into [bridgeAt] is a bridge of [bridgeM] instead. */
@@ -271,7 +272,7 @@ class SpeedPaceCalculatorTest {
     fun `buildElevationSeries counts a bridge`() {
         val points = trackWithBridge(count = 3, bridgeAt = 1, bridgeM = 500f)
 
-        val series = SpeedPaceCalculator.buildElevationSeries(points)
+        val series = SpeedPaceCalculator.buildElevationSeries(points, ElevationSource.GPS)
 
         assertEquals(0.5f, series[1].distanceKm, 0.001f)
         assertEquals(SpeedPaceCalculator.totalDistanceMeters(points) / 1000f, series[2].distanceKm, 0.001f)
@@ -282,10 +283,26 @@ class SpeedPaceCalculatorTest {
         val altitudes = listOf(100.0, 101.0, null, 103.0, 0.0, 0.0, 106.0, 107.0)
         val points = altitudes.mapIndexed { i, alt -> point(55.75, 37.60 + i * 0.0016, i * 10_000L, altitude = alt) }
 
-        val runs = TrackChartBuilder.buildElevationRuns(points)
+        val runs = TrackChartBuilder.buildElevationRuns(points, ElevationSource.GPS)
 
         assertEquals(listOf(listOf(100f, 101f), listOf(103f), listOf(106f, 107f)), runs.map { run -> run.map { it.altitudeMeters } })
-        assertTrue(SpeedPaceCalculator.buildElevationSeries(points).none { it.altitudeMeters == 0f })
+        assertTrue(SpeedPaceCalculator.buildElevationSeries(points, ElevationSource.GPS).none { it.altitudeMeters == 0f })
+    }
+
+    @Test
+    fun `a barometric track draws the pressure altitude on the GPS scale`() {
+        // GPS jumps around 150 m, the barometer climbs smoothly from 100 m: drawn from 150 m up
+        val gps = listOf(150.0, 147.0, 156.0, 149.0, null)
+        val points = gps.mapIndexed { i, alt ->
+            point(55.75, 37.60 + i * 0.0016, i * 10_000L, altitude = alt).copy(baroM = 100f + i)
+        }
+
+        val runs = TrackChartBuilder.buildElevationRuns(points, ElevationSource.BAROMETER)
+
+        // GPS − baro: 50, 46, 54, 46 → median 48
+        assertEquals(listOf(listOf(148f, 149f, 150f, 151f, 152f)), runs.map { run -> run.map { it.altitudeMeters } })
+        // The GPS line of the same track is unchanged
+        assertEquals(4, TrackChartBuilder.buildElevationRuns(points, ElevationSource.GPS).flatten().size)
     }
 
     @Test
@@ -293,7 +310,7 @@ class SpeedPaceCalculatorTest {
         val points = trackWithBridge(count = 6, bridgeAt = 2, bridgeM = 500f)
             .mapIndexed { i, p -> if (i == 4) p.copy(afterGap = true) else p }
 
-        val runs = TrackChartBuilder.buildElevationRuns(points)
+        val runs = TrackChartBuilder.buildElevationRuns(points, ElevationSource.GPS)
 
         assertEquals(listOf(2, 2, 2), runs.map { it.size })
         assertEquals(0.5f + 0.1f, runs[1].first().distanceKm, 0.01f)

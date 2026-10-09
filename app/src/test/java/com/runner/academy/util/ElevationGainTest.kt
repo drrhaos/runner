@@ -204,6 +204,92 @@ class ElevationGainTest {
         assertEquals(10.0, ElevationConfig.GPS.hysteresisM, 0.0)
     }
 
+    // --- Barometer ---
+
+    /** [points] with the pressure altitude [baro] (seconds from the start) on each. */
+    private fun List<TrackPoint>.withBaro(baro: (Int) -> Double?): List<TrackPoint> =
+        map { p -> p.copy(baroM = baro(((p.timestamp - START) / 1_000L).toInt())?.toFloat()) }
+
+    private fun barometer(points: List<TrackPoint>) = ElevationGain.compute(points, ElevationSource.BAROMETER)
+
+    @Test
+    fun `the barometer has its own finer preset, the outlier filter as for GPS`() {
+        val cfg = ElevationConfig.forSource(ElevationSource.BAROMETER)
+        assertEquals(ElevationConfig.BAROMETER, cfg)
+        assertEquals(5_000L, cfg.smoothingWindowMs)
+        assertEquals(1.5, cfg.hysteresisM, 0.0)
+        assertEquals(ElevationConfig.GPS.outlierHalfWindowMs, cfg.outlierHalfWindowMs)
+        assertEquals(ElevationConfig.GPS.outlierMadFactor, cfg.outlierMadFactor, 0.0)
+        assertEquals(ElevationConfig.GPS.outlierMinCutoffM, cfg.outlierMinCutoffM, 0.0)
+    }
+
+    @Test
+    fun `the barometer counts the pressure altitude, not the GPS one`() {
+        // GPS flat at 150 m, the barometer climbs three hills of 10 m (well over 1.5 m)
+        val track = points(toSec = 1_800) { 150.0 }.withBaro { 100.0 + hills(10.0)(it) - 150.0 }
+
+        val result = barometer(track)!!
+
+        assertEquals(30.0, result.gainM.toDouble(), 1.5)
+        assertEquals(30.0, result.lossM.toDouble(), 1.5)
+    }
+
+    @Test
+    fun `the barometer counts hills of 3 m that GPS treats as noise`() {
+        val track = points(toSec = 1_800) { null }.withBaro { hills(3.0)(it) }
+
+        assertEquals(9.0, barometer(track)!!.gainM.toDouble(), 1.0)
+    }
+
+    @Test
+    fun `a point without a pressure altitude breaks the barometer's piece`() {
+        val track = points(toSec = 700) { 150.0 }.withBaro { sec ->
+            when {
+                sec < 300 -> 100.0
+                sec < 400 -> null
+                else -> 120.0
+            }
+        }
+
+        val result = barometer(track)!!
+
+        assertEquals(0f, result.gainM)
+        assertEquals(0f, result.lossM)
+    }
+
+    @Test
+    fun `no pressure altitudes is no barometer result`() {
+        assertNull(barometer(points(toSec = 100) { 150.0 }))
+    }
+
+    // --- ElevationSeries: what the chart draws ---
+
+    @Test
+    fun `the chart draws the GPS altitudes of a GPS track`() {
+        val track = points(toSec = 3) { if (it == 1) 0.0 else 150.0 + it }.withBaro { 10.0 }
+
+        assertEquals(listOf(150.0, null, 152.0, 153.0), ElevationSeries.of(track, ElevationSource.GPS))
+    }
+
+    @Test
+    fun `the chart lifts the barometer to the GPS scale by the median difference`() {
+        // GPS = baro + 50 m with noise and one false fix; the median ignores both
+        val gps = listOf(160.0, 158.0, 161.0, 900.0, 0.0)
+        val track = points(toSec = 4) { gps[it] }.withBaro { 110.0 }
+
+        val series = ElevationSeries.of(track, ElevationSource.BAROMETER)
+
+        // Differences 50, 48, 51, 790 (0.0 is no altitude): median 50.5
+        assertEquals(List(5) { 160.5 }, series)
+    }
+
+    @Test
+    fun `without GPS altitudes the chart draws the barometer as it is`() {
+        val track = points(toSec = 2) { null }.withBaro { if (it == 1) null else 100.0 + it }
+
+        assertEquals(listOf(100.0, null, 102.0), ElevationSeries.of(track, ElevationSource.BAROMETER))
+    }
+
     // --- ElevationSource.of ---
 
     private fun track(points: List<TrackPoint>, declared: ElevationSource? = null) =
@@ -212,6 +298,34 @@ class ElevationGainTest {
     @Test
     fun `the source the track declares wins`() {
         assertEquals(ElevationSource.FILE, ElevationSource.of(track(points(toSec = 10) { 150.0 }, ElevationSource.FILE)))
+    }
+
+    @Test
+    fun `at least 80 percent of points with a pressure altitude is the barometer`() {
+        val gps = points(toSec = 9) { 150.0 }
+        assertEquals(ElevationSource.BAROMETER, ElevationSource.of(track(gps.withBaro { if (it < 8) 100.0 else null })))
+        assertEquals(ElevationSource.GPS, ElevationSource.of(track(gps.withBaro { if (it < 7) 100.0 else null })))
+        // The barometer alone, without any GPS altitude
+        assertEquals(ElevationSource.BAROMETER, ElevationSource.of(track(points(toSec = 9) { null }.withBaro { 100.0 })))
+    }
+
+    @Test
+    fun `the points alone give barometer, GPS or none`() {
+        val gps = points(toSec = 9) { 150.0 }
+        assertEquals(ElevationSource.BAROMETER, ElevationSource.ofPoints(gps.withBaro { 100.0 }))
+        assertEquals(ElevationSource.GPS, ElevationSource.ofPoints(gps))
+        assertEquals(ElevationSource.NONE, ElevationSource.ofPoints(points(toSec = 9) { 0.0 }))
+    }
+
+    @Test
+    fun `a declared barometer without pressure altitudes falls back to GPS`() {
+        val gps = points(toSec = 9) { 150.0 }
+        assertEquals(ElevationSource.GPS, ElevationSource.of(track(gps, ElevationSource.BAROMETER)))
+        assertEquals(
+            ElevationSource.BAROMETER,
+            ElevationSource.of(track(gps.withBaro { 100.0 }, ElevationSource.BAROMETER))
+        )
+        assertEquals(ElevationSource.NONE, ElevationSource.of(track(points(toSec = 9) { null }, ElevationSource.BAROMETER)))
     }
 
     @Test

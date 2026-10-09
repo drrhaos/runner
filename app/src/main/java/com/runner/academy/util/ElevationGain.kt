@@ -35,20 +35,26 @@ data class ElevationConfig(
         val GPS = ElevationConfig(smoothingWindowMs = 60_000L, hysteresisM = 10.0)
 
         /**
-         * A file's `<ele>` may be anything, so it is treated like GPS. No writer declares the
-         * barometer yet: the barometer branch adds its own (finer) preset here.
+         * Barometric altitude: noise well under a metre, so a short average and a narrow band
+         * (the spec's 5 s / 1.5 m). The sensor drift of ~8 m/h is slow against the band; the
+         * outlier filter is the GPS one (a 15 m floor never touches a real climb).
          */
+        val BAROMETER = ElevationConfig(smoothingWindowMs = 5_000L, hysteresisM = 1.5)
+
+        /** A file's `<ele>` may be anything, so it is treated like GPS. */
         fun forSource(source: ElevationSource): ElevationConfig = when (source) {
-            ElevationSource.BAROMETER, ElevationSource.GPS, ElevationSource.FILE, ElevationSource.NONE -> GPS
+            ElevationSource.BAROMETER -> BAROMETER
+            ElevationSource.GPS, ElevationSource.FILE, ElevationSource.NONE -> GPS
         }
     }
 }
 
 /**
- * Elevation gain and loss from the point altitudes. Per continuous piece of the track (cut at
- * every [TrackPoint.afterGap] and at every point without a known altitude — [knownAltitude]:
- * null or the old 0.0: a gap, a bridge or a missing altitude has no reliable height, so the
- * climb across it is not counted; the tail and a lead-in have no points at all):
+ * Elevation gain and loss from the point altitudes of the source ([ElevationSeries]: the GPS
+ * or file altitude, the barometric one for the barometer). Per continuous piece of the track
+ * (cut at every [TrackPoint.afterGap] and at every point without an altitude — for GPS
+ * [knownAltitude]: null or the old 0.0: a gap, a bridge or a missing altitude has no reliable
+ * height, so the climb across it is not counted; the tail and a lead-in have no points at all):
  *  1. false fixes out — Hampel filter: a point further than max(k·MAD, floor) from the median
  *     of its time window is replaced by that median;
  *  2. a centred moving average over time;
@@ -68,7 +74,7 @@ object ElevationGain {
         var anyAltitude = false
         var gain = 0.0
         var loss = 0.0
-        for (piece in pieces(points)) {
+        for (piece in pieces(points, ElevationSeries.of(points, source))) {
             anyAltitude = true
             val times = LongArray(piece.size) { piece[it].first }
             val cleaned = withoutOutliers(times, DoubleArray(piece.size) { piece[it].second }, cfg)
@@ -83,17 +89,18 @@ object ElevationGain {
     /**
      * (time, altitude) runs between breaks — a gap, a bridge or a point without altitude, as the
      * elevation chart draws them ([TrackChartBuilder.buildElevationRuns]); never empty.
+     * [altitudes] are the points' own, by index.
      */
-    private fun pieces(points: List<TrackPoint>): List<List<Pair<Long, Double>>> {
+    private fun pieces(points: List<TrackPoint>, altitudes: List<Double?>): List<List<Pair<Long, Double>>> {
         val pieces = mutableListOf<List<Pair<Long, Double>>>()
         var piece = mutableListOf<Pair<Long, Double>>()
         fun close() {
             if (piece.isNotEmpty()) pieces += piece
             piece = mutableListOf()
         }
-        for (point in points) {
+        for ((i, point) in points.withIndex()) {
             if (point.afterGap) close()
-            val altitude = point.knownAltitude()
+            val altitude = altitudes[i]
             if (altitude == null) close() else piece += point.timestamp to altitude
         }
         close()
@@ -109,19 +116,14 @@ object ElevationGain {
             if (hi < i) hi = i
             while (hi + 1 < values.size && times[hi + 1] - times[i] <= cfg.outlierHalfWindowMs) hi++
             val window = values.copyOfRange(lo, hi + 1)
-            val median = median(window)
-            val mad = median(DoubleArray(window.size) { abs(window[it] - median) })
+            // The window always holds the point itself: never empty
+            val median = window.median() ?: continue
+            val mad = DoubleArray(window.size) { abs(window[it] - median) }.median() ?: continue
             if (abs(values[i] - median) > maxOf(cfg.outlierMadFactor * mad, cfg.outlierMinCutoffM)) {
                 result[i] = median
             }
         }
         return result
-    }
-
-    private fun median(values: DoubleArray): Double {
-        values.sort()
-        val mid = values.size / 2
-        return if (values.size % 2 == 1) values[mid] else (values[mid - 1] + values[mid]) / 2
     }
 
     /** Mean of the values within ±window/2 of each point's time. */

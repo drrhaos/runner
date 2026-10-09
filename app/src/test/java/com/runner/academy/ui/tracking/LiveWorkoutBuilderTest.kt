@@ -108,4 +108,32 @@ class LiveWorkoutBuilderTest {
         assertEquals(ElevationSource.NONE, ElevationSource.of(track))
         assertTrue(track.points.all { it.altitude == null })
     }
+
+    @Test
+    fun `a recording with the barometer on most fixes declares it and keeps each fix's value`() {
+        val session = session(SessionClock().apply { start(t0) }, 100_000L).let { s ->
+            // A fix in ten has no reading around it (the sensor stalled): still 90 %
+            s.copy(rawTrackDataPoints = s.rawTrackDataPoints.mapIndexed { i, p ->
+                p.copy(baroM = if (i % 10 == 5) null else 120f + i * 0.1f)
+            })
+        }
+
+        val track = TrackDataJson.parse(build(session, stopAt = at(100)).trackData)!!
+
+        assertEquals(ElevationSource.BAROMETER, track.elevationSource)
+        assertEquals(120f + 3 * 0.1f, track.points.first { it.timestamp == at(3) }.baroM!!, 0.001f)
+        assertNull(track.points.first { it.timestamp == at(5) }.baroM)
+    }
+
+    @Test
+    fun `a recording with the barometer on too few fixes stays GPS`() {
+        val session = session(SessionClock().apply { start(t0) }, 100_000L).let { s ->
+            s.copy(rawTrackDataPoints = s.rawTrackDataPoints.mapIndexed { i, p -> if (i < 50) p.copy(baroM = 120f) else p })
+        }
+
+        val track = TrackDataJson.parse(build(session, stopAt = at(100)).trackData)!!
+
+        assertEquals(ElevationSource.GPS, track.elevationSource)
+        assertEquals(ElevationSource.GPS, ElevationSource.of(track))
+    }
 }
