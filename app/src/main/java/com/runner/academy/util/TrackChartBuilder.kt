@@ -89,8 +89,8 @@ object TrackChartBuilder {
         return result
     }
 
-    fun buildElevationSeries(points: List<TrackPoint>): List<ElevationPoint> =
-        buildElevationRuns(points).flatten()
+    fun buildElevationSeries(points: List<TrackPoint>, source: ElevationSource): List<ElevationPoint> =
+        buildElevationRuns(points, source).flatten()
 
     /**
      * The elevation line over distance as runs of points: it breaks at a point without altitude
@@ -101,7 +101,7 @@ object TrackChartBuilder {
      */
     fun buildElevationRuns(
         points: List<TrackPoint>,
-        source: ElevationSource = ElevationSource.GPS
+        source: ElevationSource
     ): List<List<ElevationPoint>> {
         val altitudes = ElevationSeries.of(points, source)
         val runs = mutableListOf<List<ElevationPoint>>()
