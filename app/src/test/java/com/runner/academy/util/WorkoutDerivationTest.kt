@@ -162,7 +162,7 @@ class WorkoutDerivationTest {
 
     @Test
     fun `no or broken track is marked computed with nothing derived`() {
-        assertEquals(5, WorkoutDerivation.CURRENT_METRICS_VERSION)
+        assertEquals(6, WorkoutDerivation.CURRENT_METRICS_VERSION)
         for (json in listOf(null, "", "{broken", "[1,2]")) {
             assertEquals(json, nothingDerived, WorkoutDerivation.derive(DerivationInput(json, WorkoutType.EASY_RUN, 0L)))
         }
