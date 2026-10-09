@@ -32,7 +32,8 @@ class BarometerTrackerTest {
         shadowSensors = shadowOf(context.getSystemService(Context.SENSOR_SERVICE) as SensorManager)
     }
 
-    private fun tracker() = BarometerTracker(context) { now }
+    /** A phone that never slept: uptime = elapsed realtime. */
+    private fun tracker() = BarometerTracker(context, clockNanos = { now }, uptimeNanos = { now })
 
     private fun addBarometer(): Sensor =
         ShadowSensor.newInstance(Sensor.TYPE_PRESSURE).also { shadowSensors.addSensor(it) }
@@ -79,10 +80,13 @@ class BarometerTrackerTest {
     }
 
     @Test
-    fun `an event timestamp on the same clock is used over the delivery time`() {
+    fun `an event timestamp on elapsed realtime is used over the delivery time`() {
         val barometer = addBarometer()
         val tracker = tracker()
         tracker.start()
+        now = 48 * sec
+        // The first event, fresh, shows the clock
+        send(barometer, 1000f, timestamp = 48 * sec)
         now = 100 * sec
         // Delivered late in a batch: 50 s and 51 s readings at 100 s
         send(barometer, 1000f, timestamp = 50 * sec)
@@ -90,6 +94,47 @@ class BarometerTrackerTest {
 
         assertTrue(tracker.altitudeAt(50 * sec) != null)
         assertNull(tracker.altitudeAt(99 * sec))
+    }
+
+    @Test
+    fun `an event timestamp on uptime is moved by the sleep`() {
+        val barometer = addBarometer()
+        // The phone slept 30 s since boot: uptime is 30 s behind
+        val tracker = BarometerTracker(context, clockNanos = { now }, uptimeNanos = { now - 30 * sec })
+        tracker.start()
+        now = 48 * sec
+        send(barometer, 1000f, timestamp = 18 * sec)
+        now = 100 * sec
+        // Uptime 20 s = elapsed 50 s
+        send(barometer, 1000f, timestamp = 20 * sec)
+
+        assertTrue(tracker.altitudeAt(50 * sec) != null)
+        assertNull(tracker.altitudeAt(20 * sec))
+    }
+
+    @Test
+    fun `stamps on neither clock fall back to the delivery time until the stop`() {
+        val barometer = addBarometer()
+        val tracker = tracker()
+        tracker.start()
+        now = 100 * sec
+        // 30 s off: plausible, but not this clock
+        send(barometer, 1000f, timestamp = 70 * sec)
+        now = 101 * sec
+        // Even a stamp that looks right later is not trusted: the clock was decided
+        send(barometer, 1000f, timestamp = 60 * sec)
+
+        assertNull(tracker.altitudeAt(65 * sec))
+        assertTrue(tracker.altitudeAt(100 * sec) != null)
+
+        // A new start decides afresh
+        tracker.stop()
+        tracker.start()
+        now = 200 * sec
+        send(barometer, 1000f, timestamp = 200 * sec)
+        now = 210 * sec
+        send(barometer, 1000f, timestamp = 205 * sec)
+        assertTrue(tracker.altitudeAt(205 * sec) != null)
     }
 
     @Test
