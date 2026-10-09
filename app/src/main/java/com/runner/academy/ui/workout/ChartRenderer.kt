@@ -1,7 +1,6 @@
 package com.runner.academy.ui.workout
 
-import android.graphics.Color
-import android.content.res.Configuration
+import androidx.annotation.ColorRes
 import androidx.core.content.ContextCompat
 import com.runner.academy.R
 import com.runner.academy.data.TrackData
@@ -129,9 +128,10 @@ class ChartRenderer(
         chart.visibility = android.view.View.VISIBLE
         configureInteraction(chart, legend = true)
 
-        val isDark = isDarkTheme()
-        val textColor = if (isDark) Color.WHITE else Color.BLACK
-        val gridColor = if (isDark) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
+        val textColor = color(R.color.chart_axis_text)
+        val gridColor = color(R.color.chart_grid)
+        val paceColor = color(R.color.chart_series_pace)
+        val speedColor = color(R.color.chart_series_speed)
 
         val isMetric = userPreferences?.isMetricSystem() ?: true
         val paceSpeedSeries = SpeedPaceCalculator.buildPaceSpeedSeries(points, isMetric)
@@ -159,18 +159,18 @@ class ChartRenderer(
         }
 
         val dataSetPace = LineDataSet(entriesPace, paceLabel).apply {
-            color = Color.parseColor("#FF9800")
+            color = paceColor
             lineWidth = 2f
-            setCircleColor(Color.parseColor("#FF9800"))
+            setCircleColor(paceColor)
             setDrawCircles(false)
             setDrawValues(false)
             axisDependency = YAxis.AxisDependency.LEFT
         }
 
         val dataSetSpeed = LineDataSet(entriesSpeed, speedLabel).apply {
-            color = Color.parseColor("#2196F3")
+            color = speedColor
             lineWidth = 2f
-            setCircleColor(Color.parseColor("#2196F3"))
+            setCircleColor(speedColor)
             setDrawCircles(false)
             setDrawValues(false)
             axisDependency = YAxis.AxisDependency.RIGHT
@@ -185,23 +185,20 @@ class ChartRenderer(
         }
 
         configureLeftAxis(chart, textColor, gridColor)
-        chart.axisLeft.textColor = Color.parseColor("#FF9800")
+        chart.axisLeft.textColor = paceColor
 
         val rightAxis = chart.axisRight
         rightAxis.isEnabled = true
         rightAxis.setDrawGridLines(false)
-        rightAxis.textColor = Color.parseColor("#2196F3")
+        rightAxis.textColor = speedColor
         rightAxis.axisLineColor = textColor
 
         chart.legend.textColor = textColor
         chart.setDrawMarkers(false)
-
-        textViewPaceSpeedValues.setBackgroundColor(
-            if (isDark) Color.parseColor("#E0FFFFFF") else Color.parseColor("#E0000000")
-        )
-        textViewPaceSpeedValues.setTextColor(
-            if (isDark) Color.BLACK else Color.WHITE
-        )
+        // The splits, not the per-step line: one GPS jump would be the "best" pace
+        chart.contentDescription =
+            ChartSummaryText.paceA11y(context, SpeedPaceCalculator.buildSegments(points, isMetric), isMetric)
+                ?: context.getString(R.string.workout_details_pace_speed_pulse_title)
 
         selectByTime(chart, points, textViewPaceSpeedValues) { e ->
             // Nearest series entry for the values
@@ -249,10 +246,9 @@ class ChartRenderer(
 
         configureInteraction(chart, legend = false)
 
-        // Theme-aware resources: the series hue and the label/separator of the palette
-        val seriesColor = ContextCompat.getColor(context, R.color.chart_series_cadence)
-        val axisTextColor = ContextCompat.getColor(context, R.color.ios_label)
-        val gridColor = ContextCompat.getColor(context, R.color.ios_separator)
+        val seriesColor = color(R.color.chart_series_cadence)
+        val axisTextColor = color(R.color.chart_axis_text)
+        val gridColor = color(R.color.chart_grid)
         val label = context.getString(R.string.chart_cadence_label)
 
         // One data set per run: MPAndroidChart joins every entry of a set
@@ -303,10 +299,10 @@ class ChartRenderer(
             is CadenceDisplay.Value -> {
                 leftAxis.addLimitLine(
                     LimitLine(display.spm.toFloat(), context.getString(R.string.chart_cadence_limit_label, display.spm)).apply {
-                        lineColor = ContextCompat.getColor(context, R.color.chart_series_cadence)
+                        lineColor = color(R.color.chart_series_cadence)
                         lineWidth = 1f
                         enableDashedLine(10f, 10f, 0f)
-                        textColor = ContextCompat.getColor(context, R.color.ios_label)
+                        textColor = color(R.color.chart_axis_text)
                         textSize = 10f
                         labelPosition = LimitLine.LimitLabelPosition.RIGHT_TOP
                     }
@@ -347,10 +343,9 @@ class ChartRenderer(
 
         configureInteraction(chart, legend = false)
 
-        val isDark = isDarkTheme()
-        val textColor = if (isDark) Color.WHITE else Color.BLACK
-        val gridColor = if (isDark) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
-        val seriesColor = Color.parseColor("#4CAF50")
+        val textColor = color(R.color.chart_axis_text)
+        val gridColor = color(R.color.chart_grid)
+        val seriesColor = color(R.color.chart_series_elevation)
         val label = context.getString(R.string.chart_elevation_title)
 
         // One data set per run: MPAndroidChart joins every entry of a set
@@ -396,13 +391,6 @@ class ChartRenderer(
 
         chart.axisRight.isEnabled = false
         chart.setDrawMarkers(false)
-
-        textViewElevationValues.setBackgroundColor(
-            if (isDark) Color.parseColor("#E0FFFFFF") else Color.parseColor("#E0000000")
-        )
-        textViewElevationValues.setTextColor(
-            if (isDark) Color.BLACK else Color.WHITE
-        )
 
         chart.setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
             override fun onValueSelected(e: Entry?, h: Highlight?) {
@@ -486,9 +474,10 @@ class ChartRenderer(
         chart.visibility = android.view.View.VISIBLE
         configureInteraction(chart, legend = true)
 
-        val isDark = isDarkTheme()
-        val textColor = if (isDark) Color.WHITE else Color.BLACK
-        val gridColor = if (isDark) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000")
+        val textColor = color(R.color.chart_axis_text)
+        val gridColor = color(R.color.chart_grid)
+        val paceColor = color(R.color.chart_series_pace)
+        val speedColor = color(R.color.chart_series_speed)
 
         val isMetric = userPreferences?.isMetricSystem() ?: true
         val unitLabel = if (isMetric) context.getString(R.string.unit_km) else context.getString(R.string.unit_mile)
@@ -525,7 +514,7 @@ class ChartRenderer(
                 val paceLabel = if (isMetric) context.getString(R.string.chart_pace_label)
                 else "${context.getString(R.string.workout_details_pace)} (мин/$unitLabel)"
                 BarDataSet(entriesPace, paceLabel).apply {
-                    color = Color.parseColor("#FF9800")
+                    color = paceColor
                     setDrawValues(true)
                     valueTextColor = textColor
                     valueTextSize = 10f
@@ -544,7 +533,7 @@ class ChartRenderer(
                 val speedLabel = if (isMetric) context.getString(R.string.chart_speed_label)
                 else "${context.getString(R.string.workout_details_speed)} ($speedUnit)"
                 BarDataSet(entriesSpeed, speedLabel).apply {
-                    color = Color.parseColor("#2196F3")
+                    color = speedColor
                     setDrawValues(true)
                     valueTextColor = textColor
                     valueTextSize = 10f
@@ -587,6 +576,12 @@ class ChartRenderer(
         chart.legend.textColor = textColor
         chart.setFitBars(true)
         chart.setDrawMarkers(false)
+        chart.contentDescription = ChartSummaryText.segmentsA11y(
+            context,
+            segments,
+            isMetric,
+            speed = segmentsDisplayMode == SegmentsDisplayMode.SPEED
+        ) ?: context.getString(R.string.workout_details_pace_speed_title)
 
         // Cache segments list for touch handler
         val cachedSegments = segments
@@ -679,8 +674,9 @@ class ChartRenderer(
         leftAxis.axisMinimum = 0f
     }
 
-    private fun isDarkTheme(): Boolean {
-        val nightModeFlags = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
-        return nightModeFlags == Configuration.UI_MODE_NIGHT_YES
-    }
+    /**
+     * A chart colour from resources: `chart_*` in values/colors.xml, redefined per theme in
+     * values-night where the dark card needs it. The tap-values panels take theirs in the layout.
+     */
+    private fun color(@ColorRes id: Int): Int = ContextCompat.getColor(context, id)
 }

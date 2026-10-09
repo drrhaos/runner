@@ -655,8 +655,8 @@
                     android:layout_margin="8dp"
                     android:text=""
                     android:textSize="12sp"
-                    android:textColor="?attr/colorOnSurface"
-                    android:background="@color/panel_surface_color"
+                    android:textColor="@color/chart_values_text"
+                    android:background="@color/chart_values_background"
                     android:padding="8dp"
                     android:gravity="start"
                     android:visibility="gone" />
@@ -728,8 +728,8 @@
                     android:layout_margin="8dp"
                     android:text=""
                     android:textSize="12sp"
-                    android:textColor="?attr/colorOnSurface"
-                    android:background="@color/panel_surface_color"
+                    android:textColor="@color/chart_values_text"
+                    android:background="@color/chart_values_background"
                     android:padding="8dp"
                     android:gravity="start"
                     android:visibility="gone" />
@@ -814,8 +814,8 @@
                     android:layout_margin="8dp"
                     android:text=""
                     android:textSize="12sp"
-                    android:textColor="?attr/colorOnSurface"
-                    android:background="@color/panel_surface_color"
+                    android:textColor="@color/chart_values_text"
+                    android:background="@color/chart_values_background"
                     android:padding="8dp"
                     android:gravity="start"
                     android:visibility="gone" />
@@ -899,8 +899,8 @@
                     android:layout_margin="8dp"
                     android:text=""
                     android:textSize="12sp"
-                    android:textColor="?attr/colorOnSurface"
-                    android:background="@color/panel_surface_color"
+                    android:textColor="@color/chart_values_text"
+                    android:background="@color/chart_values_background"
                     android:padding="8dp"
                     android:gravity="start"
                     android:visibility="gone" />
