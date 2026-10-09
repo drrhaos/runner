@@ -22,7 +22,6 @@
     <color name="ios_label">#FF000000</color>
     <color name="ios_secondary_label">#993C3C43</color>
     <color name="ios_tertiary_label">#4D3C3C43</color>
-    <color name="ios_separator">#493C3C43</color>
     <color name="ios_opaque_separator">#FFC6C6C8</color>
     <color name="ios_grouped_background">#FFF2F2F7</color>
     <color name="ios_secondary_grouped_background">#FFFFFFFF</color>
@@ -67,8 +66,17 @@
     <!-- AppBar — frosted iOS nav bar -->
     <color name="app_bar_background">#F2F9F9F9</color>
 
-    <!-- Chart series (the palette entry already differs per theme) -->
+    <!-- Detail charts. Series: cadence follows the palette per theme; pace, speed and elevation
+         keep their hue in both themes (≥ 3:1 on the dark card). Axes, grid and the tap values
+         panel are redefined in values-night. -->
+    <color name="chart_series_pace">#FFFF9800</color>
+    <color name="chart_series_speed">#FF2196F3</color>
+    <color name="chart_series_elevation">#FF4CAF50</color>
     <color name="chart_series_cadence">@color/ios_purple</color>
+    <color name="chart_axis_text">@color/ios_label</color>
+    <color name="chart_grid">#40000000</color>
+    <color name="chart_values_background">#E0000000</color>
+    <color name="chart_values_text">@color/white</color>
 
     <!-- Route picker mini-preview -->
     <color name="route_preview_background">#FFF2F2F7</color>
