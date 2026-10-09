@@ -6,6 +6,7 @@ import com.runner.academy.R
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.localizedTitle
+import com.runner.academy.util.SegmentStats
 import com.runner.academy.util.SpeedPaceCalculator
 import com.runner.academy.util.TrackChartBuilder
 import com.github.mikephil.charting.charts.BarChart
@@ -94,10 +95,12 @@ class ChartRenderer(
     fun updateAllCharts(trackData: TrackData) {
         if (trackData.points.isEmpty()) return
         try {
-            updatePaceSpeedHeartChart(trackData)
+            // Built once for the pace chart summary and the km/mile bars
+            val distanceSegments = distanceSegments(trackData)
+            updatePaceSpeedHeartChart(trackData, distanceSegments)
             updateCadenceChart(trackData)
             updateElevationChart(trackData)
-            updateSegmentsChart(trackData)
+            updateSegmentsChart(trackData, distanceSegments)
         } catch (e: Throwable) {
             android.util.Log.e("ChartRenderer", "Failed to update charts", e)
             paceSpeedHeartChart.visibility = android.view.View.GONE
@@ -109,14 +112,19 @@ class ChartRenderer(
 
     fun updateSegmentsChartOnly(trackData: TrackData) {
         try {
-            updateSegmentsChart(trackData)
+            updateSegmentsChart(trackData, distanceSegments(trackData))
         } catch (e: Throwable) {
             android.util.Log.e("ChartRenderer", "Failed to update segments chart", e)
             segmentsChart.visibility = android.view.View.GONE
         }
     }
 
-    private fun updatePaceSpeedHeartChart(trackData: TrackData) {
+    /** The km or mile splits of the track, built on first use. */
+    private fun distanceSegments(trackData: TrackData): Lazy<List<SegmentStats>> = lazy {
+        SpeedPaceCalculator.buildSegments(trackData.points, userPreferences?.isMetricSystem() ?: true)
+    }
+
+    private fun updatePaceSpeedHeartChart(trackData: TrackData, distanceSegments: Lazy<List<SegmentStats>>) {
         val chart = paceSpeedHeartChart
         val points = trackData.points
 
@@ -196,9 +204,8 @@ class ChartRenderer(
         chart.legend.textColor = textColor
         chart.setDrawMarkers(false)
         // The splits, not the per-step line: one GPS jump would be the "best" pace
-        chart.contentDescription =
-            ChartSummaryText.paceA11y(context, SpeedPaceCalculator.buildSegments(points, isMetric), isMetric)
-                ?: context.getString(R.string.workout_details_pace_speed_pulse_title)
+        chart.contentDescription = ChartSummaryText.paceA11y(context, distanceSegments.value, isMetric)
+            ?: context.getString(R.string.workout_details_pace_speed_pulse_title)
 
         selectByTime(chart, points, textViewPaceSpeedValues) { e ->
             // Nearest series entry for the values
@@ -462,7 +469,7 @@ class ChartRenderer(
         chart.invalidate()
     }
 
-    private fun updateSegmentsChart(trackData: TrackData) {
+    private fun updateSegmentsChart(trackData: TrackData, distanceSegments: Lazy<List<SegmentStats>>) {
         val chart = segmentsChart
         val points = trackData.points
 
@@ -486,7 +493,7 @@ class ChartRenderer(
         val segments = if (useIntervalPlan) {
             SpeedPaceCalculator.buildSegmentsFromPlan(points, intervalPlanSegments, isMetric)
         } else {
-            SpeedPaceCalculator.buildSegments(points, isMetric)
+            distanceSegments.value
         }
         if (segments.isEmpty()) {
             chart.visibility = android.view.View.GONE
@@ -580,7 +587,8 @@ class ChartRenderer(
             context,
             segments,
             isMetric,
-            speed = segmentsDisplayMode == SegmentsDisplayMode.SPEED
+            speed = segmentsDisplayMode == SegmentsDisplayMode.SPEED,
+            plan = if (useIntervalPlan) intervalPlanSegments else emptyList()
         ) ?: context.getString(R.string.workout_details_pace_speed_title)
 
         // Cache segments list for touch handler

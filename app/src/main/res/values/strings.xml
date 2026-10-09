@@ -78,6 +78,7 @@
     <string name="kilometers_per_hour_float">%.1f km/h</string>
     <string name="miles_per_hour_float">%.1f mi/h</string>
     <string name="per_km">per kilometer</string>
+    <string name="per_mile">per mile</string>
     <string name="voice_notif_text_each_km">Distance: %1$s, time: %2$s, average pace: %3$s.</string>
 
     <string name="workout_distance_label">Distance</string>
@@ -520,11 +521,12 @@
     <string name="workout_details_pace_unknown_a11y">Average pace unknown</string>
     <string name="workout_details_average_speed_a11y">Average speed %1$s</string>
     <string name="workout_details_calories_a11y">Calories %1$s</string>
-    <string name="per_mile">per mile</string>
     <string name="kilometers_per_hour_fraction_a11y">%1$.1f kilometers per hour</string>
     <string name="miles_per_hour_fraction_a11y">%1$.1f miles per hour</string>
     <string name="chart_pace_a11y">Pace chart: average %1$s, best %2$s, worst %3$s</string>
-    <string name="chart_segments_a11y">Chart by segment: %1$s, fastest — segment %2$d, %3$s, slowest — segment %4$d, %5$s</string>
+    <string name="chart_segments_a11y">Chart by segment: %1$s, fastest — %2$s, %3$s, slowest — %4$s, %5$s</string>
+    <string name="chart_segment_n_a11y">segment %1$d</string>
+    <string name="chart_segment_titled_a11y">%1$s, %2$s</string>
     <string name="chart_segments_single_a11y">Chart by segment: one segment, %1$s</string>
 
     <plurals name="kilocalories">
