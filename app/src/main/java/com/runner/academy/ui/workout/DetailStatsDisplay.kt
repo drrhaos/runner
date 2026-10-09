@@ -44,7 +44,17 @@ class DetailStatsDisplay(
             val avgSpeed = com.runner.academy.util.FormatUtils.calculateAverageSpeed(workout.distance, workout.movingDuration)
             textViewDetailAvgSpeed.text = com.runner.academy.util.FormatUtils.formatSpeed(avgSpeed, true, context)
 
-            textViewDetailCalories.text = com.runner.academy.util.FormatUtils.formatCalories(workout.calories ?: 0, context)
+            val calories = workout.calories ?: 0
+            textViewDetailCalories.text = com.runner.academy.util.FormatUtils.formatCalories(calories, context)
+
+            // Each tile is one TalkBack group: "25:30" alone would be read as "twenty-five colon thirty"
+            layoutDetailDistance.contentDescription = DetailTileText.distanceA11y(context, workout.distance)
+            layoutDetailDuration.contentDescription =
+                DetailTileText.durationA11y(context, workout.movingDuration, showsElapsed)
+            layoutDetailPace.contentDescription = DetailTileText.paceA11y(context, workout.avgPace)
+            layoutDetailElapsed.contentDescription = DetailTileText.elapsedA11y(context, workout.duration)
+            layoutDetailAvgSpeed.contentDescription = DetailTileText.speedA11y(context, avgSpeed)
+            layoutDetailCalories.contentDescription = DetailTileText.caloriesA11y(context, calories)
         }
     }
 

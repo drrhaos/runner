@@ -68,6 +68,7 @@
     <string name="kilometers_per_hour_float">%.1f км/ч</string>
     <string name="miles_per_hour_float">%.1f миль/ч</string>
     <string name="per_km">на километр</string>
+    <string name="per_mile">на милю</string>
     <string name="voice_notif_text_each_km">Дистанция: %1$s, время: %2$s, средний темп: %3$s.</string>
 
     <string name="workout_distance_label">Дистанция</string>
@@ -514,6 +515,44 @@
     <string name="statistics_elevation_approx_format">≈ %1$s</string>
     <string name="statistics_elevation_approx_a11y">приблизительно %1$s</string>
     <string name="statistics_elevation_approx_note">≈ — часть высоты посчитана по GPS и приблизительна</string>
+
+    <!-- TalkBack: плитки деталей и сводки графиков -->
+    <string name="workout_details_distance_a11y">Дистанция %1$s</string>
+    <string name="workout_details_time_a11y">Время %1$s</string>
+    <string name="workout_details_moving_time_a11y">Время в движении %1$s</string>
+    <string name="workout_details_elapsed_time_a11y">Общее время %1$s</string>
+    <string name="workout_details_pace_a11y">Средний темп %1$s</string>
+    <string name="workout_details_pace_unknown_a11y">Средний темп неизвестен</string>
+    <string name="workout_details_average_speed_a11y">Средняя скорость %1$s</string>
+    <string name="workout_details_calories_a11y">Калории %1$s</string>
+    <string name="kilometers_per_hour_fraction_a11y">%1$.1f километра в час</string>
+    <string name="miles_per_hour_fraction_a11y">%1$.1f мили в час</string>
+    <string name="chart_pace_a11y">График темпа: средний %1$s, лучший %2$s, худший %3$s</string>
+    <string name="chart_segments_a11y">График по отрезкам: %1$s, быстрее всего — %2$s, %3$s, медленнее всего — %4$s, %5$s</string>
+    <string name="chart_segment_n_a11y">отрезок %1$d</string>
+    <string name="chart_segment_titled_a11y">%1$s, %2$s</string>
+    <string name="chart_segments_single_a11y">График по отрезкам: один отрезок, %1$s</string>
+
+    <plurals name="kilocalories">
+        <item quantity="one">%d килокалория</item>
+        <item quantity="few">%d килокалории</item>
+        <item quantity="many">%d килокалорий</item>
+        <item quantity="other">%d килокалории</item>
+    </plurals>
+
+    <plurals name="miles_per_hour">
+        <item quantity="one">%d миля в час</item>
+        <item quantity="few">%d мили в час</item>
+        <item quantity="many">%d миль в час</item>
+        <item quantity="other">%d мили в час</item>
+    </plurals>
+
+    <plurals name="chart_segments_count">
+        <item quantity="one">%d отрезок</item>
+        <item quantity="few">%d отрезка</item>
+        <item quantity="many">%d отрезков</item>
+        <item quantity="other">%d отрезка</item>
+    </plurals>
 
     <!-- Планы тренировок -->
     <string name="menu_plans">Планы тренировок</string>
