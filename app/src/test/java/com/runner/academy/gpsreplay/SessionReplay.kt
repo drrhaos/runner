@@ -23,6 +23,8 @@ data class ReplaySettings(
     val intervals: Boolean = false,
     /** The step sensor is there and allowed; false: fixes and ticks carry no steps. */
     val stepsAvailable: Boolean = true,
+    /** The phone has a barometer; false: fixes carry no pressure altitude, whatever the run has. */
+    val barometerAvailable: Boolean = true,
     /** The run's frozen stride for bridges, as the service gives the processor. */
     val stepDistance: StepDistanceEstimator? = null,
     val type: WorkoutType = WorkoutType.EASY_RUN,
@@ -235,7 +237,8 @@ object SessionReplay {
                 session.rawTrackDataPoints.toMutableList(),
                 resumeAfterGap = session.gpsStatus == GpsStatus.LOST,
                 steps = steps,
-                cadence = cadence
+                cadence = cadence,
+                baroM = if (settings.barometerAvailable) fix.baroM else null
             )
             manager.setOpenStepMeters(processor.pendingStepMeters)
             val good = when (result) {
