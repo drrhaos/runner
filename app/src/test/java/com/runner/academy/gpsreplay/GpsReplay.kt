@@ -152,8 +152,23 @@ data class SyntheticRun(
     val altitudeNoiseM: Double = 0.0,
     val altitudeNoiseDecay: Double = 0.95,
     /** Seconds (from start) whose fixes have no altitude. */
-    val missingAltitude: IntRange? = null
+    val missingAltitude: IntRange? = null,
+    /** The phone's barometer: set, every fix carries a pressure altitude (`baro_m`); null: none. */
+    val barometer: Barometer? = null
 ) {
+    /**
+     * A barometer read at each fix: the true altitude ([elevation]) off by [offsetM] (the
+     * weather — never calibrated), drifting [driftMPerHour] over the run, plus white noise of
+     * [noiseM] (standard deviation) after the tracker's median. [missingSec]: no reading
+     * around those fixes.
+     */
+    data class Barometer(
+        val driftMPerHour: Double = 8.0,
+        val noiseM: Double = 0.3,
+        val offsetM: Double = -35.0,
+        val missingSec: IntRange? = null
+    )
+
     /** One stretch of a phased run. Steps grow only while moving (stride [strideM]). */
     sealed class Phase {
         /** [meters] along the route at [speedMps]. */
@@ -293,6 +308,7 @@ data class SyntheticRun(
     fun rawPoints(): List<TrackPoint> {
         val random = Random(seed)
         val altitudeRandom = Random(seed * 31 + 7)
+        val baroRandom = Random(seed * 17 + 3)
         // Innovation for the stationary standard deviation [altitudeNoiseM]
         val altitudeInnovation = altitudeNoiseM * sqrt(1 - altitudeNoiseDecay * altitudeNoiseDecay)
         var errX = 0.0
@@ -305,6 +321,7 @@ data class SyntheticRun(
             errX = noiseDecay * errX + gaussian(random) * noiseInnovationM
             errY = noiseDecay * errY + gaussian(random) * noiseInnovationM
             errZ = altitudeNoiseDecay * errZ + gaussian(altitudeRandom) * altitudeInnovation
+            val baroNoise = gaussian(baroRandom)
             val second = t.toInt()
             val onManualPause = spanAt(t)?.phase is Phase.ManualPause
             val skippedBySparse = sparseSec != null && second in sparseSec &&
@@ -329,6 +346,12 @@ data class SyntheticRun(
                 ).let { p ->
                     val (steps, cadence) = stepsAndCadence(t) ?: return@let p
                     p.copy(steps = steps, cadence = cadence)
+                }.let { p ->
+                    val baro = barometer ?: return@let p
+                    if (baro.missingSec != null && second in baro.missingSec) return@let p
+                    val altitude = trueAltitudeAt(movedAt(t)) + baro.offsetM +
+                        baro.driftMPerHour * t / 3_600.0 + baro.noiseM * baroNoise
+                    p.copy(baroM = altitude.toFloat())
                 }
             }
             t += stepSec

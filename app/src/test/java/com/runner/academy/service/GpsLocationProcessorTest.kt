@@ -141,6 +141,37 @@ class GpsLocationProcessorTest {
     }
 
     @Test
+    fun processLocation_pressureAltitude_goesIntoRawAndTrackPoint() {
+        val result = processor.processLocation(
+            location(55.7558, 37.6173, time = 1_000_000L),
+            mutableListOf(), mutableListOf(), mutableListOf(),
+            baroM = 118.5f
+        ) as GpsLocationProcessor.ProcessResult.Accepted
+
+        assertEquals(118.5f, result.trackDataPoints.single().baroM!!, 0f)
+        assertEquals(118.5f, result.rawTrackDataPoints.single().baroM!!, 0f)
+        assertEquals(null, (process(location(55.7570, 37.6173, time = 1_005_000L), result)
+            as GpsLocationProcessor.ProcessResult.Accepted).trackDataPoints.last().baroM)
+    }
+
+    @Test
+    fun sanitize_keepsThePressureAltitudeOfEachPoint() {
+        val raw = (0 until 10).map { i ->
+            com.runner.academy.data.TrackPoint(
+                55.7558 + i * 0.0001, 37.6173, 1_000_000L + i * 2_000L, 10f, 3f, 150.0,
+                baroM = if (i == 4) null else 100f + i
+            )
+        }
+
+        val saved = com.runner.academy.util.TrackSanitizer.sanitize(raw, com.runner.academy.data.WorkoutType.EASY_RUN)
+
+        val rawBaro = raw.associate { it.timestamp to it.baroM }
+        assertTrue(saved.size >= 5)
+        assertTrue(saved.all { it.baroM == rawBaro[it.timestamp] })
+        assertTrue(saved.any { it.baroM != null })
+    }
+
+    @Test
     fun processLocationWhenNotTracking_fixWithoutAltitude_storesNullNotZero() {
         val (raw, _) = processor.processLocationWhenNotTracking(
             location(55.7558, 37.6173, time = 1_000_000L), emptyList(), isCurrentlyTracking = true

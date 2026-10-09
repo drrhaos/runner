@@ -495,7 +495,7 @@
     <string name="workout_elevation_source_file">Elevation from the file</string>
     <string name="workout_elevation_source_file_short">from the file</string>
     <string name="workout_elevation_source_dialog_title">Elevation from GPS</string>
-    <string name="workout_elevation_source_dialog_message">This elevation comes from GPS. GPS measures height less accurately than position — errors of 10–20 m are common. We smooth it and ignore small changes, so the gain may differ from reality; short climbs may be missed.</string>
+    <string name="workout_elevation_source_dialog_message">This elevation comes from GPS: the phone has no barometer, or it did not work through this run, or the run was recorded before the app used it. GPS measures height less accurately than position — errors of 10–20 m are common. We smooth it and ignore small changes, so the gain may differ from reality; short climbs may be missed.</string>
     <string name="workout_elevation_source_file_dialog_title">Elevation from the file</string>
     <string name="workout_elevation_source_file_dialog_message">The elevation was taken from the imported file as it is. We smooth it and ignore small changes, like GPS elevation, so the gain may differ from what the device that recorded the file showed.</string>
     <string name="workout_elevation_summary_format">↑ %1$d m  ↓ %2$d m</string>

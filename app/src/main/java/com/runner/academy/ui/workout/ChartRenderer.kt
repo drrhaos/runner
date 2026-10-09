@@ -3,6 +3,7 @@ package com.runner.academy.ui.workout
 import androidx.annotation.ColorRes
 import androidx.core.content.ContextCompat
 import com.runner.academy.R
+import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.localizedTitle
@@ -339,7 +340,8 @@ class ChartRenderer(
         val textViewElevationValues = elevation.values
         val points = trackData.points
 
-        val runs = TrackChartBuilder.buildElevationRuns(points)
+        // The barometer's line where it is the source, lifted to the GPS scale
+        val runs = TrackChartBuilder.buildElevationRuns(points, ElevationSource.of(trackData))
         elevationRange = runs.flatten().map { it.altitudeMeters.roundToInt() }.let { values ->
             if (values.isEmpty()) null else values.min() to values.max()
         }
