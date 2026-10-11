@@ -94,6 +94,30 @@ class PairedSensorStoreTest {
     }
 
     @Test
+    fun `update changes the device with that address`() {
+        val store = PairedSensorStore(context)
+        store.put(strap)
+        store.update(SensorType.HEART_RATE, strap.address) { it.copy(batteryPercent = 60, lastSeenAt = 5L) }
+        val expected = strap.copy(batteryPercent = 60, lastSeenAt = 5L)
+        assertEquals(expected, store.get(SensorType.HEART_RATE))
+        assertEquals(expected, PairedSensorStore(context).get(SensorType.HEART_RATE))
+    }
+
+    @Test
+    fun `update leaves a replaced or removed device alone`() {
+        val store = PairedSensorStore(context)
+        val chestStrap = strap.copy(address = "11:22:33:44:55:66")
+        store.put(chestStrap)
+        store.update(SensorType.HEART_RATE, strap.address) { it.copy(batteryPercent = 1) }
+        assertEquals(chestStrap, store.get(SensorType.HEART_RATE))
+
+        store.remove(SensorType.HEART_RATE)
+        store.update(SensorType.HEART_RATE, chestStrap.address) { it.copy(batteryPercent = 1) }
+        assertNull(store.get(SensorType.HEART_RATE))
+        assertNull(PairedSensorStore(context).get(SensorType.HEART_RATE))
+    }
+
+    @Test
     fun `concurrent writes leave the flow and the file agreeing`() {
         repeat(20) { round ->
             val store = PairedSensorStore(context)
