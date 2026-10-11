@@ -1,6 +1,7 @@
 package com.runner.academy.service
 
 import android.annotation.SuppressLint
+import android.app.Notification
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -11,8 +12,10 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.runner.academy.data.GpsStatus
+import com.runner.academy.sensor.ForegroundTypes
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.GpsConfig
@@ -502,7 +505,7 @@ class WorkoutTrackingService : Service() {
             startPeriodicLocationRequest()
         }
         startWorkoutTimer()
-        startForeground(NOTIFICATION_ID, notificationManager.buildNotification(sessionManager.getSession()))
+        startForegroundTyped(notificationManager.buildNotification(sessionManager.getSession()))
         notificationManager.cancelInterruptedNotification()
         notificationManager.updateNotification(sessionManager.getSession(), force = true)
         prepareVoiceForWorkout()
@@ -678,13 +681,23 @@ class WorkoutTrackingService : Service() {
     private fun ensureForegroundNotification(): Boolean {
         // Built outside: only the start itself may be refused
         val notification = notificationManager.buildNotification(sessionManager.getSession())
-        val refusal = tryStartForeground { startForeground(NOTIFICATION_ID, notification) }
+        val refusal = tryStartForeground { startForegroundTyped(notification) }
         if (refusal != null) {
             abandonRestore(refusal)
             return false
         }
         notificationManager.cancelInterruptedNotification()
         return true
+    }
+
+    /**
+     * With explicit types: the plain `startForeground` takes every type in the manifest, and
+     * `connectedDevice` there would throw on 34+ without `BLUETOOTH_CONNECT`. Location only
+     * until the heart-rate sensor joins the workout.
+     */
+    private fun startForegroundTyped(notification: Notification) {
+        val types = ForegroundTypes.of(Build.VERSION.SDK_INT, sensorPaired = false, connectGranted = false)
+        ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, types)
     }
 
     /**
