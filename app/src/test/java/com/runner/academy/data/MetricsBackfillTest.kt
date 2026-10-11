@@ -125,6 +125,44 @@ class MetricsBackfillTest {
         assertComputedByOnePass(ids)
     }
 
+    /**
+     * Every derived column the save paths write ([Derived.applyTo]) the pass writes too (its own
+     * SQL, [WorkoutDao.updateMetricsIfOlder]). By reflection over [Derived]: a field added
+     * later fails here until the fixture fills it and both paths write it.
+     */
+    @Test
+    fun thePass_writesEveryDerivedColumnLikeApplyTo() = runBlocking {
+        val everything = Derived(
+            elevationGain = 12f,
+            elevationLoss = 11f,
+            elevationSource = ElevationSource.BAROMETER,
+            avgCadence = 171f,
+            avgHeartRate = 152,
+            maxHeartRate = 178,
+            routePreview = "1|2|S:0,0",
+            efforts = listOf(Effort(1_000, 300_000L, 0L, 300_000L, 0f))
+        )
+        // Efforts go to their own table, checked by the other tests
+        val columns = Derived::class.java.declaredFields
+            .filter { !java.lang.reflect.Modifier.isStatic(it.modifiers) && it.name != "efforts" }
+            .onEach { it.isAccessible = true }
+        for (field in columns) {
+            assertTrue("the fixture fills Derived.${field.name}", field.get(everything) != null)
+        }
+        val id = insert(1)
+        val original = row(id)
+
+        backfill(derive = { everything }).runOnce()
+
+        val byPass = row(id)
+        val byApply = everything.applyTo(original)
+        for (field in columns) {
+            val column = Workout::class.java.getDeclaredField(field.name).apply { isAccessible = true }
+            assertEquals("Workout.${field.name}", field.get(everything), column.get(byApply))
+            assertEquals("the pass writes Workout.${field.name}", column.get(byApply), column.get(byPass))
+        }
+    }
+
     @Test
     fun deriveFailingOnOneRow_marksItAndComputesTheOlderRows() = runBlocking {
         val older = insert(1)
