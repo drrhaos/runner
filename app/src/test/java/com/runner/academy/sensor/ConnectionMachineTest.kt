@@ -177,10 +177,16 @@ class ConnectionMachineTest {
     fun `pauses are 1, 3 and 7 s, then one pending auto connect`() {
         val run = Run().connected()
         run.on(Disconnected(GATT_ERROR), 60_000)
-        assertEquals(listOf(Close, Schedule(LinkTimer.RETRY, 3_000L)), run.failRetry(1_000).filter { it !is Cancel })
-        assertEquals(listOf(Close, Schedule(LinkTimer.RETRY, 7_000L)), run.failRetry(3_000).filter { it !is Cancel })
-        val last = run.failRetry(7_000).filter { it !is Cancel }
-        assertEquals(listOf(Close, ConnectAuto(addr)), last)
+        // A failed direct attempt first cancels its own 30 s timeout, then closes
+        assertEquals(
+            listOf(Cancel(LinkTimer.CONNECT), Close, Schedule(LinkTimer.RETRY, 3_000L)),
+            run.failRetry(1_000)
+        )
+        assertEquals(
+            listOf(Cancel(LinkTimer.CONNECT), Close, Schedule(LinkTimer.RETRY, 7_000L)),
+            run.failRetry(3_000)
+        )
+        assertEquals(listOf(Cancel(LinkTimer.CONNECT), Close, ConnectAuto(addr)), run.failRetry(7_000))
         assertEquals(SensorLink.SEARCHING, run.machine.link)
     }
 
@@ -226,7 +232,10 @@ class ConnectionMachineTest {
         run.failRetry(3_000)
         run.failRetry(7_000)
         assertEquals(listOf(Close, Schedule(LinkTimer.RETRY, 7_000L)), run.on(Disconnected(GATT_ERROR), 60_000))
+        // The pause between auto connects is still searching, not a direct attempt
+        assertEquals(SensorLink.SEARCHING, run.machine.link)
         assertEquals(listOf(Close, ConnectAuto(addr)), run.on(Timeout(LinkTimer.RETRY), 7_000))
+        assertEquals(SensorLink.SEARCHING, run.machine.link)
     }
 
     @Test
@@ -234,7 +243,10 @@ class ConnectionMachineTest {
         val run = Run()
         run.on(Acquired)
         run.on(Connected)
-        assertEquals(Close, run.on(OpFailed).filter { it !is Cancel }.first())
+        assertEquals(
+            listOf(Cancel(LinkTimer.SILENCE), Close, Schedule(LinkTimer.RETRY, 1_000L)),
+            run.on(OpFailed)
+        )
         assertEquals(SensorLink.CONNECTING, run.machine.link)
 
         val ok = Run().connected()
@@ -252,6 +264,29 @@ class ConnectionMachineTest {
         assertEquals(LinkFailure.NO_HEART_RATE_SERVICE, run.machine.failure)
         assertEquals(emptyList<LinkCommand>(), run.on(Disconnected(0), 5_000))
         assertEquals(emptyList<LinkCommand>(), run.on(Timeout(LinkTimer.RETRY), 5_000))
+    }
+
+    @Test
+    fun `a device without the heart rate service stays given up through leases and Bluetooth`() {
+        val run = Run()
+        run.on(Acquired)
+        run.on(Connected)
+        run.on(ServicesOk(hasHrs = false))
+
+        assertEquals(listOf(Close), run.on(Released))
+        assertEquals(emptyList<LinkCommand>(), run.on(Acquired))
+        assertEquals(SensorLink.IDLE, run.machine.link)
+        assertEquals(LinkFailure.NO_HEART_RATE_SERVICE, run.machine.failure)
+
+        assertEquals(listOf(Close), run.on(BtOff))
+        assertEquals(SensorLink.BLUETOOTH_OFF, run.machine.link)
+        assertEquals(emptyList<LinkCommand>(), run.on(BtOn))
+        assertEquals(SensorLink.IDLE, run.machine.link)
+        assertEquals(LinkFailure.NO_HEART_RATE_SERVICE, run.machine.failure)
+
+        assertEquals(emptyList<LinkCommand>(), run.on(AddressChanged(addr)))
+        assertEquals(LinkFailure.NO_HEART_RATE_SERVICE, run.machine.failure)
+        assertFalse(run.all.drop(3).any { it is ConnectDirect || it is ConnectAuto })
     }
 
     @Test

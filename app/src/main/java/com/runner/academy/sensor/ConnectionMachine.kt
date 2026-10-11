@@ -76,20 +76,25 @@ enum class LinkFailure { NO_HEART_RATE_SERVICE }
  * - A direct connect with a [CONNECT_TIMEOUT_MS] timeout first. A drop, a failed or timed-out
  *   attempt, a failed setup step or [SILENCE_MS] without notifications closes and pauses
  *   [RETRY_PAUSES_MS] before each of up to three direct attempts; after that one pending
- *   auto connect with no timeout ([SensorLink.SEARCHING]).
+ *   auto connect with no timeout ([SensorLink.SEARCHING]). At worst, every direct attempt
+ *   timing out, that is 4 × 30 s + 1 + 3 + 7 s = 131 s from the first connect.
  * - After every connection: discover, notifications on, battery read.
- * - A device without the Heart Rate Service is given up ([failure]).
+ * - A device without the Heart Rate Service is given up ([failure]) until the address changes.
  *
  * Not thread-safe: the caller feeds events from one thread.
  */
 class ConnectionMachine(address: String? = null, bluetoothOn: Boolean = true) {
 
-    private enum class Phase { IDLE, CONNECTING, BACKOFF, SEARCHING, SETUP, CONNECTED, FAILED }
+    /** [SEARCH_BACKOFF]: the pause after a failed auto connect, before the next one. */
+    private enum class Phase { IDLE, CONNECTING, BACKOFF, SEARCHING, SEARCH_BACKOFF, SETUP, CONNECTED, FAILED }
 
     var address: String? = address
         private set
 
-    /** Set when the device turned out not to be a heart-rate sensor; cleared by a new start. */
+    /**
+     * Set when the device turned out not to be a heart-rate sensor. Until the address changes
+     * nothing reconnects to it: leases and Bluetooth coming back leave the link [SensorLink.IDLE].
+     */
     var failure: LinkFailure? = null
         private set
 
@@ -110,12 +115,12 @@ class ConnectionMachine(address: String? = null, bluetoothOn: Boolean = true) {
             else -> when (phase) {
                 Phase.IDLE, Phase.FAILED -> SensorLink.IDLE
                 Phase.CONNECTING, Phase.BACKOFF -> SensorLink.CONNECTING
-                Phase.SEARCHING -> SensorLink.SEARCHING
+                Phase.SEARCHING, Phase.SEARCH_BACKOFF -> SensorLink.SEARCHING
                 Phase.SETUP, Phase.CONNECTED -> SensorLink.CONNECTED
             }
         }
 
-    private val wanted: Boolean get() = acquired && btOn && address != null
+    private val wanted: Boolean get() = acquired && btOn && address != null && failure == null
 
     fun on(event: LinkEvent, nowMs: Long): List<LinkCommand> {
         val out = mutableListOf<LinkCommand>()
@@ -156,9 +161,8 @@ class ConnectionMachine(address: String? = null, bluetoothOn: Boolean = true) {
                 if (event.hasHrs) {
                     out += LinkCommand.EnableHrNotify
                 } else {
-                    stop(out)
-                    phase = Phase.FAILED
                     failure = LinkFailure.NO_HEART_RATE_SERVICE
+                    stop(out)
                 }
             }
             LinkEvent.NotifyEnabled -> if (phase == Phase.SETUP) {
@@ -202,7 +206,7 @@ class ConnectionMachine(address: String? = null, bluetoothOn: Boolean = true) {
             // The auto connect itself failed: no tight loop, wait the longest pause
             wasSearching -> {
                 out += LinkCommand.Close
-                phase = Phase.BACKOFF
+                phase = Phase.SEARCH_BACKOFF
                 schedule(out, LinkTimer.RETRY, RETRY_PAUSES_MS.last())
             }
             else -> connectAuto(out)
@@ -210,14 +214,17 @@ class ConnectionMachine(address: String? = null, bluetoothOn: Boolean = true) {
     }
 
     private fun startFresh(out: MutableList<LinkCommand>) {
-        failure = null
         failures = 0
         cancelAll(out)
         connectDirect(out)
     }
 
     private fun connectDirect(out: MutableList<LinkCommand>) {
-        val target = address ?: return stop(out)
+        val target = address
+        if (target == null) {
+            stop(out)
+            return
+        }
         out += LinkCommand.Close
         out += LinkCommand.ConnectDirect(target)
         phase = Phase.CONNECTING
@@ -225,16 +232,21 @@ class ConnectionMachine(address: String? = null, bluetoothOn: Boolean = true) {
     }
 
     private fun connectAuto(out: MutableList<LinkCommand>) {
-        val target = address ?: return stop(out)
+        val target = address
+        if (target == null) {
+            stop(out)
+            return
+        }
         out += LinkCommand.Close
         out += LinkCommand.ConnectAuto(target)
         phase = Phase.SEARCHING
     }
 
+    /** Close and rest: given up on the device when there is a [failure], else idle. */
     private fun stop(out: MutableList<LinkCommand>) {
         cancelAll(out)
         out += LinkCommand.Close
-        phase = Phase.IDLE
+        phase = if (failure != null) Phase.FAILED else Phase.IDLE
     }
 
     private fun schedule(out: MutableList<LinkCommand>, id: LinkTimer, ms: Long) {
