@@ -48,7 +48,10 @@ object HeartRateParser {
     /** RR intervals are sent in 1/1024 s. */
     private const val RR_UNITS_PER_SECOND = 1024.0
 
-    /** The measurement in [bytes], or null when the packet is shorter than its flags promise. */
+    /**
+     * The measurement in [bytes], or null when the packet is too short for the value or the
+     * energy its flags promise.
+     */
     fun parse(bytes: ByteArray): HeartRateMeasurement? {
         if (bytes.isEmpty()) return null
         val flags = bytes.u8(0)
@@ -80,8 +83,8 @@ object HeartRateParser {
 
         val rrMs = mutableListOf<Int>()
         if (flags and FLAG_RR != 0) {
-            if ((bytes.size - offset) % 2 != 0) return null
-            while (offset < bytes.size) {
+            // An incomplete last interval is dropped: the value before it is still good
+            while (offset + 1 < bytes.size) {
                 rrMs += (bytes.u16(offset) * 1000 / RR_UNITS_PER_SECOND).roundToInt()
                 offset += 2
             }

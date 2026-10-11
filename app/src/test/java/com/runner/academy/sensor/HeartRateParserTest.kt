@@ -86,13 +86,23 @@ class HeartRateParserTest {
     }
 
     @Test
-    fun `truncated packets are null`() {
+    fun `packets too short for the value or the energy are null`() {
         assertNull(parse())
         assertNull(parse(0x00))
         assertNull(parse(0x01, 0x50))
         assertNull(parse(0x08, 70, 0x01))
-        assertNull(parse(0x10, 70, 0x00))
-        assertNull(parse(0x10, 70, 0x00, 0x04, 0x00))
+        assertNull(parse(0x18, 70, 0x01))
+    }
+
+    @Test
+    fun `an incomplete last rr interval is dropped, the value is kept`() {
+        val single = parse(0x10, 70, 0x00)!!
+        assertEquals(70, single.bpm)
+        assertEquals(emptyList<Int>(), single.rrMs)
+        val tail = parse(0x16, 70, 0x00, 0x04, 0x00)!!
+        assertEquals(70, tail.bpm)
+        assertEquals(Contact.DETECTED, tail.contact)
+        assertEquals(listOf(1000), tail.rrMs)
     }
 
     @Test
