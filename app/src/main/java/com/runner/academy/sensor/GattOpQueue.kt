@@ -1,14 +1,14 @@
 package com.runner.academy.sensor
 
-import java.util.UUID
+import android.bluetooth.BluetoothGatt.GATT_SUCCESS
 
 /** A GATT operation that ends with a callback. */
 sealed interface GattOp {
     data object Discover : GattOp
 
     /** Notifications on: the CCCD write ends with `onDescriptorWrite`. */
-    data class EnableNotify(val service: UUID, val characteristic: UUID) : GattOp
-    data class Read(val service: UUID, val characteristic: UUID) : GattOp
+    data class EnableNotify(val characteristic: GattCharacteristic) : GattOp
+    data class Read(val characteristic: GattCharacteristic) : GattOp
 }
 
 /**
@@ -83,6 +83,5 @@ class GattOpQueue(
 
     companion object {
         const val OP_TIMEOUT_MS = 5_000L
-        private const val GATT_SUCCESS = 0
     }
 }

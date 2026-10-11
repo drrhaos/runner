@@ -15,9 +15,9 @@ import android.os.PowerManager
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.runner.academy.data.GpsStatus
-import com.runner.academy.sensor.ForegroundTypes
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.sensor.ForegroundTypes
 import com.runner.academy.util.GpsConfig
 import com.runner.academy.util.GpsDiagnostics.FixResult
 import com.runner.academy.util.GpsDiagnostics.Event as DiagEvent

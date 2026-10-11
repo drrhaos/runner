@@ -1,7 +1,8 @@
 package com.runner.academy.sensor
 
-import com.runner.academy.sensor.GattUuids.BATTERY_LEVEL
-import com.runner.academy.sensor.GattUuids.HEART_RATE_MEASUREMENT
+import android.bluetooth.BluetoothGatt.GATT_SUCCESS
+import com.runner.academy.sensor.GattCharacteristic.Companion.BATTERY_LEVEL
+import com.runner.academy.sensor.GattCharacteristic.Companion.HEART_RATE_MEASUREMENT
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -322,10 +323,6 @@ class BleGattLinkTest {
             inside = false
         }
         assertFalse(calledInside)
-    }
-
-    private companion object {
-        const val GATT_SUCCESS = 0
     }
 }
 

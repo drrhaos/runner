@@ -8,31 +8,9 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.bluetooth.BluetoothProfile
 import android.bluetooth.BluetoothStatusCodes
-import android.content.BroadcastReceiver
 import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.os.Build
 import android.os.Handler
-import androidx.core.content.ContextCompat
-import androidx.core.os.HandlerCompat
-import java.util.UUID
-
-/** [LinkScheduler] on a `Handler` of the BLE thread. */
-class HandlerScheduler(private val handler: Handler) : LinkScheduler {
-
-    override fun post(task: () -> Unit) {
-        handler.post(task)
-    }
-
-    override fun postDelayed(token: Any, delayMs: Long, task: () -> Unit) {
-        HandlerCompat.postDelayed(handler, task, token, delayMs)
-    }
-
-    override fun cancel(token: Any) {
-        handler.removeCallbacksAndMessages(token)
-    }
-}
 
 /**
  * `connectGatt` over LE with the callbacks on [handler] (the BLE thread). Every Bluetooth call
@@ -75,11 +53,10 @@ private class AndroidGattHandle(private val gatt: BluetoothGatt) : GattHandle {
         false
     }
 
-    override fun properties(service: UUID, characteristic: UUID): Int? =
-        characteristic(service, characteristic)?.properties
+    override fun properties(characteristic: GattCharacteristic): Int? = find(characteristic)?.properties
 
-    override fun enableNotifications(service: UUID, characteristic: UUID): Boolean {
-        val target = characteristic(service, characteristic) ?: return false
+    override fun enableNotifications(characteristic: GattCharacteristic): Boolean {
+        val target = find(characteristic) ?: return false
         val cccd = target.getDescriptor(GattUuids.CCCD) ?: return false
         return try {
             gatt.setCharacteristicNotification(target, true) &&
@@ -89,8 +66,8 @@ private class AndroidGattHandle(private val gatt: BluetoothGatt) : GattHandle {
         }
     }
 
-    override fun read(service: UUID, characteristic: UUID): Boolean {
-        val target = characteristic(service, characteristic) ?: return false
+    override fun read(characteristic: GattCharacteristic): Boolean {
+        val target = find(characteristic) ?: return false
         return try {
             gatt.readCharacteristic(target)
         } catch (e: SecurityException) {
@@ -106,8 +83,8 @@ private class AndroidGattHandle(private val gatt: BluetoothGatt) : GattHandle {
         }
     }
 
-    private fun characteristic(service: UUID, characteristic: UUID): BluetoothGattCharacteristic? =
-        gatt.getService(service)?.getCharacteristic(characteristic)
+    private fun find(characteristic: GattCharacteristic): BluetoothGattCharacteristic? =
+        gatt.getService(characteristic.service)?.getCharacteristic(characteristic.uuid)
 
     /** 33+ passes the value; below it is set on the descriptor (deprecated, shared state). */
     @Throws(SecurityException::class)
@@ -138,7 +115,7 @@ private class AndroidGattCallback(private val target: GattCallback) : BluetoothG
     }
 
     override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
-        target.onDescriptorWrite(descriptor.characteristic.uuid, status)
+        descriptor.characteristic.id()?.let { target.onDescriptorWrite(it, status) }
     }
 
     override fun onCharacteristicRead(
@@ -147,13 +124,13 @@ private class AndroidGattCallback(private val target: GattCallback) : BluetoothG
         value: ByteArray,
         status: Int
     ) {
-        target.onCharacteristicRead(characteristic.uuid, value, status)
+        characteristic.id()?.let { target.onCharacteristicRead(it, value, status) }
     }
 
     /** Below 33 only. */
     @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
     override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
-        target.onCharacteristicRead(characteristic.uuid, characteristic.value ?: ByteArray(0), status)
+        characteristic.id()?.let { target.onCharacteristicRead(it, characteristic.value ?: ByteArray(0), status) }
     }
 
     override fun onCharacteristicChanged(
@@ -161,40 +138,16 @@ private class AndroidGattCallback(private val target: GattCallback) : BluetoothG
         characteristic: BluetoothGattCharacteristic,
         value: ByteArray
     ) {
-        target.onCharacteristicChanged(characteristic.uuid, value)
+        characteristic.id()?.let { target.onCharacteristicChanged(it, value) }
     }
 
     /** Below 33 only. */
     @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
     override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-        target.onCharacteristicChanged(characteristic.uuid, characteristic.value ?: ByteArray(0))
-    }
-}
-
-/** `ACTION_STATE_CHANGED` of the adapter, delivered on [handler]. */
-class AndroidAdapterWatch(private val context: Context, private val handler: Handler) : AdapterStateWatch {
-
-    private var receiver: BroadcastReceiver? = null
-
-    override fun start(onState: (Int) -> Unit) {
-        stop()
-        val r = object : BroadcastReceiver() {
-            override fun onReceive(context: Context, intent: Intent) {
-                onState(intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.ERROR))
-            }
-        }
-        // Exported: below 33 ContextCompat makes a not-exported receiver require an app-private
-        // permission, which the Bluetooth process sending this does not hold. Safe: it is a
-        // protected broadcast, no other app can send it.
-        ContextCompat.registerReceiver(
-            context, r, IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED), null, handler,
-            ContextCompat.RECEIVER_EXPORTED
-        )
-        receiver = r
+        characteristic.id()?.let { target.onCharacteristicChanged(it, characteristic.value ?: ByteArray(0)) }
     }
 
-    override fun stop() {
-        receiver?.let { context.unregisterReceiver(it) }
-        receiver = null
-    }
+    /** Null only for a characteristic detached from its service, which discovery never gives. */
+    private fun BluetoothGattCharacteristic.id(): GattCharacteristic? =
+        service?.let { GattCharacteristic(it.uuid, uuid) }
 }

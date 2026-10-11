@@ -1,6 +1,7 @@
 package com.runner.academy.sensor
 
-import java.util.UUID
+import com.runner.academy.sensor.GattCharacteristic.Companion.BATTERY_LEVEL
+import com.runner.academy.sensor.GattCharacteristic.Companion.HEART_RATE_MEASUREMENT
 
 /** A [GattConnector] that records every connection; each one is a [FakeGattHandle]. */
 class FakeGattConnector : GattConnector {
@@ -13,7 +14,7 @@ class FakeGattConnector : GattConnector {
     var accepts = true
 
     /** Characteristics with their properties that new connections will expose. */
-    var characteristics: Map<Pair<UUID, UUID>, Int> = HRS_AND_BATTERY
+    var characteristics: Map<GattCharacteristic, Int> = HRS_AND_BATTERY
 
     val last: Attempt get() = attempts.last()
 
@@ -27,20 +28,14 @@ class FakeGattConnector : GattConnector {
         const val PROPERTY_READ = 0x02
         const val PROPERTY_NOTIFY = 0x10
 
-        val HRS_ONLY = mapOf(
-            (GattUuids.HEART_RATE_SERVICE to GattUuids.HEART_RATE_MEASUREMENT) to PROPERTY_NOTIFY
-        )
-        val HRS_AND_BATTERY = HRS_ONLY + mapOf(
-            (GattUuids.BATTERY_SERVICE to GattUuids.BATTERY_LEVEL) to PROPERTY_READ
-        )
-        val HRS_AND_NOTIFYING_BATTERY = HRS_ONLY + mapOf(
-            (GattUuids.BATTERY_SERVICE to GattUuids.BATTERY_LEVEL) to (PROPERTY_READ or PROPERTY_NOTIFY)
-        )
+        val HRS_ONLY = mapOf(HEART_RATE_MEASUREMENT to PROPERTY_NOTIFY)
+        val HRS_AND_BATTERY = HRS_ONLY + mapOf(BATTERY_LEVEL to PROPERTY_READ)
+        val HRS_AND_NOTIFYING_BATTERY = HRS_ONLY + mapOf(BATTERY_LEVEL to (PROPERTY_READ or PROPERTY_NOTIFY))
     }
 }
 
 /** One fake `BluetoothGatt`: records the operations started on it. */
-class FakeGattHandle(private val characteristics: Map<Pair<UUID, UUID>, Int>) : GattHandle {
+class FakeGattHandle(private val characteristics: Map<GattCharacteristic, Int>) : GattHandle {
 
     /** Started operations: `discover`, `notify:<char>`, `read:<char>`, `close`. */
     val calls = mutableListOf<String>()
@@ -54,13 +49,13 @@ class FakeGattHandle(private val characteristics: Map<Pair<UUID, UUID>, Int>) : 
 
     override fun discoverServices(): Boolean = record("discover")
 
-    override fun properties(service: UUID, characteristic: UUID): Int? = characteristics[service to characteristic]
+    override fun properties(characteristic: GattCharacteristic): Int? = characteristics[characteristic]
 
-    override fun enableNotifications(service: UUID, characteristic: UUID): Boolean =
-        characteristics.containsKey(service to characteristic) && record("notify:${short(characteristic)}")
+    override fun enableNotifications(characteristic: GattCharacteristic): Boolean =
+        characteristic in characteristics && record("notify:${short(characteristic)}")
 
-    override fun read(service: UUID, characteristic: UUID): Boolean =
-        characteristics.containsKey(service to characteristic) && record("read:${short(characteristic)}")
+    override fun read(characteristic: GattCharacteristic): Boolean =
+        characteristic in characteristics && record("read:${short(characteristic)}")
 
     override fun close() {
         calls += "close"
@@ -73,6 +68,6 @@ class FakeGattHandle(private val characteristics: Map<Pair<UUID, UUID>, Int>) : 
 
     companion object {
         /** `2a37` for Heart Rate Measurement. */
-        fun short(uuid: UUID): String = uuid.toString().substring(4, 8)
+        fun short(characteristic: GattCharacteristic): String = characteristic.uuid.toString().substring(4, 8)
     }
 }

@@ -6,9 +6,7 @@ import java.util.UUID
 /** The standard Bluetooth SIG UUIDs the sensors use. */
 object GattUuids {
     val HEART_RATE_SERVICE: UUID = uuid16(0x180D)
-    val HEART_RATE_MEASUREMENT: UUID = uuid16(0x2A37)
     val BATTERY_SERVICE: UUID = uuid16(0x180F)
-    val BATTERY_LEVEL: UUID = uuid16(0x2A19)
 
     /** Client Characteristic Configuration: notifications on/off. */
     val CCCD: UUID = uuid16(0x2902)
@@ -16,6 +14,14 @@ object GattUuids {
     /** A 16-bit SIG UUID on the Bluetooth base UUID. */
     fun uuid16(short: Int): UUID =
         UUID.fromString(String.format(Locale.ROOT, "0000%04x-0000-1000-8000-00805f9b34fb", short))
+}
+
+/** A characteristic: its [uuid] in the service [service]. */
+data class GattCharacteristic(val service: UUID, val uuid: UUID) {
+    companion object {
+        val HEART_RATE_MEASUREMENT = GattCharacteristic(GattUuids.HEART_RATE_SERVICE, GattUuids.uuid16(0x2A37))
+        val BATTERY_LEVEL = GattCharacteristic(GattUuids.BATTERY_SERVICE, GattUuids.uuid16(0x2A19))
+    }
 }
 
 /**
@@ -38,13 +44,13 @@ interface GattHandle {
 
     fun discoverServices(): Boolean
 
-    /** The properties (`PROPERTY_*`) of [characteristic] in [service], null when there is none. */
-    fun properties(service: UUID, characteristic: UUID): Int?
+    /** The properties (`PROPERTY_*`) of [characteristic], null when the device has none. */
+    fun properties(characteristic: GattCharacteristic): Int?
 
     /** Turns notifications of [characteristic] on: local registration and a CCCD write. */
-    fun enableNotifications(service: UUID, characteristic: UUID): Boolean
+    fun enableNotifications(characteristic: GattCharacteristic): Boolean
 
-    fun read(service: UUID, characteristic: UUID): Boolean
+    fun read(characteristic: GattCharacteristic): Boolean
 
     /** Disconnects and frees the GATT client (`close()`, not just `disconnect()`). */
     fun close()
@@ -56,9 +62,9 @@ interface GattCallback {
     fun onServicesDiscovered(status: Int)
 
     /** A CCCD write of [characteristic] finished. */
-    fun onDescriptorWrite(characteristic: UUID, status: Int)
-    fun onCharacteristicRead(characteristic: UUID, value: ByteArray, status: Int)
-    fun onCharacteristicChanged(characteristic: UUID, value: ByteArray)
+    fun onDescriptorWrite(characteristic: GattCharacteristic, status: Int)
+    fun onCharacteristicRead(characteristic: GattCharacteristic, value: ByteArray, status: Int)
+    fun onCharacteristicChanged(characteristic: GattCharacteristic, value: ByteArray)
 }
 
 /**

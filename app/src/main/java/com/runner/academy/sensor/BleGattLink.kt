@@ -2,12 +2,10 @@ package com.runner.academy.sensor
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGatt.GATT_SUCCESS
 import android.bluetooth.BluetoothGattCharacteristic
-import com.runner.academy.sensor.GattUuids.BATTERY_LEVEL
-import com.runner.academy.sensor.GattUuids.BATTERY_SERVICE
-import com.runner.academy.sensor.GattUuids.HEART_RATE_MEASUREMENT
-import com.runner.academy.sensor.GattUuids.HEART_RATE_SERVICE
-import java.util.UUID
+import com.runner.academy.sensor.GattCharacteristic.Companion.BATTERY_LEVEL
+import com.runner.academy.sensor.GattCharacteristic.Companion.HEART_RATE_MEASUREMENT
 
 /**
  * Carries out a [ConnectionMachine]'s commands for one device and reports back what the radio
@@ -101,7 +99,7 @@ class BleGattLink(
             is LinkCommand.ConnectDirect -> connect(command.address, autoConnect = false)
             is LinkCommand.ConnectAuto -> connect(command.address, autoConnect = true)
             LinkCommand.Discover -> queue.add(GattOp.Discover)
-            LinkCommand.EnableHrNotify -> queue.add(GattOp.EnableNotify(HEART_RATE_SERVICE, HEART_RATE_MEASUREMENT))
+            LinkCommand.EnableHrNotify -> queue.add(GattOp.EnableNotify(HEART_RATE_MEASUREMENT))
             LinkCommand.ReadBattery -> readBattery()
             is LinkCommand.Schedule -> {
                 val token = timerToken(command.id)
@@ -127,9 +125,9 @@ class BleGattLink(
     }
 
     private fun readBattery() {
-        val properties = gatt?.properties(BATTERY_SERVICE, BATTERY_LEVEL)
+        val properties = gatt?.properties(BATTERY_LEVEL)
         if (properties != null && properties and BluetoothGattCharacteristic.PROPERTY_READ != 0) {
-            queue.add(GattOp.Read(BATTERY_SERVICE, BATTERY_LEVEL))
+            queue.add(GattOp.Read(BATTERY_LEVEL))
         } else {
             deliver { onBattery(null) }
         }
@@ -139,8 +137,8 @@ class BleGattLink(
         val g = gatt ?: return false
         return when (op) {
             GattOp.Discover -> g.discoverServices()
-            is GattOp.EnableNotify -> g.enableNotifications(op.service, op.characteristic)
-            is GattOp.Read -> g.read(op.service, op.characteristic)
+            is GattOp.EnableNotify -> g.enableNotifications(op.characteristic)
+            is GattOp.Read -> g.read(op.characteristic)
         }
     }
 
@@ -176,7 +174,7 @@ class BleGattLink(
 
         override fun onConnectionStateChange(status: Int, connected: Boolean) {
             if (!current) return
-            if (connected && status == BluetoothGatt.GATT_SUCCESS) {
+            if (connected && status == GATT_SUCCESS) {
                 deliver(gen) { onEvent(LinkEvent.Connected) }
             } else {
                 queue.clear()
@@ -186,29 +184,27 @@ class BleGattLink(
 
         override fun onServicesDiscovered(status: Int) {
             if (!current || !queue.finish(GattOp.Discover, status)) return
-            val hasHrs = gatt?.properties(HEART_RATE_SERVICE, HEART_RATE_MEASUREMENT) != null
+            val hasHrs = gatt?.properties(HEART_RATE_MEASUREMENT) != null
             deliver(gen) { onEvent(LinkEvent.ServicesOk(hasHrs)) }
         }
 
-        override fun onDescriptorWrite(characteristic: UUID, status: Int) {
-            if (!current) return
-            val service = serviceOf(characteristic) ?: return
-            if (!queue.finish(GattOp.EnableNotify(service, characteristic), status)) return
+        override fun onDescriptorWrite(characteristic: GattCharacteristic, status: Int) {
+            if (!current || !queue.finish(GattOp.EnableNotify(characteristic), status)) return
             if (characteristic == HEART_RATE_MEASUREMENT) deliver(gen) { onEvent(LinkEvent.NotifyEnabled) }
         }
 
-        override fun onCharacteristicRead(characteristic: UUID, value: ByteArray, status: Int) {
+        override fun onCharacteristicRead(characteristic: GattCharacteristic, value: ByteArray, status: Int) {
             if (!current || characteristic != BATTERY_LEVEL) return
-            if (!queue.finish(GattOp.Read(BATTERY_SERVICE, BATTERY_LEVEL), status)) return
+            if (!queue.finish(GattOp.Read(BATTERY_LEVEL), status)) return
             val percent = batteryPercent(value)
             deliver(gen) { onBattery(percent) }
-            val properties = gatt?.properties(BATTERY_SERVICE, BATTERY_LEVEL) ?: 0
+            val properties = gatt?.properties(BATTERY_LEVEL) ?: 0
             if (percent != null && properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY != 0) {
-                queue.add(GattOp.EnableNotify(BATTERY_SERVICE, BATTERY_LEVEL))
+                queue.add(GattOp.EnableNotify(BATTERY_LEVEL))
             }
         }
 
-        override fun onCharacteristicChanged(characteristic: UUID, value: ByteArray) {
+        override fun onCharacteristicChanged(characteristic: GattCharacteristic, value: ByteArray) {
             if (!current) return
             when (characteristic) {
                 HEART_RATE_MEASUREMENT -> {
@@ -226,12 +222,6 @@ class BleGattLink(
     companion object {
         /** The status of a connect that did not even start (`BluetoothGatt.GATT_FAILURE`). */
         const val GATT_FAILURE = BluetoothGatt.GATT_FAILURE
-
-        private fun serviceOf(characteristic: UUID): UUID? = when (characteristic) {
-            HEART_RATE_MEASUREMENT -> HEART_RATE_SERVICE
-            BATTERY_LEVEL -> BATTERY_SERVICE
-            else -> null
-        }
 
         /** Battery Level is one byte, 0–100 %. */
         private fun batteryPercent(value: ByteArray): Int? =

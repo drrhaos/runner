@@ -1,9 +1,8 @@
 package com.runner.academy.sensor
 
-import com.runner.academy.sensor.GattUuids.BATTERY_LEVEL
-import com.runner.academy.sensor.GattUuids.BATTERY_SERVICE
-import com.runner.academy.sensor.GattUuids.HEART_RATE_MEASUREMENT
-import com.runner.academy.sensor.GattUuids.HEART_RATE_SERVICE
+import android.bluetooth.BluetoothGatt.GATT_SUCCESS
+import com.runner.academy.sensor.GattCharacteristic.Companion.BATTERY_LEVEL
+import com.runner.academy.sensor.GattCharacteristic.Companion.HEART_RATE_MEASUREMENT
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -24,8 +23,8 @@ class GattOpQueueTest {
     )
 
     private val discover = GattOp.Discover
-    private val hrNotify = GattOp.EnableNotify(HEART_RATE_SERVICE, HEART_RATE_MEASUREMENT)
-    private val battery = GattOp.Read(BATTERY_SERVICE, BATTERY_LEVEL)
+    private val hrNotify = GattOp.EnableNotify(HEART_RATE_MEASUREMENT)
+    private val battery = GattOp.Read(BATTERY_LEVEL)
 
     @Test
     fun `operations run one at a time in order`() {
@@ -111,9 +110,5 @@ class GattOpQueueTest {
 
         queue.add(battery)
         assertEquals(listOf(discover, battery), started)
-    }
-
-    private companion object {
-        const val GATT_SUCCESS = 0
     }
 }
