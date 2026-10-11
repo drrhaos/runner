@@ -72,11 +72,16 @@ object GpxExporter {
             // Время
             builder.append("        <time>").append(formatIso8601(Date(point.timestamp))).append("</time>\n")
             
-            // Расширения (точность, скорость)
-            if (point.accuracy != null || point.speed != null) {
+            // Расширения (пульс, точность, скорость)
+            if (point.heartRate != null || point.accuracy != null || point.speed != null) {
                 builder.append("        <extensions>\n")
                 builder.append("          <gpxtpx:TrackPointExtension>\n")
-                
+
+                // Пульс первым: в XSD v1 порядок atemp, wtemp, depth, hr, cad
+                point.heartRate?.let { bpm ->
+                    builder.append("            <gpxtpx:hr>").append(bpm).append("</gpxtpx:hr>\n")
+                }
+
                 point.accuracy?.let { accuracy ->
                     builder.append("            <gpxtpx:hdop>").append(String.format("%.1f", accuracy)).append("</gpxtpx:hdop>\n")
                 }

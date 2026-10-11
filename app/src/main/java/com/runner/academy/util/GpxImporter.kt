@@ -114,6 +114,7 @@ object GpxImporter {
         var ele: Double? = null
         var timeMs: Long? = null
         var speed: Float? = null
+        var heartRate: Int? = null
         var inTrkpt = false
 
         while (event != XmlPullParser.END_DOCUMENT) {
@@ -127,6 +128,7 @@ object GpxImporter {
                             ele = null
                             timeMs = null
                             speed = null
+                            heartRate = null
                         }
                         "ele" -> if (inTrkpt) {
                             ele = parser.nextText().toDoubleOrNull()
@@ -136,6 +138,10 @@ object GpxImporter {
                         }
                         "speed" -> if (inTrkpt) {
                             speed = parser.nextText().toFloatOrNull()
+                        }
+                        // The local name: gpxtpx:hr, ns3:hr and other prefixes alike
+                        "hr" -> if (inTrkpt) {
+                            heartRate = HeartRates.valid(parser.nextText().trim().toIntOrNull())
                         }
                     }
                 }
@@ -157,7 +163,8 @@ object GpxImporter {
                                     speed = speed,
                                     altitude = ele,
                                     afterGap = false,
-                                    source = LocationSource.GPS.name
+                                    source = LocationSource.GPS.name,
+                                    heartRate = heartRate
                                 )
                             )
                         }

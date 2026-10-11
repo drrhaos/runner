@@ -166,6 +166,23 @@ class RouteTimeAlignerTest {
     }
 
     @Test
+    fun `a route with new times drops the heart rate, a shifted track keeps it`() {
+        // The heart rate of a replaced route belongs to another run (or to another moment)
+        val route = track((0..20).map { point(it * 50.0, 5.0).copy(heartRate = 150) })
+
+        val uniform = RouteTimeAligner.distributeByDistance(route, start, 600_000L)!!
+        val aligned = RouteTimeAligner.alignToRecorded(route, recordedOutAndBack())!!
+        val shifted = RouteTimeAligner.shiftTime(
+            track(recordedOutAndBack().points.map { it.copy(heartRate = 140) }),
+            5_000L
+        )
+
+        assertTrue(uniform.points.all { it.heartRate == null })
+        assertTrue(aligned.points.all { it.heartRate == null })
+        assertTrue(shifted.points.all { it.heartRate == 140 })
+    }
+
+    @Test
     fun `rebuilder marks route time from the form as synthetic`() {
         val routeJson = TrackDataJson.toJson(track((0..20).map { point(it * 50.0, 5.0, time = 42L + it) }))
 

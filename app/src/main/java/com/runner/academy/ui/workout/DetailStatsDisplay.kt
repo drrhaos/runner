@@ -6,6 +6,7 @@ import com.runner.academy.R
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.MovingTimeDisplay
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -76,6 +77,29 @@ class DetailStatsDisplay(
                     layoutDetailCadence.contentDescription = context.getString(R.string.workout_details_cadence_pending_a11y)
                 }
                 CadenceDisplay.None -> Unit
+            }
+        }
+    }
+
+    /**
+     * The heart rate tile (its own row): the stored average, "—" while the background pass has
+     * not reached a track with heart rate, hidden when there is none (no sensor, an older or
+     * manual workout).
+     */
+    fun displayHeartRate(display: HeartRateSummaryDisplay) {
+        binding.apply {
+            layoutDetailHeartRateRow.visibility = if (display == HeartRateSummaryDisplay.None) View.GONE else View.VISIBLE
+            when (display) {
+                is HeartRateSummaryDisplay.Value -> {
+                    textViewDetailHeartRate.text = NumberFormat.getIntegerInstance().format(display.avgBpm)
+                    layoutDetailHeartRate.contentDescription = HeartRateText.averageA11y(context, display.avgBpm)
+                }
+                HeartRateSummaryDisplay.Pending -> {
+                    textViewDetailHeartRate.setText(R.string.metric_pending_placeholder)
+                    layoutDetailHeartRate.contentDescription =
+                        context.getString(R.string.workout_details_heart_rate_pending_a11y)
+                }
+                HeartRateSummaryDisplay.None -> Unit
             }
         }
     }

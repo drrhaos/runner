@@ -155,6 +155,50 @@ class GpsLocationProcessorTest {
     }
 
     @Test
+    fun processLocation_heartRate_goesIntoRawAndTrackPoint() {
+        val result = processor.processLocation(
+            location(55.7558, 37.6173, time = 1_000_000L),
+            mutableListOf(), mutableListOf(), mutableListOf(),
+            heartRate = 151
+        ) as GpsLocationProcessor.ProcessResult.Accepted
+
+        assertEquals(151, result.trackDataPoints.single().heartRate)
+        assertEquals(151, result.rawTrackDataPoints.single().heartRate)
+        assertEquals(null, (process(location(55.7570, 37.6173, time = 1_005_000L), result)
+            as GpsLocationProcessor.ProcessResult.Accepted).trackDataPoints.last().heartRate)
+    }
+
+    @Test
+    fun processLocation_implausibleHeartRate_isStoredAsNone() {
+        for (bpm in listOf(0, 24, 251)) {
+            val result = GpsLocationProcessor().processLocation(
+                location(55.7558, 37.6173, time = 1_000_000L),
+                mutableListOf(), mutableListOf(), mutableListOf(),
+                heartRate = bpm
+            )
+
+            assertEquals(null, result.rawTrackDataPoints.single().heartRate)
+        }
+    }
+
+    @Test
+    fun sanitize_keepsTheHeartRateOfEachPoint() {
+        val raw = (0 until 10).map { i ->
+            com.runner.academy.data.TrackPoint(
+                55.7558 + i * 0.0001, 37.6173, 1_000_000L + i * 2_000L, 10f, 3f, 150.0,
+                heartRate = if (i == 4) null else 140 + i
+            )
+        }
+
+        val saved = com.runner.academy.util.TrackSanitizer.sanitize(raw, com.runner.academy.data.WorkoutType.EASY_RUN)
+
+        val rawHr = raw.associate { it.timestamp to it.heartRate }
+        assertTrue(saved.size >= 5)
+        assertTrue(saved.all { it.heartRate == rawHr[it.timestamp] })
+        assertTrue(saved.any { it.heartRate != null })
+    }
+
+    @Test
     fun sanitize_keepsThePressureAltitudeOfEachPoint() {
         val raw = (0 until 10).map { i ->
             com.runner.academy.data.TrackPoint(

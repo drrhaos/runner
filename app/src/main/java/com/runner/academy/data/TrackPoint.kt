@@ -59,7 +59,13 @@ data class TrackPoint(
      * differences mean something); null without a barometer and on older tracks.
      */
     @SerializedName("baro_m")
-    val baroM: Float? = null
+    val baroM: Float? = null,
+    /**
+     * Heart rate at this fix's moment, beats per minute (a sensor sample or a GPX `hr`, already
+     * checked by [com.runner.academy.util.HeartRates.valid]); null without a sensor, without contact and on older tracks.
+     */
+    @SerializedName("hr")
+    val heartRate: Int? = null
 )
 
 /**

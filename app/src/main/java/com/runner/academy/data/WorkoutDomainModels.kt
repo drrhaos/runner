@@ -15,7 +15,8 @@ data class WorkoutSession(
     val currentPace: Float = 0f, // текущий темп в минутах на километр
     val avgSpeed: Float = 0f,
     val currentSpeed: Float = 0f,
-    val heartRate: Int = 0,
+    /** The live heart rate to show, beats per minute; null without a sensor or a fresh value. */
+    val heartRate: Int? = null,
     val calories: Int = 0,
     val gpsStatus: GpsStatus = GpsStatus.SEARCHING,
     val trackPoints: List<GeoPoint> = emptyList(), // для отображения на карте

@@ -154,7 +154,12 @@ data class SyntheticRun(
     /** Seconds (from start) whose fixes have no altitude. */
     val missingAltitude: IntRange? = null,
     /** The phone's barometer: set, every fix carries a pressure altitude (`baro_m`); null: none. */
-    val barometer: Barometer? = null
+    val barometer: Barometer? = null,
+    /**
+     * Heart rate by ms from the start, put straight on each fix (`hr`, as a sensor would give
+     * it, no sensor modelled); null from it: no contact at that fix. Null: no heart rate at all.
+     */
+    val hrAt: ((Long) -> Int?)? = null
 ) {
     /**
      * A barometer read at each fix: the true altitude ([elevation]) off by [offsetM] (the
@@ -352,6 +357,9 @@ data class SyntheticRun(
                     val altitude = trueAltitudeAt(movedAt(t)) + baro.offsetM +
                         baro.driftMPerHour * t / 3_600.0 + baro.noiseM * baroNoise
                     p.copy(baroM = altitude.toFloat())
+                }.let { p ->
+                    val hr = hrAt ?: return@let p
+                    p.copy(heartRate = hr((t * 1000).toLong()))
                 }
             }
             t += stepSec

@@ -25,7 +25,8 @@ import java.util.Date
  * formatVersion=2 (DB schema 7) adds movingDurationMs, excludeFromRecords, avgHeartRate and
  * maxHeartRate. Derived metrics (elevation, cadence, route preview, records) are not exported:
  * imported rows get metricsVersion 0 and are recomputed from the track. Older builds read
- * format 2 too — they ignore unknown keys.
+ * format 2 too — they ignore unknown keys. The heart rate is derived from the track too since
+ * metrics version 7; its keys stay in the format and the recompute overwrites them.
  */
 object WorkoutBackupFormat {
 

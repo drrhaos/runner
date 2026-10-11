@@ -33,6 +33,8 @@ data class Derived(
     val elevationLoss: Float? = null,
     val elevationSource: ElevationSource? = null,
     val avgCadence: Float? = null,
+    val avgHeartRate: Int? = null,
+    val maxHeartRate: Int? = null,
     val routePreview: String? = null,
     val efforts: List<Effort> = emptyList(),
     val metricsVersion: Int = WorkoutDerivation.CURRENT_METRICS_VERSION
@@ -43,6 +45,8 @@ data class Derived(
         elevationLoss = elevationLoss,
         elevationSource = elevationSource,
         avgCadence = avgCadence,
+        avgHeartRate = avgHeartRate,
+        maxHeartRate = maxHeartRate,
         routePreview = routePreview,
         metricsVersion = metricsVersion
     )
@@ -59,7 +63,7 @@ object WorkoutDerivation {
      * Version of the algorithms below. Raising it makes the background pass recompute every
      * row (a changed algorithm or a new record distance needs no migration).
      */
-    const val CURRENT_METRICS_VERSION = 6 // 2: route preview, 3: cadence, 4: elevation (GPS/file), 5: best efforts, 6: barometer
+    const val CURRENT_METRICS_VERSION = 7 // 2: route preview, 3: cadence, 4: elevation (GPS/file), 5: best efforts, 6: barometer, 7: heart rate
 
     /**
      * A derived column that is empty is "not computed yet" (shown as "—") rather than "no data"
@@ -78,7 +82,7 @@ object WorkoutDerivation {
     /**
      * Every metric is computed from the same [track] here; each release-3 branch fills its
      * fields: routePreview (route preview), avgCadence (cadence), elevation* (elevation),
-     * efforts (records). Raise [CURRENT_METRICS_VERSION] with each.
+     * efforts (records); *HeartRate (heart rate). Raise [CURRENT_METRICS_VERSION] with each.
      */
     @Suppress("UNUSED_PARAMETER")
     private fun fromTrack(track: TrackData, input: DerivationInput): Derived {
@@ -89,6 +93,8 @@ object WorkoutDerivation {
             elevationLoss = elevation?.lossM,
             elevationSource = if (elevation == null) ElevationSource.NONE else source,
             avgCadence = TrackCadence.average(track.points, track.pauses),
+            avgHeartRate = TrackHeartRate.average(track.points, track.pauses),
+            maxHeartRate = TrackHeartRate.max(track.points, track.pauses),
             routePreview = RoutePreviews.of(track.points)?.let(RoutePreviewCodec::encode),
             // On the shown track, so a record window agrees with the splits and the map
             efforts = BestEfforts.compute(track)

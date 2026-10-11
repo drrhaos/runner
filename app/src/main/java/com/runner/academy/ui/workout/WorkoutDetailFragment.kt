@@ -54,6 +54,8 @@ class WorkoutDetailFragment : Fragment() {
     private var currentTrackData: TrackData? = null
     /** The shown track has steps: a missing cadence is then "not computed yet", not "none". */
     private var currentTrackHasSteps = false
+    /** The shown track has heart rate: a missing average is then "not computed yet", not "none". */
+    private var currentTrackHasHeartRate = false
     /** The shown track has altitudes: missing gain and loss are then "not computed yet". */
     private var currentTrackHasAltitude = false
     /** "Don't count in records" for the shown track; hidden until it is read. */
@@ -100,6 +102,12 @@ class WorkoutDetailFragment : Fragment() {
                 chart = binding.chartCadence,
                 values = binding.textViewChartCadenceValues,
                 average = binding.textViewChartCadenceAvg
+            ),
+            heartRate = HeartRateChartViews(
+                card = binding.cardChartHeartRate,
+                chart = binding.chartHeartRate,
+                values = binding.textViewChartHeartRateValues,
+                summary = binding.textViewChartHeartRateSummary
             ),
             context = requireContext(),
             userPreferences = userPreferences,
@@ -310,6 +318,7 @@ class WorkoutDetailFragment : Fragment() {
                         if (hasDiagnostics) View.VISIBLE else View.GONE
                     statsDisplay?.displayWorkout(workout)
                     showCadence(workout)
+                    showHeartRate(workout)
                     showElevation(workout)
                     showExcludeFromRecords(workout)
                     chartRenderer?.intervalPlanSegments =
@@ -324,9 +333,11 @@ class WorkoutDetailFragment : Fragment() {
                         if (workout.trackData == null) {
                             currentTrackData = null
                             currentTrackHasSteps = false
+                            currentTrackHasHeartRate = false
                             currentTrackHasAltitude = false
                             excludeRow = ExcludeFromRecordsRow.Hidden
                             showCadence(workout)
+                            showHeartRate(workout)
                             showElevation(workout)
                             showExcludeFromRecords(workout)
                             _binding?.progressBarMapLoading?.visibility = View.GONE
@@ -382,6 +393,7 @@ class WorkoutDetailFragment : Fragment() {
                         val scan = withContext(Dispatchers.Default) {
                             TrackScan(
                                 hasSteps = cleanedTrackData.points.any { it.steps != null },
+                                hasHeartRate = cleanedTrackData.points.any { it.heartRate != null },
                                 // GPS, file or barometer altitudes: a barometric track may have no GPS ones
                                 hasAltitude = ElevationSource.of(cleanedTrackData) != ElevationSource.NONE,
                                 excludeRow = ExcludeFromRecordsRow.of(cleanedTrackData)
@@ -390,12 +402,14 @@ class WorkoutDetailFragment : Fragment() {
                         if (_binding == null || !isAdded || isDetached) return@launch
                         currentTrackData = cleanedTrackData
                         currentTrackHasSteps = scan.hasSteps
+                        currentTrackHasHeartRate = scan.hasHeartRate
                         currentTrackHasAltitude = scan.hasAltitude
                         excludeRow = scan.excludeRow
                         mapManager?.displayTrack(cleanedTrackData)
                         chartRenderer?.updateAllCharts(cleanedTrackData)
                         currentWorkout?.let {
                             showCadence(it)
+                            showHeartRate(it)
                             showElevation(it)
                             showExcludeFromRecords(it)
                         }
@@ -424,6 +438,18 @@ class WorkoutDetailFragment : Fragment() {
         val display = CadenceDisplay.of(workout.avgCadence, workout.metricsVersion, currentTrackHasSteps)
         statsDisplay?.displayCadence(display)
         chartRenderer?.cadenceDisplay = display
+    }
+
+    /** The tile and the chart title from the same stored heart rate (see [HeartRateSummaryDisplay]). */
+    private fun showHeartRate(workout: com.runner.academy.data.Workout) {
+        val display = HeartRateSummaryDisplay.of(
+            workout.avgHeartRate,
+            workout.maxHeartRate,
+            workout.metricsVersion,
+            currentTrackHasHeartRate
+        )
+        statsDisplay?.displayHeartRate(display)
+        chartRenderer?.heartRateDisplay = display
     }
 
     /** The tiles and the chart title from the same stored gain and loss (see [ElevationDisplay]). */
@@ -531,7 +557,12 @@ class WorkoutDetailFragment : Fragment() {
     }
 
     /** What the details read from the shown track besides drawing it. */
-    private class TrackScan(val hasSteps: Boolean, val hasAltitude: Boolean, val excludeRow: ExcludeFromRecordsRow)
+    private class TrackScan(
+        val hasSteps: Boolean,
+        val hasHeartRate: Boolean,
+        val hasAltitude: Boolean,
+        val excludeRow: ExcludeFromRecordsRow
+    )
 
     private fun deleteWorkout() {
         currentWorkout?.let { workout ->

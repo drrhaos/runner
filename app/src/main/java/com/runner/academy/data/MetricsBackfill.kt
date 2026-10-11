@@ -247,6 +247,8 @@ class MetricsBackfill(
             elevationLoss = metrics.elevationLoss,
             elevationSource = metrics.elevationSource,
             avgCadence = metrics.avgCadence,
+            avgHeartRate = metrics.avgHeartRate,
+            maxHeartRate = metrics.maxHeartRate,
             routePreview = metrics.routePreview
         )
         if (updated > 0) {

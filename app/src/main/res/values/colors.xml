@@ -72,12 +72,14 @@
          speed     #2196F3 3.1:1  / same    5.4:1
          elevation #388E3C 4.1:1  / #4CAF50 6.1:1  (#4CAF50 on white is only 2.8:1)
          cadence   ios_purple #AF52DE 4.1:1 / #BF5AF2 4.8:1
+         heart rate #D32F2F 5.0:1 / #FF5252 5.3:1
          Series hues never colour text: axis labels and bar values take chart_axis_text.
          Axes, grid and the tap values panel are redefined in values-night. -->
     <color name="chart_series_pace">#FFE65100</color>
     <color name="chart_series_speed">#FF2196F3</color>
     <color name="chart_series_elevation">#FF388E3C</color>
     <color name="chart_series_cadence">@color/ios_purple</color>
+    <color name="chart_series_heart_rate">#FFD32F2F</color>
     <color name="chart_axis_text">@color/ios_label</color>
     <color name="chart_grid">#40000000</color>
     <color name="chart_values_background">#E0000000</color>

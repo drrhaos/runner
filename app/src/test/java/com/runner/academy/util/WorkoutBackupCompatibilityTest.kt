@@ -166,6 +166,23 @@ class WorkoutBackupCompatibilityTest {
         assertWorkoutsMatchGolden(WorkoutBackupFormat.parseBackupJson(reExported))
     }
 
+    @Test
+    fun goldenBackupsWithoutHr_haveNoHeartRateOnceDerived() {
+        for (golden in listOf(goldenV1, goldenV2)) {
+            for (workout in WorkoutBackupFormat.parseBackupJson(golden)) {
+                val track = TrackDataJson.parse(workout.trackData) ?: continue
+                assertEquals(List(track.points.size) { null }, track.points.map { it.heartRate })
+
+                val derived = WorkoutDerivation.derive(DerivationInput(workout.trackData, workout.type, workout.duration))
+                val applied = derived.applyTo(workout)
+
+                // The 148 / 176 format 2 carries have no track behind them: they do not survive
+                assertEquals(null, applied.avgHeartRate)
+                assertEquals(null, applied.maxHeartRate)
+            }
+        }
+    }
+
     private fun assertWorkoutsMatchGolden(restored: List<Workout>) {
         assertEquals(
             expectedWorkouts,

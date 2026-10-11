@@ -85,6 +85,43 @@ class TrackDataJsonTest {
     }
 
     @Test
+    fun `the heart rate of a point survives a round trip, a missing one stays null`() {
+        val points = listOf(
+            TrackPoint(55.0, 37.0, 1L, 5f, 3f, 150.0, heartRate = 152),
+            TrackPoint(55.01, 37.0, 2L, 5f, 3f, 150.0)
+        )
+
+        val json = TrackDataJson.toJson(track(points))
+        val parsed = TrackDataJson.parse(json)!!
+
+        assertTrue(json.contains("\"hr\":152"))
+        assertFalse(json.contains("\"hr\":null"))
+        assertEquals(points, parsed.points)
+        assertNull(parsed.points[1].heartRate)
+    }
+
+    @Test
+    fun `an implausible stored heart rate reads as none`() {
+        val json = """{"points":[{"latitude":55.0,"longitude":37.0,"timestamp":1,"hr":0},
+            {"latitude":55.0,"longitude":37.0,"timestamp":2,"hr":300},
+            {"latitude":55.0,"longitude":37.0,"timestamp":3,"hr":151}],
+            "total_distance":0,"total_duration":0,"avg_speed":0,"max_speed":0,"start_time":0}"""
+
+        assertEquals(listOf(null, null, 151), TrackDataJson.parse(json)!!.points.map { it.heartRate })
+    }
+
+    @Test
+    fun `an old track without heart rate reads as null`() {
+        val json = """{"points":[{"latitude":55.0,"longitude":37.0,"timestamp":1}],
+            "total_distance":0,"total_duration":0,"avg_speed":0,"max_speed":0,"start_time":0}"""
+
+        val parsed = TrackDataJson.parse(json)!!
+
+        assertNull(parsed.points.single().heartRate)
+        assertFalse(TrackDataJson.toJson(parsed).contains("\"hr\""))
+    }
+
+    @Test
     fun `old tracks without the release 3 fields read as null`() {
         val json = """{"points":[{"latitude":55.0,"longitude":37.0,"timestamp":1}],
             "total_distance":0,"total_duration":0,"avg_speed":0,"max_speed":0,"start_time":0}"""

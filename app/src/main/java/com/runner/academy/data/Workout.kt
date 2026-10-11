@@ -39,9 +39,8 @@ data class Workout(
     /** User flag: the workout never counts towards personal records. */
     @ColumnInfo(defaultValue = "0")
     val excludeFromRecords: Boolean = false,
-    // Reserved for a heart-rate sensor: only carried through backups, no UI yet
-    val avgHeartRate: Int? = null,
-    val maxHeartRate: Int? = null,
+    val avgHeartRate: Int? = null, // уд/мин, средний по времени движения
+    val maxHeartRate: Int? = null, // уд/мин, без одиночных выбросов
     /**
      * Version of the algorithms the derived columns were computed with; 0 = not computed yet
      * (tells "not computed" apart from "no data" and reruns the pass when an algorithm changes).

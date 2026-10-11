@@ -31,7 +31,8 @@ class WorkoutDataCleanerTest {
             bridgeMeters = if (i == 20) 130f else null,
             steps = i * 5,
             cadence = 170f,
-            baroM = 100f + i
+            baroM = 100f + i,
+            heartRate = 140 + i
         )
     }
 
@@ -46,6 +47,7 @@ class WorkoutDataCleanerTest {
         assertEquals(TrackGeometry.totalDistanceMeters(points), cleaned.totalDistance, 0.5f)
         assertTrue("step counts survive", cleaned.points.all { it.steps != null && it.cadence != null })
         assertTrue("pressure altitudes survive", cleaned.points.all { it.baroM == 100f + it.steps!! / 5 })
+        assertTrue("heart rates survive", cleaned.points.all { it.heartRate == 140 + it.steps!! / 5 })
     }
 
     @Test

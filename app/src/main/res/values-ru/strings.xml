@@ -489,6 +489,26 @@
     <string name="statistics_average_cadence_label">Средний каденс:</string>
     <string name="statistics_cadence_format">%1$d шаг/мин</string>
 
+    <!-- Пульс -->
+    <plurals name="heart_rate_beats_per_minute">
+        <item quantity="one">%d удар в минуту</item>
+        <item quantity="few">%d удара в минуту</item>
+        <item quantity="many">%d ударов в минуту</item>
+        <item quantity="other">%d удара в минуту</item>
+    </plurals>
+    <string name="workout_details_heart_rate">Пульс уд/мин</string>
+    <string name="workout_details_heart_rate_title">Пульс</string>
+    <string name="workout_details_heart_rate_a11y">Средний пульс %1$s</string>
+    <string name="workout_details_heart_rate_pending_a11y">Пульс ещё считается</string>
+    <string name="chart_heart_rate_label">Пульс (уд/мин)</string>
+    <string name="chart_heart_rate_value">Пульс: %1$d уд/мин</string>
+    <string name="chart_heart_rate_summary_format">средний %1$d · макс %2$d</string>
+    <string name="chart_heart_rate_avg_format">средний %1$d уд/мин</string>
+    <string name="chart_heart_rate_limit_label">ср. %1$d</string>
+    <string name="chart_heart_rate_summary_a11y">Средний пульс %1$s, максимальный %2$s</string>
+    <string name="chart_heart_rate_a11y">График пульса, ударов в минуту: в среднем %1$d, от %2$d до %3$d</string>
+    <string name="chart_heart_rate_range_a11y">График пульса, ударов в минуту: от %1$d до %2$d</string>
+
     <!-- Набор и сброс высоты -->
     <string name="workout_elevation_gain_label">Набор высоты</string>
     <string name="workout_elevation_loss_label">Сброс высоты</string>
