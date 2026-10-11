@@ -379,6 +379,38 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- Пульс: свой ряд под первой колонкой, скрыт, когда пульса нет -->
+            <LinearLayout
+                android:id="@+id/layout_detail_heart_rate_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="3"
+                android:baselineAligned="false"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <LinearLayout
+                    android:id="@+id/layout_detail_heart_rate"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:focusable="true">
+
+                    <TextView
+                        android:id="@+id/textView_detail_heart_rate"
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="152" />
+
+                    <TextView
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_details_heart_rate" />
+                </LinearLayout>
+            </LinearLayout>
+
             <!-- Третий ряд: набор и сброс высоты (когда в треке есть высоты) и общее время
                  (когда оно отличается от времени в движении) -->
             <LinearLayout
@@ -722,6 +754,79 @@
 
                 <TextView
                     android:id="@+id/textView_chart_cadence_values"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="8dp"
+                    android:text=""
+                    android:textSize="12sp"
+                    android:textColor="@color/chart_values_text"
+                    android:background="@color/chart_values_background"
+                    android:padding="8dp"
+                    android:gravity="start"
+                    android:visibility="gone" />
+
+            </FrameLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- График пульса: скрыт целиком, когда точек с пульсом меньше двух -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_chart_heart_rate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:baselineAligned="false"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/workout_details_heart_rate_title"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <TextView
+                    android:id="@+id/textView_chart_heart_rate_summary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="средний 152 · макс 178"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="200dp">
+
+                <com.github.mikephil.charting.charts.LineChart
+                    android:id="@+id/chart_heart_rate"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <TextView
+                    android:id="@+id/textView_chart_heart_rate_values"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="top|end"

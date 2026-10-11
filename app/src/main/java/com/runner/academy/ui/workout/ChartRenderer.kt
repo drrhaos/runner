@@ -30,6 +30,14 @@ class CadenceChartViews(
     val average: android.widget.TextView
 )
 
+/** The heart rate card: hidden as a whole, its chart, the tap values and the average and maximum in the title. */
+class HeartRateChartViews(
+    val card: android.view.View,
+    val chart: LineChart,
+    val values: android.widget.TextView,
+    val summary: android.widget.TextView
+)
+
 /**
  * The elevation card: hidden as a whole, its chart, the tap values, gain and loss in the title
  * and the source under it.
@@ -52,6 +60,7 @@ class ChartRenderer(
     private val segmentsChart: BarChart,
     private val textViewPaceSpeedValues: android.widget.TextView,
     private val cadence: CadenceChartViews,
+    private val heartRate: HeartRateChartViews,
     private val context: android.content.Context,
     private val userPreferences: com.runner.academy.util.UserPreferences?,
     private val onPositionSelected: (TrackPoint) -> Unit,
@@ -78,6 +87,17 @@ class ChartRenderer(
     /** Min and max of the drawn cadence line; null: nothing to draw. */
     private var cadenceRange: Pair<Int, Int>? = null
 
+    /** The stored average and maximum heart rate, as the tile shows them; set on every row update. */
+    var heartRateDisplay: HeartRateSummaryDisplay = HeartRateSummaryDisplay.None
+        set(value) {
+            if (field == value) return
+            field = value
+            applyHeartRateDisplay()
+        }
+
+    /** Min and max of the drawn heart rate line; null: under two points to draw. */
+    private var heartRateRange: Pair<Int, Int>? = null
+
     /** The stored gain and loss of the workout, as the tiles show them; set on every row update. */
     var elevationDisplay: ElevationDisplay = ElevationDisplay.None
         set(value) {
@@ -100,12 +120,14 @@ class ChartRenderer(
             val distanceSegments = distanceSegments(trackData)
             updatePaceSpeedHeartChart(trackData, distanceSegments)
             updateCadenceChart(trackData)
+            updateHeartRateChart(trackData)
             updateElevationChart(trackData)
             updateSegmentsChart(trackData, distanceSegments)
         } catch (e: Throwable) {
             android.util.Log.e("ChartRenderer", "Failed to update charts", e)
             paceSpeedHeartChart.visibility = android.view.View.GONE
             cadence.card.visibility = android.view.View.GONE
+            heartRate.card.visibility = android.view.View.GONE
             elevation.card.visibility = android.view.View.GONE
             segmentsChart.visibility = android.view.View.GONE
         }
@@ -326,6 +348,108 @@ class ChartRenderer(
                 chart.contentDescription = context.getString(R.string.workout_details_cadence_pending_a11y)
             }
             CadenceDisplay.None -> Unit
+        }
+        chart.invalidate()
+    }
+
+    /**
+     * One line, broken where there is no heart rate (no contact), over pauses and steps longer
+     * than 10 s; nothing interpolated. The card shows from two drawn points; the average and
+     * maximum in the title and the dashed average follow [heartRateDisplay] — the stored
+     * values, like the tile.
+     */
+    private fun updateHeartRateChart(trackData: TrackData) {
+        val chart = heartRate.chart
+        val points = trackData.points
+        val runs = TrackChartBuilder.buildHeartRateSeries(points, trackData.pauses)
+        val drawn = runs.flatten().map { it.bpm.roundToInt() }
+        heartRateRange = if (drawn.size < 2) null else drawn.min() to drawn.max()
+        if (heartRateRange == null) {
+            applyHeartRateDisplay()
+            return
+        }
+
+        configureInteraction(chart, legend = false)
+
+        val seriesColor = color(R.color.chart_series_heart_rate)
+        val axisTextColor = color(R.color.chart_axis_text)
+        val gridColor = color(R.color.chart_grid)
+        val label = context.getString(R.string.chart_heart_rate_label)
+
+        // One data set per run: MPAndroidChart joins every entry of a set
+        val dataSets = runs.map { run ->
+            LineDataSet(run.map { Entry(it.timeMinutes, it.bpm) }, label).apply {
+                color = seriesColor
+                lineWidth = 2f
+                // A lone point between breaks would draw nothing without its circle
+                setDrawCircles(run.size == 1)
+                setCircleColor(seriesColor)
+                circleRadius = 2f
+                setDrawCircleHole(false)
+                setDrawValues(false)
+            }
+        }
+        chart.data = LineData(dataSets)
+
+        configureXAxis(chart, axisTextColor, gridColor) { value ->
+            context.getString(R.string.chart_time_format, value.toInt())
+        }
+        configureLeftAxis(chart, axisTextColor, gridColor)
+        // Heart rate sits around 100–190: an axis from zero would flatten the line
+        chart.axisLeft.resetAxisMinimum()
+        chart.axisLeft.setDrawLimitLinesBehindData(true)
+        chart.axisRight.isEnabled = false
+        chart.setDrawMarkers(false)
+
+        selectByTime(chart, points, heartRate.values) { e ->
+            context.getString(R.string.chart_time_format, e.x.toInt()) + "\n" +
+                context.getString(R.string.chart_heart_rate_value, e.y.roundToInt())
+        }
+        applyHeartRateDisplay()
+    }
+
+    /** Card visibility, title, dashed average and summary from the drawn line and [heartRateDisplay]. */
+    private fun applyHeartRateDisplay() {
+        val range = heartRateRange
+        if (range == null) {
+            heartRate.card.visibility = android.view.View.GONE
+            return
+        }
+        heartRate.card.visibility = android.view.View.VISIBLE
+        val chart = heartRate.chart
+        val leftAxis = chart.axisLeft
+        leftAxis.removeAllLimitLines()
+        when (val display = heartRateDisplay) {
+            is HeartRateSummaryDisplay.Value -> {
+                leftAxis.addLimitLine(
+                    LimitLine(display.avgBpm.toFloat(), context.getString(R.string.chart_heart_rate_limit_label, display.avgBpm)).apply {
+                        lineColor = color(R.color.chart_series_heart_rate)
+                        lineWidth = 1f
+                        enableDashedLine(10f, 10f, 0f)
+                        textColor = color(R.color.chart_axis_text)
+                        textSize = 10f
+                        labelPosition = LimitLine.LimitLabelPosition.RIGHT_TOP
+                    }
+                )
+                heartRate.summary.visibility = android.view.View.VISIBLE
+                heartRate.summary.text = display.maxBpm?.let { max ->
+                    context.getString(R.string.chart_heart_rate_summary_format, display.avgBpm, max)
+                } ?: context.getString(R.string.chart_heart_rate_avg_format, display.avgBpm)
+                heartRate.summary.contentDescription = HeartRateText.summaryA11y(context, display.avgBpm, display.maxBpm)
+                chart.contentDescription =
+                    context.getString(R.string.chart_heart_rate_a11y, display.avgBpm, range.first, range.second)
+            }
+            HeartRateSummaryDisplay.Pending -> {
+                heartRate.summary.visibility = android.view.View.VISIBLE
+                heartRate.summary.setText(R.string.metric_pending_placeholder)
+                heartRate.summary.contentDescription = context.getString(R.string.workout_details_heart_rate_pending_a11y)
+                chart.contentDescription = context.getString(R.string.chart_heart_rate_range_a11y, range.first, range.second)
+            }
+            // Under a minute of heart rate: the line without an average
+            HeartRateSummaryDisplay.None -> {
+                heartRate.summary.visibility = android.view.View.GONE
+                chart.contentDescription = context.getString(R.string.chart_heart_rate_range_a11y, range.first, range.second)
+            }
         }
         chart.invalidate()
     }

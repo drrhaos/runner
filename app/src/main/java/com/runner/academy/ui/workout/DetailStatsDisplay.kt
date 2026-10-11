@@ -81,6 +81,29 @@ class DetailStatsDisplay(
     }
 
     /**
+     * The heart rate tile (its own row): the stored average, "—" while the background pass has
+     * not reached a track with heart rate, hidden when there is none (no sensor, an older or
+     * manual workout).
+     */
+    fun displayHeartRate(display: HeartRateSummaryDisplay) {
+        binding.apply {
+            layoutDetailHeartRateRow.visibility = if (display == HeartRateSummaryDisplay.None) View.GONE else View.VISIBLE
+            when (display) {
+                is HeartRateSummaryDisplay.Value -> {
+                    textViewDetailHeartRate.text = display.avgBpm.toString()
+                    layoutDetailHeartRate.contentDescription = HeartRateText.averageA11y(context, display.avgBpm)
+                }
+                HeartRateSummaryDisplay.Pending -> {
+                    textViewDetailHeartRate.setText(R.string.metric_pending_placeholder)
+                    layoutDetailHeartRate.contentDescription =
+                        context.getString(R.string.workout_details_heart_rate_pending_a11y)
+                }
+                HeartRateSummaryDisplay.None -> Unit
+            }
+        }
+    }
+
+    /**
      * The gain and loss tiles: the stored values, "—" (without a source note) while the
      * background pass has not reached a track with altitudes, hidden without altitudes. Under
      * them the source note for GPS and file altitudes; a tap calls [onSourceNoteClick].

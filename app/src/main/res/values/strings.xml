@@ -485,6 +485,24 @@
     <string name="statistics_average_cadence_label">Average cadence:</string>
     <string name="statistics_cadence_format">%1$d spm</string>
 
+    <!-- Heart rate -->
+    <plurals name="heart_rate_beats_per_minute">
+        <item quantity="one">%d beat per minute</item>
+        <item quantity="other">%d beats per minute</item>
+    </plurals>
+    <string name="workout_details_heart_rate">Heart rate bpm</string>
+    <string name="workout_details_heart_rate_title">Heart rate</string>
+    <string name="workout_details_heart_rate_a11y">Average heart rate %1$s</string>
+    <string name="workout_details_heart_rate_pending_a11y">Heart rate is still being calculated</string>
+    <string name="chart_heart_rate_label">Heart rate (bpm)</string>
+    <string name="chart_heart_rate_value">Heart rate: %1$d bpm</string>
+    <string name="chart_heart_rate_summary_format">avg %1$d · max %2$d</string>
+    <string name="chart_heart_rate_avg_format">avg %1$d bpm</string>
+    <string name="chart_heart_rate_limit_label">avg %1$d</string>
+    <string name="chart_heart_rate_summary_a11y">Average heart rate %1$s, maximum %2$s</string>
+    <string name="chart_heart_rate_a11y">Heart rate chart, beats per minute: average %1$d, from %2$d to %3$d</string>
+    <string name="chart_heart_rate_range_a11y">Heart rate chart, beats per minute: from %1$d to %2$d</string>
+
     <!-- Elevation gain and loss -->
     <string name="workout_elevation_gain_label">Elevation gain</string>
     <string name="workout_elevation_loss_label">Elevation loss</string>

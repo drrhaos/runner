@@ -29,6 +29,12 @@ data class CadencePoint(
     val cadence: Float
 )
 
+/** Single data point for heart rate chart series. */
+data class HeartRatePoint(
+    val timeMinutes: Float,
+    val bpm: Float
+)
+
 /** Statistics for a 1 km / 1 mile (or plan) segment. */
 data class SegmentStats(
     val paceMinPerUnit: Float,
@@ -171,6 +177,46 @@ object TrackChartBuilder {
                 closeRun()
             }
             run.add(CadencePoint((point.timestamp - startTime) / SpeedPaceUnits.MS_PER_MINUTE, cadence))
+            last = point
+        }
+        closeRun()
+        return runs
+    }
+
+    /**
+     * The heart rate line as runs of points: a point without a value (no contact, no sensor)
+     * or strictly inside a pause is left out, and the line breaks there, over a pause between
+     * two fixes and over a step longer than [TrackHeartRate.MAX_PAIR_MS] — the pairs
+     * [TrackHeartRate.average] counts. Nothing is interpolated.
+     */
+    fun buildHeartRateSeries(points: List<TrackPoint>, pauses: List<PauseInterval>?): List<List<HeartRatePoint>> {
+        if (points.isEmpty()) return emptyList()
+        val startTime = points.first().timestamp
+        val runs = mutableListOf<List<HeartRatePoint>>()
+        var run = mutableListOf<HeartRatePoint>()
+        var last: TrackPoint? = null
+
+        fun closeRun() {
+            if (run.isNotEmpty()) runs.add(run)
+            run = mutableListOf()
+        }
+
+        for (point in points) {
+            val bpm = point.heartRate
+            if (bpm == null || TrackPauses.isInside(pauses, point.timestamp)) {
+                closeRun()
+                last = null
+                continue
+            }
+            val prev = last
+            if (prev != null && (
+                    point.timestamp - prev.timestamp > TrackHeartRate.MAX_PAIR_MS ||
+                        TrackPauses.overlapMs(pauses, prev.timestamp, point.timestamp) > 0L
+                    )
+            ) {
+                closeRun()
+            }
+            run.add(HeartRatePoint((point.timestamp - startTime) / SpeedPaceUnits.MS_PER_MINUTE, bpm.toFloat()))
             last = point
         }
         closeRun()
