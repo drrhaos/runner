@@ -101,6 +101,16 @@ class TrackDataJsonTest {
     }
 
     @Test
+    fun `an implausible stored heart rate reads as none`() {
+        val json = """{"points":[{"latitude":55.0,"longitude":37.0,"timestamp":1,"hr":0},
+            {"latitude":55.0,"longitude":37.0,"timestamp":2,"hr":300},
+            {"latitude":55.0,"longitude":37.0,"timestamp":3,"hr":151}],
+            "total_distance":0,"total_duration":0,"avg_speed":0,"max_speed":0,"start_time":0}"""
+
+        assertEquals(listOf(null, null, 151), TrackDataJson.parse(json)!!.points.map { it.heartRate })
+    }
+
+    @Test
     fun `an old track without heart rate reads as null`() {
         val json = """{"points":[{"latitude":55.0,"longitude":37.0,"timestamp":1}],
             "total_distance":0,"total_duration":0,"avg_speed":0,"max_speed":0,"start_time":0}"""

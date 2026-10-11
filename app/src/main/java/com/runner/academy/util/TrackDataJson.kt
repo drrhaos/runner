@@ -89,7 +89,8 @@ object TrackDataJson {
                 tailMeters = obj.number("tail_m")?.toFloat(),
                 afterPause = if (obj.booleanOr("after_pause", false)) true else null,
                 baroM = obj.number("baro_m")?.toFloat(),
-                heartRate = obj.number("hr")?.toInt()
+                // A backup or an older writer may hold 0 or junk: never into the average or a GPX
+                heartRate = HeartRates.valid(obj.number("hr")?.toInt())
             )
         }
 
