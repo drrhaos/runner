@@ -197,9 +197,12 @@ object RouteTimeAligner {
         }
     }
 
-    /** Новые метки времени; скорость пересчитывается из дистанции/времени, старая GPS-скорость неверна. */
+    /**
+     * Новые метки времени; скорость пересчитывается из дистанции/времени, старая GPS-скорость неверна.
+     * Пульс сбрасывается: он относится к другому моменту (или к другой тренировке).
+     */
     private fun withTimes(points: List<TrackPoint>, times: LongArray): List<TrackPoint> {
-        val timed = points.mapIndexed { k, p -> p.copy(timestamp = times[k], speed = null) }
+        val timed = points.mapIndexed { k, p -> p.copy(timestamp = times[k], speed = null, heartRate = null) }
         return timed.mapIndexed { k, p ->
             val neighbour = if (k > 0) k - 1 else 1
             if (neighbour >= timed.size) return@mapIndexed p
