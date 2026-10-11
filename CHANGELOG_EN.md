@@ -19,6 +19,17 @@ Current release: **`v.0.1.5`**.
 - If a workout cannot be restored in the background, a notification asks to open the app; the track is kept
 - Standing still (a traffic light) no longer counts as a GPS loss
 - GPS diagnostics record why each fix was dropped, and the steps and cadence
+- Auto-pause (in settings, off by default): the clock stops at traffic lights and water stops by steps or GPS, while the track and distance keep recording; not used in interval workouts. Voice: "Auto-pause" / "Resuming"
+- Moving time: the big timer, the list and the pace use it; details and statistics show the elapsed time too
+- Elevation gain and loss: from the barometer when there is one, otherwise from GPS (marked approximate) or from the `<ele>` of an imported GPX. In details, on the chart and in statistics
+- Average cadence: a tile and a chart in details, a line in statistics
+- Personal records for 1 km, 5 km, 10 km, half marathon and marathon: a Records screen with the history of improvements, a congratulation after a run, "N records updated" after an import. A workout can be left out of records; routes with calculated time are left out automatically
+- After the update, older workouts are recalculated in the background: elevation, cadence, previews and records appear within a few minutes
+- The workout list no longer loads tracks — the route preview is stored separately
+- The JSON backup carries moving time and the "don't count in records" flag (format 2; older backups still read)
+- TalkBack: detail tiles read as one phrase, charts have summaries; the button on pause is called "Resume"
+- Chart colours have more contrast in the light theme; tile captions are 12sp
+- Tapping off the line on the elevation and segment charts no longer crashes the app
 
 ## 0.1.5a1 — `v.0.1.5a1`
 
