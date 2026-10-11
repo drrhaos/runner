@@ -165,7 +165,10 @@ class BleGattLink(
         scheduler.post { if (gen == generation) listener?.call() }
     }
 
-    private fun timerToken(id: LinkTimer): Any = this to id
+    /** One object per timer of this link: `Handler.removeCallbacksAndMessages` matches by identity. */
+    private val timerTokens = LinkTimer.entries.associateWith { Any() }
+
+    private fun timerToken(id: LinkTimer): Any = timerTokens.getValue(id)
 
     private inner class Callback(private val gen: Int) : GattCallback {
 
