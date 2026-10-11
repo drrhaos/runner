@@ -161,8 +161,55 @@ class WorkoutDerivationTest {
     }
 
     @Test
+    fun `a track with heart rate gets its average and maximum`() {
+        // 150 for 5 min, 2 min standing on an auto-pause at 100, 150 again for 5 min; one 220 spike
+        val start = 1_000_000L
+        val points = (0..720 step 2).map { sec ->
+            val hr = when {
+                sec == 100 -> 220
+                sec in 301..419 -> 100
+                sec in 600..610 -> 170
+                else -> 150
+            }
+            val moving = if (sec <= 300) sec else maxOf(300, sec - 120)
+            TrackPoint(55.75, 37.60 + moving * 0.00004, start + sec * 1_000L, 5f, 3f, 150.0, heartRate = hr)
+        }
+        val json = TrackDataJson.toJson(
+            TrackData(
+                points, 0f, 0L, 0f, 0f, start, null,
+                pauses = listOf(PauseInterval(start + 300_000L, start + 420_000L, PauseKind.AUTO))
+            )
+        )
+
+        val derived = WorkoutDerivation.derive(DerivationInput(json, WorkoutType.EASY_RUN, 720_000L))
+
+        assertEquals(150f, derived.avgHeartRate!!.toFloat(), 1f)
+        assertEquals(170, derived.maxHeartRate)
+        val track = DisplayTrack.of(json, WorkoutType.EASY_RUN)!!
+        assertEquals(TrackHeartRate.average(track.points, track.pauses), derived.avgHeartRate)
+        assertEquals(TrackHeartRate.max(track.points), derived.maxHeartRate)
+    }
+
+    @Test
+    fun `a track without heart rate has none`() {
+        val derived = WorkoutDerivation.derive(DerivationInput(trackJson, WorkoutType.EASY_RUN, 57_000L))
+
+        assertNull(derived.avgHeartRate)
+        assertNull(derived.maxHeartRate)
+    }
+
+    @Test
+    fun `a row of the previous version with heart rate in the track is pending, without it is not`() {
+        val previous = WorkoutDerivation.CURRENT_METRICS_VERSION - 1
+
+        assertEquals(true, WorkoutDerivation.isPending(previous, trackHasData = true))
+        assertEquals(false, WorkoutDerivation.isPending(previous, trackHasData = false))
+        assertEquals(false, WorkoutDerivation.isPending(WorkoutDerivation.CURRENT_METRICS_VERSION, trackHasData = true))
+    }
+
+    @Test
     fun `no or broken track is marked computed with nothing derived`() {
-        assertEquals(6, WorkoutDerivation.CURRENT_METRICS_VERSION)
+        assertEquals(7, WorkoutDerivation.CURRENT_METRICS_VERSION)
         for (json in listOf(null, "", "{broken", "[1,2]")) {
             assertEquals(json, nothingDerived, WorkoutDerivation.derive(DerivationInput(json, WorkoutType.EASY_RUN, 0L)))
         }
@@ -189,6 +236,7 @@ class WorkoutDerivationTest {
             routePreview = "old",
             excludeFromRecords = true,
             avgHeartRate = 150,
+            maxHeartRate = 180,
             metricsVersion = 0
         )
         val derived = Derived(
@@ -196,6 +244,8 @@ class WorkoutDerivationTest {
             elevationLoss = null,
             elevationSource = ElevationSource.FILE,
             avgCadence = null,
+            avgHeartRate = null,
+            maxHeartRate = 171,
             routePreview = "new",
             efforts = emptyList(),
             metricsVersion = 9
@@ -209,6 +259,8 @@ class WorkoutDerivationTest {
                 elevationLoss = null,
                 elevationSource = ElevationSource.FILE,
                 avgCadence = null,
+                avgHeartRate = null,
+                maxHeartRate = 171,
                 routePreview = "new",
                 metricsVersion = 9
             ),

@@ -42,6 +42,8 @@ class MetricsBackfillTest {
     private val derive: (DerivationInput) -> Derived = { input ->
         Derived(
             avgCadence = input.durationMs / 1000f,
+            avgHeartRate = 100 + (input.durationMs / 60_000L).toInt(),
+            maxHeartRate = 150 + (input.durationMs / 60_000L).toInt(),
             efforts = listOf(Effort(1_000, input.durationMs, 0L, input.durationMs, 0f))
         )
     }
@@ -90,6 +92,8 @@ class MetricsBackfillTest {
             val row = row(id)
             assertEquals(version, row.metricsVersion)
             assertEquals(row.duration / 1000f, row.avgCadence!!, 0f)
+            assertEquals(100 + (row.duration / 60_000L).toInt(), row.avgHeartRate)
+            assertEquals(150 + (row.duration / 60_000L).toInt(), row.maxHeartRate)
             assertEquals(listOf(row.duration), efforts.getForWorkout(id).map { it.elapsedMs })
         }
     }

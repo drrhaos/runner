@@ -106,6 +106,7 @@ abstract class WorkoutDao {
         """
         UPDATE workouts SET elevationGain = :elevationGain, elevationLoss = :elevationLoss,
             elevationSource = :elevationSource, avgCadence = :avgCadence,
+            avgHeartRate = :avgHeartRate, maxHeartRate = :maxHeartRate,
             routePreview = :routePreview, metricsVersion = :version
         WHERE id = :id AND metricsVersion < :version
         """
@@ -117,6 +118,8 @@ abstract class WorkoutDao {
         elevationLoss: Float?,
         elevationSource: ElevationSource?,
         avgCadence: Float?,
+        avgHeartRate: Int?,
+        maxHeartRate: Int?,
         routePreview: String?
     ): Int
 
