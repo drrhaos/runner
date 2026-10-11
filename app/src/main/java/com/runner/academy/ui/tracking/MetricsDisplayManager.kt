@@ -79,7 +79,7 @@ class MetricsDisplayManager(
         views.textViewWorkoutTimeExpanded.text = formattedTime
         views.textViewWorkoutDistanceExpanded.text = formattedDistance
         views.textViewWorkoutPace.text = stripUnit(viewModel.formatPace(session.avgPace))
-        views.textViewWorkoutHeartRate.text = if (session.heartRate > 0) session.heartRate.toString() else "--"
+        views.textViewWorkoutHeartRate.text = session.heartRate?.toString() ?: "--"
         views.textViewAvgSpeed.text = stripUnit(viewModel.formatSpeed(session.avgSpeed))
         views.textViewCurrentPace.text = stripUnit(viewModel.formatPace(session.currentPace))
         views.textViewCaloriesBurned.text = session.calories.toString()

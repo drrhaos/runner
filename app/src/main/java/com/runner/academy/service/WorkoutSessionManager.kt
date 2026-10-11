@@ -57,7 +57,7 @@ class WorkoutSessionManager {
             currentPace = 0f,
             avgSpeed = 0f,
             currentSpeed = 0f,
-            heartRate = 0,
+            heartRate = null,
             calories = 0,
             gpsStatus = initialGpsStatus,
             trackPoints = emptyList(),

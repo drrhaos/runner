@@ -88,7 +88,8 @@ object TrackDataJson {
                 cadence = obj.number("cadence")?.toFloat(),
                 tailMeters = obj.number("tail_m")?.toFloat(),
                 afterPause = if (obj.booleanOr("after_pause", false)) true else null,
-                baroM = obj.number("baro_m")?.toFloat()
+                baroM = obj.number("baro_m")?.toFloat(),
+                heartRate = obj.number("hr")?.toInt()
             )
         }
 
