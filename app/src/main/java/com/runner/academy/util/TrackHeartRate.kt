@@ -56,13 +56,29 @@ object TrackHeartRate {
     }
 
     /**
-     * The highest median of [MAX_WINDOW] neighbouring known values (points without one are
-     * skipped): a single spike (a dry strap reads 220 at the start) never reaches it, two in a
-     * row do. Null with fewer than [MAX_WINDOW] known values.
+     * The highest median of [MAX_WINDOW] neighbouring values inside one [stretches] run: a
+     * single spike (a dry strap reads 220 at the start) never reaches it, two in a row do, and
+     * a window never joins values across a break, a pause or a missing value. Null without an
+     * [average] (one coverage rule for both: a maximum nobody sees is not kept) or without a
+     * run of [MAX_WINDOW] values.
      */
-    fun max(points: List<TrackPoint>): Int? {
-        val known = points.mapNotNull { it.heartRate }
-        if (known.size < MAX_WINDOW) return null
-        return known.windowed(MAX_WINDOW).maxOf { it.sorted()[MAX_WINDOW / 2] }
+    fun max(points: List<TrackPoint>, pauses: List<PauseInterval>?): Int? {
+        if (average(points, pauses) == null) return null
+        return stretches(points, pauses)
+            .flatMap { run -> run.mapNotNull { it.heartRate }.windowed(MAX_WINDOW) }
+            .maxOfOrNull { it.sorted()[MAX_WINDOW / 2] }
     }
+
+    /**
+     * The track split where the heart rate is continuous: points with a value, outside pauses,
+     * at most [MAX_PAIR_MS] apart and not across a pause. The chart draws these runs
+     * ([TrackChartBuilder.buildHeartRateSeries]) and [max] takes its windows inside them.
+     */
+    fun stretches(points: List<TrackPoint>, pauses: List<PauseInterval>?): List<List<TrackPoint>> =
+        TrackChartBuilder.buildRuns(
+            points,
+            pauses,
+            hasValue = { it.heartRate != null },
+            breakBetween = { prev, point -> point.timestamp - prev.timestamp > MAX_PAIR_MS }
+        )
 }

@@ -187,7 +187,7 @@ class WorkoutDerivationTest {
         assertEquals(170, derived.maxHeartRate)
         val track = DisplayTrack.of(json, WorkoutType.EASY_RUN)!!
         assertEquals(TrackHeartRate.average(track.points, track.pauses), derived.avgHeartRate)
-        assertEquals(TrackHeartRate.max(track.points), derived.maxHeartRate)
+        assertEquals(TrackHeartRate.max(track.points, track.pauses), derived.maxHeartRate)
     }
 
     @Test

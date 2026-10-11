@@ -94,7 +94,7 @@ object WorkoutDerivation {
             elevationSource = if (elevation == null) ElevationSource.NONE else source,
             avgCadence = TrackCadence.average(track.points, track.pauses),
             avgHeartRate = TrackHeartRate.average(track.points, track.pauses),
-            maxHeartRate = TrackHeartRate.max(track.points),
+            maxHeartRate = TrackHeartRate.max(track.points, track.pauses),
             routePreview = RoutePreviews.of(track.points)?.let(RoutePreviewCodec::encode),
             // On the shown track, so a record window agrees with the splits and the map
             efforts = BestEfforts.compute(track)

@@ -87,8 +87,8 @@ class TrackHeartRateTest {
     fun `no heart rate gives no average and no maximum`() {
         assertNull(TrackHeartRate.average(fixes(0, 600) { null }, null))
         assertNull(TrackHeartRate.average(emptyList(), null))
-        assertNull(TrackHeartRate.max(fixes(0, 600) { null }))
-        assertNull(TrackHeartRate.max(emptyList()))
+        assertNull(TrackHeartRate.max(fixes(0, 600) { null }, null))
+        assertNull(TrackHeartRate.max(emptyList(), null))
     }
 
     // --- Maximum ---
@@ -98,26 +98,58 @@ class TrackHeartRateTest {
         // 140 up to 160, a dry strap gives 220 once
         val points = fixes(0, 80) { sec -> if (sec == 60) 220 else 140 + minOf(sec, 40) / 2 }
 
-        assertEquals(160, TrackHeartRate.max(points))
+        assertEquals(160, TrackHeartRate.max(points, null))
     }
 
     @Test
     fun `two values in a row are a real maximum`() {
         val points = fixes(0, 80) { sec -> if (sec == 40 || sec == 42) 190 else 150 }
 
-        assertEquals(190, TrackHeartRate.max(points))
+        assertEquals(190, TrackHeartRate.max(points, null))
     }
 
     @Test
-    fun `points without a value between two known ones are skipped, not a break`() {
-        val points = listOf(point(0, 150), point(2, 190), point(4, null), point(6, 190), point(8, 150))
+    fun `a point without a value breaks the stretch, like the line`() {
+        // As one sequence 150, 190, 190 would make a window of 190
+        val points = fixes(0, 60) { 150 } +
+            listOf(point(62, 190), point(64, null), point(66, 190), point(68, 150))
 
-        assertEquals(190, TrackHeartRate.max(points))
+        assertEquals(150, TrackHeartRate.max(points, null))
     }
 
     @Test
-    fun `fewer than three known values give no maximum`() {
-        assertNull(TrackHeartRate.max(listOf(point(0, 150), point(2, 220), point(4, null))))
-        assertEquals(150, TrackHeartRate.max(listOf(point(0, 150), point(2, 220), point(4, 150))))
+    fun `fewer than three known values in a stretch give no maximum`() {
+        // A minute of 150 so the average exists; the windows are only inside it
+        val minute = fixes(0, 60) { 150 }
+        assertEquals(150, TrackHeartRate.max(minute, null))
+        assertEquals(150, TrackHeartRate.max(minute + listOf(point(62, 220), point(64, 150)), null))
+    }
+
+    @Test
+    fun `the window never joins values across a break`() {
+        // 150 for a minute, then a lone 200 at the end of one stretch and another 200 after a
+        // 60 s break: as one sequence they would make a window 200, 200, x
+        val points = fixes(0, 60) { 150 } + point(62, 200) + point(122, 200) + fixes(124, 200) { 150 }
+
+        assertEquals(150, TrackHeartRate.max(points, null))
+    }
+
+    @Test
+    fun `the window never joins values across a pause`() {
+        // Two spikes 4 s apart, a manual pause between them
+        val points = fixes(0, 60) { 150 } + point(62, 200) + point(66, 200) + fixes(68, 140) { 150 }
+        val pauses = listOf(PauseInterval(at(63), at(65), PauseKind.MANUAL))
+
+        assertEquals(150, TrackHeartRate.max(points, pauses))
+        assertEquals(200, TrackHeartRate.max(points, null))
+    }
+
+    @Test
+    fun `no average means no maximum`() {
+        // Under a minute covered: a real 190 plateau is still not shown anywhere
+        val points = fixes(0, 50) { sec -> if (sec in 20..30) 190 else 150 }
+
+        assertNull(TrackHeartRate.average(points, null))
+        assertNull(TrackHeartRate.max(points, null))
     }
 }

@@ -150,51 +150,44 @@ object TrackChartBuilder {
      * and over a GPS gap (a bridge by steps keeps it). Never zero for a missing value.
      */
     fun buildCadenceSeries(points: List<TrackPoint>, pauses: List<PauseInterval>?): List<List<CadencePoint>> {
-        if (points.isEmpty()) return emptyList()
-        val startTime = points.first().timestamp
-        val runs = mutableListOf<List<CadencePoint>>()
-        var run = mutableListOf<CadencePoint>()
-        var last: TrackPoint? = null
-
-        fun closeRun() {
-            if (run.isNotEmpty()) runs.add(run)
-            run = mutableListOf()
-        }
-
-        for (point in points) {
-            val cadence = point.cadence?.takeIf { it.isFinite() }
-            if (cadence == null || TrackPauses.isInside(pauses, point.timestamp)) {
-                closeRun()
-                last = null
-                continue
-            }
-            val prev = last
-            if (prev != null && (
-                    TrackPauses.overlapMs(pauses, prev.timestamp, point.timestamp) > 0L ||
-                        (TrackGeometry.isTrackGapStep(prev, point) && !TrackGeometry.isBridgeStep(point))
-                    )
-            ) {
-                closeRun()
-            }
-            run.add(CadencePoint((point.timestamp - startTime) / SpeedPaceUnits.MS_PER_MINUTE, cadence))
-            last = point
-        }
-        closeRun()
-        return runs
+        val startTime = points.firstOrNull()?.timestamp ?: return emptyList()
+        val runs = buildRuns(
+            points,
+            pauses,
+            hasValue = { it.cadence?.isFinite() == true },
+            breakBetween = { prev, point -> TrackGeometry.isTrackGapStep(prev, point) && !TrackGeometry.isBridgeStep(point) }
+        )
+        return runs.map { run -> run.map { CadencePoint(minutesFrom(startTime, it), it.cadence!!) } }
     }
 
     /**
-     * The heart rate line as runs of points: a point without a value (no contact, no sensor)
-     * or strictly inside a pause is left out, and the line breaks there, over a pause between
-     * two fixes and over a step longer than [TrackHeartRate.MAX_PAIR_MS] — the pairs
-     * [TrackHeartRate.average] counts. Nothing is interpolated.
+     * The heart rate line as runs of points ([TrackHeartRate.stretches]): a point without a
+     * value (no contact, no sensor) or strictly inside a pause is left out, and the line breaks
+     * there, over a pause between two fixes and over a step longer than
+     * [TrackHeartRate.MAX_PAIR_MS] — the pairs [TrackHeartRate.average] counts. Nothing is
+     * interpolated.
      */
     fun buildHeartRateSeries(points: List<TrackPoint>, pauses: List<PauseInterval>?): List<List<HeartRatePoint>> {
-        if (points.isEmpty()) return emptyList()
-        val startTime = points.first().timestamp
-        val runs = mutableListOf<List<HeartRatePoint>>()
-        var run = mutableListOf<HeartRatePoint>()
-        var last: TrackPoint? = null
+        val startTime = points.firstOrNull()?.timestamp ?: return emptyList()
+        return TrackHeartRate.stretches(points, pauses).map { run ->
+            run.map { HeartRatePoint(minutesFrom(startTime, it), it.heartRate!!.toFloat()) }
+        }
+    }
+
+    /**
+     * A per-point value line split into runs: a point without the value ([hasValue]) or
+     * strictly inside a pause is left out and breaks the run; a run also breaks over a pause
+     * between two kept points and wherever [breakBetween] says so. Never a zero for a missing
+     * value, nothing interpolated.
+     */
+    fun buildRuns(
+        points: List<TrackPoint>,
+        pauses: List<PauseInterval>?,
+        hasValue: (TrackPoint) -> Boolean,
+        breakBetween: (prev: TrackPoint, point: TrackPoint) -> Boolean
+    ): List<List<TrackPoint>> {
+        val runs = mutableListOf<List<TrackPoint>>()
+        var run = mutableListOf<TrackPoint>()
 
         fun closeRun() {
             if (run.isNotEmpty()) runs.add(run)
@@ -202,26 +195,25 @@ object TrackChartBuilder {
         }
 
         for (point in points) {
-            val bpm = point.heartRate
-            if (bpm == null || TrackPauses.isInside(pauses, point.timestamp)) {
+            if (!hasValue(point) || TrackPauses.isInside(pauses, point.timestamp)) {
                 closeRun()
-                last = null
                 continue
             }
-            val prev = last
+            val prev = run.lastOrNull()
             if (prev != null && (
-                    point.timestamp - prev.timestamp > TrackHeartRate.MAX_PAIR_MS ||
-                        TrackPauses.overlapMs(pauses, prev.timestamp, point.timestamp) > 0L
+                    TrackPauses.overlapMs(pauses, prev.timestamp, point.timestamp) > 0L || breakBetween(prev, point)
                     )
             ) {
                 closeRun()
             }
-            run.add(HeartRatePoint((point.timestamp - startTime) / SpeedPaceUnits.MS_PER_MINUTE, bpm.toFloat()))
-            last = point
+            run.add(point)
         }
         closeRun()
         return runs
     }
+
+    private fun minutesFrom(startTime: Long, point: TrackPoint): Float =
+        (point.timestamp - startTime) / SpeedPaceUnits.MS_PER_MINUTE
 
     /**
      * Segments of 1 km (metric) or 1 mile (imperial).
