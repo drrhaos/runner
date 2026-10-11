@@ -56,6 +56,20 @@ class PairedSensorStore(context: Context) {
         }
     }
 
+    /**
+     * Rewrites the device of [type] with [change], only while it is still the one at [address]:
+     * a write from the radio (battery, last seen) never brings back a device the user just
+     * replaced or forgot.
+     */
+    fun update(type: SensorType, address: String, change: (PairedSensor) -> PairedSensor) {
+        synchronized(lock) {
+            val current = _changes.value[type]?.takeIf { it.address == address } ?: return
+            val updated = change(current).copy(type = type, address = address)
+            prefs.edit { putString(type.name, toJson(updated)) }
+            _changes.update { it + (type to updated) }
+        }
+    }
+
     fun remove(type: SensorType) {
         synchronized(lock) {
             prefs.edit { remove(type.name) }
