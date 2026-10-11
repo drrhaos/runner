@@ -12,6 +12,7 @@ import com.runner.academy.sensor.BleHeartRateSensor
 import com.runner.academy.sensor.BleScanner
 import com.runner.academy.sensor.HeartRateSensor
 import com.runner.academy.sensor.PairedSensorStore
+import com.runner.academy.sensor.SensorLease
 import com.runner.academy.sensor.SensorScanner
 import com.runner.academy.sensor.UnavailableHeartRateSensor
 import com.runner.academy.sensor.UnavailableSensorScanner
@@ -62,24 +63,28 @@ class AppContainer(context: Context) {
     /** Bluetooth LE and the BLE thread; null on a device without Bluetooth LE. */
     private val androidBle: AndroidBle? by lazy { AndroidBle.createOrNull(appContext) }
 
-    /** The paired heart-rate sensor, shared through leases by screens and the workout service. */
-    val heartRateSensor: HeartRateSensor by lazy {
-        val ble = androidBle ?: return@lazy UnavailableHeartRateSensor
+    private val bleHeartRateSensor: BleHeartRateSensor? by lazy {
+        val ble = androidBle ?: return@lazy null
         BleHeartRateSensor(
             store = pairedSensorStore,
             link = ble.newLink(),
             scheduler = ble.scheduler,
             canConnect = ble::canConnect,
-            bluetoothOn = ble.bluetoothOn,
+            bluetoothOn = { ble.bluetoothOn },
             nowMs = SystemClock::elapsedRealtime,
             wallMs = System::currentTimeMillis,
             scope = applicationScope
         )
     }
 
-    /** Finding and checking a sensor to pair. */
+    /** The paired heart-rate sensor, shared through leases by screens and the workout service. */
+    val heartRateSensor: HeartRateSensor get() = bleHeartRateSensor ?: UnavailableHeartRateSensor
+
+    /** Finding and checking a sensor to pair; a probe of the paired device holds the sensor off it. */
     val sensorScanner: SensorScanner by lazy {
-        androidBle?.let(::BleScanner) ?: UnavailableSensorScanner
+        androidBle?.let { ble ->
+            BleScanner(ble, holdOff = { address -> bleHeartRateSensor?.holdOff(address) ?: SensorLease {} })
+        } ?: UnavailableSensorScanner
     }
 
     val gpsDiagnosticsStore: GpsDiagnosticsStore by lazy {

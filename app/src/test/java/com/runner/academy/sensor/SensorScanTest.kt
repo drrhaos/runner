@@ -33,6 +33,13 @@ class SensorScanTest {
     }
 
     @Test
+    fun `a refused scan start fails with its reason`() {
+        assertEquals(ScanFailure.NO_PERMISSION, scanStartFailure(SecurityException("no BLUETOOTH_SCAN")).reason)
+        // Bluetooth went off between the check and the start
+        assertEquals(ScanFailure.BLUETOOTH_OFF, scanStartFailure(IllegalStateException("BT Adapter is not turned ON")).reason)
+    }
+
+    @Test
     fun `found devices keep their order, the newest signal and a known name`() {
         val strap = FoundSensor("AA", "HR Strap 10", -60)
         val chestStrap = FoundSensor("BB", "Chest Strap", -80)

@@ -11,8 +11,12 @@ class FakeGattLink : GattLink {
 
     override var deviceName: String? = null
 
+    /** Runs right after [start]: the receiver is registered from here on. */
+    var onStart: () -> Unit = {}
+
     override fun start(listener: GattLink.Listener) {
         this.listener = listener
+        onStart()
     }
 
     override fun execute(command: LinkCommand) {

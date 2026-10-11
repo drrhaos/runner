@@ -38,6 +38,8 @@ class BleHeartRateSensorTest {
     private val scheduler = FakeLinkScheduler()
     private val scope = CoroutineScope(Dispatchers.Unconfined)
     private var permitted = true
+    private var permissionChecks = 0
+    private var bluetoothOn = true
     private var wallMs = 1_700_000_000_000L
 
     private val samples = mutableListOf<HeartRateSample>()
@@ -55,13 +57,13 @@ class BleHeartRateSensorTest {
         scope.cancel()
     }
 
-    private fun sensor(bluetoothOn: Boolean = true): BleHeartRateSensor =
+    private fun sensor(): BleHeartRateSensor =
         BleHeartRateSensor(
             store = store,
             link = link,
             scheduler = scheduler,
-            canConnect = { permitted },
-            bluetoothOn = bluetoothOn,
+            canConnect = { permissionChecks++; permitted },
+            bluetoothOn = { bluetoothOn },
             nowMs = { scheduler.nowMs },
             wallMs = { wallMs },
             scope = scope
@@ -246,10 +248,67 @@ class BleHeartRateSensorTest {
     @Test
     fun `starts off when Bluetooth is off`() {
         store.put(strap)
-        val s = sensor(bluetoothOn = false)
+        bluetoothOn = false
+        val s = sensor()
         s.acquire("devices")
         assertFalse(link.commands.any { it is ConnectDirect })
         assertEquals(SensorLink.BLUETOOTH_OFF, s.status.value.link)
+        assertEquals(emptyList<SensorDiagEvent>(), diag)
+    }
+
+    @Test
+    fun `the link and the permission are touched only on the BLE thread`() {
+        store.put(strap)
+        scheduler.hold()
+        val s = sensor()
+        assertNull(link.listener)
+        assertEquals(0, permissionChecks)
+
+        scheduler.release()
+        assertTrue(link.listener != null)
+        assertEquals(1, permissionChecks)
+        s.acquire("devices")
+        assertTrue(link.commands.any { it is ConnectDirect })
+    }
+
+    @Test
+    fun `a switch before the receiver was registered is not lost`() {
+        store.put(strap)
+        // On when the sensor was made, off by the time the receiver listens
+        link.onStart = { bluetoothOn = false }
+        val s = sensor()
+        assertEquals(SensorLink.BLUETOOTH_OFF, s.status.value.link)
+        s.acquire("devices")
+        assertFalse(link.commands.any { it is ConnectDirect })
+    }
+
+    @Test
+    fun `the sensor lets go of a device being probed and takes it back after`() {
+        store.put(strap)
+        val s = sensor()
+        connected(s)
+        val hold = s.holdOff(addr)
+        assertTrue(Close in link.drain())
+        assertEquals(SensorLink.IDLE, s.status.value.link)
+
+        // Leases taken meanwhile wait too
+        s.acquire("workout")
+        assertFalse(link.drain().any { it is ConnectDirect })
+
+        hold.release()
+        hold.release()
+        assertEquals(1, link.drain().count { it is ConnectDirect })
+    }
+
+    @Test
+    fun `probing another device leaves the sensor alone`() {
+        store.put(strap)
+        val s = sensor()
+        connected(s)
+        val hold = s.holdOff("11:22:33:44:55:66")
+        hold.release()
+        assertEquals(emptyList<LinkCommand>(), link.drain())
+        assertEquals(SensorLink.CONNECTED, s.status.value.link)
     }
 
     @Test
@@ -311,7 +370,7 @@ class BleHeartRateSensorTest {
     fun `a silent connection is logged when it is dropped`() {
         store.put(strap)
         var now = 0L
-        val s = BleHeartRateSensor(store, link, scheduler, { true }, true, nowMs = { now }, wallMs = { wallMs }, scope = scope)
+        val s = BleHeartRateSensor(store, link, scheduler, { true }, { true }, nowMs = { now }, wallMs = { wallMs }, scope = scope)
         s.diagnostics.onEach { diag += it }.launchIn(scope)
         connected(s)
         now += ConnectionMachine.SILENCE_MS
@@ -324,7 +383,7 @@ class BleHeartRateSensorTest {
     fun `after the direct attempts the auto connect is logged`() {
         store.put(strap)
         var now = 0L
-        val s = BleHeartRateSensor(store, link, scheduler, { true }, true, nowMs = { now }, wallMs = { wallMs }, scope = scope)
+        val s = BleHeartRateSensor(store, link, scheduler, { true }, { true }, nowMs = { now }, wallMs = { wallMs }, scope = scope)
         s.diagnostics.onEach { diag += it }.launchIn(scope)
         s.acquire("devices")
         repeat(4) {

@@ -16,9 +16,23 @@ class FakeLinkScheduler : LinkScheduler {
     private var seq = 0L
     private var running = false
 
+    /** True: posted tasks wait for [release], as if the BLE thread were busy. */
+    var held = false
+        private set
+
+    fun hold() {
+        held = true
+    }
+
+    /** Runs what was posted while [held]. */
+    fun release() {
+        held = false
+        post {}
+    }
+
     override fun post(task: () -> Unit) {
         queue.addLast(task)
-        if (running) return
+        if (running || held) return
         running = true
         try {
             while (queue.isNotEmpty()) queue.removeFirst()()

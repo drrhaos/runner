@@ -1,5 +1,6 @@
 package com.runner.academy.sensor
 
+import androidx.annotation.VisibleForTesting
 import com.runner.academy.sensor.SensorDiagEvent.Kind
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -22,9 +23,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  *   on every [acquire], so after the grant the screen takes a new lease to connect.
  * - Battery and the last-seen time go to the status and back into [store] (last seen at most
  *   once a minute, and when the connection ends).
+ * - [holdOff] keeps it off the device while the pairing probe talks to it.
  *
- * Everything but [acquire]/[SensorLease.release] runs on the BLE thread ([scheduler]).
+ * The constructor only reads the store; the link, the permission and everything after them run
+ * on the BLE thread ([scheduler]). [acquire], [holdOff] and the releases may be called anywhere.
  *
+ * @param bluetoothOn reads the adapter switch; read again once the link listens for changes.
  * @param nowMs the machine's clock (`SystemClock.elapsedRealtime`).
  * @param wallMs wall-clock time for last seen.
  */
@@ -33,19 +37,23 @@ class BleHeartRateSensor(
     private val link: GattLink,
     private val scheduler: LinkScheduler,
     private val canConnect: () -> Boolean,
-    bluetoothOn: Boolean,
+    private val bluetoothOn: () -> Boolean,
     private val nowMs: () -> Long,
     private val wallMs: () -> Long,
     scope: CoroutineScope
 ) : HeartRateSensor, GattLink.Listener {
 
     private val paired: PairedSensor? = store.get(SensorType.HEART_RATE)
-    private val machine = ConnectionMachine(paired?.address, bluetoothOn)
+    private val machine = ConnectionMachine(paired?.address, bluetoothOn())
 
-    private var permitted = canConnect()
+    /** Checked on the BLE thread when the sensor starts and on every [acquire]. */
+    private var permitted = true
     private var leases = 0
 
-    /** Whether the machine was told [LinkEvent.Acquired]: leased and allowed. */
+    /** [holdOff]s of the current device. */
+    private var holds = 0
+
+    /** Whether the machine was told [LinkEvent.Acquired]: leased, allowed and not held off. */
     private var machineAcquired = false
 
     private var batteryPercent: Int? = paired?.batteryPercent
@@ -64,10 +72,18 @@ class BleHeartRateSensor(
     override val diagnostics: SharedFlow<SensorDiagEvent> = _diagnostics.asSharedFlow()
 
     /** Leases held now (read on the BLE thread or in tests). */
-    val leaseCount: Int get() = leases
+    @VisibleForTesting
+    internal val leaseCount: Int get() = leases
 
     init {
-        link.start(this)
+        scheduler.post {
+            link.start(this)
+            // A switch between the snapshot above and the receiver registration is not broadcast
+            val on = bluetoothOn()
+            if (on != (machine.link != SensorLink.BLUETOOTH_OFF)) feed(if (on) LinkEvent.BtOn else LinkEvent.BtOff)
+            permitted = canConnect()
+            publish()
+        }
         store.changes
             .onEach { sensors -> scheduler.post { onPaired(sensors[SensorType.HEART_RATE]) } }
             .launchIn(scope)
@@ -90,8 +106,36 @@ class BleHeartRateSensor(
         }
     }
 
+    /**
+     * Keeps the sensor disconnected from [address] until released, when it is the sensor's
+     * device: a peripheral often takes one connection only, and two GATT clients to one device
+     * from one phone trip the stack. Another address: nothing happens. Leases taken meanwhile
+     * connect after the release.
+     */
+    fun holdOff(address: String): SensorLease {
+        val released = AtomicBoolean(false)
+        var held = false
+        scheduler.post {
+            if (address == machine.address && !released.get()) {
+                held = true
+                holds++
+                syncLease()
+            }
+        }
+        return SensorLease {
+            if (released.compareAndSet(false, true)) {
+                scheduler.post {
+                    if (held) {
+                        holds--
+                        syncLease()
+                    }
+                }
+            }
+        }
+    }
+
     private fun syncLease() {
-        val wanted = leases > 0 && permitted
+        val wanted = leases > 0 && permitted && holds == 0
         if (wanted != machineAcquired) {
             machineAcquired = wanted
             feed(if (wanted) LinkEvent.Acquired else LinkEvent.Released)

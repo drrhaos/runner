@@ -25,9 +25,12 @@ interface SensorScanner {
     fun scan(): Flow<List<FoundSensor>>
 
     /**
-     * The check before pairing: connect, discover, the Heart Rate Service is there,
-     * notifications turn on, the battery is read; then disconnect. Up to
-     * [SensorProbe.PROBE_TIMEOUT_MS]. Cancelling the call disconnects.
+     * The check before pairing: connect, discover, the Heart Rate Service is there, the battery
+     * is read; then disconnect. Up to [SensorProbe.PROBE_TIMEOUT_MS]; cancelling the call
+     * disconnects. When [address] is the paired sensor, the sensor lets go of it meanwhile.
+     *
+     * Nothing is saved: on [ProbeResult.Ok] the caller pairs the device with
+     * `PairedSensorStore.put`, and the heart-rate sensor follows the new address by itself.
      */
     suspend fun probe(address: String): ProbeResult
 
@@ -105,6 +108,14 @@ object ScanStartLimit {
     /** [starts] with a start at [nowMs], trimmed to the ones that can still matter. */
     fun record(starts: List<Long>, nowMs: Long): List<Long> = (starts + nowMs).takeLast(MAX_STARTS)
 }
+
+/**
+ * What a refused `startScan` means: [SecurityException] is a missing permission, anything else
+ * (`IllegalStateException`) is Bluetooth switched off between the checks and the start.
+ */
+fun scanStartFailure(error: RuntimeException): ScanException = ScanException(
+    if (error is SecurityException) ScanFailure.NO_PERMISSION else ScanFailure.BLUETOOTH_OFF
+)
 
 /**
  * The list with [found] in it: a device already there keeps its place (rows do not jump under

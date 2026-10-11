@@ -12,15 +12,19 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
 
 /**
  * [SensorScanner] over `BluetoothLeScanner`: low-latency scan filtered by the Heart Rate
  * Service UUID (no location from 31+: `BLUETOOTH_SCAN` is `neverForLocation`), and the probe
  * through a [SensorProbe] on the BLE thread with a link of its own.
+ *
+ * @param holdOff keeps the heart-rate sensor off a device while it is probed
+ *   ([BleHeartRateSensor.holdOff]): one GATT client per device.
  */
-class BleScanner(private val ble: AndroidBle) : SensorScanner {
+class BleScanner(
+    private val ble: AndroidBle,
+    private val holdOff: (String) -> SensorLease
+) : SensorScanner {
 
     /** Scan starts of this process, oldest first ([ScanStartLimit]). */
     private var starts = emptyList<Long>()
@@ -59,7 +63,9 @@ class BleScanner(private val ble: AndroidBle) : SensorScanner {
         try {
             scanner.startScan(filters, settings, callback)
         } catch (e: SecurityException) {
-            throw ScanException(ScanFailure.NO_PERMISSION)
+            throw scanStartFailure(e)
+        } catch (e: IllegalStateException) {
+            throw scanStartFailure(e)
         }
         synchronized(lock) { starts = ScanStartLimit.record(starts, SystemClock.elapsedRealtime()) }
         trySend(found)
@@ -83,11 +89,7 @@ class BleScanner(private val ble: AndroidBle) : SensorScanner {
     override suspend fun probe(address: String): ProbeResult {
         if (!ble.canConnect()) return ProbeResult.Failed(ProbeFailure.NO_PERMISSION)
         if (!ble.bluetoothOn) return ProbeResult.Failed(ProbeFailure.BLUETOOTH_OFF)
-        return suspendCancellableCoroutine { cont ->
-            val probe = SensorProbe(ble.newLink(), ble.scheduler, SystemClock::elapsedRealtime, onResult = { cont.resume(it) })
-            ble.scheduler.post { probe.start(address) }
-            cont.invokeOnCancellation { ble.scheduler.post { probe.cancel() } }
-        }
+        return SensorProbe.run(address, ble.newLink(), ble.scheduler, SystemClock::elapsedRealtime, holdOff)
     }
 }
 
