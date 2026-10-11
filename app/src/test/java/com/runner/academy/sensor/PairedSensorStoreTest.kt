@@ -10,6 +10,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import java.util.concurrent.CountDownLatch
+import kotlin.concurrent.thread
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -89,6 +91,26 @@ class PairedSensorStoreTest {
             listOf(null, 80, 75, null),
             seen.map { it[SensorType.HEART_RATE]?.batteryPercent }
         )
+    }
+
+    @Test
+    fun `concurrent writes leave the flow and the file agreeing`() {
+        repeat(20) { round ->
+            val store = PairedSensorStore(context)
+            val start = CountDownLatch(1)
+            val threads = (0 until 8).map { t ->
+                thread {
+                    start.await()
+                    repeat(50) { i ->
+                        if ((t + i) % 5 == 0) store.remove(SensorType.HEART_RATE)
+                        else store.put(strap.copy(batteryPercent = t * 100 + i))
+                    }
+                }
+            }
+            start.countDown()
+            threads.forEach { it.join() }
+            assertEquals("round $round", PairedSensorStore(context).changes.value, store.changes.value)
+        }
     }
 
     @Test

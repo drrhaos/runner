@@ -8,6 +8,7 @@ import com.google.gson.JsonParser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 /**
  * A device the user paired for [type].
@@ -44,14 +45,22 @@ class PairedSensorStore(context: Context) {
 
     fun get(type: SensorType): PairedSensor? = _changes.value[type]
 
+    /** Writes go to the file and the flow under one lock: they land in the same order in both. */
+    private val lock = Any()
+
     fun put(sensor: PairedSensor) {
-        prefs.edit { putString(sensor.type.name, toJson(sensor)) }
-        _changes.value = _changes.value + (sensor.type to sensor)
+        val json = toJson(sensor)
+        synchronized(lock) {
+            prefs.edit { putString(sensor.type.name, json) }
+            _changes.update { it + (sensor.type to sensor) }
+        }
     }
 
     fun remove(type: SensorType) {
-        prefs.edit { remove(type.name) }
-        _changes.value = _changes.value - type
+        synchronized(lock) {
+            prefs.edit { remove(type.name) }
+            _changes.update { it - type }
+        }
     }
 
     private fun load(): Map<SensorType, PairedSensor> =
