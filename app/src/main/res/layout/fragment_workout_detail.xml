@@ -379,7 +379,8 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Пульс: свой ряд под первой колонкой, скрыт, когда пульса нет -->
+            <!-- Пульс: свой ряд под первой колонкой, скрыт, когда пульса нет (ряд держит ширину
+                 колонки через weightSum, поэтому не лишний) -->
             <LinearLayout
                 android:id="@+id/layout_detail_heart_rate_row"
                 android:layout_width="match_parent"
@@ -389,7 +390,8 @@
                 android:baselineAligned="false"
                 android:layout_marginBottom="16dp"
                 android:visibility="gone"
-                tools:visibility="visible">
+                tools:visibility="visible"
+                tools:ignore="UselessParent">
 
                 <LinearLayout
                     android:id="@+id/layout_detail_heart_rate"

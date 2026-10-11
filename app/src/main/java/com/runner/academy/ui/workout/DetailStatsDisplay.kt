@@ -6,6 +6,7 @@ import com.runner.academy.R
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.MovingTimeDisplay
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -90,7 +91,7 @@ class DetailStatsDisplay(
             layoutDetailHeartRateRow.visibility = if (display == HeartRateSummaryDisplay.None) View.GONE else View.VISIBLE
             when (display) {
                 is HeartRateSummaryDisplay.Value -> {
-                    textViewDetailHeartRate.text = display.avgBpm.toString()
+                    textViewDetailHeartRate.text = NumberFormat.getIntegerInstance().format(display.avgBpm)
                     layoutDetailHeartRate.contentDescription = HeartRateText.averageA11y(context, display.avgBpm)
                 }
                 HeartRateSummaryDisplay.Pending -> {
