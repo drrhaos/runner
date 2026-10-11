@@ -1,5 +1,6 @@
 package com.runner.academy.sensor
 
+import android.annotation.SuppressLint
 import android.content.pm.ServiceInfo
 import android.os.Build
 
@@ -13,6 +14,8 @@ object ForegroundTypes {
 
     const val CONNECTED_DEVICE_SDK = Build.VERSION_CODES.UPSIDE_DOWN_CAKE
 
+    /** The constants are inlined from API 29; `ServiceCompat.startForeground` ignores types below. */
+    @SuppressLint("InlinedApi")
     fun of(sdkInt: Int, sensorPaired: Boolean, connectGranted: Boolean): Int {
         var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
         if (sdkInt >= CONNECTED_DEVICE_SDK && sensorPaired && connectGranted) {
