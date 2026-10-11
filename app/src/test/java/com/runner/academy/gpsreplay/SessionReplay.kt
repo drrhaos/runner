@@ -238,7 +238,8 @@ object SessionReplay {
                 resumeAfterGap = session.gpsStatus == GpsStatus.LOST,
                 steps = steps,
                 cadence = cadence,
-                baroM = if (settings.barometerAvailable) fix.baroM else null
+                baroM = if (settings.barometerAvailable) fix.baroM else null,
+                heartRate = fix.heartRate
             )
             manager.setOpenStepMeters(processor.pendingStepMeters)
             val good = when (result) {
