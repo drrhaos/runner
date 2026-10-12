@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.databinding.FragmentSettingsBinding
@@ -28,7 +29,12 @@ class SettingsFragment : Fragment() {
 
     private val viewModel: SettingsViewModel by viewModels {
         val app = requireContext().appContainer()
-        SettingsViewModelFactory(requireContext(), app.userPreferences)
+        SettingsViewModelFactory(
+            requireContext(),
+            app.userPreferences,
+            app.pairedSensorStore.changes,
+            app.heartRateSensor.status
+        )
     }
 
     /** Set while the UI writes switch states, so programmatic changes do not act as taps. */
@@ -128,6 +134,11 @@ class SettingsFragment : Fragment() {
             onStepsForDistanceToggled(isChecked)
         }
 
+        // Устройства (пульсометр)
+        binding.rowDevices.setOnClickListener {
+            findNavController().navigate(R.id.nav_devices)
+        }
+
         // Сброс настроек
         binding.buttonResetSettings.setOnClickListener {
             showResetConfirmationDialog()
@@ -138,6 +149,13 @@ class SettingsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.settingsState.collect { settings ->
                 updateUI(settings)
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.devicesSummary.collect { summary ->
+                val name = summary.sensorName ?: getString(R.string.devices_unnamed)
+                binding.textViewDevicesSummary.text =
+                    if (summary.hasSensor) getString(summary.text, name) else getString(summary.text)
             }
         }
     }
