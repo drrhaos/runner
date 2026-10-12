@@ -763,4 +763,88 @@
         <item quantity="other">%d records updated</item>
     </plurals>
 
+    <!-- Devices (heart rate monitor) -->
+    <string name="devices_title">Devices</string>
+    <string name="devices_section_heart_rate">Heart rate monitor</string>
+    <string name="devices_unnamed">Unnamed</string>
+    <string name="devices_status_connected">connected</string>
+    <string name="devices_bpm">· %1$d bpm</string>
+    <string name="devices_status_no_contact">connected · strap not worn</string>
+    <string name="devices_status_searching">searching…</string>
+    <string name="devices_status_offline">offline</string>
+    <string name="devices_status_never_seen">not seen yet</string>
+    <string name="devices_status_bluetooth_off">Bluetooth is off</string>
+    <string name="devices_status_no_permission">No access to nearby devices</string>
+    <string name="devices_enable_bluetooth">Turn on</string>
+    <string name="devices_allow">Allow</string>
+    <string name="devices_open_settings">Open settings</string>
+    <string name="devices_battery">battery %1$d%%</string>
+    <string name="devices_last_seen">last seen: %1$s</string>
+    <string name="devices_meta_separator" translatable="false">" · "</string>
+    <string name="devices_menu_a11y">Actions for %1$s</string>
+    <string name="devices_menu_replace">Replace device</string>
+    <string name="devices_menu_forget">Forget device</string>
+    <string name="devices_forget_title">Forget %1$s?</string>
+    <string name="devices_forget_message">Heart rate won’t be recorded until you add a sensor again.</string>
+    <string name="devices_forget_confirm">Forget</string>
+    <string name="devices_empty_title">No heart rate monitor</string>
+    <string name="devices_empty_message">Connect a chest strap or a watch broadcasting heart rate to record it in every workout.</string>
+    <string name="devices_add">Add heart rate monitor</string>
+    <string name="devices_ble_unsupported">This phone has no Bluetooth LE, so a heart rate monitor can’t be connected.</string>
+    <string name="devices_paired_snackbar">%1$s added</string>
+    <plurals name="devices_battery_a11y">
+        <item quantity="one">battery %d percent</item>
+        <item quantity="other">battery %d percent</item>
+    </plurals>
+
+    <string name="add_sensor_title">Add heart rate monitor</string>
+    <string name="add_sensor_permission_rationale_31">To find your monitor, allow access to nearby devices. Your location isn’t used.</string>
+    <string name="add_sensor_permission_rationale_30">On Android 11 and below, Bluetooth devices can only be found with precise location access.</string>
+    <string name="add_sensor_permission_denied">Access is denied. Turn it on in the app’s system settings.</string>
+    <string name="add_sensor_location_off">Turn on location: Android 11 and below can’t find Bluetooth devices without it.</string>
+    <string name="add_sensor_open_location">Turn on location</string>
+    <string name="add_sensor_scanning">Looking for monitors…</string>
+    <string name="add_sensor_seconds_left">%1$d s left</string>
+    <plurals name="add_sensor_seconds_left_a11y">
+        <item quantity="one">%d second left</item>
+        <item quantity="other">%d seconds left</item>
+    </plurals>
+    <string name="add_sensor_signal_excellent">excellent signal</string>
+    <string name="add_sensor_signal_good">good signal</string>
+    <string name="add_sensor_signal_weak">weak signal</string>
+    <string name="add_sensor_signal_very_weak">very weak signal</string>
+    <string name="add_sensor_already_paired">already added</string>
+    <string name="add_sensor_scan_again">Search again</string>
+    <string name="add_sensor_retry_in">Retry in %1$d s</string>
+    <string name="add_sensor_not_found_link">Don’t see yours?</string>
+    <string name="add_sensor_empty_title">Nothing found</string>
+    <string name="add_sensor_hint_strap">Put the strap on and wet the pads: it wakes up on skin contact.</string>
+    <string name="add_sensor_hint_single_connection">Many sensors allow one connection at a time: disconnect yours from your watch or other apps.</string>
+    <string name="add_sensor_hint_watch_broadcast">Watch: turn on heart rate broadcast in the watch settings.</string>
+    <string name="add_sensor_hint_no_broadcast">Some watches can’t broadcast heart rate at all.</string>
+    <string name="add_sensor_found_a11y">Devices found: %1$d</string>
+    <string name="add_sensor_replace_title">Replace %1$s?</string>
+    <string name="add_sensor_replace_message">Only one monitor is allowed: %1$s will be forgotten and replaced by %2$s.</string>
+    <string name="add_sensor_replace">Replace</string>
+    <string name="add_sensor_probing">Checking %1$s…</string>
+    <string name="add_sensor_probing_hint">This takes up to 30 seconds. Keep the strap on.</string>
+    <string name="add_sensor_probe_unreachable">%1$s didn’t respond. Put the strap on, move closer and disconnect it from your watch.</string>
+    <string name="add_sensor_probe_not_hr">%1$s doesn’t send heart rate. Choose another device.</string>
+    <string name="add_sensor_error_bluetooth_off">Bluetooth is off</string>
+    <string name="add_sensor_error_failed">Couldn’t start searching (error %1$d). Try again later.</string>
+    <string name="add_sensor_retry">Retry</string>
+    <string name="add_sensor_back_to_list">Back to list</string>
+
+    <string name="settings_devices_title">Sensors</string>
+    <string name="settings_label_devices">Devices</string>
+    <string name="settings_devices_none">No heart rate monitor</string>
+    <string name="settings_devices_summary">Heart rate monitor: %1$s</string>
+    <string name="settings_devices_summary_connected">Heart rate monitor: %1$s · connected</string>
+    <string name="settings_devices_summary_bt_off">Heart rate monitor: %1$s · Bluetooth off</string>
+    <string name="settings_devices_summary_no_access">Heart rate monitor: %1$s · no access</string>
+
+    <string name="tracking_hr_tile_no_sensor_a11y">Heart rate: no sensor added</string>
+    <string name="tracking_hr_tile_disconnected_a11y">Heart rate: sensor not connected</string>
+    <string name="tracking_hr_tile_open_devices">open Devices</string>
+
 </resources>

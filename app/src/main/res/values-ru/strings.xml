@@ -777,4 +777,91 @@
         <item quantity="other">Обновлено %d рекорда</item>
     </plurals>
 
+    <!-- Устройства (пульсометр) -->
+    <string name="devices_title">Устройства</string>
+    <string name="devices_section_heart_rate">Пульсометр</string>
+    <string name="devices_unnamed">Без имени</string>
+    <string name="devices_status_connected">подключено</string>
+    <string name="devices_bpm">· %1$d уд/мин</string>
+    <string name="devices_status_no_contact">подключено · ремень не надет</string>
+    <string name="devices_status_searching">ищем…</string>
+    <string name="devices_status_offline">не в сети</string>
+    <string name="devices_status_never_seen">ещё не был на связи</string>
+    <string name="devices_status_bluetooth_off">Bluetooth выключен</string>
+    <string name="devices_status_no_permission">Нет доступа к устройствам поблизости</string>
+    <string name="devices_enable_bluetooth">Включить</string>
+    <string name="devices_allow">Разрешить</string>
+    <string name="devices_open_settings">Открыть настройки</string>
+    <string name="devices_battery">батарея %1$d %%</string>
+    <string name="devices_last_seen">на связи: %1$s</string>
+    <string name="devices_menu_a11y">Действия с «%1$s»</string>
+    <string name="devices_menu_replace">Заменить устройство</string>
+    <string name="devices_menu_forget">Забыть устройство</string>
+    <string name="devices_forget_title">Забыть «%1$s»?</string>
+    <string name="devices_forget_message">Пульс перестанет записываться, пока не добавите датчик снова.</string>
+    <string name="devices_forget_confirm">Забыть</string>
+    <string name="devices_empty_title">Пульсометр не добавлен</string>
+    <string name="devices_empty_message">Подключите нагрудный ремень или часы с трансляцией пульса — пульс будет в каждой тренировке.</string>
+    <string name="devices_add">Добавить пульсометр</string>
+    <string name="devices_ble_unsupported">На этом телефоне нет Bluetooth LE — пульсометр не подключить.</string>
+    <string name="devices_paired_snackbar">«%1$s» добавлен</string>
+    <plurals name="devices_battery_a11y">
+        <item quantity="one">батарея %d процент</item>
+        <item quantity="few">батарея %d процента</item>
+        <item quantity="many">батарея %d процентов</item>
+        <item quantity="other">батарея %d процента</item>
+    </plurals>
+
+    <string name="add_sensor_title">Добавить пульсометр</string>
+    <string name="add_sensor_permission_rationale_31">Чтобы найти пульсометр, разрешите доступ к устройствам поблизости. Местоположение не определяется.</string>
+    <string name="add_sensor_permission_rationale_30">На Android 11 и ниже Bluetooth-устройства ищутся только с доступом к точному местоположению.</string>
+    <string name="add_sensor_permission_denied">Доступ запрещён. Включите его в системных настройках приложения.</string>
+    <string name="add_sensor_location_off">Включите геолокацию: без неё Android 11 и ниже не находит Bluetooth-устройства.</string>
+    <string name="add_sensor_open_location">Включить геолокацию</string>
+    <string name="add_sensor_scanning">Ищем пульсометры…</string>
+    <string name="add_sensor_seconds_left">ещё %1$d с</string>
+    <plurals name="add_sensor_seconds_left_a11y">
+        <item quantity="one">осталась %d секунда</item>
+        <item quantity="few">осталось %d секунды</item>
+        <item quantity="many">осталось %d секунд</item>
+        <item quantity="other">осталось %d секунды</item>
+    </plurals>
+    <string name="add_sensor_signal_excellent">сигнал отличный</string>
+    <string name="add_sensor_signal_good">сигнал хороший</string>
+    <string name="add_sensor_signal_weak">сигнал слабый</string>
+    <string name="add_sensor_signal_very_weak">сигнал очень слабый</string>
+    <string name="add_sensor_already_paired">уже добавлен</string>
+    <string name="add_sensor_scan_again">Искать снова</string>
+    <string name="add_sensor_retry_in">Повторить через %1$d с</string>
+    <string name="add_sensor_not_found_link">Нет вашего датчика?</string>
+    <string name="add_sensor_empty_title">Ничего не нашли</string>
+    <string name="add_sensor_hint_strap">Наденьте ремень и смочите контакты: датчик просыпается от контакта с кожей.</string>
+    <string name="add_sensor_hint_single_connection">Многие датчики держат одно подключение: отключите свой от часов или другого приложения.</string>
+    <string name="add_sensor_hint_watch_broadcast">Часы: включите трансляцию пульса в настройках часов.</string>
+    <string name="add_sensor_hint_no_broadcast">Некоторые часы пульс не транслируют вовсе.</string>
+    <string name="add_sensor_found_a11y">Найдено устройств: %1$d</string>
+    <string name="add_sensor_replace_title">Заменить «%1$s»?</string>
+    <string name="add_sensor_replace_message">Пульсометр может быть только один: «%1$s» будет забыт, вместо него — «%2$s».</string>
+    <string name="add_sensor_replace">Заменить</string>
+    <string name="add_sensor_probing">Проверяем «%1$s»…</string>
+    <string name="add_sensor_probing_hint">Это до 30 секунд. Ремень должен быть надет.</string>
+    <string name="add_sensor_probe_unreachable">«%1$s» не ответил. Наденьте ремень, поднесите телефон ближе и отключите датчик от часов.</string>
+    <string name="add_sensor_probe_not_hr">«%1$s» не передаёт пульс. Выберите другое устройство.</string>
+    <string name="add_sensor_error_bluetooth_off">Bluetooth выключен</string>
+    <string name="add_sensor_error_failed">Не удалось начать поиск (ошибка %1$d). Повторите позже.</string>
+    <string name="add_sensor_retry">Повторить</string>
+    <string name="add_sensor_back_to_list">К списку</string>
+
+    <string name="settings_devices_title">Датчики</string>
+    <string name="settings_label_devices">Устройства</string>
+    <string name="settings_devices_none">Пульсометр не добавлен</string>
+    <string name="settings_devices_summary">Пульсометр: %1$s</string>
+    <string name="settings_devices_summary_connected">Пульсометр: %1$s · подключено</string>
+    <string name="settings_devices_summary_bt_off">Пульсометр: %1$s · Bluetooth выключен</string>
+    <string name="settings_devices_summary_no_access">Пульсометр: %1$s · нет доступа</string>
+
+    <string name="tracking_hr_tile_no_sensor_a11y">Пульс: датчик не добавлен</string>
+    <string name="tracking_hr_tile_disconnected_a11y">Пульс: датчик не подключён</string>
+    <string name="tracking_hr_tile_open_devices">открыть «Устройства»</string>
+
 </resources>
