@@ -15,10 +15,17 @@ import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutState
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.sensor.FakeHeartRateSensor
+import com.runner.academy.sensor.PairedSensor
+import com.runner.academy.sensor.SensorLink
+import com.runner.academy.sensor.SensorType
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.TrackDataJson
+import android.os.Looper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import org.robolectric.Shadows.shadowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -57,7 +64,37 @@ class WorkoutTrackingViewModelTest {
         )
         database = WorkoutDatabase.getInMemoryDatabase(context)
         workoutDao = database.workoutDao()
-        viewModel = WorkoutTrackingViewModel(WorkoutRepository(database), context as Application)
+        viewModel = WorkoutTrackingViewModel(WorkoutRepository(database), context as Application, pairedSensors, hrSensor.status)
+    }
+
+    private val pairedSensors = MutableStateFlow<Map<SensorType, PairedSensor>>(emptyMap())
+    private val hrSensor = FakeHeartRateSensor()
+
+    @Test
+    fun heart_rate_tile_opens_devices_without_a_sensor() {
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(HeartRateTile.NO_SENSOR, viewModel.heartRateTile.value)
+        assertTrue(viewModel.heartRateTileOpensDevices.value)
+    }
+
+    @Test
+    fun heart_rate_tile_follows_the_paired_sensor_and_its_link() {
+        pairedSensors.value = mapOf(
+            SensorType.HEART_RATE to PairedSensor(SensorType.HEART_RATE, "AA:BB", "HR Strap 10", 1L, null, null)
+        )
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(HeartRateTile.DISCONNECTED, viewModel.heartRateTile.value)
+        assertTrue(viewModel.heartRateTileOpensDevices.value)
+
+        hrSensor.setLink(SensorLink.CONNECTED)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(HeartRateTile.CONNECTED, viewModel.heartRateTile.value)
+        assertFalse(viewModel.heartRateTileOpensDevices.value)
+
+        hrSensor.setLink(SensorLink.SEARCHING)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(viewModel.heartRateTileOpensDevices.value)
     }
 
     @After

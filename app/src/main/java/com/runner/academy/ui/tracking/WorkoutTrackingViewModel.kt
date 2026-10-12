@@ -9,6 +9,10 @@ import android.location.Location
 import android.os.IBinder
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.runner.academy.sensor.PairedSensor
+import com.runner.academy.sensor.SensorStatus
+import com.runner.academy.sensor.SensorType
 import com.runner.academy.util.GpsLocationClient
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutRepository
@@ -21,9 +25,13 @@ import com.runner.academy.util.IntervalSegmentsJson
 import com.runner.academy.util.StrideModel
 import com.runner.academy.util.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -32,8 +40,25 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 class WorkoutTrackingViewModel(
     private val repository: WorkoutRepository,
-    private val application: Application
+    private val application: Application,
+    pairedSensors: StateFlow<Map<SensorType, PairedSensor>>,
+    heartRateStatus: StateFlow<SensorStatus>
 ) : ViewModel() {
+
+    /** The heart-rate tile; also during a workout (its state lives in the service). */
+    val heartRateTile: StateFlow<HeartRateTile> =
+        combine(pairedSensors, heartRateStatus) { sensors, status ->
+            HeartRateTile.of(sensors[SensorType.HEART_RATE], status.link)
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            HeartRateTile.of(pairedSensors.value[SensorType.HEART_RATE], heartRateStatus.value.link)
+        )
+
+    /** No sensor paired or not connected: a tap on the tile opens Devices. */
+    val heartRateTileOpensDevices: StateFlow<Boolean> =
+        heartRateTile.map { it.opensDevices }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, heartRateTile.value.opensDevices)
 
     private val _workoutSession = MutableStateFlow(WorkoutSession())
     val workoutSession: StateFlow<WorkoutSession> = _workoutSession.asStateFlow()
@@ -394,12 +419,14 @@ object TrackingModeSelectionCodec {
 
 class WorkoutTrackingViewModelFactory(
     private val repository: WorkoutRepository,
-    private val application: Application
+    private val application: Application,
+    private val pairedSensors: StateFlow<Map<SensorType, PairedSensor>>,
+    private val heartRateStatus: StateFlow<SensorStatus>
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(WorkoutTrackingViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return WorkoutTrackingViewModel(repository, application) as T
+            return WorkoutTrackingViewModel(repository, application, pairedSensors, heartRateStatus) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
