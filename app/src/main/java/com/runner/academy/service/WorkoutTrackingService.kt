@@ -7,17 +7,23 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
+import androidx.annotation.VisibleForTesting
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import com.runner.academy.data.GpsStatus
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.sensor.ForegroundTypes
+import com.runner.academy.sensor.SensorDiagEvent
+import com.runner.academy.sensor.SensorPermissionPolicy
+import com.runner.academy.sensor.SensorType
+import com.runner.academy.ui.tracking.HeartRateVoiceTimer
 import com.runner.academy.util.GpsConfig
 import com.runner.academy.util.GpsDiagnostics.FixResult
 import com.runner.academy.util.GpsDiagnostics.Event as DiagEvent
@@ -40,8 +46,12 @@ import androidx.core.location.LocationRequestCompat
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -61,6 +71,8 @@ import kotlinx.coroutines.withContext
  *  - [StepTracker] for steps (distance over false-signal stretches) and [StrideLearner] to
  *    teach the stride model on good GPS stretches
  *  - [BarometerTracker] for the pressure altitude of each fix (elevation gain)
+ *  - [HeartRateTracker] for the heart rate of each fix and the tile, under the sensor lease
+ *    `"workout"` while a sensor is paired (kept over pauses)
  *
  * The service itself handles:
  *  - Android Service lifecycle (onCreate, onDestroy, onBind)
@@ -103,6 +115,9 @@ class WorkoutTrackingService : Service() {
         private const val WAKE_LOCK_TAG = "Runner:WorkoutTracking"
         /** Fixes this accurate (or better) may teach the stride model. */
         private const val STRIDE_LEARN_MAX_ACCURACY_M = 20f
+        private const val RSSI_EVERY_MS = 30_000L
+        /** Diagnostics event: the system refused the connected-device service type. */
+        const val FGS_NO_CONNECTED_DEVICE = "fgs_no_connected_device"
     }
 
     // Extracted component instances
@@ -121,6 +136,41 @@ class WorkoutTrackingService : Service() {
     private var strideSamplesAtStart = 0
     /** Pressure altitude for each fix's `baro_m`; listens from the start to the stop of a run. */
     private var barometerTracker: BarometerTracker? = null
+
+    /**
+     * The heart-rate sensor of the app; tests set it before `onCreate`. The service knows no
+     * Bluetooth: it holds a lease and reads samples.
+     */
+    @VisibleForTesting
+    internal var heartRateSource: HeartRateSource? = null
+    private lateinit var heartRate: HeartRateSource
+
+    /** Where samples are collected; tests use an unconfined one to see them at once. */
+    @VisibleForTesting
+    internal var heartRateDispatcher: CoroutineDispatcher = Dispatchers.Default
+
+    /** How often the sensor's signal strength goes to the diagnostics log. */
+    @VisibleForTesting
+    internal var rssiEveryMs: Long = RSSI_EVERY_MS
+
+    /** `startForeground` with explicit types; tests replace it to play a refusal. */
+    @VisibleForTesting
+    internal var foregroundStarter: (Notification, Int) -> Unit = { notification, types ->
+        ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, types)
+    }
+
+    /** The heart rate of each fix's `hr` and the tile; runs while a paired sensor is in the workout. */
+    private var heartRateTracker: HeartRateTracker? = null
+    /** The 1 s tile tick, the sensor's log events and the RSSI reads; lives with the tracker. */
+    private var heartRateJob: Job? = null
+    private var heartRateVoice: HeartRateVoiceTimer? = null
+    /**
+     * The system refused the connected-device service type (34+): this workout goes without the
+     * sensor, the user is not told (the tile shows "lost", the log has the reason).
+     */
+    private var heartRateRefused = false
+    /** The service is in the foreground for a workout (a new pairing restarts it with new types). */
+    private var foregroundStarted = false
     private val unreliableLatch = UnreliableSignalLatch()
     /** Fed every processed fix; ticked on the workout timer while auto-pause applies. */
     private val autoPause = AutoPauseController()
@@ -231,6 +281,15 @@ class WorkoutTrackingService : Service() {
             this,
             (applicationContext as com.runner.academy.RunnerApplication).container.gpsDiagnosticsStore
         )
+        heartRate = heartRateSource ?: run {
+            val container = (applicationContext as com.runner.academy.RunnerApplication).container
+            HeartRateSource(container.heartRateSensor, container.pairedSensors) {
+                SensorPermissionPolicy.connectPermissions(Build.VERSION.SDK_INT).all {
+                    ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+                }
+            }
+        }
+        watchPairing()
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
         registerScreenStateReceiver()
@@ -294,6 +353,7 @@ class WorkoutTrackingService : Service() {
         // run taught the stride model so far is kept, a restore reloads it
         stopSteps(saveLearned = true)
         barometerTracker?.stop()
+        stopHeartRate()
         diagnostics.release()
         serviceJob.cancel()
     }
@@ -302,7 +362,8 @@ class WorkoutTrackingService : Service() {
     // Location callback & processing
     // ------------------------------------------------------------------
 
-    private fun updateLocation(location: Location) {
+    @VisibleForTesting
+    internal fun updateLocation(location: Location) {
         if (Looper.myLooper() != Looper.getMainLooper()) {
             mainHandler.post { updateLocation(location) }
             return
@@ -323,6 +384,10 @@ class WorkoutTrackingService : Service() {
             val cadence = tracker?.cadence
             // The pressure altitude of the fix's own moment too
             val baroM = barometerTracker?.altitudeAt(location.elapsedRealtimeNanos)
+            // And the heart rate (a fix without its own monotonic time is taken as now)
+            val hr = heartRateTracker?.bpmAt(
+                location.elapsedRealtimeNanos.takeIf { it > 0L } ?: SystemClock.elapsedRealtimeNanos()
+            )
 
             val result = gpsProcessor.processLocation(
                 location,
@@ -332,7 +397,8 @@ class WorkoutTrackingService : Service() {
                 resumeAfterGap = resumeAfterGap,
                 steps = steps,
                 cadence = cadence,
-                baroM = baroM
+                baroM = baroM,
+                heartRate = hr
             )
             lastAnyFixTime = System.currentTimeMillis()
             lastProcessedFixTimeMs = maxOf(lastProcessedFixTimeMs, location.time)
@@ -344,7 +410,8 @@ class WorkoutTrackingService : Service() {
                 result.toFixResult(),
                 reason = (result as? GpsLocationProcessor.ProcessResult.Rejected)?.reason?.name,
                 steps = steps,
-                cadence = cadence
+                cadence = cadence,
+                heartRate = hr
             )
 
             val good = when (result) {
@@ -492,6 +559,11 @@ class WorkoutTrackingService : Service() {
         screenInteractive = isDisplayInteractive()
         notificationManager.setScreenInteractive(screenInteractive)
 
+        // Before the session is published: the screen hands its pre-start lease over when it
+        // sees the workout running, and the connection must not drop in between
+        heartRateRefused = false
+        syncHeartRate()
+
         val initialGpsStatus = if (hasPermission) GpsStatus.SEARCHING else GpsStatus.DENIED
         sessionManager.startNewSession(initialGpsStatus = initialGpsStatus, strideModelState = runStride?.state)
         maybeSaveCheckpoint(sessionManager.getSession(), force = true)
@@ -506,6 +578,7 @@ class WorkoutTrackingService : Service() {
         }
         startWorkoutTimer()
         startForegroundTyped(notificationManager.buildNotification(sessionManager.getSession()))
+        foregroundStarted = true
         notificationManager.cancelInterruptedNotification()
         notificationManager.updateNotification(sessionManager.getSession(), force = true)
         prepareVoiceForWorkout()
@@ -557,6 +630,8 @@ class WorkoutTrackingService : Service() {
         sessionManager.stop()
         stopSteps(saveLearned = true)
         barometerTracker?.stop()
+        stopHeartRate()
+        foregroundStarted = false
         activeWorkoutStore.clear()
         modeSelectionKey = null
         intervalSegmentsJson = null
@@ -583,10 +658,12 @@ class WorkoutTrackingService : Service() {
             if (!isCurrentlyTracking && !existing.isPaused) {
                 // Session flags say running but timers not started — re-arm
                 resumeStepsAfterAbandon(existing)
+                syncHeartRate()
                 if (!resumeTrackingAfterRestore(existing)) return false
                 ensureBarometer()
                 return true
             } else if (existing.isPaused) {
+                syncHeartRate()
                 return ensureForegroundNotification()
             }
             return true
@@ -627,6 +704,10 @@ class WorkoutTrackingService : Service() {
         // Elapsed recomputed after the gap so the clock doesn't freeze at kill time
         val restoredSession = checkpoint.toRestoredSession(System.currentTimeMillis())
             .copy(strideModelState = runStride?.state)
+        // Afresh, before the session is published (see startWorkout); the machine starts with a
+        // direct connection and the first one is silent. A refused restore stops it again.
+        heartRateRefused = false
+        syncHeartRate()
         sessionManager.restoreSession(restoredSession, checkpoint.lastUpdateTime)
         sessionManager.setOpenStepMeters(gpsProcessor.pendingStepMeters)
         // An open auto-pause stays open: the detector waits for fresh steps or speed, and the
@@ -686,18 +767,133 @@ class WorkoutTrackingService : Service() {
             abandonRestore(refusal)
             return false
         }
+        foregroundStarted = true
         notificationManager.cancelInterruptedNotification()
         return true
     }
 
     /**
-     * With explicit types: the plain `startForeground` takes every type in the manifest, and
-     * `connectedDevice` there would throw on 34+ without `BLUETOOTH_CONNECT`. Location only
-     * until the heart-rate sensor joins the workout.
+     * With explicit types ([ForegroundTypes]): the plain `startForeground` takes every type in
+     * the manifest, and `connectedDevice` there would throw on 34+ without `BLUETOOTH_CONNECT`.
+     * Location always; connected device with a paired sensor in the workout and the permission.
+     * A [SecurityException] for connected device is retried as location only, and this workout
+     * goes on without the sensor: the user is not told, the log gets `fgs_no_connected_device`.
+     * A refusal of the location-only start is the caller's ([tryStartForeground]).
      */
     private fun startForegroundTyped(notification: Notification) {
-        val types = ForegroundTypes.of(Build.VERSION.SDK_INT, sensorPaired = false, connectGranted = false)
-        ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, types)
+        val locationOnly = ForegroundTypes.of(Build.VERSION.SDK_INT, sensorPaired = false, connectGranted = false)
+        val types = ForegroundTypes.of(
+            Build.VERSION.SDK_INT,
+            sensorPaired = heartRate.isPaired && !heartRateRefused,
+            connectGranted = heartRate.connectGranted()
+        )
+        if (types != locationOnly) {
+            try {
+                foregroundStarter(notification, types)
+                return
+            } catch (e: SecurityException) {
+                android.util.Log.w("WorkoutTrackingService", "Connected-device service type refused, no heart rate", e)
+                heartRateRefused = true
+                diagnostics.recordSensor(FGS_NO_CONNECTED_DEVICE)
+                stopHeartRate()
+            }
+        }
+        foregroundStarter(notification, locationOnly)
+    }
+
+    // ------------------------------------------------------------------
+    // Heart rate
+    // ------------------------------------------------------------------
+
+    /** The tracker runs while a workout has a paired sensor the system did not refuse. */
+    private fun syncHeartRate() {
+        if (heartRate.isPaired && !heartRateRefused) startHeartRate() else stopHeartRate()
+    }
+
+    private fun startHeartRate() {
+        if (heartRateTracker?.isRunning == true) return
+        val tracker = heartRateTracker
+            ?: HeartRateTracker(heartRate.sensor, scope = CoroutineScope(serviceJob + heartRateDispatcher))
+                .also { heartRateTracker = it }
+        tracker.start()
+        heartRateVoice = HeartRateVoiceTimer(SystemClock.elapsedRealtime())
+        val sensor = heartRate.sensor
+        heartRateJob = serviceScope.launch(heartRateDispatcher) {
+            launch {
+                sensor.diagnostics.collect { event ->
+                    when (event.kind) {
+                        SensorDiagEvent.Kind.DISCONNECTED, SensorDiagEvent.Kind.GATT_ERROR ->
+                            diagnostics.recordSensor(event.kind.wireName, status = event.value)
+                        else -> diagnostics.recordSensor(event.kind.wireName, value = event.value)
+                    }
+                }
+            }
+            launch {
+                // Only for the log: no radio work without the diagnostics recording
+                while (isActive) {
+                    delay(rssiEveryMs)
+                    if (diagnostics.recording) sensor.readRssi()
+                }
+            }
+            while (isActive) {
+                withContext(Dispatchers.Main) { tickHeartRate() }
+                delay(WORKOUT_TIMER_INTERVAL_MS)
+            }
+        }
+    }
+
+    /** Gives the lease back; the tile shows "no sensor". */
+    private fun stopHeartRate() {
+        heartRateJob?.cancel()
+        heartRateJob = null
+        heartRateTracker?.stop()
+        heartRateVoice = null
+        if (sessionManager.setHeartRate(null)) sessionUpdateCallback?.invoke(sessionManager.getSession())
+    }
+
+    /**
+     * Once a second for the whole workout, pauses included (the timer stops on a pause, the
+     * tile shows the recovery heart rate): the tile, then the voice. A manual pause says
+     * nothing and restarts the 30 s count ([HeartRateVoiceTimer]).
+     */
+    private fun tickHeartRate() {
+        val tracker = heartRateTracker?.takeIf { it.isRunning } ?: return
+        val display = tracker.display()
+        val session = sessionManager.getSession()
+        if (!(session.isTracking || session.isPaused)) return
+        if (sessionManager.setHeartRate(display)) sessionUpdateCallback?.invoke(sessionManager.getSession())
+        val announcement = heartRateVoice?.onTick(display.isFresh, SystemClock.elapsedRealtime(), session.isPaused)
+            ?: return
+        if (userPreferences.voiceFeedback) {
+            if (voiceFeedback == null) prepareVoiceForWorkout()
+            voiceFeedback?.notifyHeartRate(announcement)
+        }
+    }
+
+    /**
+     * A sensor paired, replaced or forgotten mid-workout: the foreground service gets the new
+     * types (connected device needs one on 34+) and the tracker starts or stops. A new device
+     * is picked up silently: the sensor follows the address itself.
+     */
+    private fun watchPairing() {
+        serviceScope.launch {
+            heartRate.paired
+                .map { it[SensorType.HEART_RATE]?.address }
+                .distinctUntilChanged()
+                .drop(1)
+                .collect { withContext(Dispatchers.Main) { onPairingChanged() } }
+        }
+    }
+
+    private fun onPairingChanged() {
+        val session = sessionManager.getSession()
+        if (!foregroundStarted || !(session.isTracking || session.isPaused)) return
+        val notification = notificationManager.buildNotification(session)
+        // Paired from the Devices screen, so the app is in front; a refusal keeps the old types
+        tryStartForeground { startForegroundTyped(notification) }?.let {
+            android.util.Log.w("WorkoutTrackingService", "Foreground restart for a new pairing refused", it)
+        }
+        syncHeartRate()
     }
 
     /**
@@ -716,6 +912,8 @@ class WorkoutTrackingService : Service() {
         // The checkpoint keeps the steps; the next restore continues from them
         stopSteps(saveLearned = false)
         barometerTracker?.stop()
+        stopHeartRate()
+        foregroundStarted = false
         diagnostics.stop(DiagEvent.RESTORE_FAILED)
         notificationManager.showInterruptedNotification()
     }
