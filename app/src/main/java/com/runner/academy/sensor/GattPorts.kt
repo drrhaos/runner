@@ -52,6 +52,9 @@ interface GattHandle {
 
     fun read(characteristic: GattCharacteristic): Boolean
 
+    /** Reads the signal strength of the connection (`readRemoteRssi`). */
+    fun readRssi(): Boolean
+
     /** Disconnects and frees the GATT client (`close()`, not just `disconnect()`). */
     fun close()
 }
@@ -65,6 +68,9 @@ interface GattCallback {
     fun onDescriptorWrite(characteristic: GattCharacteristic, status: Int)
     fun onCharacteristicRead(characteristic: GattCharacteristic, value: ByteArray, status: Int)
     fun onCharacteristicChanged(characteristic: GattCharacteristic, value: ByteArray)
+
+    /** A [GattHandle.readRssi] finished: [rssi] in dBm. */
+    fun onReadRemoteRssi(rssi: Int, status: Int)
 }
 
 /**

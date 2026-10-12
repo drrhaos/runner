@@ -197,6 +197,20 @@ class BleHeartRateSensorTest {
     }
 
     @Test
+    fun `rssi is read only while connected and goes to the log`() {
+        store.put(strap)
+        val s = sensor()
+        s.readRssi()
+        assertEquals(0, link.rssiReads)
+
+        connected(s)
+        s.readRssi()
+        assertEquals(1, link.rssiReads)
+        link.listener!!.onRssi(-70)
+        assertEquals(listOf(SensorDiagEvent(Kind.RSSI, -70)), diag)
+    }
+
+    @Test
     fun `battery goes to the status, the store and the log`() {
         store.put(strap)
         val s = sensor()

@@ -19,6 +19,12 @@ interface GattLink {
 
     fun execute(command: LinkCommand)
 
+    /**
+     * Reads the signal strength of the open connection for the diagnostics log; the result
+     * comes as [Listener.onRssi]. Nothing happens without a connection or when the read fails.
+     */
+    fun readRssi()
+
     /** Closes the connection, drops the timers and stops watching the switch. */
     fun stop()
 
@@ -37,6 +43,9 @@ interface GattLink {
 
         /** A GATT operation failed with [status]; null: it did not start or timed out. */
         fun onGattError(status: Int?)
+
+        /** The signal strength read by [readRssi], dBm. */
+        fun onRssi(dbm: Int) {}
     }
 }
 
@@ -110,6 +119,10 @@ class BleGattLink(
         }
     }
 
+    override fun readRssi() {
+        if (gatt != null) queue.add(GattOp.ReadRssi)
+    }
+
     private fun connect(address: String, autoConnect: Boolean) {
         close()
         val gen = generation
@@ -139,12 +152,15 @@ class BleGattLink(
             GattOp.Discover -> g.discoverServices()
             is GattOp.EnableNotify -> g.enableNotifications(op.characteristic)
             is GattOp.Read -> g.read(op.characteristic)
+            GattOp.ReadRssi -> g.readRssi()
         }
     }
 
     private fun onOpFailed(op: GattOp, status: Int?) {
+        // Only for the log: a failure says nothing about the heart rate
+        if (op == GattOp.ReadRssi) return
         val battery = when (op) {
-            GattOp.Discover -> false
+            GattOp.Discover, GattOp.ReadRssi -> false
             is GattOp.EnableNotify -> op.characteristic == BATTERY_LEVEL
             is GattOp.Read -> true
         }
@@ -216,6 +232,11 @@ class BleGattLink(
                 }
                 BATTERY_LEVEL -> batteryPercent(value)?.let { deliver(gen) { onBattery(it) } }
             }
+        }
+
+        override fun onReadRemoteRssi(rssi: Int, status: Int) {
+            if (!current || !queue.finish(GattOp.ReadRssi, status)) return
+            deliver(gen) { onRssi(rssi) }
         }
     }
 

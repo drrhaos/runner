@@ -15,6 +15,12 @@ interface HeartRateSensor {
 
     /** Keep the sensor connected for [owner] (a name for logs, e.g. `"workout"`). */
     fun acquire(owner: String): SensorLease
+
+    /**
+     * Reads the signal strength of the connection once; it comes as a [SensorDiagEvent.Kind.RSSI]
+     * on [diagnostics]. Nothing happens while not connected. For the diagnostics log only.
+     */
+    fun readRssi() {}
 }
 
 /** A hold on the sensor connection. Releasing it again has no effect. */

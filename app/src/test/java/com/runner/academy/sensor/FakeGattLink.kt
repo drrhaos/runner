@@ -23,6 +23,14 @@ class FakeGattLink : GattLink {
         commands += command
     }
 
+    /** [readRssi] calls. */
+    var rssiReads = 0
+        private set
+
+    override fun readRssi() {
+        rssiReads++
+    }
+
     override fun stop() {
         stopped = true
         listener = null

@@ -40,7 +40,13 @@ class BleGattLinkTest {
         override fun onGattError(status: Int?) {
             errors += status
         }
+
+        override fun onRssi(dbm: Int) {
+            rssis += dbm
+        }
     }
+
+    private val rssis = mutableListOf<Int>()
 
     private val callback: GattCallback get() = connector.last.callback
     private val handle: FakeGattHandle get() = connector.last.handle!!
@@ -247,6 +253,36 @@ class BleGattLinkTest {
         assertEquals(listOf<Int?>(null), batteries)
         assertEquals(listOf<Int?>(137), errors)
         assertEquals(emptyList<LinkEvent>(), events)
+    }
+
+    @Test
+    fun `rssi is read through the queue and reported`() {
+        setUpConnection()
+        link.execute(LinkCommand.ReadBattery)
+        link.readRssi()
+        // Waits for the battery read
+        assertEquals("read:2a19", handle.calls.last())
+        callback.onCharacteristicRead(BATTERY_LEVEL, byteArrayOf(80), GATT_SUCCESS)
+        assertEquals("rssi", handle.calls.last())
+        callback.onReadRemoteRssi(-67, GATT_SUCCESS)
+        assertEquals(listOf(-67), rssis)
+    }
+
+    @Test
+    fun `a failed rssi read is silent`() {
+        setUpConnection()
+        link.readRssi()
+        callback.onReadRemoteRssi(0, 133)
+        assertEquals(emptyList<Int>(), rssis)
+        assertEquals(emptyList<Int?>(), errors)
+        assertEquals(emptyList<LinkEvent>(), events)
+    }
+
+    @Test
+    fun `rssi without a connection is not asked`() {
+        link.readRssi()
+        assertEquals(emptyList<Int>(), rssis)
+        assertTrue(connector.attempts.isEmpty())
     }
 
     @Test

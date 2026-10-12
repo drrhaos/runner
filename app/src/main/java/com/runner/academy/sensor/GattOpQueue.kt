@@ -9,6 +9,9 @@ sealed interface GattOp {
     /** Notifications on: the CCCD write ends with `onDescriptorWrite`. */
     data class EnableNotify(val characteristic: GattCharacteristic) : GattOp
     data class Read(val characteristic: GattCharacteristic) : GattOp
+
+    /** `readRemoteRssi`, for the diagnostics log. */
+    data object ReadRssi : GattOp
 }
 
 /**
