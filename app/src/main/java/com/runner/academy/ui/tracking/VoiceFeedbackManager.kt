@@ -80,6 +80,14 @@ class VoiceFeedbackManager(
         }
     }
 
+    /** See [HeartRateVoiceTimer]: the service decides when, this says it. */
+    fun notifyHeartRate(announcement: HrAnnouncement) {
+        when (announcement) {
+            HrAnnouncement.LOST -> speak(context.getString(R.string.voice_hr_sensor_lost), "hr_lost")
+            HrAnnouncement.CONNECTED -> speak(context.getString(R.string.voice_hr_sensor_connected), "hr_connected")
+        }
+    }
+
     fun notifyAutoPause(event: AutoPauseEvent, autoPauseDurationMs: Long) {
         when (AutoPauseVoiceTransition.announcement(event, autoPauseDurationMs)) {
             AutoPauseAnnouncement.PAUSED -> speak(context.getString(R.string.voice_auto_pause), "auto_pause")

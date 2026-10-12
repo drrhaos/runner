@@ -17,6 +17,7 @@ import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutState
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.sensor.FakeHeartRateSensor
+import com.runner.academy.sensor.HeartRateDisplay
 import com.runner.academy.sensor.PairedSensor
 import com.runner.academy.sensor.SensorLink
 import com.runner.academy.sensor.SensorType
@@ -66,7 +67,90 @@ class WorkoutTrackingViewModelTest {
         )
         database = WorkoutDatabase.getInMemoryDatabase(context)
         workoutDao = database.workoutDao()
-        viewModel = WorkoutTrackingViewModel(WorkoutRepository(database), context as Application, pairedSensors, hrSensor.status)
+        viewModel = WorkoutTrackingViewModel(
+            WorkoutRepository(database), context as Application, pairedSensors, hrSensor, clockNanos = { nowNanos }
+        )
+    }
+
+    private var nowNanos = 1_000_000_000_000L
+    private val strap = PairedSensor(SensorType.HEART_RATE, "AA:BB", "HR Strap 10", 1L, null, null)
+
+    @Test
+    fun `before the start a paired sensor is held by the screen and shown`() {
+        pairedSensors.value = mapOf(SensorType.HEART_RATE to strap)
+        hrSensor.setLink(SensorLink.CONNECTING)
+        viewModel.holdHeartRateBeforeStart()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(listOf(WorkoutTrackingViewModel.PRESTART_LEASE), hrSensor.owners)
+        assertEquals(HeartRateDisplay.LinkIcon.SEARCHING, viewModel.heartRateDisplay.value!!.link)
+        assertNull(viewModel.heartRateDisplay.value!!.bpm)
+
+        hrSensor.setLink(SensorLink.CONNECTED)
+        hrSensor.emit(141, atNanos = nowNanos)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(141, viewModel.heartRateDisplay.value!!.bpm)
+        assertEquals(HeartRateDisplay.LinkIcon.CONNECTED, viewModel.heartRateDisplay.value!!.link)
+
+        // A second hold (onStart again) keeps one lease
+        viewModel.holdHeartRateBeforeStart()
+        assertEquals(1, hrSensor.leaseCount)
+
+        viewModel.releaseHeartRateBeforeStart()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(0, hrSensor.leaseCount)
+    }
+
+    @Test
+    fun `the pre-start value goes grey on the one second tick`() {
+        pairedSensors.value = mapOf(SensorType.HEART_RATE to strap)
+        hrSensor.setLink(SensorLink.CONNECTED)
+        viewModel.holdHeartRateBeforeStart()
+        hrSensor.emit(141, atNanos = nowNanos)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        nowNanos += 8_000_000_000L
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1))
+        assertEquals(HeartRateDisplay.Freshness.STALE, viewModel.heartRateDisplay.value!!.freshness)
+        viewModel.releaseHeartRateBeforeStart()
+    }
+
+    @Test
+    fun `without a paired sensor nothing is held and the tile has no sensor`() {
+        viewModel.holdHeartRateBeforeStart()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(0, hrSensor.leaseCount)
+        assertNull(viewModel.heartRateDisplay.value)
+    }
+
+    @Test
+    fun `the screen lets its lease go only once the service runs the workout`() {
+        pairedSensors.value = mapOf(SensorType.HEART_RATE to strap)
+        viewModel.holdHeartRateBeforeStart()
+        // The countdown and the service start: the screen still holds
+        viewModel.onSessionFromService(WorkoutSession())
+        assertEquals(listOf(WorkoutTrackingViewModel.PRESTART_LEASE), hrSensor.owners)
+
+        // The service takes "workout" before it publishes the running session
+        hrSensor.acquire("workout")
+        val display = HeartRateDisplay(150, HeartRateDisplay.Freshness.FRESH, HeartRateDisplay.LinkIcon.CONNECTED)
+        viewModel.onSessionFromService(WorkoutSession(isTracking = true, heartRateDisplay = display))
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(listOf("workout"), hrSensor.owners)
+        assertEquals(WorkoutState.RUNNING, viewModel.workoutState.value)
+        // During the workout the tile is the service's
+        assertEquals(display, viewModel.heartRateDisplay.value)
+    }
+
+    @Test
+    fun `during a workout no pre-start lease is taken`() {
+        pairedSensors.value = mapOf(SensorType.HEART_RATE to strap)
+        viewModel.onSessionFromService(WorkoutSession(isTracking = true))
+        viewModel.holdHeartRateBeforeStart()
+
+        assertEquals(0, hrSensor.leaseCount)
     }
 
     @Test

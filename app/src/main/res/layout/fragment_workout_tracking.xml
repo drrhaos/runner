@@ -61,6 +61,22 @@
             </LinearLayout>
         </FrameLayout>
 
+        <!-- Связь пульсометра рядом с индикатором GPS: виден, только если датчик привязан -->
+        <ImageView
+            android:id="@+id/imageView_hr_link_compact"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_alignTop="@id/layout_gps_status"
+            android:layout_toEndOf="@id/layout_gps_status"
+            android:layout_marginStart="6dp"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/bg_map_control_circle"
+            android:padding="6dp"
+            android:contentDescription="@string/tracking_hr_link_searching"
+            android:visibility="gone"
+            tools:src="@drawable/ic_hr_link_searching"
+            tools:visibility="visible" />
+
         <!-- Баннер потери GPS / режима без GPS -->
         <TextView
             android:id="@+id/textView_gps_banner"
@@ -449,13 +465,31 @@
                         android:textSize="24sp"
                         android:textColor="?attr/colorOnSurface" />
 
-                    <TextView
+                    <!-- Подпись и значок связи датчика (gone без датчика) -->
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/track_info_pulse_label"
-                        android:textSize="14sp"
-                        android:textColor="?attr/colorOnSurface"
-                        android:alpha="0.72" />
+                        android:orientation="horizontal"
+                        android:gravity="center">
+
+                        <ImageView
+                            android:id="@+id/imageView_hr_link"
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:layout_marginEnd="4dp"
+                            android:importantForAccessibility="no"
+                            android:visibility="gone"
+                            tools:src="@drawable/ic_hr_link_connected"
+                            tools:visibility="visible" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/track_info_pulse_label"
+                            android:textSize="14sp"
+                            android:textColor="?attr/colorOnSurface"
+                            android:alpha="0.72" />
+                    </LinearLayout>
                 </LinearLayout>
             </GridLayout>
         </LinearLayout>

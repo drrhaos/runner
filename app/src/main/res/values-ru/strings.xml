@@ -868,7 +868,14 @@
     <string name="settings_devices_summary_no_access">Пульсометр: %1$s · нет доступа</string>
 
     <string name="tracking_hr_tile_no_sensor_a11y">Пульс: датчик не добавлен</string>
-    <string name="tracking_hr_tile_disconnected_a11y">Пульс: датчик не подключён</string>
     <string name="tracking_hr_tile_open_devices">открыть «Устройства»</string>
+    <string name="tracking_hr_tile_a11y">Пульс: %1$s</string>
+    <string name="tracking_hr_tile_stale_a11y">Пульс: %1$s, данные не обновляются</string>
+    <string name="tracking_hr_tile_no_data_a11y">Пульс: нет данных</string>
+    <string name="tracking_hr_link_connected">датчик подключён</string>
+    <string name="tracking_hr_link_searching">ищем датчик</string>
+    <string name="tracking_hr_link_lost">датчик потерян</string>
+    <string name="voice_hr_sensor_lost">Датчик пульса потерян</string>
+    <string name="voice_hr_sensor_connected">Датчик пульса подключён</string>
 
 </resources>

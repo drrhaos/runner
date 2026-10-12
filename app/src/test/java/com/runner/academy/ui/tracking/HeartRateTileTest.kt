@@ -1,12 +1,10 @@
 package com.runner.academy.ui.tracking
 
-import com.runner.academy.R
 import com.runner.academy.sensor.PairedSensor
 import com.runner.academy.sensor.SensorLink
 import com.runner.academy.sensor.SensorType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -20,7 +18,6 @@ class HeartRateTileTest {
             val tile = HeartRateTile.of(null, link)
             assertEquals(HeartRateTile.NO_SENSOR, tile)
             assertTrue(tile.opensDevices)
-            assertEquals(R.string.tracking_hr_tile_no_sensor_a11y, tile.a11y)
         }
     }
 
@@ -30,7 +27,6 @@ class HeartRateTileTest {
             val tile = HeartRateTile.of(strap, link)
             assertEquals(HeartRateTile.DISCONNECTED, tile)
             assertTrue(tile.opensDevices)
-            assertEquals(R.string.tracking_hr_tile_disconnected_a11y, tile.a11y)
         }
     }
 
@@ -40,6 +36,5 @@ class HeartRateTileTest {
 
         assertEquals(HeartRateTile.CONNECTED, tile)
         assertFalse(tile.opensDevices)
-        assertNull(tile.a11y)
     }
 }
