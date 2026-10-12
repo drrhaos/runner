@@ -5,11 +5,11 @@ import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.core.location.LocationManagerCompat
 import androidx.core.view.ViewCompat
 import androidx.fragment.app.Fragment
@@ -63,13 +63,14 @@ class AddSensorFragment : Fragment() {
     private val scanPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
-        val canAskAgain = results.values.all { it } || results.keys.any { shouldShowRequestPermissionRationale(it) }
-        viewModel.onPermissionResult(granted(), locationOn(), canAskAgain)
+        viewModel.onPermissionResult(granted(), locationOn(), rationale = results.keys.any { shouldShowRequestPermissionRationale(it) })
     }
 
     private val enableBluetooth = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) viewModel.onBluetoothEnabled()
     }
+
+    private var replaceDialog: AlertDialog? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentAddSensorBinding.inflate(inflater, container, false)
@@ -82,6 +83,7 @@ class AddSensorFragment : Fragment() {
         for (heading in listOf(binding.textViewScanning, binding.textViewHintsTitle, binding.textViewProbing)) {
             ViewCompat.setAccessibilityHeading(heading, true)
         }
+        binding.progressScan.max = SensorScanner.SCAN_DURATION_MS.toInt()
         binding.recyclerViewFound.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerViewFound.adapter = adapter
 
@@ -124,17 +126,20 @@ class AddSensorFragment : Fragment() {
         b.groupProbing.visibility = visibleIf(step is AddSensorStep.Probing)
         b.groupError.visibility = visibleIf(step is AddSensorStep.ProbeFailed || step is AddSensorStep.ScanFailed)
 
+        // Rendered before it is announced (a failure reads its text), announced before leaving
+        if (step is AddSensorStep.ProbeFailed) renderProbeFailed(step)
+        AddSensorAnnouncement.of(previous, step)?.let { b.root.announceForAccessibility(textOf(it)) }
+
         when (step) {
             AddSensorStep.Starting -> Unit
             is AddSensorStep.Permission -> renderPermission(step.prompt)
             is AddSensorStep.Scanning -> renderScanning(step)
             is AddSensorStep.Results -> renderResults(step)
             is AddSensorStep.Probing -> b.textViewProbing.text = getString(R.string.add_sensor_probing, nameOf(step.device))
-            is AddSensorStep.ProbeFailed -> renderProbeFailed(step)
+            is AddSensorStep.ProbeFailed -> Unit
             is AddSensorStep.ScanFailed -> renderScanFailed(step)
             is AddSensorStep.Paired -> onPaired(step)
         }
-        AddSensorAnnouncement.of(previous, step)?.let { b.root.announceForAccessibility(textOf(it)) }
     }
 
     private fun renderPermission(prompt: PermissionPrompt) {
@@ -158,8 +163,11 @@ class AddSensorFragment : Fragment() {
 
     private fun onPermissionButton() {
         when ((viewModel.state.value as? AddSensorStep.Permission)?.prompt) {
-            PermissionPrompt.RATIONALE_31, PermissionPrompt.RATIONALE_30 ->
-                scanPermissionRequest.launch(SensorPermissionPolicy.scanPermissions(sdk).toTypedArray())
+            PermissionPrompt.RATIONALE_31, PermissionPrompt.RATIONALE_30 -> {
+                val permissions = SensorPermissionPolicy.scanPermissions(sdk)
+                viewModel.onPermissionRequest(rationale = permissions.any { shouldShowRequestPermissionRationale(it) })
+                scanPermissionRequest.launch(permissions.toTypedArray())
+            }
             PermissionPrompt.DENIED -> openAppSystemSettings()
             PermissionPrompt.LOCATION_OFF -> openLocationSettings()
             null -> Unit
@@ -199,8 +207,8 @@ class AddSensorFragment : Fragment() {
         b.buttonScanAgain.isEnabled = !waiting
         if (waiting) {
             b.buttonScanAgain.text = getString(R.string.add_sensor_retry_in, step.retryInSeconds)
-            b.buttonScanAgain.contentDescription = getString(R.string.add_sensor_scan_again) + ", " +
-                resources.getQuantityString(R.plurals.seconds, step.retryInSeconds, step.retryInSeconds)
+            b.buttonScanAgain.contentDescription =
+                resources.getQuantityString(R.plurals.add_sensor_retry_in_a11y, step.retryInSeconds, step.retryInSeconds)
         } else {
             b.buttonScanAgain.setText(R.string.add_sensor_scan_again)
             b.buttonScanAgain.contentDescription = null
@@ -222,10 +230,14 @@ class AddSensorFragment : Fragment() {
 
     private fun renderScanFailed(step: AddSensorStep.ScanFailed) {
         val b = binding
+        val code = step.errorCode
         b.textViewError.text = when (step.reason) {
+            ScanFailure.UNSUPPORTED -> getString(R.string.devices_ble_unsupported)
             ScanFailure.BLUETOOTH_OFF -> getString(R.string.add_sensor_error_bluetooth_off)
-            ScanFailure.FAILED -> getString(R.string.add_sensor_error_failed, step.errorCode ?: 0)
-            else -> getString(R.string.devices_ble_unsupported)
+            // The others never end a scan here (they are steps of their own): the generic text
+            ScanFailure.FAILED, ScanFailure.NO_PERMISSION, ScanFailure.LOCATION_OFF, ScanFailure.TOO_FREQUENT ->
+                if (code != null) getString(R.string.add_sensor_error_failed, code)
+                else getString(R.string.add_sensor_error_failed_no_code)
         }
         b.buttonErrorEnable.visibility = visibleIf(step.reason == ScanFailure.BLUETOOTH_OFF)
         b.buttonErrorRetry.visibility = visibleIf(step.reason == ScanFailure.FAILED)
@@ -250,7 +262,7 @@ class AddSensorFragment : Fragment() {
             return
         }
         val oldName = replaced.name ?: getString(R.string.devices_unnamed)
-        MaterialAlertDialogBuilder(requireContext())
+        replaceDialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(getString(R.string.add_sensor_replace_title, oldName))
             .setMessage(getString(R.string.add_sensor_replace_message, oldName, nameOf(device)))
             .setPositiveButton(R.string.add_sensor_replace) { _, _ -> viewModel.probe(device) }
@@ -258,19 +270,15 @@ class AddSensorFragment : Fragment() {
             .show()
     }
 
-    private fun requestBluetooth() {
-        try {
-            enableBluetooth.launch(bluetoothEnableIntent(requireContext()))
-        } catch (e: Exception) {
-            Log.w(TAG, "Bluetooth request unavailable: ${e.message}")
-        }
-    }
+    private fun requestBluetooth() = requestBluetoothEnable(requireContext(), enableBluetooth)
 
     private fun textOf(announcement: AddSensorAnnouncement): String = when (announcement) {
         is AddSensorAnnouncement.Found -> getString(R.string.add_sensor_found_a11y, announcement.count)
         AddSensorAnnouncement.NothingFound -> getString(R.string.add_sensor_empty_title)
         is AddSensorAnnouncement.Probing -> getString(R.string.add_sensor_probing, nameOf(announcement.device))
         is AddSensorAnnouncement.ProbeFailed -> binding.textViewError.text.toString()
+        is AddSensorAnnouncement.Paired ->
+            getString(R.string.devices_paired_snackbar, announcement.name ?: getString(R.string.devices_unnamed))
     }
 
     private fun nameOf(device: FoundSensor): String = device.name ?: getString(R.string.devices_unnamed)
@@ -278,13 +286,14 @@ class AddSensorFragment : Fragment() {
     private fun visibleIf(visible: Boolean) = if (visible) View.VISIBLE else View.GONE
 
     override fun onDestroyView() {
+        replaceDialog?.dismiss()
+        replaceDialog = null
         super.onDestroyView()
         binding.recyclerViewFound.adapter = null
         _binding = null
     }
 
     private companion object {
-        const val TAG = "AddSensorFragment"
         const val STATE_EVERY_S = 5
     }
 }

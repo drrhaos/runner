@@ -2,7 +2,9 @@ package com.runner.academy.ui.devices
 
 import com.runner.academy.R
 import com.runner.academy.sensor.FakeHeartRateSensor
+import com.runner.academy.sensor.HeartRateSensor
 import com.runner.academy.sensor.PairedSensor
+import com.runner.academy.sensor.SensorLease
 import com.runner.academy.sensor.SensorLink
 import com.runner.academy.sensor.SensorType
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +19,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -148,6 +152,64 @@ class DevicesViewModelTest {
         val row = vm.state.value.heartRate!!
         assertEquals(R.string.devices_status_connected, row.status)
         assertNull(row.bpm)
+        vm.onStop()
+    }
+
+    @Test
+    fun `a granted permission takes a new lease before giving back the old one`() = runTest(dispatcher) {
+        var acquired = 0
+        val counting = object : HeartRateSensor by sensor {
+            override fun acquire(owner: String): SensorLease {
+                acquired++
+                return sensor.acquire(owner)
+            }
+        }
+        val vm = DevicesViewModel(counting, paired, { }, { testScheduler.currentTime })
+        vm.onStart()
+        sensor.setLink(SensorLink.NO_PERMISSION)
+        runCurrent()
+
+        vm.onPermissionResult(granted = true, rationale = false)
+        sensor.setLink(SensorLink.CONNECTING)
+        runCurrent()
+
+        assertEquals(2, acquired)
+        assertEquals(1, sensor.leaseCount)
+        assertEquals(R.string.devices_status_searching, vm.state.value.heartRate!!.status)
+
+        vm.onStop()
+        assertEquals(0, sensor.leaseCount)
+    }
+
+    @Test
+    fun `a granted permission while stopped takes no lease`() = runTest(dispatcher) {
+        val vm = viewModel()
+
+        vm.onPermissionGranted()
+
+        assertEquals(0, sensor.leaseCount)
+    }
+
+    @Test
+    fun `a dismissed first dialog keeps Allow, a refusal for good switches to settings`() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.onStart()
+        runCurrent()
+
+        vm.onPermissionRequest(rationale = false)
+        vm.onPermissionResult(granted = false, rationale = false)
+        runCurrent()
+        assertFalse(vm.state.value.permissionDeniedForGood)
+
+        vm.onPermissionRequest(rationale = false)
+        vm.onPermissionResult(granted = false, rationale = true)
+        runCurrent()
+        assertFalse(vm.state.value.permissionDeniedForGood)
+
+        vm.onPermissionRequest(rationale = true)
+        vm.onPermissionResult(granted = false, rationale = false)
+        runCurrent()
+        assertTrue(vm.state.value.permissionDeniedForGood)
         vm.onStop()
     }
 

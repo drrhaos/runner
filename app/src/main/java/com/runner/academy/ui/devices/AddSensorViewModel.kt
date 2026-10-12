@@ -73,11 +73,14 @@ sealed interface AddSensorAnnouncement {
     data object NothingFound : AddSensorAnnouncement
     data class Probing(val device: FoundSensor) : AddSensorAnnouncement
     data class ProbeFailed(val device: FoundSensor, val reason: ProbeFailure) : AddSensorAnnouncement
+    data class Paired(val name: String?) : AddSensorAnnouncement
 
     companion object {
         fun of(previous: AddSensorStep?, next: AddSensorStep): AddSensorAnnouncement? = when {
-            previous is AddSensorStep.Scanning && next is AddSensorStep.Results ->
+            // A countdown to retry (start limit) is not the end of a scan: nothing was searched
+            previous is AddSensorStep.Scanning && next is AddSensorStep.Results && next.retryInSeconds == 0 ->
                 if (next.found.isEmpty()) NothingFound else Found(next.found.size)
+            previous is AddSensorStep.Probing && next is AddSensorStep.Paired -> Paired(next.name)
             previous !is AddSensorStep.Probing && next is AddSensorStep.Probing -> Probing(next.device)
             previous is AddSensorStep.Probing && next is AddSensorStep.ProbeFailed -> ProbeFailed(next.device, next.reason)
             else -> null
@@ -112,6 +115,7 @@ class AddSensorViewModel(
 
     private var found: List<FoundSensor> = emptyList()
     private var permanentlyDenied = false
+    private val permissionAsks = PermissionAsks()
     private var scanJob: Job? = null
     private var probeJob: Job? = null
 
@@ -128,10 +132,15 @@ class AddSensorViewModel(
         step = AddSensorStep.Permission(prompt(blocker))
     }
 
-    /** After the system dialog; [canAskAgain] false: refused with "don't ask again". */
-    fun onPermissionResult(granted: Set<String>, locationOn: Boolean, canAskAgain: Boolean) {
+    /** Call right before the system dialog, with whether a rationale would be shown now. */
+    fun onPermissionRequest(rationale: Boolean) {
+        permissionAsks.beforeRequest(rationale)
+    }
+
+    /** After the system dialog; [rationale]: whether the system would show one now. */
+    fun onPermissionResult(granted: Set<String>, locationOn: Boolean, rationale: Boolean) {
         val blocker = SensorPermissionPolicy.canScan(sdkInt, granted, locationOn)
-        if (blocker == ScanBlocker.NO_PERMISSION && !canAskAgain) permanentlyDenied = true
+        if (blocker == ScanBlocker.NO_PERMISSION && permissionAsks.afterDenial(rationale)) permanentlyDenied = true
         check(granted, locationOn)
     }
 

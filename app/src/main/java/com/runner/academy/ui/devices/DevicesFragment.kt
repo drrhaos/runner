@@ -5,12 +5,12 @@ import android.os.Build
 import android.os.Bundle
 import android.os.SystemClock
 import android.text.format.DateUtils
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.ViewCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -45,24 +45,23 @@ class DevicesFragment : Fragment() {
         )
     }
 
-    /** "Allow" was refused with "don't ask again": the button opens the app's settings. */
-    private var permissionDeniedForGood = false
-
     private val connectPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
-        if (results.values.all { it }) return@registerForActivityResult
-        val canAskAgain = results.keys.any { shouldShowRequestPermissionRationale(it) }
-        if (!canAskAgain) {
-            permissionDeniedForGood = true
-            render(viewModel.state.value)
-            openAppSystemSettings()
-        }
+        // Refused for good only switches the button to "Open settings": the user taps it
+        viewModel.onPermissionResult(
+            granted = results.isNotEmpty() && results.values.all { it },
+            rationale = results.keys.any { shouldShowRequestPermissionRationale(it) }
+        )
     }
 
     private val enableBluetooth = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         // The sensor watches the adapter itself: nothing to do on the way back
     }
+
+    private var bleSupported = true
+    private var menu: PopupMenu? = null
+    private var forgetDialog: AlertDialog? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentDevicesBinding.inflate(inflater, container, false)
@@ -74,10 +73,10 @@ class DevicesFragment : Fragment() {
         ViewCompat.setAccessibilityHeading(binding.textViewSectionHeartRate, true)
         ViewCompat.setScreenReaderFocusable(binding.layoutDeviceRow, true)
 
-        val bleSupported = requireContext().packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
+        bleSupported = requireContext().packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
         binding.buttonDevicesAdd.visibility = if (bleSupported) View.VISIBLE else View.GONE
         binding.textViewDevicesBleUnsupported.visibility = if (bleSupported) View.GONE else View.VISIBLE
-        binding.buttonDevicesAdd.setOnClickListener { findNavController().navigate(R.id.nav_add_sensor) }
+        binding.buttonDevicesAdd.setOnClickListener { openAddSensor() }
         binding.buttonDeviceMenu.setOnClickListener { showMenu(it) }
         binding.buttonDeviceAction.setOnClickListener { onAction() }
 
@@ -114,10 +113,10 @@ class DevicesFragment : Fragment() {
         val row = state.heartRate
         b.layoutDevicesEmpty.visibility = if (row == null) View.VISIBLE else View.GONE
         b.layoutDeviceRow.visibility = if (row == null) View.GONE else View.VISIBLE
-        if (row != null) renderRow(row)
+        if (row != null) renderRow(row, state.permissionDeniedForGood)
     }
 
-    private fun renderRow(row: DeviceRow) {
+    private fun renderRow(row: DeviceRow, permissionDeniedForGood: Boolean) {
         val b = binding
         val name = displayName(row)
         b.textViewDeviceName.text = name
@@ -196,38 +195,48 @@ class DevicesFragment : Fragment() {
     private fun displayName(row: DeviceRow): String = row.name ?: getString(R.string.devices_unnamed)
 
     private fun onAction() {
-        when (viewModel.state.value.heartRate?.action) {
-            DeviceAction.ENABLE_BLUETOOTH -> try {
-                enableBluetooth.launch(bluetoothEnableIntent(requireContext()))
-            } catch (e: Exception) {
-                Log.w(TAG, "Bluetooth request unavailable: ${e.message}")
-            }
+        val state = viewModel.state.value
+        when (state.heartRate?.action) {
+            DeviceAction.ENABLE_BLUETOOTH -> requestBluetoothEnable(requireContext(), enableBluetooth)
             DeviceAction.ALLOW -> {
                 val permissions = SensorPermissionPolicy.connectPermissions(Build.VERSION.SDK_INT)
-                if (permissionDeniedForGood || permissions.isEmpty()) openAppSystemSettings()
-                else connectPermissionRequest.launch(permissions.toTypedArray())
+                if (state.permissionDeniedForGood || permissions.isEmpty()) {
+                    openAppSystemSettings()
+                } else {
+                    viewModel.onPermissionRequest(rationale = permissions.any { shouldShowRequestPermissionRationale(it) })
+                    connectPermissionRequest.launch(permissions.toTypedArray())
+                }
             }
             null -> Unit
         }
     }
 
+    /** Guarded: a double tap would open it twice. */
+    private fun openAddSensor() {
+        val navController = findNavController()
+        if (navController.currentDestination?.id == R.id.nav_devices) navController.navigate(R.id.nav_add_sensor)
+    }
+
     private fun showMenu(anchor: View) {
         val row = viewModel.state.value.heartRate ?: return
         val popup = PopupMenu(requireContext(), anchor)
-        popup.menu.add(0, MENU_REPLACE, 0, R.string.devices_menu_replace)
+        // Without Bluetooth LE nothing could replace it
+        if (bleSupported) popup.menu.add(0, MENU_REPLACE, 0, R.string.devices_menu_replace)
         popup.menu.add(0, MENU_FORGET, 1, R.string.devices_menu_forget)
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
-                MENU_REPLACE -> findNavController().navigate(R.id.nav_add_sensor)
+                MENU_REPLACE -> openAddSensor()
                 MENU_FORGET -> confirmForget(displayName(row))
             }
             true
         }
+        popup.setOnDismissListener { if (menu === popup) menu = null }
+        menu = popup
         popup.show()
     }
 
     private fun confirmForget(name: String) {
-        MaterialAlertDialogBuilder(requireContext())
+        forgetDialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(getString(R.string.devices_forget_title, name))
             .setMessage(R.string.devices_forget_message)
             .setPositiveButton(R.string.devices_forget_confirm) { _, _ -> viewModel.forget(SensorType.HEART_RATE) }
@@ -236,6 +245,10 @@ class DevicesFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        menu?.dismiss()
+        menu = null
+        forgetDialog?.dismiss()
+        forgetDialog = null
         super.onDestroyView()
         _binding = null
     }
@@ -244,7 +257,6 @@ class DevicesFragment : Fragment() {
         /** Set on this screen's back-stack entry by [AddSensorFragment] after pairing. */
         const val PAIRED_NAME_KEY = "paired_name"
 
-        private const val TAG = "DevicesFragment"
         private const val MENU_REPLACE = 1
         private const val MENU_FORGET = 2
     }

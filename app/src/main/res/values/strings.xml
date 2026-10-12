@@ -816,6 +816,10 @@
     <string name="add_sensor_already_paired">already added</string>
     <string name="add_sensor_scan_again">Search again</string>
     <string name="add_sensor_retry_in">Retry in %1$d s</string>
+    <plurals name="add_sensor_retry_in_a11y">
+        <item quantity="one">Search again in %d second</item>
+        <item quantity="other">Search again in %d seconds</item>
+    </plurals>
     <string name="add_sensor_not_found_link">Don’t see yours?</string>
     <string name="add_sensor_empty_title">Nothing found</string>
     <string name="add_sensor_hint_strap">Put the strap on and wet the pads: it wakes up on skin contact.</string>
@@ -832,6 +836,7 @@
     <string name="add_sensor_probe_not_hr">%1$s doesn’t send heart rate. Choose another device.</string>
     <string name="add_sensor_error_bluetooth_off">Bluetooth is off</string>
     <string name="add_sensor_error_failed">Couldn’t start searching (error %1$d). Try again later.</string>
+    <string name="add_sensor_error_failed_no_code">Couldn’t start searching. Try again later.</string>
     <string name="add_sensor_retry">Retry</string>
     <string name="add_sensor_back_to_list">Back to list</string>
 

@@ -105,10 +105,12 @@ class AddSensorViewModelTest {
         val vm = viewModel(sdk = 34)
         vm.check(emptySet(), true)
 
-        vm.onPermissionResult(emptySet(), true, canAskAgain = true)
+        vm.onPermissionRequest(rationale = false)
+        vm.onPermissionResult(emptySet(), true, rationale = true)
         assertEquals(Permission(PermissionPrompt.RATIONALE_31), vm.step)
 
-        vm.onPermissionResult(emptySet(), true, canAskAgain = false)
+        vm.onPermissionRequest(rationale = true)
+        vm.onPermissionResult(emptySet(), true, rationale = false)
         assertEquals(Permission(PermissionPrompt.DENIED), vm.step)
         vm.check(emptySet(), true)
         assertEquals(Permission(PermissionPrompt.DENIED), vm.step)
@@ -117,6 +119,17 @@ class AddSensorViewModelTest {
         runCurrent()
         assertTrue(vm.step is Scanning)
         vm.cancelAll()
+    }
+
+    @Test
+    fun `a first dialog dismissed without an answer still asks, not settings`() = runTest(dispatcher) {
+        val vm = viewModel(sdk = 34)
+        vm.check(emptySet(), true)
+
+        vm.onPermissionRequest(rationale = false)
+        vm.onPermissionResult(emptySet(), true, rationale = false)
+
+        assertEquals(Permission(PermissionPrompt.RATIONALE_31), vm.step)
     }
 
     @Test
@@ -413,7 +426,10 @@ class AddSensorViewModelTest {
             AddSensorAnnouncement.ProbeFailed(strap, ProbeFailure.UNREACHABLE),
             AddSensorAnnouncement.of(Probing(strap), ProbeFailed(strap, ProbeFailure.UNREACHABLE))
         )
+        assertEquals(AddSensorAnnouncement.Paired("HR Strap 10"), AddSensorAnnouncement.of(Probing(strap), Paired("HR Strap 10")))
         assertNull(AddSensorAnnouncement.of(scanning, Scanning(emptyList(), 9_000L)))
+        // Too frequent: the scan did not run, a countdown is no "nothing found"
+        assertNull(AddSensorAnnouncement.of(scanning, Results(emptyList(), false, 3)))
         assertNull(AddSensorAnnouncement.of(Results(found, false, 2), Results(found, false, 1)))
         assertNull(AddSensorAnnouncement.of(null, Results(emptyList(), true, 0)))
     }

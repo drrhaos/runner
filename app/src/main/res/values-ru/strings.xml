@@ -833,6 +833,12 @@
     <string name="add_sensor_already_paired">уже добавлен</string>
     <string name="add_sensor_scan_again">Искать снова</string>
     <string name="add_sensor_retry_in">Повторить через %1$d с</string>
+    <plurals name="add_sensor_retry_in_a11y">
+        <item quantity="one">Искать снова через %d секунду</item>
+        <item quantity="few">Искать снова через %d секунды</item>
+        <item quantity="many">Искать снова через %d секунд</item>
+        <item quantity="other">Искать снова через %d секунды</item>
+    </plurals>
     <string name="add_sensor_not_found_link">Нет вашего датчика?</string>
     <string name="add_sensor_empty_title">Ничего не нашли</string>
     <string name="add_sensor_hint_strap">Наденьте ремень и смочите контакты: датчик просыпается от контакта с кожей.</string>
@@ -849,6 +855,7 @@
     <string name="add_sensor_probe_not_hr">«%1$s» не передаёт пульс. Выберите другое устройство.</string>
     <string name="add_sensor_error_bluetooth_off">Bluetooth выключен</string>
     <string name="add_sensor_error_failed">Не удалось начать поиск (ошибка %1$d). Повторите позже.</string>
+    <string name="add_sensor_error_failed_no_code">Не удалось начать поиск. Повторите позже.</string>
     <string name="add_sensor_retry">Повторить</string>
     <string name="add_sensor_back_to_list">К списку</string>
 

@@ -20,8 +20,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** The Devices screen: one row per paired sensor type, null when none is paired (the empty state). */
-data class DevicesState(val heartRate: DeviceRow?)
+/**
+ * The Devices screen: one row per paired sensor type, null when none is paired (the empty state).
+ *
+ * @param permissionDeniedForGood "Allow" was refused for good: the button opens the app's settings.
+ */
+data class DevicesState(val heartRate: DeviceRow?, val permissionDeniedForGood: Boolean = false)
 
 /**
  * The Devices screen. While it is visible ([onStart] to [onStop]) it holds a lease on the
@@ -53,8 +57,14 @@ class DevicesViewModel(
     /** The newest sample not shown yet; reset when the link changes. */
     private var pendingSample: HeartRateSample? = null
 
-    val state: StateFlow<DevicesState> = combine(paired, live) { sensors, current ->
-        DevicesState(heartRate = sensors[SensorType.HEART_RATE]?.let { device -> row(device, current) })
+    private val permissionAsks = PermissionAsks()
+    private val deniedForGood = MutableStateFlow(false)
+
+    val state: StateFlow<DevicesState> = combine(paired, live, deniedForGood) { sensors, current, denied ->
+        DevicesState(
+            heartRate = sensors[SensorType.HEART_RATE]?.let { device -> row(device, current) },
+            permissionDeniedForGood = denied
+        )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, DevicesState(null))
 
     private fun row(device: PairedSensor, current: Live?): DeviceRow =
@@ -106,6 +116,31 @@ class DevicesViewModel(
         job = null
         lease?.release()
         lease = null
+    }
+
+    /** Call right before asking for the connect permission ("Allow"). */
+    fun onPermissionRequest(rationale: Boolean) {
+        permissionAsks.beforeRequest(rationale)
+    }
+
+    /** The answer to "Allow"; [rationale]: whether the system would now show one. */
+    fun onPermissionResult(granted: Boolean, rationale: Boolean) {
+        if (granted) {
+            onPermissionGranted()
+        } else if (permissionAsks.afterDenial(rationale)) {
+            deniedForGood.value = true
+        }
+    }
+
+    /**
+     * The sensor checks the permission only when a lease is taken, and the system dialog does
+     * not stop the screen: take a new lease, then give back the old one (never zero in between).
+     */
+    fun onPermissionGranted() {
+        deniedForGood.value = false
+        val old = lease ?: return
+        lease = sensor.acquire(LEASE_OWNER)
+        old.release()
     }
 
     fun forget(type: SensorType) {
