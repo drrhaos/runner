@@ -3,6 +3,7 @@ package com.runner.academy.ui.tracking
 import android.Manifest
 import android.app.Application
 import android.content.Context
+import android.os.Looper
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.test.core.app.ApplicationProvider
 import com.runner.academy.data.GpsStatus
@@ -21,11 +22,9 @@ import com.runner.academy.sensor.SensorLink
 import com.runner.academy.sensor.SensorType
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.TrackDataJson
-import android.os.Looper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import org.robolectric.Shadows.shadowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -38,6 +37,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowApplication
 import java.util.Date
@@ -54,6 +54,8 @@ class WorkoutTrackingViewModelTest {
     private lateinit var database: WorkoutDatabase
     private lateinit var workoutDao: WorkoutDao
     private lateinit var viewModel: WorkoutTrackingViewModel
+    private val pairedSensors = MutableStateFlow<Map<SensorType, PairedSensor>>(emptyMap())
+    private val hrSensor = FakeHeartRateSensor()
 
     @Before
     fun setUp() {
@@ -67,15 +69,12 @@ class WorkoutTrackingViewModelTest {
         viewModel = WorkoutTrackingViewModel(WorkoutRepository(database), context as Application, pairedSensors, hrSensor.status)
     }
 
-    private val pairedSensors = MutableStateFlow<Map<SensorType, PairedSensor>>(emptyMap())
-    private val hrSensor = FakeHeartRateSensor()
-
     @Test
     fun heart_rate_tile_opens_devices_without_a_sensor() {
         shadowOf(Looper.getMainLooper()).idle()
 
         assertEquals(HeartRateTile.NO_SENSOR, viewModel.heartRateTile.value)
-        assertTrue(viewModel.heartRateTileOpensDevices.value)
+        assertTrue(viewModel.heartRateTile.value.opensDevices)
     }
 
     @Test
@@ -85,16 +84,17 @@ class WorkoutTrackingViewModelTest {
         )
         shadowOf(Looper.getMainLooper()).idle()
         assertEquals(HeartRateTile.DISCONNECTED, viewModel.heartRateTile.value)
-        assertTrue(viewModel.heartRateTileOpensDevices.value)
+        assertTrue(viewModel.heartRateTile.value.opensDevices)
 
         hrSensor.setLink(SensorLink.CONNECTED)
         shadowOf(Looper.getMainLooper()).idle()
         assertEquals(HeartRateTile.CONNECTED, viewModel.heartRateTile.value)
-        assertFalse(viewModel.heartRateTileOpensDevices.value)
+        assertFalse(viewModel.heartRateTile.value.opensDevices)
 
         hrSensor.setLink(SensorLink.SEARCHING)
         shadowOf(Looper.getMainLooper()).idle()
-        assertTrue(viewModel.heartRateTileOpensDevices.value)
+        assertEquals(HeartRateTile.DISCONNECTED, viewModel.heartRateTile.value)
+        assertTrue(viewModel.heartRateTile.value.opensDevices)
     }
 
     @After

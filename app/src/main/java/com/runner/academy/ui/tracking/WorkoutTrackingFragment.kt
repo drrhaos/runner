@@ -309,7 +309,10 @@ class WorkoutTrackingFragment : Fragment() {
         }
         // Only an entry to Devices; the pre-start lease belongs to the workout branch
         binding.layoutHeartRateTile.setOnClickListener {
-            if (viewModel.heartRateTileOpensDevices.value) findNavController().navigate(R.id.nav_devices)
+            val navController = findNavController()
+            if (viewModel.heartRateTile.value.opensDevices && navController.currentDestination?.id == R.id.nav_tracking) {
+                navController.navigate(R.id.nav_devices)
+            }
         }
     }
 

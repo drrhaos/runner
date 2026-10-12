@@ -136,7 +136,9 @@ class SettingsFragment : Fragment() {
 
         // Устройства (пульсометр)
         binding.rowDevices.setOnClickListener {
-            findNavController().navigate(R.id.nav_devices)
+            // A double tap would open it twice
+            val navController = findNavController()
+            if (navController.currentDestination?.id == R.id.nav_settings) navController.navigate(R.id.nav_devices)
         }
 
         // Сброс настроек

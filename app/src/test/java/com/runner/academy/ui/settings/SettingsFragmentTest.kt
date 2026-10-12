@@ -58,6 +58,7 @@ class SettingsFragmentTest {
         val navController = NavHostController(activity).apply {
             navigatorProvider.addNavigator(RecordingNavigator())
             setGraph(R.navigation.mobile_navigation)
+            navigate(R.id.nav_settings)
         }
         Navigation.setViewNavController(fragment.requireView(), navController)
         shadowOf(Looper.getMainLooper()).idle()
@@ -96,5 +97,17 @@ class SettingsFragmentTest {
         fragment.requireView().findViewById<View>(R.id.row_devices).performClick()
 
         assertEquals(R.id.nav_devices, navController.currentDestination?.id)
+    }
+
+    @Test
+    fun `a double tap opens Devices once`() {
+        val (fragment, navController) = launch()
+        val row = fragment.requireView().findViewById<View>(R.id.row_devices)
+
+        row.performClick()
+        row.performClick()
+        navController.popBackStack()
+
+        assertEquals(R.id.nav_settings, navController.currentDestination?.id)
     }
 }

@@ -30,7 +30,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -45,7 +44,10 @@ class WorkoutTrackingViewModel(
     heartRateStatus: StateFlow<SensorStatus>
 ) : ViewModel() {
 
-    /** The heart-rate tile; also during a workout (its state lives in the service). */
+    /**
+     * The heart-rate tile; also during a workout (its state lives in the service). Without a
+     * connected sensor ([HeartRateTile.opensDevices]) a tap opens Devices.
+     */
     val heartRateTile: StateFlow<HeartRateTile> =
         combine(pairedSensors, heartRateStatus) { sensors, status ->
             HeartRateTile.of(sensors[SensorType.HEART_RATE], status.link)
@@ -54,11 +56,6 @@ class WorkoutTrackingViewModel(
             SharingStarted.Eagerly,
             HeartRateTile.of(pairedSensors.value[SensorType.HEART_RATE], heartRateStatus.value.link)
         )
-
-    /** No sensor paired or not connected: a tap on the tile opens Devices. */
-    val heartRateTileOpensDevices: StateFlow<Boolean> =
-        heartRateTile.map { it.opensDevices }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, heartRateTile.value.opensDevices)
 
     private val _workoutSession = MutableStateFlow(WorkoutSession())
     val workoutSession: StateFlow<WorkoutSession> = _workoutSession.asStateFlow()
