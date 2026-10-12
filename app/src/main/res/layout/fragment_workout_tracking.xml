@@ -465,12 +465,14 @@
                         android:textSize="24sp"
                         android:textColor="?attr/colorOnSurface" />
 
-                    <!-- Подпись и значок связи датчика (gone без датчика) -->
+                    <!-- Подпись и значок связи датчика (gone без датчика). Отдельный ImageView,
+                         а не compound drawable: значок 16dp не растёт со шрифтом и меняет tint -->
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
-                        android:gravity="center">
+                        android:gravity="center"
+                        tools:ignore="UseCompoundDrawables">
 
                         <ImageView
                             android:id="@+id/imageView_hr_link"

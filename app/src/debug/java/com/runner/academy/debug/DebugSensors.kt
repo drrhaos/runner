@@ -29,7 +29,7 @@ object DebugSensors {
         val switch = row.findViewById<SwitchMaterial>(R.id.switch_debug_simulated_hr) ?: return
         val prefs = row.context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         switch.isChecked = prefs.getBoolean(KEY_SIMULATED_HR, false)
-        row.setOnClickListener { switch.toggle() }
+        (row.findViewById<View>(R.id.row_debug_simulated_hr) ?: row).setOnClickListener { switch.toggle() }
         switch.setOnCheckedChangeListener { _, checked -> prefs.edit { putBoolean(KEY_SIMULATED_HR, checked) } }
     }
 

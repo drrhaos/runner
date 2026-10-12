@@ -68,7 +68,7 @@ class DebugSensorsTest {
         DebugSensors.bind(row)
         val switch = row.findViewById<SwitchMaterial>(R.id.switch_debug_simulated_hr)
 
-        row.performClick()
+        row.findViewById<android.view.View>(R.id.row_debug_simulated_hr).performClick()
 
         assertTrue(switch.isChecked)
         assertTrue(debugPrefs.getBoolean("simulated_hr", false))
