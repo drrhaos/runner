@@ -455,6 +455,13 @@
 
                 </LinearLayout>
 
+                <!-- Debug only (src/debug); an empty Space in release -->
+                <ViewStub
+                    android:id="@+id/stub_debug_settings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout="@layout/debug_settings_row" />
+
                 <!-- Шаги для дистанции при потере GPS -->
                 <LinearLayout
                     android:layout_width="match_parent"

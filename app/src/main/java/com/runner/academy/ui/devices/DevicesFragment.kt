@@ -39,7 +39,7 @@ class DevicesFragment : Fragment() {
         val app = requireContext().appContainer()
         DevicesViewModelFactory(
             sensor = app.heartRateSensor,
-            paired = app.pairedSensorStore.changes,
+            paired = app.pairedSensors,
             forgetSensor = { app.pairedSensorStore.remove(it) },
             nowMs = SystemClock::elapsedRealtime
         )
