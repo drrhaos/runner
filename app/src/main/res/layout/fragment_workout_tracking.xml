@@ -430,7 +430,9 @@
                         android:alpha="0.72" />
                 </LinearLayout>
 
+                <!-- Пульс: без подключённого датчика нажатие открывает «Устройства» -->
                 <LinearLayout
+                    android:id="@+id/layout_heart_rate_tile"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_columnWeight="1"

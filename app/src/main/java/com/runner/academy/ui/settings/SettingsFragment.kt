@@ -1,10 +1,7 @@
 package com.runner.academy.ui.settings
 
 import android.app.DatePickerDialog
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,11 +10,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.databinding.FragmentSettingsBinding
 import com.runner.academy.util.StepPermissionPolicy
 import com.runner.academy.util.StepTrackingAccess
+import com.runner.academy.util.openAppSystemSettings
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.Calendar
@@ -30,7 +29,12 @@ class SettingsFragment : Fragment() {
 
     private val viewModel: SettingsViewModel by viewModels {
         val app = requireContext().appContainer()
-        SettingsViewModelFactory(requireContext(), app.userPreferences)
+        SettingsViewModelFactory(
+            requireContext(),
+            app.userPreferences,
+            app.pairedSensorStore.changes,
+            app.heartRateSensor.status
+        )
     }
 
     /** Set while the UI writes switch states, so programmatic changes do not act as taps. */
@@ -130,6 +134,13 @@ class SettingsFragment : Fragment() {
             onStepsForDistanceToggled(isChecked)
         }
 
+        // Устройства (пульсометр)
+        binding.rowDevices.setOnClickListener {
+            // A double tap would open it twice
+            val navController = findNavController()
+            if (navController.currentDestination?.id == R.id.nav_settings) navController.navigate(R.id.nav_devices)
+        }
+
         // Сброс настроек
         binding.buttonResetSettings.setOnClickListener {
             showResetConfirmationDialog()
@@ -140,6 +151,13 @@ class SettingsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.settingsState.collect { settings ->
                 updateUI(settings)
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.devicesSummary.collect { summary ->
+                val name = summary.sensorName ?: getString(R.string.devices_unnamed)
+                binding.textViewDevicesSummary.text =
+                    if (summary.hasSensor) getString(summary.text, name) else getString(summary.text)
             }
         }
     }
@@ -191,19 +209,6 @@ class SettingsFragment : Fragment() {
         viewModel.updateStepsForDistance(enabled)
         if (enabled && !StepTrackingAccess.hasPermission(requireContext())) {
             stepPermissionRequest.launch(StepPermissionPolicy.PERMISSION)
-        }
-    }
-
-    private fun openAppSystemSettings() {
-        try {
-            startActivity(
-                Intent(
-                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.fromParts("package", requireContext().packageName, null)
-                )
-            )
-        } catch (e: Exception) {
-            android.util.Log.w("SettingsFragment", "App settings unavailable: ${e.message}")
         }
     }
 

@@ -63,7 +63,9 @@ class WorkoutTrackingFragment : Fragment() {
         val app = requireContext().appContainer()
         WorkoutTrackingViewModelFactory(
             app.workoutRepository,
-            requireContext().applicationContext as android.app.Application
+            requireContext().applicationContext as android.app.Application,
+            app.pairedSensorStore.changes,
+            app.heartRateSensor.status
         )
     }
 
@@ -299,10 +301,18 @@ class WorkoutTrackingFragment : Fragment() {
                     chip = binding.textViewTimerStateChipExpanded
                 ),
                 textViewElapsedTimeExpanded = binding.textViewElapsedTimeExpanded,
+                layoutHeartRateTile = binding.layoutHeartRateTile,
             ),
             viewModel
         ) { expanded ->
             intervalController?.onExpandedInfoChanged(expanded)
+        }
+        // Only an entry to Devices; the pre-start lease belongs to the workout branch
+        binding.layoutHeartRateTile.setOnClickListener {
+            val navController = findNavController()
+            if (viewModel.heartRateTile.value.opensDevices && navController.currentDestination?.id == R.id.nav_tracking) {
+                navController.navigate(R.id.nav_devices)
+            }
         }
     }
 
@@ -467,6 +477,12 @@ class WorkoutTrackingFragment : Fragment() {
     // -- ViewModel observation --
 
     private fun observeViewModel() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.heartRateTile.collect { metricsDisplayManager?.updateHeartRateTile(it) }
+            }
+        }
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 try {

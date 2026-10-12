@@ -6,6 +6,9 @@ import android.widget.ImageButton
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.content.withStyledAttributes
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import com.google.android.material.color.MaterialColors
 import com.runner.academy.R
 import com.runner.academy.data.WorkoutSession
@@ -64,9 +67,52 @@ class MetricsDisplayManager(
         val timerCaption: TimerCaption,
         val timerCaptionExpanded: TimerCaption,
         val textViewElapsedTimeExpanded: TextView,
+        /** The heart-rate tile: opens Devices while no sensor is connected. */
+        val layoutHeartRateTile: View,
     )
 
     private var shownTimerState: TimerState? = null
+    private var heartRateTile: HeartRateTile? = null
+    private var heartRate: Int? = null
+
+    /**
+     * Without a connected sensor the tile is a button to Devices ("Heart rate: no sensor added,
+     * double-tap to open Devices"); with one it only shows the value.
+     */
+    fun updateHeartRateTile(tile: HeartRateTile) {
+        if (tile == heartRateTile) return
+        heartRateTile = tile
+        val view = views.layoutHeartRateTile
+        val context = view.context
+        view.isClickable = tile.opensDevices
+        view.isFocusable = tile.opensDevices
+        if (tile.opensDevices) {
+            context.withStyledAttributes(attrs = intArrayOf(android.R.attr.selectableItemBackground)) {
+                view.background = getDrawable(0)
+            }
+            ViewCompat.replaceAccessibilityAction(
+                view,
+                AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK,
+                context.getString(R.string.tracking_hr_tile_open_devices),
+                null
+            )
+        } else {
+            view.background = null
+            ViewCompat.removeAccessibilityAction(view, AccessibilityNodeInfoCompat.ACTION_CLICK)
+        }
+        describeHeartRateTile()
+    }
+
+    private fun describeHeartRateTile() {
+        val view = views.layoutHeartRateTile
+        val a11y = heartRateTile?.a11y
+        val bpm = heartRate
+        view.contentDescription = when {
+            a11y != null -> view.context.getString(a11y)
+            bpm != null -> view.resources.getQuantityString(R.plurals.heart_rate_beats_per_minute, bpm, bpm)
+            else -> null
+        }
+    }
 
     fun updateMetrics(session: WorkoutSession) {
         // The big timer is the moving time; on an auto-pause it rolls back in the same frame
@@ -80,6 +126,10 @@ class MetricsDisplayManager(
         views.textViewWorkoutDistanceExpanded.text = formattedDistance
         views.textViewWorkoutPace.text = stripUnit(viewModel.formatPace(session.avgPace))
         views.textViewWorkoutHeartRate.text = session.heartRate?.toString() ?: "--"
+        if (session.heartRate != heartRate) {
+            heartRate = session.heartRate
+            describeHeartRateTile()
+        }
         views.textViewAvgSpeed.text = stripUnit(viewModel.formatSpeed(session.avgSpeed))
         views.textViewCurrentPace.text = stripUnit(viewModel.formatPace(session.currentPace))
         views.textViewCaloriesBurned.text = session.calories.toString()

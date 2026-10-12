@@ -7,12 +7,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.runner.academy.R
+import com.runner.academy.sensor.PairedSensor
+import com.runner.academy.sensor.SensorStatus
+import com.runner.academy.sensor.SensorType
+import com.runner.academy.ui.devices.DevicesSummary
 import com.runner.academy.util.StepTrackingAccess
 import com.runner.academy.util.ThemeUtils
 import com.runner.academy.util.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class SettingsState(
@@ -36,11 +43,23 @@ data class SettingsState(
 
 class SettingsViewModel(
     private val context: Context,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    pairedSensors: StateFlow<Map<SensorType, PairedSensor>>,
+    sensorStatus: StateFlow<SensorStatus>
 ) : ViewModel() {
-    
+
     private val _settingsState = MutableStateFlow(SettingsState())
     val settingsState: StateFlow<SettingsState> = _settingsState.asStateFlow()
+
+    /** The Devices row's subtitle; no lease: the status is whatever another holder keeps up. */
+    val devicesSummary: StateFlow<DevicesSummary> =
+        combine(pairedSensors, sensorStatus) { sensors, status ->
+            DevicesSummary.of(sensors[SensorType.HEART_RATE], status.link)
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            DevicesSummary.of(pairedSensors.value[SensorType.HEART_RATE], sensorStatus.value.link)
+        )
 
     init {
         loadSettings()
@@ -212,12 +231,14 @@ class SettingsViewModel(
 
 class SettingsViewModelFactory(
     private val context: Context,
-    private val userPreferences: UserPreferences
+    private val userPreferences: UserPreferences,
+    private val pairedSensors: StateFlow<Map<SensorType, PairedSensor>>,
+    private val sensorStatus: StateFlow<SensorStatus>
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return SettingsViewModel(context.applicationContext, userPreferences) as T
+            return SettingsViewModel(context.applicationContext, userPreferences, pairedSensors, sensorStatus) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
