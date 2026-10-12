@@ -133,7 +133,8 @@ class GpsDiagnosticsRecorder(
         result: FixResult,
         reason: String? = null,
         steps: Int? = null,
-        cadence: Float? = null
+        cadence: Float? = null,
+        heartRate: Int? = null
     ) {
         if (!isRecording) return
         val fix = DiagFix(
@@ -148,9 +149,20 @@ class GpsDiagnosticsRecorder(
             provider = location.provider ?: "unknown",
             isMock = LocationCompat.isMock(location),
             steps = steps,
-            cadence = cadence
+            cadence = cadence,
+            heartRate = heartRate
         )
         io.execute { writeNow(GpsDiagnostics.fixLine(fix, result, reason)) }
+    }
+
+    /** True between [start] and [stop]. */
+    val recording: Boolean get() = isRecording
+
+    /** A heart-rate sensor link event (see [GpsDiagnostics.sensorLine]). */
+    fun recordSensor(event: String, status: Int? = null, value: Int? = null) {
+        if (!isRecording) return
+        val at = SystemClock.elapsedRealtime()
+        io.execute { writeNow(GpsDiagnostics.sensorLine(at, event, status, value)) }
     }
 
     fun recordEvent(event: Event) {
