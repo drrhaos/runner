@@ -1,10 +1,7 @@
 package com.runner.academy.ui.settings
 
 import android.app.DatePickerDialog
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,6 +15,7 @@ import com.runner.academy.appContainer
 import com.runner.academy.databinding.FragmentSettingsBinding
 import com.runner.academy.util.StepPermissionPolicy
 import com.runner.academy.util.StepTrackingAccess
+import com.runner.academy.util.openAppSystemSettings
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.Calendar
@@ -191,19 +189,6 @@ class SettingsFragment : Fragment() {
         viewModel.updateStepsForDistance(enabled)
         if (enabled && !StepTrackingAccess.hasPermission(requireContext())) {
             stepPermissionRequest.launch(StepPermissionPolicy.PERMISSION)
-        }
-    }
-
-    private fun openAppSystemSettings() {
-        try {
-            startActivity(
-                Intent(
-                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.fromParts("package", requireContext().packageName, null)
-                )
-            )
-        } catch (e: Exception) {
-            android.util.Log.w("SettingsFragment", "App settings unavailable: ${e.message}")
         }
     }
 
