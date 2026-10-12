@@ -15,10 +15,10 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * Heart rate on the bench: the values a sensor would give are put straight on the fixes (no
- * sensor modelled) and go through the session, the save path and the derivation. The average
- * is over the moving time with a value — gaps and auto-pauses out; one spike never reaches the
- * maximum; live = saved.
+ * Heart rate on the bench: the sensor's script plays through a fake sensor at 1 Hz into the
+ * service's tracker, each fix takes the value of its own moment, and it goes through the
+ * session, the save path and the derivation. The average is over the moving time with a
+ * value — gaps and auto-pauses out; one spike never reaches the maximum; live = saved.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -87,6 +87,49 @@ class HeartRateReplayTest {
 
         assertTrue("the light was an auto-pause", result.pauses.isNotEmpty())
         assertEquals(150f, assertLiveEqualsSaved(result)!!.toFloat(), 1f)
+    }
+
+    @Test
+    fun `a manual pause adds no points, the heart rate is there right after the resume`() {
+        val result = SessionReplay.run(
+            trafficLight(standSec = 0) { 150 },
+            settings,
+            events = listOf(ReplayEvent.ManualPause(atSec = 200, sec = 120))
+        )
+
+        val points = TrackDataJson.parse(result.savedWorkout.trackData)!!.points
+        val start = points.first().timestamp
+        assertTrue(points.none { (it.timestamp - start) / 1_000L in 201L..319L })
+        // The connection was kept over the pause: the first fixes after it have a value
+        val afterResume = points.filter { (it.timestamp - start) / 1_000L in 320L..330L }
+        assertTrue(afterResume.isNotEmpty())
+        assertTrue(afterResume.all { it.heartRate == 150 })
+        assertEquals(150f, assertLiveEqualsSaved(result)!!.toFloat(), 1f)
+    }
+
+    @Test
+    fun `a process death and restore goes on with the heart rate`() {
+        val result = SessionReplay.run(
+            trafficLight(standSec = 0) { 150 },
+            settings,
+            events = listOf(ReplayEvent.KillAndRestore(atSec = 300, downSec = 20))
+        )
+
+        val points = TrackDataJson.parse(result.savedWorkout.trackData)!!.points
+        val start = points.first().timestamp
+        val afterRestore = points.filter { (it.timestamp - start) / 1_000L in 321L..400L }
+        assertTrue(afterRestore.isNotEmpty())
+        assertTrue(afterRestore.all { it.heartRate == 150 })
+        assertEquals(150f, assertLiveEqualsSaved(result)!!.toFloat(), 1f)
+    }
+
+    @Test
+    fun `without a sensor no point has a heart rate`() {
+        val result = SessionReplay.run(trafficLight(standSec = 0) { null }.copy(hrAt = null), settings)
+
+        val points = TrackDataJson.parse(result.savedWorkout.trackData)!!.points
+        assertTrue(points.all { it.heartRate == null })
+        assertEquals(null, saved(result).avgHeartRate)
     }
 
     @Test
