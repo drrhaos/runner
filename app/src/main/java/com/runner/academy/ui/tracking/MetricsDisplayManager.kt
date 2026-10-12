@@ -6,6 +6,7 @@ import android.widget.ImageButton
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.content.withStyledAttributes
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import com.google.android.material.color.MaterialColors
@@ -86,9 +87,9 @@ class MetricsDisplayManager(
         view.isClickable = tile.opensDevices
         view.isFocusable = tile.opensDevices
         if (tile.opensDevices) {
-            val attrs = context.obtainStyledAttributes(intArrayOf(android.R.attr.selectableItemBackground))
-            view.background = attrs.getDrawable(0)
-            attrs.recycle()
+            context.withStyledAttributes(attrs = intArrayOf(android.R.attr.selectableItemBackground)) {
+                view.background = getDrawable(0)
+            }
             ViewCompat.replaceAccessibilityAction(
                 view,
                 AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK,

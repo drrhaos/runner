@@ -273,7 +273,6 @@ class AddSensorViewModel(
 
     override fun onCleared() {
         cancelAll()
-        super.onCleared()
     }
 
     private companion object {

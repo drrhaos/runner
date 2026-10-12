@@ -114,7 +114,6 @@ class DevicesViewModel(
 
     override fun onCleared() {
         onStop()
-        super.onCleared()
     }
 
     companion object {
