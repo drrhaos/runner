@@ -3,6 +3,7 @@ package com.runner.academy.ui.tracking
 import android.content.res.ColorStateList
 import android.view.View
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -13,6 +14,7 @@ import com.google.android.material.color.MaterialColors
 import com.runner.academy.R
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutState
+import com.runner.academy.sensor.HeartRateDisplay
 
 /** What the timer shows besides its digits. */
 enum class TimerState {
@@ -69,11 +71,60 @@ class MetricsDisplayManager(
         val textViewElapsedTimeExpanded: TextView,
         /** The heart-rate tile: opens Devices while no sensor is connected. */
         val layoutHeartRateTile: View,
+        /** The link icon by the tile's label. */
+        val imageViewHrLink: ImageView,
+        /** The same icon by the GPS indicator: seen with the panel collapsed. */
+        val imageViewHrLinkCompact: ImageView,
     )
 
     private var shownTimerState: TimerState? = null
     private var heartRateTile: HeartRateTile? = null
-    private var heartRate: Int? = null
+    private var shownHeartRate: HeartRateTileLook? = null
+
+    /**
+     * The value, its colour, the link icon (on the tile and by the GPS indicator) and what
+     * TalkBack says, from the service's session during a workout or the screen's own lease
+     * before it ([WorkoutTrackingViewModel.heartRateDisplay]); null: no sensor. No live region:
+     * the description changes quietly, the voice tells about a lost sensor.
+     */
+    fun updateHeartRate(display: HeartRateDisplay?) {
+        val look = HeartRateTileLook.of(display)
+        val previous = shownHeartRate
+        if (look == previous) return
+        shownHeartRate = look
+        val value = views.textViewWorkoutHeartRate
+        value.text = look.text ?: value.context.getString(R.string.track_info_pulse_placeholder)
+        value.setTextColor(
+            MaterialColors.getColor(
+                value,
+                if (look.greyed) com.google.android.material.R.attr.colorOnSurfaceVariant
+                else com.google.android.material.R.attr.colorOnSurface
+            )
+        )
+        val tile = views.layoutHeartRateTile
+        val context = tile.context
+        tile.contentDescription = look.a11y.bpm?.let { bpm ->
+            context.getString(
+                look.a11y.text,
+                context.resources.getQuantityString(R.plurals.heart_rate_beats_per_minute, bpm, bpm)
+            )
+        } ?: context.getString(look.a11y.text)
+
+        val icon = look.icon
+        val state = icon?.let { context.getString(it.stateDescription) }
+        for (image in listOf(views.imageViewHrLink, views.imageViewHrLinkCompact)) {
+            if (icon == null) {
+                image.visibility = View.GONE
+                continue
+            }
+            image.setImageResource(icon.drawable)
+            image.imageTintList = ColorStateList.valueOf(MaterialColors.getColor(image, icon.tintAttr))
+            image.visibility = View.VISIBLE
+        }
+        views.imageViewHrLinkCompact.contentDescription = state
+        // Only on a change: TalkBack announces a new state of the focused tile
+        if (previous == null || previous.icon != icon) ViewCompat.setStateDescription(tile, state)
+    }
 
     /**
      * Without a connected sensor the tile is a button to Devices ("Heart rate: no sensor added,
@@ -100,18 +151,6 @@ class MetricsDisplayManager(
             view.background = null
             ViewCompat.removeAccessibilityAction(view, AccessibilityNodeInfoCompat.ACTION_CLICK)
         }
-        describeHeartRateTile()
-    }
-
-    private fun describeHeartRateTile() {
-        val view = views.layoutHeartRateTile
-        val a11y = heartRateTile?.a11y
-        val bpm = heartRate
-        view.contentDescription = when {
-            a11y != null -> view.context.getString(a11y)
-            bpm != null -> view.resources.getQuantityString(R.plurals.heart_rate_beats_per_minute, bpm, bpm)
-            else -> null
-        }
     }
 
     fun updateMetrics(session: WorkoutSession) {
@@ -125,11 +164,6 @@ class MetricsDisplayManager(
         views.textViewWorkoutTimeExpanded.text = formattedTime
         views.textViewWorkoutDistanceExpanded.text = formattedDistance
         views.textViewWorkoutPace.text = stripUnit(viewModel.formatPace(session.avgPace))
-        views.textViewWorkoutHeartRate.text = session.heartRate?.toString() ?: "--"
-        if (session.heartRate != heartRate) {
-            heartRate = session.heartRate
-            describeHeartRateTile()
-        }
         views.textViewAvgSpeed.text = stripUnit(viewModel.formatSpeed(session.avgSpeed))
         views.textViewCurrentPace.text = stripUnit(viewModel.formatPace(session.currentPace))
         views.textViewCaloriesBurned.text = session.calories.toString()

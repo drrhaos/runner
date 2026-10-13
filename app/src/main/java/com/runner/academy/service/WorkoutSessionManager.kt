@@ -2,6 +2,7 @@ package com.runner.academy.service
 
 import com.runner.academy.data.GpsStatus
 import com.runner.academy.data.WorkoutSession
+import com.runner.academy.sensor.HeartRateDisplay
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.SpeedPaceCalculator
 
@@ -57,7 +58,7 @@ class WorkoutSessionManager {
             currentPace = 0f,
             avgSpeed = 0f,
             currentSpeed = 0f,
-            heartRate = null,
+            heartRateDisplay = null,
             calories = 0,
             gpsStatus = initialGpsStatus,
             trackPoints = emptyList(),
@@ -155,6 +156,17 @@ class WorkoutSessionManager {
     fun tickElapsedTime(broadcast: Boolean = true, now: Long = System.currentTimeMillis()) {
         session = session.withTimesAt(now).withClock()
         if (broadcast) notifyChanged()
+    }
+
+    /**
+     * See [WorkoutSession.heartRateDisplay]; no listeners: the service's 1 s heart-rate tick
+     * pushes the session to the screen itself (also during a pause, when the timer stops).
+     * @return true when it changed.
+     */
+    fun setHeartRate(display: HeartRateDisplay?): Boolean {
+        if (session.heartRateDisplay == display) return false
+        session = session.copy(heartRateDisplay = display)
+        return true
     }
 
     /** See [WorkoutSession.openStepMeters]; no listeners (the next update carries it). */

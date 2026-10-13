@@ -1,6 +1,7 @@
 package com.runner.academy.data
 
 import android.location.Location
+import com.runner.academy.sensor.HeartRateDisplay
 import org.osmdroid.util.GeoPoint
 
 data class WorkoutSession(
@@ -15,8 +16,12 @@ data class WorkoutSession(
     val currentPace: Float = 0f, // текущий темп в минутах на километр
     val avgSpeed: Float = 0f,
     val currentSpeed: Float = 0f,
-    /** The live heart rate to show, beats per minute; null without a sensor or a fresh value. */
-    val heartRate: Int? = null,
+    /**
+     * What the heart-rate tile shows, refreshed once a second by the service; null: no sensor
+     * in this workout (none paired, or the system refused the connected-device service type).
+     * Not checkpointed: the heart rate lives in the points.
+     */
+    val heartRateDisplay: HeartRateDisplay? = null,
     val calories: Int = 0,
     val gpsStatus: GpsStatus = GpsStatus.SEARCHING,
     val trackPoints: List<GeoPoint> = emptyList(), // для отображения на карте

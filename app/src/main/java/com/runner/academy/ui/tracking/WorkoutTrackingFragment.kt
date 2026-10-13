@@ -64,8 +64,8 @@ class WorkoutTrackingFragment : Fragment() {
         WorkoutTrackingViewModelFactory(
             app.workoutRepository,
             requireContext().applicationContext as android.app.Application,
-            app.pairedSensorStore.changes,
-            app.heartRateSensor.status
+            app.pairedSensors,
+            app.heartRateSensor
         )
     }
 
@@ -302,12 +302,14 @@ class WorkoutTrackingFragment : Fragment() {
                 ),
                 textViewElapsedTimeExpanded = binding.textViewElapsedTimeExpanded,
                 layoutHeartRateTile = binding.layoutHeartRateTile,
+                imageViewHrLink = binding.imageViewHrLink,
+                imageViewHrLinkCompact = binding.imageViewHrLinkCompact,
             ),
             viewModel
         ) { expanded ->
             intervalController?.onExpandedInfoChanged(expanded)
         }
-        // Only an entry to Devices; the pre-start lease belongs to the workout branch
+        // Only an entry to Devices (the workout goes on: its "workout" lease shares the connection)
         binding.layoutHeartRateTile.setOnClickListener {
             val navController = findNavController()
             if (viewModel.heartRateTile.value.opensDevices && navController.currentDestination?.id == R.id.nav_tracking) {
@@ -480,6 +482,12 @@ class WorkoutTrackingFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.heartRateTile.collect { metricsDisplayManager?.updateHeartRateTile(it) }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.heartRateDisplay.collect { metricsDisplayManager?.updateHeartRate(it) }
             }
         }
 
@@ -940,6 +948,18 @@ class WorkoutTrackingFragment : Fragment() {
     }
 
     // -- Lifecycle --
+
+    override fun onStart() {
+        super.onStart()
+        // Before the start the paired sensor connects while the screen is seen (the panel may be
+        // collapsed: the compact icon by the GPS indicator shows the link)
+        viewModel.holdHeartRateBeforeStart()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        viewModel.releaseHeartRateBeforeStart()
+    }
 
     override fun onResume() {
         super.onResume()

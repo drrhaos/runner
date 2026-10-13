@@ -50,6 +50,15 @@ class FakeHeartRateSensor(link: SensorLink = SensorLink.IDLE) : HeartRateSensor 
         _status.value = SensorStatus(link, batteryPercent, lastSeenAt)
     }
 
+    /** [readRssi] calls. */
+    @Volatile
+    var rssiReads = 0
+        private set
+
+    override fun readRssi() {
+        rssiReads++
+    }
+
     fun diag(event: SensorDiagEvent) {
         _diagnostics.tryEmit(event)
     }

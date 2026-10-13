@@ -146,6 +146,46 @@ class GpsDiagnosticsFormatTest {
         assertEquals(null, record.reason)
         assertEquals(null, record.fix.steps)
         assertEquals(null, record.fix.cadence)
+        assertEquals(null, record.fix.heartRate)
         assertEquals(1, GpsDiagnostics.FORMAT_VERSION)
+    }
+
+    @Test
+    fun fixLine_carriesTheHeartRate() {
+        val withHr = fix.copy(heartRate = 152)
+        val line = GpsDiagnostics.fixLine(withHr, FixResult.ACCEPTED)
+
+        assertTrue(line.contains("\"hr\":152"))
+        assertEquals(DiagRecord.Fix(withHr, FixResult.ACCEPTED), GpsDiagnostics.parse(listOf(line)).single())
+    }
+
+    @Test
+    fun sensorLine_wireFormat() {
+        assertEquals(
+            """{"type":"sensor","t":5,"sensor":"hr","event":"disconnected","status":133}""",
+            GpsDiagnostics.sensorLine(5L, "disconnected", status = 133)
+        )
+        assertEquals(
+            """{"type":"sensor","t":6,"sensor":"hr","event":"fgs_no_connected_device"}""",
+            GpsDiagnostics.sensorLine(6L, "fgs_no_connected_device")
+        )
+    }
+
+    @Test
+    fun sensorLine_roundTripsThroughParse() {
+        val lines = listOf(
+            GpsDiagnostics.sensorLine(7L, "battery", value = 80),
+            GpsDiagnostics.sensorLine(8L, "rssi", value = -71),
+            GpsDiagnostics.sensorLine(9L, "gatt_error", status = 8)
+        )
+
+        assertEquals(
+            listOf(
+                DiagRecord.Sensor(7L, "hr", "battery", status = null, value = 80),
+                DiagRecord.Sensor(8L, "hr", "rssi", status = null, value = -71),
+                DiagRecord.Sensor(9L, "hr", "gatt_error", status = 8, value = null)
+            ),
+            GpsDiagnostics.parse(lines)
+        )
     }
 }

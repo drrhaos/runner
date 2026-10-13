@@ -75,6 +75,12 @@ private class AndroidGattHandle(private val gatt: BluetoothGatt) : GattHandle {
         }
     }
 
+    override fun readRssi(): Boolean = try {
+        gatt.readRemoteRssi()
+    } catch (e: SecurityException) {
+        false
+    }
+
     override fun close() {
         try {
             gatt.close()
@@ -145,6 +151,10 @@ private class AndroidGattCallback(private val target: GattCallback) : BluetoothG
     @Suppress("OVERRIDE_DEPRECATION", "DEPRECATION")
     override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
         characteristic.id()?.let { target.onCharacteristicChanged(it, characteristic.value ?: ByteArray(0)) }
+    }
+
+    override fun onReadRemoteRssi(gatt: BluetoothGatt, rssi: Int, status: Int) {
+        target.onReadRemoteRssi(rssi, status)
     }
 
     /** Null only for a characteristic detached from its service, which discovery never gives. */

@@ -849,7 +849,14 @@
     <string name="settings_devices_summary_no_access">Heart rate monitor: %1$s · no access</string>
 
     <string name="tracking_hr_tile_no_sensor_a11y">Heart rate: no sensor added</string>
-    <string name="tracking_hr_tile_disconnected_a11y">Heart rate: sensor not connected</string>
     <string name="tracking_hr_tile_open_devices">open Devices</string>
+    <string name="tracking_hr_tile_a11y">Heart rate: %1$s</string>
+    <string name="tracking_hr_tile_stale_a11y">Heart rate: %1$s, not updating</string>
+    <string name="tracking_hr_tile_no_data_a11y">Heart rate: no data</string>
+    <string name="tracking_hr_link_connected">sensor connected</string>
+    <string name="tracking_hr_link_searching">searching for sensor</string>
+    <string name="tracking_hr_link_lost">sensor lost</string>
+    <string name="voice_hr_sensor_lost">Heart rate sensor lost</string>
+    <string name="voice_hr_sensor_connected">Heart rate sensor connected</string>
 
 </resources>

@@ -37,7 +37,7 @@ class FakeGattConnector : GattConnector {
 /** One fake `BluetoothGatt`: records the operations started on it. */
 class FakeGattHandle(private val characteristics: Map<GattCharacteristic, Int>) : GattHandle {
 
-    /** Started operations: `discover`, `notify:<char>`, `read:<char>`, `close`. */
+    /** Started operations: `discover`, `notify:<char>`, `read:<char>`, `rssi`, `close`. */
     val calls = mutableListOf<String>()
 
     /** False: operations refuse to start. */
@@ -56,6 +56,8 @@ class FakeGattHandle(private val characteristics: Map<GattCharacteristic, Int>) 
 
     override fun read(characteristic: GattCharacteristic): Boolean =
         characteristic in characteristics && record("read:${short(characteristic)}")
+
+    override fun readRssi(): Boolean = record("rssi")
 
     override fun close() {
         calls += "close"

@@ -14,6 +14,7 @@ import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.databinding.FragmentSettingsBinding
+import com.runner.academy.debug.DebugSensors
 import com.runner.academy.util.StepPermissionPolicy
 import com.runner.academy.util.StepTrackingAccess
 import com.runner.academy.util.openAppSystemSettings
@@ -32,7 +33,7 @@ class SettingsFragment : Fragment() {
         SettingsViewModelFactory(
             requireContext(),
             app.userPreferences,
-            app.pairedSensorStore.changes,
+            app.pairedSensors,
             app.heartRateSensor.status
         )
     }
@@ -65,7 +66,9 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
+
+        // Debug builds only: the simulated heart-rate sensor switch (release inflates a Space)
+        DebugSensors.bind(binding.stubDebugSettings.inflate())
         setupClickListeners()
         observeViewModel()
     }

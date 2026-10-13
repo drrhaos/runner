@@ -6,10 +6,16 @@ import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.sensor.FakeHeartRateSensor
+import com.runner.academy.sensor.SensorLink
 import com.runner.academy.service.ActiveWorkoutCheckpoint
 import com.runner.academy.service.AutoPauseController
 import com.runner.academy.service.GpsLocationProcessor
 import com.runner.academy.service.GpsStatusWatchdog
+import com.runner.academy.service.HeartRateTracker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import com.runner.academy.service.WorkoutSessionManager
 import com.runner.academy.ui.tracking.LiveWorkoutBuilder
 import com.runner.academy.util.StepDistanceEstimator
@@ -75,6 +81,9 @@ data class SessionReplayResult(
  * Simulated time is both the wall and the monotonic clock (a fix's time is its
  * `elapsedRealtime`), so the service's mono → wall conversion is the identity here.
  *
+ * A run with a heart-rate script ([SyntheticRun.hrAt]) plays it through a [FakeHeartRateSensor]
+ * at 1 Hz into the service's [HeartRateTracker]; each fix takes `bpmAt` its own time.
+ *
  * Not modelled: the unreliable-signal latch, the lastKnown pull of the watchdog and the stride
  * learner. Keep in sync with the service when that glue changes, like [GpsReplay.live].
  */
@@ -84,6 +93,7 @@ object SessionReplay {
     /** The watchdog's period and timeout with the screen on (`WorkoutTrackingService`). */
     private const val WATCHDOG_EVERY_TICKS = 2
     private const val LOST_TIMEOUT_MS = 5_000L
+    private const val NANOS_PER_MS = 1_000_000L
     private val gson = GsonBuilder().create()
 
     fun run(
@@ -126,6 +136,7 @@ object SessionReplay {
             if (kill != null) {
                 checkpointJson = live.checkpoint(now)
                 killedAtMs = now
+                live.kill()
                 if (kill.downSec > 0) {
                     deadUntilSec = sec + kill.downSec
                     fixes.dropWhile(now + TICK_MS)
@@ -133,6 +144,8 @@ object SessionReplay {
                 }
                 live.restore(checkpointJson!!, now, now)
             }
+            // The sensor notifies once a second, pauses included (the service keeps the lease)
+            live.heartRateSample(now, sinceStartMs = now - start)
             while (fixes.isNotEmpty() && fixes.first().timestamp < now + TICK_MS) {
                 val fix = fixes.removeFirst()
                 // Delivered without batching: received in the second of its own time
@@ -166,6 +179,35 @@ object SessionReplay {
         private var lastAnyFixMs = 0L
         private var watchdogTicks = 0
 
+        /**
+         * The paired heart-rate sensor ([SyntheticRun.hrAt]) and the service's tracker on it:
+         * leased from the start (or a restore) to the stop; a dead process loses the history.
+         */
+        private val hrSensor = FakeHeartRateSensor(SensorLink.CONNECTED)
+        private val hrScope = CoroutineScope(Dispatchers.Unconfined)
+        private var hrNowNanos = 0L
+        var heartRate: HeartRateTracker? = null
+            private set
+
+        private fun startHeartRate() {
+            heartRate?.stop()
+            if (run.hrAt == null) return
+            heartRate = HeartRateTracker(hrSensor, clockNanos = { hrNowNanos }, scope = hrScope).also { it.start() }
+        }
+
+        /** The sensor's sample of second [now]. */
+        fun heartRateSample(now: Long, sinceStartMs: Long) {
+            val script = run.hrAt ?: return
+            hrNowNanos = now * NANOS_PER_MS
+            hrSensor.emit(script(sinceStartMs), atNanos = now * NANOS_PER_MS)
+        }
+
+        /** The process dies: its tracker and lease with it. */
+        fun kill() {
+            heartRate?.stop()
+            heartRate = null
+        }
+
         private fun sensorSteps(timeMs: Long): Pair<Int, Float?>? =
             if (settings.stepsAvailable) run.stepsAt(timeMs) else null
 
@@ -178,6 +220,7 @@ object SessionReplay {
             watchdogTicks = 0
             autoPause.reset()
             processor.reset(workoutType = settings.type, stepDistance = settings.stepDistance)
+            startHeartRate()
             manager.startNewSession(initialGpsStatus = GpsStatus.SEARCHING, now = now)
             tracking = true
         }
@@ -239,7 +282,8 @@ object SessionReplay {
                 steps = steps,
                 cadence = cadence,
                 baroM = if (settings.barometerAvailable) fix.baroM else null,
-                heartRate = fix.heartRate
+                // `updateLocation`: the value at the fix's own time (elapsedRealtime = its time here)
+                heartRate = heartRate?.bpmAt(fix.timestamp * NANOS_PER_MS)
             )
             manager.setOpenStepMeters(processor.pendingStepMeters)
             val good = when (result) {
@@ -341,6 +385,8 @@ object SessionReplay {
                 )
             }
             val restored = checkpoint.toRestoredSession(now)
+            // A new tracker with an empty history; the machine connects again
+            startHeartRate()
             manager = WorkoutSessionManager().apply {
                 restoreSession(restored, checkpoint.lastUpdateTime)
                 setOpenStepMeters(processor.pendingStepMeters)
@@ -355,6 +401,8 @@ object SessionReplay {
 
         /** Stop: the VM freezes the session at Stop and saves it. */
         fun stop(now: Long): SessionReplayResult {
+            heartRate?.stop()
+            hrScope.cancel()
             val stopped = LiveWorkoutBuilder.stopped(manager.getSession(), now)
             val workout = LiveWorkoutBuilder.build(
                 session = stopped,

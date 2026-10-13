@@ -175,6 +175,16 @@ class BleHeartRateSensor(
         diag(Kind.GATT_ERROR, status)
     }
 
+    override fun readRssi() {
+        scheduler.post {
+            if (machine.link == SensorLink.CONNECTED) link.readRssi()
+        }
+    }
+
+    override fun onRssi(dbm: Int) {
+        diag(Kind.RSSI, dbm)
+    }
+
     private fun feed(event: LinkEvent) {
         val before = machine.link
         val commands = machine.on(event, nowMs())

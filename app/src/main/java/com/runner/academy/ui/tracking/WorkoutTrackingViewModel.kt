@@ -7,12 +7,21 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.location.Location
 import android.os.IBinder
+import android.os.SystemClock
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.runner.academy.sensor.HeartRateDisplay
+import com.runner.academy.sensor.HeartRateSample
+import com.runner.academy.sensor.HeartRateSensor
 import com.runner.academy.sensor.PairedSensor
-import com.runner.academy.sensor.SensorStatus
+import com.runner.academy.sensor.SensorLease
 import com.runner.academy.sensor.SensorType
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import com.runner.academy.util.GpsLocationClient
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutRepository
@@ -40,8 +49,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 class WorkoutTrackingViewModel(
     private val repository: WorkoutRepository,
     private val application: Application,
-    pairedSensors: StateFlow<Map<SensorType, PairedSensor>>,
-    heartRateStatus: StateFlow<SensorStatus>
+    private val pairedSensors: StateFlow<Map<SensorType, PairedSensor>>,
+    private val heartRateSensor: HeartRateSensor,
+    private val clockNanos: () -> Long = SystemClock::elapsedRealtimeNanos
 ) : ViewModel() {
 
     /**
@@ -49,16 +59,117 @@ class WorkoutTrackingViewModel(
      * connected sensor ([HeartRateTile.opensDevices]) a tap opens Devices.
      */
     val heartRateTile: StateFlow<HeartRateTile> =
-        combine(pairedSensors, heartRateStatus) { sensors, status ->
+        combine(pairedSensors, heartRateSensor.status) { sensors, status ->
             HeartRateTile.of(sensors[SensorType.HEART_RATE], status.link)
         }.stateIn(
             viewModelScope,
             SharingStarted.Eagerly,
-            HeartRateTile.of(pairedSensors.value[SensorType.HEART_RATE], heartRateStatus.value.link)
+            HeartRateTile.of(pairedSensors.value[SensorType.HEART_RATE], heartRateSensor.status.value.link)
         )
 
     private val _workoutSession = MutableStateFlow(WorkoutSession())
     val workoutSession: StateFlow<WorkoutSession> = _workoutSession.asStateFlow()
+
+    // -- Heart rate before the start --
+
+    private var prestartLease: SensorLease? = null
+    private var prestartJob: Job? = null
+    private var prestartLatest: HeartRateSample? = null
+
+    /** The tile before the start, ticked once a second while the screen holds its lease. */
+    private val prestartDisplay = MutableStateFlow<HeartRateDisplay?>(null)
+
+    /**
+     * What the heart-rate tile shows: during a workout the service's
+     * [WorkoutSession.heartRateDisplay], before it the screen's own (see
+     * [holdHeartRateBeforeStart]); null without a paired sensor.
+     */
+    val heartRateDisplay: StateFlow<HeartRateDisplay?> =
+        combine(_workoutSession, pairedSensors, prestartDisplay) { session, sensors, prestart ->
+            when {
+                session.isTracking || session.isPaused -> session.heartRateDisplay
+                sensors[SensorType.HEART_RATE] == null -> null
+                // Paired, the lease not taken (yet): the screen is about to connect, searching
+                else -> prestart ?: HeartRateDisplay.ofLeased(null, heartRateSensor.status.value.link, clockNanos())
+            }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Between the screen's `onStart` and `onStop`: it wants the sensor whenever no workout runs. */
+    private var screenWantsHeartRate = false
+
+    /**
+     * Keeps the paired sensor connected while the workout screen is visible before the start
+     * (lease `"tracking-prestart"`): by the start the heart rate is already there. Called from
+     * the screen's `onStart`; nothing happens without a paired sensor or during a workout.
+     * Held through the countdown; handed over once the service holds `"workout"`, see
+     * [onSessionFromService], and taken again when the workout is over and the screen still
+     * seen ([resetWorkout]).
+     */
+    fun holdHeartRateBeforeStart() {
+        screenWantsHeartRate = true
+        acquirePrestart()
+    }
+
+    private fun acquirePrestart() {
+        if (prestartLease != null) return
+        if (pairedSensors.value[SensorType.HEART_RATE] == null) return
+        val session = _workoutSession.value
+        if (session.isTracking || session.isPaused) return
+        prestartLease = heartRateSensor.acquire(PRESTART_LEASE)
+        refreshPrestartDisplay()
+        prestartJob = viewModelScope.launch {
+            launch {
+                heartRateSensor.samples.collect {
+                    prestartLatest = it
+                    refreshPrestartDisplay()
+                }
+            }
+            launch { heartRateSensor.status.collect { refreshPrestartDisplay() } }
+            while (isActive) {
+                delay(HEART_RATE_TICK_MS)
+                refreshPrestartDisplay()
+            }
+        }
+    }
+
+    /** The screen stopped (`onStop`). Releasing twice is harmless. */
+    fun releaseHeartRateBeforeStart() {
+        screenWantsHeartRate = false
+        dropPrestart()
+    }
+
+    /** The service took over, or the screen let go. */
+    private fun dropPrestart() {
+        prestartJob?.cancel()
+        prestartJob = null
+        prestartLease?.release()
+        prestartLease = null
+        prestartLatest = null
+        prestartDisplay.value = null
+    }
+
+    private fun refreshPrestartDisplay() {
+        if (prestartLease == null) return
+        // Under the screen's lease: IDLE is the sensor about to connect, not a lost link
+        prestartDisplay.value = HeartRateDisplay.ofLeased(prestartLatest, heartRateSensor.status.value.link, clockNanos())
+    }
+
+    /**
+     * A session from the service. The service takes its `"workout"` lease before it publishes
+     * the started (or restored) session, so once one is tracking the screen's lease can go
+     * without the connection dropping in between. An idle one (no workout) while the screen is
+     * seen takes the lease back.
+     */
+    @VisibleForTesting
+    internal fun onSessionFromService(session: WorkoutSession) {
+        _workoutSession.value = session
+        if (session.isTracking || session.isPaused) {
+            dropPrestart()
+        } else if (screenWantsHeartRate) {
+            acquirePrestart()
+        }
+        updateWorkoutState()
+    }
 
     private val _workoutState = MutableStateFlow(WorkoutState.NOT_STARTED)
     val workoutState: StateFlow<WorkoutState> = _workoutState.asStateFlow()
@@ -128,10 +239,7 @@ class WorkoutTrackingViewModel(
             isServiceBound = true
             serviceBound.value = true
 
-            trackingService?.setSessionUpdateCallback { session ->
-                _workoutSession.value = session
-                updateWorkoutState()
-            }
+            trackingService?.setSessionUpdateCallback { session -> onSessionFromService(session) }
             trackingService?.let { adoptServiceSession(it) }
         }
 
@@ -175,11 +283,10 @@ class WorkoutTrackingViewModel(
 
     private fun adoptServiceSession(svc: WorkoutTrackingService) {
         val serviceSession = svc.getCurrentSession()
-        _workoutSession.value = serviceSession
         if (serviceSession.isTracking || serviceSession.isPaused) {
             restoreUiMetadataFromService(svc)
         }
-        updateWorkoutState()
+        onSessionFromService(serviceSession)
     }
 
     private fun restoreUiMetadataFromService(svc: WorkoutTrackingService) {
@@ -284,6 +391,8 @@ class WorkoutTrackingViewModel(
         _workoutSession.value = WorkoutSession()
         _workoutState.value = WorkoutState.NOT_STARTED
         clearActiveIntervalSegments()
+        // The workout's lease is gone with the service; a screen still seen takes its own again
+        if (screenWantsHeartRate) acquirePrestart()
     }
 
     private fun updateWorkoutState() {
@@ -383,12 +492,15 @@ class WorkoutTrackingViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        releaseHeartRateBeforeStart()
         cleanup()
     }
 
     companion object {
         private const val TAG = "WorkoutTrackingViewModel"
         private const val BIND_TIMEOUT_MS = 5_000L
+        const val PRESTART_LEASE = "tracking-prestart"
+        private const val HEART_RATE_TICK_MS = 1_000L
     }
 }
 
@@ -418,12 +530,12 @@ class WorkoutTrackingViewModelFactory(
     private val repository: WorkoutRepository,
     private val application: Application,
     private val pairedSensors: StateFlow<Map<SensorType, PairedSensor>>,
-    private val heartRateStatus: StateFlow<SensorStatus>
+    private val heartRateSensor: HeartRateSensor
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(WorkoutTrackingViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return WorkoutTrackingViewModel(repository, application, pairedSensors, heartRateStatus) as T
+            return WorkoutTrackingViewModel(repository, application, pairedSensors, heartRateSensor) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }
