@@ -13,8 +13,12 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.appContainer
+import com.runner.academy.databinding.DialogHrMaxBinding
 import com.runner.academy.databinding.FragmentSettingsBinding
 import com.runner.academy.debug.DebugSensors
+import com.runner.academy.ui.workout.HeartRateText
+import com.runner.academy.util.HrMax
+import com.google.android.material.color.MaterialColors
 import com.runner.academy.util.StepPermissionPolicy
 import com.runner.academy.util.StepTrackingAccess
 import com.runner.academy.util.openAppSystemSettings
@@ -87,6 +91,11 @@ class SettingsFragment : Fragment() {
         // Дата рождения
         binding.rowAge.setOnClickListener {
             showBirthDateDialog()
+        }
+
+        // Максимальный пульс
+        binding.rowHrMax.setOnClickListener {
+            showHrMaxDialog()
         }
 
         // Пол пользователя
@@ -171,7 +180,8 @@ class SettingsFragment : Fragment() {
         binding.textViewHeightValue.text = getString(R.string.settings_height_format, settings.userHeight.toInt())
         binding.textViewAgeValue.text = if (settings.userAge > 0) getString(R.string.settings_age_format, settings.userAge) else getString(R.string.settings_gender_unknown)
         binding.textViewGenderValue.text = getGenderDisplayName(settings.userGender)
-        
+        showHrMax(settings.hrMax)
+
         // Настройки приложения
         binding.textViewUnitSystemValue.text = viewModel.getUnitSystemDisplayName(settings.unitSystem)
         binding.textViewThemeModeValue.text = viewModel.getThemeModeDisplayName(settings.themeMode)
@@ -381,6 +391,76 @@ class SettingsFragment : Fragment() {
             setTitle(getString(R.string.settings_dialog_birthdate_title))
             datePicker.maxDate = System.currentTimeMillis()
         }.show()
+    }
+
+    /** The value, where it comes from (or why the zones are off), read by TalkBack as one row. */
+    private fun showHrMax(hrMax: HrMax?) {
+        val value = binding.textViewHrMaxValue
+        val source = binding.textViewHrMaxSource
+        if (hrMax == null) {
+            value.setText(R.string.settings_hr_max_none)
+            value.setTextColor(MaterialColors.getColor(value, com.google.android.material.R.attr.colorOnSurfaceVariant))
+            source.setText(R.string.settings_hr_max_source_none)
+            binding.rowHrMax.contentDescription = getString(R.string.settings_hr_max_none_a11y)
+            return
+        }
+        value.text = hrMax.bpm.toString()
+        value.setTextColor(MaterialColors.getColor(value, androidx.appcompat.R.attr.colorPrimary))
+        val age = hrMax.ageYears
+        source.text = if (age != null) {
+            getString(R.string.settings_hr_max_source_auto, age)
+        } else {
+            getString(R.string.settings_hr_max_source_manual)
+        }
+        binding.rowHrMax.contentDescription = getString(
+            R.string.settings_hr_max_a11y,
+            HeartRateText.beatsPerMinute(requireContext(), hrMax.bpm),
+            getString(if (age != null) R.string.hr_max_source_auto_short else R.string.settings_hr_max_source_manual)
+        )
+    }
+
+    /**
+     * A picker of 100..230 with the zones it gives; Save writes a manual value (unless an
+     * automatic one was left as it was), "By age" goes back to the automatic one.
+     */
+    private fun showHrMaxDialog() {
+        val state = viewModel.settingsState.value
+        val current = state.hrMax
+        val byAge = state.hrMaxByAge
+        val dialogBinding = DialogHrMaxBinding.inflate(layoutInflater)
+        dialogBinding.textViewHrMaxExplain.text = if (byAge != null) {
+            getString(R.string.settings_dialog_hr_max_auto_formula, byAge.ageYears, byAge.bpm)
+        } else {
+            getString(R.string.settings_dialog_hr_max_no_birth)
+        }
+        val picker = dialogBinding.numberPickerHrMax
+        picker.minValue = HrMax.MIN_MANUAL_BPM
+        picker.maxValue = HrMax.MAX_MANUAL_BPM
+        picker.wrapSelectorWheel = false
+        picker.value = HrMaxDialog.initialBpm(current)
+        fun showPreview(bpm: Int) {
+            dialogBinding.textViewHrMaxZonesPreview.text = HrMaxDialog.zonesPreview(bpm).joinToString("\n") { (zone, range) ->
+                getString(R.string.settings_hr_max_zone_line, zone, range.first, range.last)
+            }
+        }
+        showPreview(picker.value)
+        picker.setOnValueChangedListener { _, _, bpm -> showPreview(bpm) }
+
+        val builder = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.settings_dialog_hr_max_title)
+            .setView(dialogBinding.root)
+            .setPositiveButton(R.string.save) { _, _ ->
+                HrMaxDialog.manualToSave(current, picker.value)?.let { viewModel.updateHrMaxManual(it) }
+                Toast.makeText(requireContext(), getString(R.string.settings_hr_max_saved), Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.cancel, null)
+        if (HrMaxDialog.offersByAge(current, byAge)) {
+            builder.setNeutralButton(R.string.settings_dialog_hr_max_auto) { _, _ ->
+                viewModel.updateHrMaxManual(0)
+                Toast.makeText(requireContext(), getString(R.string.settings_hr_max_saved), Toast.LENGTH_SHORT).show()
+            }
+        }
+        builder.show()
     }
 
     private fun showGenderDialog() {

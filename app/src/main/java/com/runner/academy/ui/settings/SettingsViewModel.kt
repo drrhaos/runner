@@ -11,6 +11,7 @@ import com.runner.academy.sensor.PairedSensor
 import com.runner.academy.sensor.SensorStatus
 import com.runner.academy.sensor.SensorType
 import com.runner.academy.ui.devices.DevicesSummary
+import com.runner.academy.util.HrMax
 import com.runner.academy.util.StepTrackingAccess
 import com.runner.academy.util.ThemeUtils
 import com.runner.academy.util.UserPreferences
@@ -21,6 +22,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.ZoneId
 
 data class SettingsState(
     val userWeight: Float = 70f,
@@ -38,7 +41,11 @@ data class SettingsState(
     val themeMode: String = ThemeUtils.THEME_SYSTEM,
     val appLanguage: String = "en",
     val isFirstLaunch: Boolean = true,
-    val startCountdownSeconds: Int = 5
+    val startCountdownSeconds: Int = 5,
+    /** What the zones are built on; null: they are off. */
+    val hrMax: HrMax? = null,
+    /** 220 − age whatever is set by hand; null without a birth date. */
+    val hrMaxByAge: HrMax? = null
 )
 
 class SettingsViewModel(
@@ -83,7 +90,7 @@ class SettingsViewModel(
                 appLanguage = userPreferences.appLanguage,
                 isFirstLaunch = userPreferences.isFirstLaunch,
                 startCountdownSeconds = userPreferences.startCountdownSeconds
-            )
+            ).withHrMax()
             applyTheme(userPreferences.themeMode)
         }
     }
@@ -104,8 +111,20 @@ class SettingsViewModel(
         _settingsState.value = _settingsState.value.copy(
             userBirthDate = birthDate,
             userAge = age
-        )
+        ).withHrMax()
     }
+
+    /** [bpm] 0: back to "by age". */
+    fun updateHrMaxManual(bpm: Int) {
+        userPreferences.hrMaxManual = bpm
+        _settingsState.value = _settingsState.value.withHrMax()
+    }
+
+    /** The maximum heart rate as the preferences resolve it today. */
+    private fun SettingsState.withHrMax(): SettingsState = copy(
+        hrMax = userPreferences.hrMax(),
+        hrMaxByAge = HrMax.byAge(userPreferences.userBirthDate, LocalDate.now(), ZoneId.systemDefault())
+    )
     
     fun updateUserGender(gender: String) {
         userPreferences.userGender = gender
