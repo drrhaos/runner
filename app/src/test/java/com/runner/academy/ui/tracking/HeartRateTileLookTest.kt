@@ -16,7 +16,7 @@ class HeartRateTileLookTest {
     fun `no sensor is dashes without an icon`() {
         val look = HeartRateTileLook.of(null)
 
-        assertEquals("--", look.text)
+        assertNull(look.text)
         assertFalse(look.greyed)
         assertNull(look.icon)
         assertEquals(HeartRateTileLook.A11y(R.string.tracking_hr_tile_no_sensor_a11y), look.a11y)
@@ -46,7 +46,7 @@ class HeartRateTileLookTest {
     fun `no value is dashes in the normal colour`() {
         val look = HeartRateTileLook.of(HeartRateDisplay(null, Freshness.NONE, LinkIcon.LOST))
 
-        assertEquals("--", look.text)
+        assertNull(look.text)
         assertFalse(look.greyed)
         assertEquals(HrLinkIcon.LOST, look.icon)
         assertEquals(HeartRateTileLook.A11y(R.string.tracking_hr_tile_no_data_a11y), look.a11y)
@@ -65,7 +65,7 @@ class HeartRateTileLookTest {
     fun `no contact is the connected icon in the error colour, said as strap not worn`() {
         val look = HeartRateTileLook.of(HeartRateDisplay(null, Freshness.NONE, LinkIcon.CONNECTED, noContact = true))
 
-        assertEquals("--", look.text)
+        assertNull(look.text)
         assertEquals(HrLinkIcon.NO_CONTACT, look.icon)
         assertEquals(R.drawable.ic_hr_link_connected, look.icon!!.drawable)
         assertEquals(com.google.android.material.R.attr.colorError, look.icon!!.tintAttr)

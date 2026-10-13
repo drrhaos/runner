@@ -29,11 +29,12 @@ enum class HrLinkIcon(
  * How the heart-rate tile looks for a [HeartRateDisplay] (null: no sensor). One function for
  * both sources: the service's session during a workout, the screen's own lease before it.
  *
+ * @param text the value; null: no value, the placeholder `track_info_pulse_placeholder` (`--`).
  * @param greyed the value is 5–15 s old: `colorOnSurfaceVariant` instead of `colorOnSurface`.
  * @param icon null: no sensor, the icon is gone.
  */
 data class HeartRateTileLook(
-    val text: String,
+    val text: String?,
     val greyed: Boolean,
     val icon: HrLinkIcon?,
     val a11y: A11y
@@ -43,11 +44,9 @@ data class HeartRateTileLook(
     data class A11y(@StringRes val text: Int, val bpm: Int? = null)
 
     companion object {
-        const val NO_VALUE = "--"
-
         fun of(display: HeartRateDisplay?): HeartRateTileLook {
             if (display == null) {
-                return HeartRateTileLook(NO_VALUE, false, null, A11y(R.string.tracking_hr_tile_no_sensor_a11y))
+                return HeartRateTileLook(null, false, null, A11y(R.string.tracking_hr_tile_no_sensor_a11y))
             }
             val icon = when {
                 display.noContact -> HrLinkIcon.NO_CONTACT
@@ -57,7 +56,7 @@ data class HeartRateTileLook(
             }
             val bpm = display.bpm
             return when {
-                bpm == null -> HeartRateTileLook(NO_VALUE, false, icon, A11y(R.string.tracking_hr_tile_no_data_a11y))
+                bpm == null -> HeartRateTileLook(null, false, icon, A11y(R.string.tracking_hr_tile_no_data_a11y))
                 display.isFresh -> HeartRateTileLook(bpm.toString(), false, icon, A11y(R.string.tracking_hr_tile_a11y, bpm))
                 else -> HeartRateTileLook(bpm.toString(), true, icon, A11y(R.string.tracking_hr_tile_stale_a11y, bpm))
             }

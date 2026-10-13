@@ -93,7 +93,7 @@ class MetricsDisplayManager(
         if (look == previous) return
         shownHeartRate = look
         val value = views.textViewWorkoutHeartRate
-        value.text = look.text
+        value.text = look.text ?: value.context.getString(R.string.track_info_pulse_placeholder)
         value.setTextColor(
             MaterialColors.getColor(
                 value,
