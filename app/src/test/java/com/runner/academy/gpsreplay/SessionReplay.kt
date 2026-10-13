@@ -18,8 +18,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import com.runner.academy.service.WorkoutSessionManager
 import com.runner.academy.ui.tracking.LiveWorkoutBuilder
+import com.runner.academy.data.WorkoutTemplateSegment
+import com.runner.academy.util.IntervalEngine
+import com.runner.academy.util.IntervalSegmentsJson
 import com.runner.academy.util.StepDistanceEstimator
 import com.runner.academy.util.TrackSanitizer
+import com.runner.academy.voice.CoachInput
+import com.runner.academy.voice.VoiceCoach
+import com.runner.academy.voice.VoiceLine
+import com.runner.academy.voice.VoiceSettings
 
 /** How the replayed session is set up. */
 data class ReplaySettings(
@@ -34,8 +41,14 @@ data class ReplaySettings(
     /** The run's frozen stride for bridges, as the service gives the processor. */
     val stepDistance: StepDistanceEstimator? = null,
     val type: WorkoutType = WorkoutType.EASY_RUN,
-    val userWeightKg: Float = 70f
-)
+    val userWeightKg: Float = 70f,
+    /** The workout's segments, as the service gets them; an interval workout (no auto-pause). */
+    val segments: List<WorkoutTemplateSegment>? = null,
+    /** The voice settings the service reads on each tick; on by default on the bench. */
+    val voice: VoiceSettings = VoiceSettings.DEFAULT.copy(enabled = true)
+) {
+    val hasSegments: Boolean get() = intervals || !segments.isNullOrEmpty()
+}
 
 /** What the runner (or the system) does during the replay; seconds from the start. */
 sealed class ReplayEvent {
@@ -65,7 +78,9 @@ data class SessionReplayResult(
     /** The session's track points at Stop, as the service recorded them (steps included). */
     val livePoints: List<TrackPoint>,
     /** The row the save path builds from the stopped session. */
-    val savedWorkout: Workout
+    val savedWorkout: Workout,
+    /** What the voice coach said on the timer: (ms since the start, line). */
+    val voice: List<Pair<Long, VoiceLine>> = emptyList()
 )
 
 /**
@@ -83,6 +98,11 @@ data class SessionReplayResult(
  *
  * A run with a heart-rate script ([SyntheticRun.hrAt]) plays it through a [FakeHeartRateSensor]
  * at 1 Hz into the service's [HeartRateTracker]; each fix takes `bpmAt` its own time.
+ *
+ * The voice: `tickVoice()` after the clock tick feeds the service's [VoiceCoach] (segments from
+ * [ReplaySettings.segments], their cursor checkpointed; a restore resumes a new coach) and
+ * collects its lines in [SessionReplayResult.voice]. Status lines (GPS, sensor, auto-pause) and
+ * the speech engine are not modelled.
  *
  * Not modelled: the unreliable-signal latch, the lastKnown pull of the watchdog and the stride
  * learner. Keep in sync with the service when that glue changes, like [GpsReplay.live].
@@ -170,6 +190,11 @@ object SessionReplay {
         /** `userPreferences.autoPause`, may change mid-run. */
         var autoPauseOn = settings.autoPause
 
+        /** `serviceIntervalEngine` and `voiceCoach`: a new process restores the first, not the second. */
+        private var engine = settings.segments?.takeIf { it.isNotEmpty() }?.let { IntervalEngine(it) }
+        private var coach = VoiceCoach()
+        val voice = mutableListOf<Pair<Long, VoiceLine>>()
+
         /** Sensor steps the step tracker never counted (pauses, a dead process). */
         private var droppedSteps = 0
         private var stepsAtPause: Int? = null
@@ -238,6 +263,25 @@ object SessionReplay {
             }
             tickAutoPause(now)
             manager.tickElapsedTime(broadcast = false, now = now)
+            tickVoice(now)
+        }
+
+        /** `tickVoice()`: the coach on the tick, the tile's heart rate of this second. */
+        private fun tickVoice(now: Long) {
+            val session = manager.getSession()
+            val result = coach.onTick(
+                CoachInput(
+                    elapsedMs = session.currentTime,
+                    movingMs = session.movingTime,
+                    distanceM = session.distance * 1000f,
+                    autoPaused = session.autoPaused,
+                    avgPace = session.avgPace,
+                    settings = settings.voice,
+                    heartRate = heartRate?.display(now * NANOS_PER_MS),
+                    engine = engine
+                )
+            )
+            result.lines.forEach { voice += (now - run.startTimeMs) to it }
         }
 
         /** `resolveGpsStatusDuringWorkout()` with the screen on (permission granted). */
@@ -260,7 +304,7 @@ object SessionReplay {
         private fun tickAutoPause(now: Long) {
             autoPause.tick(
                 manager = manager,
-                enabled = autoPauseOn && !settings.intervals,
+                enabled = autoPauseOn && !settings.hasSegments,
                 steps = trackerSteps(now)?.first,
                 nowMono = now,
                 nowWall = now
@@ -356,8 +400,8 @@ object SessionReplay {
                 session = manager.getSession(),
                 workoutType = settings.type,
                 modeSelection = null,
-                intervalSegmentsJson = null,
-                intervalCursor = null,
+                intervalSegmentsJson = settings.segments?.let { IntervalSegmentsJson.toJson(it) },
+                intervalCursor = engine?.snapshot(),
                 lastLocationTime = lastGoodFixMs,
                 lastUpdateTime = manager.getLastUpdateTime(),
                 steps = trackerSteps(now)?.first,
@@ -393,6 +437,12 @@ object SessionReplay {
             }
             // An open auto-pause stays open: the new detector waits for fresh steps or speed
             autoPause = AutoPauseController().apply { reset(autoPaused = restored.autoPaused, restored = true) }
+            // `rebuildIntervalEngineFromMetadata()` from the saved segments and cursor, then
+            // `prepareVoiceForWorkout(restored)`
+            engine = IntervalSegmentsJson.parse(checkpoint.intervalSegmentsJson).takeIf { it.isNotEmpty() }?.let { segments ->
+                IntervalEngine(segments).apply { checkpoint.intervalCursor()?.let { restore(it) } }
+            }
+            coach = VoiceCoach().apply { resume(restored.movingTime, restored.distance * 1000f) }
             lastGoodFixMs = checkpoint.lastLocationTime
             lastAnyFixMs = checkpoint.lastLocationTime
             watchdogTicks = 0
@@ -419,7 +469,8 @@ object SessionReplay {
                 distanceM = stopped.distance * 1000.0,
                 pauses = stopped.clock.pauses,
                 livePoints = stopped.trackDataPoints,
-                savedWorkout = workout
+                savedWorkout = workout,
+                voice = voice.toList()
             )
         }
     }
