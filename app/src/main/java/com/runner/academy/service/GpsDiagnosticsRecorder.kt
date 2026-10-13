@@ -27,6 +27,7 @@ import java.io.BufferedWriter
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 
 /**
  * Writes a workout's raw GPS fixes, satellite summaries, session events and battery saver
@@ -152,7 +153,7 @@ class GpsDiagnosticsRecorder(
             cadence = cadence,
             heartRate = heartRate
         )
-        io.execute { writeNow(GpsDiagnostics.fixLine(fix, result, reason)) }
+        write { writeNow(GpsDiagnostics.fixLine(fix, result, reason)) }
     }
 
     /** True between [start] and [stop]. */
@@ -162,19 +163,31 @@ class GpsDiagnosticsRecorder(
     fun recordSensor(event: String, status: Int? = null, value: Int? = null) {
         if (!isRecording) return
         val at = SystemClock.elapsedRealtime()
-        io.execute { writeNow(GpsDiagnostics.sensorLine(at, event, status, value)) }
+        write { writeNow(GpsDiagnostics.sensorLine(at, event, status, value)) }
     }
 
     fun recordEvent(event: Event) {
         if (!isRecording) return
         val at = SystemClock.elapsedRealtime()
-        io.execute { writeNow(GpsDiagnostics.eventLine(at, event)) }
+        write { writeNow(GpsDiagnostics.eventLine(at, event)) }
     }
 
     private fun recordPowerState() {
         val at = SystemClock.elapsedRealtime()
         val status = PowerSaveCheck.read(appContext)
-        io.execute { writeNow(GpsDiagnostics.powerLine(at, status)) }
+        write { writeNow(GpsDiagnostics.powerLine(at, status)) }
+    }
+
+    /**
+     * Queues a write on [io]. After [release] the executor rejects it: a late record from
+     * another thread is dropped instead of crashing the process.
+     */
+    private fun write(task: () -> Unit) {
+        try {
+            io.execute(task)
+        } catch (_: RejectedExecutionException) {
+            // Released: the recording is over
+        }
     }
 
     /**
