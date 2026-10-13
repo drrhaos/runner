@@ -30,6 +30,11 @@ Current release: **`v.0.1.5`**.
 - TalkBack: detail tiles read as one phrase, charts have summaries; the button on pause is called "Resume"
 - Chart colours have more contrast in the light theme; tile captions are 12sp
 - Tapping off the line on the elevation and segment charts no longer crashes the app
+- Bluetooth LE heart-rate sensor (chest straps and other sensors with the standard Heart Rate profile): a Devices screen in settings — add, replace or forget a sensor, link status, battery level, current heart rate
+- Heart rate during a workout: a tile with the value (grey when stale; "--" when the strap is off or the link is lost) and a link icon next to the GPS indicator; without a sensor the tile opens Devices. Voice: "Heart rate sensor lost" after 30 s without data and "Heart rate sensor connected" when it returns; silent on manual pause
+- Heart rate is stored in every track point: average and maximum in details and on a chart, in GPX export and import (including other apps' tracks with heart rate)
+- The sensor link survives drop-outs, Bluetooth being switched off and an app restart mid-workout; Android 12+ needs the "Nearby devices" permission, without it the workout runs without heart rate
+- GPS diagnostics record sensor events (connection, drop-outs, battery, signal strength)
 
 ## 0.1.5a1 — `v.0.1.5a1`
 
