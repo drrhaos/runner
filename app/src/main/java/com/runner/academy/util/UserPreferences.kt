@@ -3,6 +3,8 @@ package com.runner.academy.util
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import java.time.LocalDate
+import java.time.ZoneId
 
 /**
  * Управление настройками пользователя
@@ -31,6 +33,7 @@ class UserPreferences(context: Context) {
         private const val KEY_STEP_PERMISSION_ASKED = "step_permission_asked"
         private const val KEY_STRIDE_MODEL = "stride_model"
         private const val KEY_AUTO_PAUSE = "auto_pause"
+        private const val KEY_HR_MAX_MANUAL = "hr_max_manual"
 
         // Значения по умолчанию
         private const val DEFAULT_WEIGHT = 70f
@@ -161,6 +164,19 @@ class UserPreferences(context: Context) {
     var autoPause: Boolean
         get() = prefs.getBoolean(KEY_AUTO_PAUSE, DEFAULT_AUTO_PAUSE)
         set(value) = prefs.edit { putBoolean(KEY_AUTO_PAUSE, value) }
+
+    /** Максимальный пульс, заданный вручную; 0 — по возрасту (220 − возраст). */
+    var hrMaxManual: Int
+        get() = prefs.getInt(KEY_HR_MAX_MANUAL, 0)
+        set(value) = prefs.edit { putInt(KEY_HR_MAX_MANUAL, value) }
+
+    /** Максимальный пульс для зон; null — зоны выключены (нет ни даты рождения, ни ручного значения). */
+    fun hrMax(today: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault()): HrMax? =
+        HrMax.resolve(userBirthDate, hrMaxManual, today, zone)
+
+    /** Пульсовые зоны по текущему [hrMax]; null — зоны выключены. */
+    fun hrZones(today: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault()): HrZones? =
+        hrMax(today, zone)?.zones
 
     /** Разрешение ACTIVITY_RECOGNITION уже запрашивалось — повторно автоматически не спрашиваем. */
     var stepPermissionAsked: Boolean
