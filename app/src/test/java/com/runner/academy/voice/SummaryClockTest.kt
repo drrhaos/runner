@@ -107,6 +107,23 @@ class SummaryClockTest {
         assertEquals(5f, (first.parts[1] as SummaryPart.SplitPace).minPerKm, 0.01f)
         assertEquals(4.5f, (second.parts[0] as SummaryPart.AvgPace).minPerKm, 0.01f)
         assertEquals(4f, (second.parts[1] as SummaryPart.SplitPace).minPerKm, 0.01f)
+        assertEquals(SummaryEvery.KM_1, (first.parts[1] as SummaryPart.SplitPace).span)
+        assertEquals(SummaryEvery.KM_1, (second.parts[1] as SummaryPart.SplitPace).span)
+    }
+
+    @Test
+    fun `the split after a resume or an interval change is partial, the next one whole again`() {
+        val split = profile(SummaryEvery.KM_1, SummaryMetric.SPLIT_PACE)
+        clock.resume(movingMs = 1_020_000L, distanceM = 3_400f)
+        val afterResume = tick(1_200_000L, 4_000f, split)!!
+        assertEquals(null, (afterResume.parts.single() as SummaryPart.SplitPace).span)
+        assertEquals(5f, (afterResume.parts.single() as SummaryPart.SplitPace).minPerKm, 0.01f)
+        assertEquals(SummaryEvery.KM_1, (tick(1_500_000L, 5_000f, split)!!.parts.single() as SummaryPart.SplitPace).span)
+
+        val every2 = profile(SummaryEvery.KM_2, SummaryMetric.SPLIT_PACE)
+        tick(1_650_000L, 5_500f, every2)
+        assertEquals(null, (tick(1_800_000L, 6_000f, every2)!!.parts.single() as SummaryPart.SplitPace).span)
+        assertEquals(SummaryEvery.KM_2, (tick(2_400_000L, 8_000f, every2)!!.parts.single() as SummaryPart.SplitPace).span)
     }
 
     @Test

@@ -27,10 +27,14 @@ sealed interface SummaryPart {
     data class Distance(val meters: Float) : SummaryPart
     data class Time(val movingMs: Long) : SummaryPart
     data class AvgPace(val minPerKm: Float) : SummaryPart
-    /** The pace since the previous summary. */
-    data class SplitPace(val minPerKm: Float) : SummaryPart
-    /** The average heart rate since the previous summary. */
-    data class SplitHr(val bpm: Int) : SummaryPart
+    /**
+     * The pace since the previous summary. [span]: the interval that stretch really covered
+     * ("the last kilometre"); null when it is partial (after a restore or a change of the
+     * interval), said as "since the last summary".
+     */
+    data class SplitPace(val minPerKm: Float, val span: SummaryEvery?) : SummaryPart
+    /** The average heart rate since the previous summary; [span] as in [SplitPace]. */
+    data class SplitHr(val bpm: Int, val span: SummaryEvery?) : SummaryPart
     data class CurrentHr(val bpm: Int) : SummaryPart
 }
 

@@ -13,7 +13,8 @@ import kotlin.math.roundToInt
  * - A mark reached during an auto-pause waits for the run to go on.
  * - The split pace is Δmoving / Δdistance since the previous summary (or the resume); the
  *   split heart rate averages the [HeartRateDisplay.Freshness.FRESH] values of the moving ticks
- *   since then, left out when they cover under half of them.
+ *   since then, left out when they cover under half of them. Both carry the interval their
+ *   stretch really covered; after a resume or a change of the interval it is partial (null).
  */
 class SummaryClock {
 
@@ -24,8 +25,13 @@ class SummaryClock {
     /** The position of the last [resume]: the next tick marks from there, not from its own. */
     private var pendingResume: Pair<Long, Float>? = null
 
+    /** Ticked or resumed at least once: a later change of the interval leaves a partial split. */
+    private var started = false
+
     private var splitMovingMs = 0L
     private var splitDistanceM = 0f
+    /** The interval the current split covers in full; null: a partial one. */
+    private var splitSpan: SummaryEvery? = null
     private var hrSum = 0L
     private var hrCount = 0
     private var movingTicks = 0
@@ -33,7 +39,8 @@ class SummaryClock {
     /** Continues from this position (a restore): the next summary is the next mark after it. */
     fun resume(movingMs: Long, distanceM: Float) {
         markedFor = null
-        startSplit(movingMs, distanceM)
+        started = true
+        startSplit(movingMs, distanceM, span = null)
         pendingResume = movingMs to distanceM
     }
 
@@ -54,6 +61,9 @@ class SummaryClock {
             val (fromMs, fromM) = pendingResume ?: (movingMs to distanceM)
             markedFor = every
             nextMark = markAfter(every, fromMs, fromM)
+            // From the start of the run the split is whole; after a change it is not
+            splitSpan = if (started) null else every
+            started = true
         }
         pendingResume = null
         if (every == SummaryEvery.OFF || autoPaused) return null
@@ -63,7 +73,7 @@ class SummaryClock {
             partOf(metric, movingMs, distanceM, avgPace, heartRate)
         }
         nextMark = markAfter(every, movingMs, distanceM)
-        startSplit(movingMs, distanceM)
+        startSplit(movingMs, distanceM, span = every)
         return VoiceLine.Summary(parts)
     }
 
@@ -77,8 +87,8 @@ class SummaryClock {
         SummaryMetric.DISTANCE -> SummaryPart.Distance(distanceM)
         SummaryMetric.TIME -> SummaryPart.Time(movingMs)
         SummaryMetric.AVG_PACE -> avgPace.takeIf { it.isFinite() && it > 0f }?.let { SummaryPart.AvgPace(it) }
-        SummaryMetric.SPLIT_PACE -> splitPace(movingMs, distanceM)?.let { SummaryPart.SplitPace(it) }
-        SummaryMetric.SPLIT_HR -> splitHeartRate()?.let { SummaryPart.SplitHr(it) }
+        SummaryMetric.SPLIT_PACE -> splitPace(movingMs, distanceM)?.let { SummaryPart.SplitPace(it, splitSpan) }
+        SummaryMetric.SPLIT_HR -> splitHeartRate()?.let { SummaryPart.SplitHr(it, splitSpan) }
         SummaryMetric.CURRENT_HR -> heartRate
             ?.takeIf { it.freshness != HeartRateDisplay.Freshness.NONE }
             ?.bpm
@@ -97,9 +107,10 @@ class SummaryClock {
         return (hrSum.toFloat() / hrCount).roundToInt()
     }
 
-    private fun startSplit(movingMs: Long, distanceM: Float) {
+    private fun startSplit(movingMs: Long, distanceM: Float, span: SummaryEvery?) {
         splitMovingMs = movingMs
         splitDistanceM = distanceM
+        splitSpan = span
         hrSum = 0L
         hrCount = 0
         movingTicks = 0
