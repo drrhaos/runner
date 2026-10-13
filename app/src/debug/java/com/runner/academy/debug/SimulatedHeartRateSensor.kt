@@ -25,8 +25,8 @@ import kotlin.math.sin
 
 /**
  * The 4-minute script of the simulated sensor: every state of the heart-rate tile once.
- * - 0:00–1:00 normal; 1:00–1:12 connected but silent (value, grey, `--`);
- * - 1:12–2:00 normal; 2:00–2:15 no contact (`--` at once, connected icon);
+ * - 0:00–1:00 normal; 1:00–1:20 connected but silent (value 5 s, grey to 15 s, then `--`);
+ * - 1:20–2:00 normal; 2:00–2:15 no contact (`--` at once, connected icon);
  * - 2:15–3:00 normal; 3:00–3:40 connecting, silent (searching; "lost" after 30 s);
  * - 3:40–4:00 normal ("connected").
  * Normal is a 120–170 bpm sine at 1 Hz.
@@ -44,7 +44,7 @@ object SimulatedHeartRateScenario {
         val t = Math.floorMod(tMs, CYCLE_MS)
         val sec = t / 1_000L
         return when (sec) {
-            in 60L until 72L -> Step(SensorLink.CONNECTED, null, sample = false)
+            in 60L until 80L -> Step(SensorLink.CONNECTED, null, sample = false)
             in 120L until 135L -> Step(SensorLink.CONNECTED, null, sample = true)
             in 180L until 220L -> Step(SensorLink.CONNECTING, null, sample = false)
             else -> Step(SensorLink.CONNECTED, sine(t), sample = true)

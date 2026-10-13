@@ -29,8 +29,11 @@ class SimulatedHeartRateScenarioTest {
 
     @Test
     fun `each state of the tile comes once in four minutes`() {
-        // Silence while connected: the value goes grey, then dashes
-        assertEquals(SimulatedHeartRateScenario.Step(SensorLink.CONNECTED, null, sample = false), at(65))
+        // Silence while connected, longer than the 15 s grey value: the value goes grey, then dashes
+        for (sec in 60 until 80) {
+            assertEquals(SimulatedHeartRateScenario.Step(SensorLink.CONNECTED, null, sample = false), at(sec))
+        }
+        assertTrue(at(59).sample && at(80).sample)
         // No contact
         assertEquals(SimulatedHeartRateScenario.Step(SensorLink.CONNECTED, null, sample = true), at(125))
         // Searching, long enough for the lost voice
