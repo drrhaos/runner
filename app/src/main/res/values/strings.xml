@@ -859,4 +859,43 @@
     <string name="voice_hr_sensor_lost">Heart rate sensor lost</string>
     <string name="voice_hr_sensor_connected">Heart rate sensor connected</string>
 
+    <!-- ===== Release 4: heart rate zones (feature/r4-hr-zones) ===== -->
+    <string name="settings_label_hr_max">Maximum heart rate</string>
+    <string name="settings_hr_max_source_auto">by age: 220 − %1$d</string>
+    <string name="settings_hr_max_source_manual">set manually</string>
+    <string name="settings_hr_max_source_none">Zones are off: set your date of birth or enter it manually</string>
+    <string name="settings_hr_max_none" translatable="false">—</string>
+    <string name="settings_hr_max_a11y">Maximum heart rate %1$s, %2$s</string>
+    <string name="settings_hr_max_none_a11y">Maximum heart rate not set, zones are off</string>
+    <string name="settings_dialog_hr_max_title">Maximum heart rate</string>
+    <string name="settings_dialog_hr_max_auto_formula">By age: 220 − %1$d = %2$d. If you know your tested maximum, set it here.</string>
+    <string name="settings_dialog_hr_max_no_birth">No date of birth: set your maximum manually. Zones are off without it.</string>
+    <string name="settings_dialog_hr_max_auto">By age</string>
+    <string name="settings_hr_max_unit">bpm</string>
+    <string name="settings_hr_max_zone_line" translatable="false">Z%1$d %2$d–%3$d</string>
+    <string name="settings_hr_max_saved">Maximum heart rate saved</string>
+    <string name="hr_max_source_auto_short">by age</string>
+    <string name="hr_zone_badge" translatable="false">Z%1$d</string>
+    <string name="hr_zone_badge_below" translatable="false">&lt;Z1</string>
+    <string name="tracking_hr_tile_zone_a11y">Heart rate: %1$s, zone %2$d</string>
+    <string name="tracking_hr_tile_stale_zone_a11y">Heart rate: %1$s, zone %2$d, not updating</string>
+    <string name="tracking_hr_tile_below_zone_a11y">Heart rate: %1$s, below zone 1</string>
+    <string name="workout_details_hr_zones_title">Time in zones</string>
+    <string name="workout_details_hr_zones_basis">Based on maximum heart rate %1$d (%2$s)</string>
+    <string name="workout_details_hr_zone_below">below Z1</string>
+    <string name="workout_details_hr_zone_range" translatable="false">%1$d–%2$d</string>
+    <string name="workout_details_hr_zone_below_range" translatable="false">&lt; %1$d</string>
+    <string name="workout_details_hr_zone_percent">%1$d%%</string>
+    <!-- %4$s: the time in words; %5$s: percent_a11y -->
+    <string name="workout_details_hr_zone_row_a11y">Zone %1$d, %2$d to %3$d beats per minute: %4$s, %5$s</string>
+    <string name="workout_details_hr_zone_below_a11y">Below zone 1, under %1$d beats per minute: %2$s, %3$s</string>
+    <string name="chart_heart_rate_zones_a11y">Heart rate chart, beats per minute: average %1$d, from %2$d to %3$d. The line is coloured by heart rate zone</string>
+    <string name="chart_heart_rate_value_zone">Heart rate: %1$d bpm · Z%2$d</string>
+    <string name="chart_heart_rate_value_below">Heart rate: %1$d bpm · below Z1</string>
+    <plurals name="percent_a11y">
+        <item quantity="one">%d percent</item>
+        <item quantity="other">%d percent</item>
+    </plurals>
+    <!-- ===== End of heart rate zones ===== -->
+
 </resources>

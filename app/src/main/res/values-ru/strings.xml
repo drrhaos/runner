@@ -878,4 +878,38 @@
     <string name="voice_hr_sensor_lost">Датчик пульса потерян</string>
     <string name="voice_hr_sensor_connected">Датчик пульса подключён</string>
 
+    <!-- ===== Релиз 4: пульсовые зоны (feature/r4-hr-zones) ===== -->
+    <string name="settings_label_hr_max">Максимальный пульс</string>
+    <string name="settings_hr_max_source_auto">по возрасту: 220 − %1$d</string>
+    <string name="settings_hr_max_source_manual">задан вручную</string>
+    <string name="settings_hr_max_source_none">Зоны выключены: укажите дату рождения или задайте вручную</string>
+    <string name="settings_hr_max_a11y">Максимальный пульс %1$s, %2$s</string>
+    <string name="settings_hr_max_none_a11y">Максимальный пульс не задан, зоны выключены</string>
+    <string name="settings_dialog_hr_max_title">Максимальный пульс</string>
+    <string name="settings_dialog_hr_max_auto_formula">По возрасту: 220 − %1$d = %2$d. Если знаете свой максимум по тесту, задайте его здесь.</string>
+    <string name="settings_dialog_hr_max_no_birth">Даты рождения нет — задайте максимум вручную. Без него зоны выключены.</string>
+    <string name="settings_dialog_hr_max_auto">По возрасту</string>
+    <string name="settings_hr_max_unit">уд/мин</string>
+    <string name="settings_hr_max_saved">Максимальный пульс сохранён</string>
+    <string name="hr_max_source_auto_short">по возрасту</string>
+    <string name="tracking_hr_tile_zone_a11y">Пульс: %1$s, зона %2$d</string>
+    <string name="tracking_hr_tile_stale_zone_a11y">Пульс: %1$s, зона %2$d, данные не обновляются</string>
+    <string name="tracking_hr_tile_below_zone_a11y">Пульс: %1$s, ниже зоны 1</string>
+    <string name="workout_details_hr_zones_title">Время в зонах</string>
+    <string name="workout_details_hr_zones_basis">По максимальному пульсу %1$d (%2$s)</string>
+    <string name="workout_details_hr_zone_below">ниже Z1</string>
+    <string name="workout_details_hr_zone_percent">%1$d&#160;%%</string>
+    <string name="workout_details_hr_zone_row_a11y">Зона %1$d, %2$d–%3$d ударов в минуту: %4$s, %5$s</string>
+    <string name="workout_details_hr_zone_below_a11y">Ниже зоны 1, меньше %1$d ударов в минуту: %2$s, %3$s</string>
+    <string name="chart_heart_rate_zones_a11y">График пульса, ударов в минуту: в среднем %1$d, от %2$d до %3$d. Линия раскрашена по пульсовым зонам</string>
+    <string name="chart_heart_rate_value_zone">Пульс: %1$d уд/мин · Z%2$d</string>
+    <string name="chart_heart_rate_value_below">Пульс: %1$d уд/мин · ниже Z1</string>
+    <plurals name="percent_a11y">
+        <item quantity="one">%d процент</item>
+        <item quantity="few">%d процента</item>
+        <item quantity="many">%d процентов</item>
+        <item quantity="other">%d процента</item>
+    </plurals>
+    <!-- ===== Конец пульсовых зон ===== -->
+
 </resources>

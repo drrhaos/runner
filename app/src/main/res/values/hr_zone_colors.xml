@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Heart rate zones: grey, blue-grey, blue, green, orange, red. Always with a "Z1…Z5"
+         label beside: neighbouring zones differ in hue, not in lightness. -->
+    <color name="hr_zone_0">#FF8E8E93</color>
+    <color name="hr_zone_1">#FF56718C</color>
+    <color name="hr_zone_2">#FF1A6FC4</color>
+    <color name="hr_zone_3">#FF2A7F39</color>
+    <color name="hr_zone_4">#FFB85400</color>
+    <color name="hr_zone_5">#FFD32F2F</color>
+    <!-- Text on a filled zone badge -->
+    <color name="hr_zone_on">#FFFFFFFF</color>
+    <!-- A grey badge: a stale value, or a fresh one below Z1 -->
+    <color name="hr_zone_stale_bg">#FFE5E5EA</color>
+</resources>
