@@ -40,7 +40,7 @@ class DevicesFragment : Fragment() {
         DevicesViewModelFactory(
             sensor = app.heartRateSensor,
             paired = app.pairedSensors,
-            forgetSensor = { app.pairedSensorStore.remove(it) },
+            forgetSensor = app::forgetSensor,
             nowMs = SystemClock::elapsedRealtime
         )
     }

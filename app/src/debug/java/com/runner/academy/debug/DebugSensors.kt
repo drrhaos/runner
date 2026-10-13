@@ -9,7 +9,6 @@ import com.runner.academy.sensor.HeartRateOverride
 import com.runner.academy.sensor.PairedSensor
 import com.runner.academy.sensor.SensorType
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * Debug-only sensors: the hidden "simulate heart rate monitor" switch in Settings and, while it
@@ -46,7 +45,7 @@ object DebugSensors {
         )
         return HeartRateOverride(
             sensor = SimulatedHeartRateSensor(scope),
-            paired = MutableStateFlow(mapOf(SensorType.HEART_RATE to paired))
+            pairing = mapOf(SensorType.HEART_RATE to paired)
         )
     }
 }

@@ -62,6 +62,33 @@ class DebugSensorsTest {
     }
 
     @Test
+    fun `switch on - forget and pair never touch the real store`() {
+        AppContainer(app).pairedSensorStore.put(real)
+        debugPrefs.edit { putBoolean("simulated_hr", true) }
+        val container = AppContainer(app)
+
+        container.pairSensor(real.copy(address = "11:22:33:44:55:66", name = "HR Strap 9"))
+        assertEquals(DebugSensors.SIMULATED_ADDRESS, container.pairedSensors.value.getValue(SensorType.HEART_RATE).address)
+
+        container.forgetSensor(SensorType.HEART_RATE)
+        assertNull(container.pairedSensors.value[SensorType.HEART_RATE])
+
+        // The real device is still paired, as it was
+        val store = PairedSensorStore(app)
+        assertEquals(real, store.get(SensorType.HEART_RATE))
+    }
+
+    @Test
+    fun `switch off - pair and forget go to the store`() {
+        val container = AppContainer(app)
+        container.pairSensor(real)
+        assertEquals(real, container.pairedSensors.value[SensorType.HEART_RATE])
+
+        container.forgetSensor(SensorType.HEART_RATE)
+        assertNull(container.pairedSensorStore.get(SensorType.HEART_RATE))
+    }
+
+    @Test
     fun `the settings row writes the flag`() {
         val themed = android.view.ContextThemeWrapper(app, R.style.Theme_Runner)
         val row = LayoutInflater.from(themed).inflate(R.layout.debug_settings_row, null)

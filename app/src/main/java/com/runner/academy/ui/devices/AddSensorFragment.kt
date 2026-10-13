@@ -41,12 +41,11 @@ class AddSensorFragment : Fragment() {
 
     private val viewModel: AddSensorViewModel by viewModels {
         val app = requireContext().appContainer()
-        val store = app.pairedSensorStore
         AddSensorViewModelFactory(
             scanner = app.sensorScanner,
             sdkInt = Build.VERSION.SDK_INT,
-            pairedSensor = { store.get(SensorType.HEART_RATE) },
-            pair = store::put,
+            pairedSensor = { app.pairedSensors.value[SensorType.HEART_RATE] },
+            pair = app::pairSensor,
             nowMs = SystemClock::elapsedRealtime,
             wallMs = System::currentTimeMillis
         )

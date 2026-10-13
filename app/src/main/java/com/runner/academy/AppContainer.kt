@@ -7,10 +7,10 @@ import com.runner.academy.data.TrainingPlanRepository
 import com.runner.academy.data.WorkoutDatabase
 import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.GpsDiagnosticsStore
+import com.runner.academy.debug.DebugSensors
 import com.runner.academy.sensor.AndroidBle
 import com.runner.academy.sensor.BleHeartRateSensor
 import com.runner.academy.sensor.BleScanner
-import com.runner.academy.debug.DebugSensors
 import com.runner.academy.sensor.HeartRateOverride
 import com.runner.academy.sensor.HeartRateSensor
 import com.runner.academy.sensor.PairedSensor
@@ -66,8 +66,9 @@ class AppContainer(context: Context) {
     val pairedSensorStore: PairedSensorStore by lazy { PairedSensorStore(appContext) }
 
     /**
-     * The debug build's simulated heart-rate sensor when its hidden switch is on (read once per
-     * process); always null in release. Replaces both the sensor and the pairing.
+     * The debug build's simulated heart-rate sensor when its hidden switch is on; always null in
+     * release. Replaces both the sensor and the pairing. Read once per process, on the first use
+     * of a sensor (a small preferences file, cheap on the main thread).
      */
     private val heartRateOverride: HeartRateOverride? by lazy {
         DebugSensors.heartRateOverride(appContext, applicationScope)
@@ -75,10 +76,23 @@ class AppContainer(context: Context) {
 
     /**
      * The paired sensors as screens and the service see them: [pairedSensorStore], or the
-     * simulated pairing of the debug sensor. Writes (pairing, forgetting) go to the store.
+     * simulated pairing of the debug sensor (then the store is neither read nor written).
+     * Change them with [pairSensor] and [forgetSensor], not through the store.
      */
     val pairedSensors: StateFlow<Map<SensorType, PairedSensor>>
         get() = heartRateOverride?.paired ?: pairedSensorStore.changes
+
+    /** Pairs [sensor] (replacing the one of its type); ignored while the debug sensor simulates. */
+    fun pairSensor(sensor: PairedSensor) {
+        val override = heartRateOverride
+        if (override != null) override.pair(sensor) else pairedSensorStore.put(sensor)
+    }
+
+    /** Forgets the sensor of [type]; while simulating, the simulated one. */
+    fun forgetSensor(type: SensorType) {
+        val override = heartRateOverride
+        if (override != null) override.forget(type) else pairedSensorStore.remove(type)
+    }
 
     /** Bluetooth LE and the BLE thread; null on a device without Bluetooth LE. */
     private val androidBle: AndroidBle? by lazy { AndroidBle.createOrNull(appContext) }
