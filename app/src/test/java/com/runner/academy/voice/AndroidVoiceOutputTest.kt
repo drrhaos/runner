@@ -42,8 +42,75 @@ class AndroidVoiceOutputTest {
     @Before
     fun setUp() {
         ShadowToneGenerator.reset()
+        ShadowTextToSpeech.addLanguageAvailability(context.resources.configuration.locales[0])
         output = AndroidVoiceOutput(context)
         tts = shadowOf(ShadowTextToSpeech.getLastTextToSpeechInstance())
+        tts.onInitListener.onInit(TextToSpeech.SUCCESS)
+    }
+
+    /** A second output whose engine has not reported yet. */
+    private fun notReady(): Pair<AndroidVoiceOutput, ShadowTextToSpeech> {
+        output.release()
+        val fresh = AndroidVoiceOutput(context)
+        output = fresh
+        return fresh to shadowOf(ShadowTextToSpeech.getLastTextToSpeechInstance())
+    }
+
+    @Test
+    fun `a line before the engine is ready waits for it without taking the focus`() {
+        val (early, engine) = notReady()
+        val requestsBefore = audio.lastAudioFocusRequest
+
+        early.say(VoiceLine.Status(StatusKind.GPS_LOST))
+        assertEquals(emptyList<String>(), engine.spokenTextList)
+        assertSame("no focus while not ready", requestsBefore, audio.lastAudioFocusRequest)
+
+        engine.onInitListener.onInit(TextToSpeech.SUCCESS)
+        assertEquals(listOf("GPS signal lost"), engine.spokenTextList)
+        assertNotNull(audio.lastAudioFocusRequest)
+    }
+
+    @Test
+    fun `an engine that fails to start drops the waiting lines`() {
+        val (early, engine) = notReady()
+        early.say(VoiceLine.Status(StatusKind.GPS_LOST))
+
+        engine.onInitListener.onInit(TextToSpeech.ERROR)
+        early.say(VoiceLine.Status(StatusKind.GPS_RECOVERED))
+
+        assertEquals(emptyList<String>(), engine.spokenTextList)
+        assertNull(audio.lastAudioFocusRequest)
+    }
+
+    @Test
+    fun `a late end of a part dropped by a focus loss does not end the next phrase`() {
+        // The parts end only when the test says so
+        val real = ShadowTextToSpeech.getLastTextToSpeechInstance()
+        val listener = tts.utteranceProgressListener
+        real.setOnUtteranceProgressListener(null)
+
+        output.say(VoiceLine.Status(StatusKind.GPS_LOST)) // part "voice_0"
+        loseFocus()
+        output.say(VoiceLine.Status(StatusKind.GPS_RECOVERED)) // part "voice_1"
+        val second = audio.lastAudioFocusRequest
+
+        listener.onStop("voice_0", true)
+        looper.idleFor(Duration.ofMillis(1_000))
+        assertTrue("still speaking the second phrase", output.busy)
+
+        listener.onDone("voice_1")
+        looper.idle()
+        assertFalse(output.busy)
+        looper.idleFor(Duration.ofMillis(500))
+        assertSame(second!!.audioFocusRequest, audio.lastAbandonedAudioFocusRequest)
+    }
+
+    /** The system takes the focus away for a call: it calls the request's (hidden) listener. */
+    private fun loseFocus() {
+        val request = audio.lastAudioFocusRequest!!.audioFocusRequest
+        request.javaClass.getDeclaredMethod("getOnAudioFocusChangeListener").invoke(request)
+            .let { it as AudioManager.OnAudioFocusChangeListener }
+            .onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
     }
 
     @After
@@ -124,15 +191,15 @@ class AndroidVoiceOutputTest {
     }
 
     @Test
-    fun `losing the focus to a call drops the rest of the queue`() {
+    fun `losing the focus to a call drops the rest of the queue and gives the focus back`() {
         output.say(summary)
-        // The system calls the request's listener (a hidden getter)
         val request = audio.lastAudioFocusRequest!!.audioFocusRequest
-        request.javaClass.getDeclaredMethod("getOnAudioFocusChangeListener").invoke(request)
-            .let { it as AudioManager.OnAudioFocusChangeListener }
-            .onAudioFocusChange(AudioManager.AUDIOFOCUS_LOSS_TRANSIENT)
+
+        loseFocus()
 
         assertTrue(tts.isStopped)
         assertFalse(output.busy)
+        // The player gets the focus back after the call, not at our next line
+        assertSame(request, audio.lastAbandonedAudioFocusRequest)
     }
 }

@@ -24,7 +24,8 @@ import android.util.Log
  *   nothing is said over a conversation; lost mid-phrase: the queue is dropped.
  * - The beep plays on the music stream: as loud as the voice and heard in silent mode; it holds
  *   the focus for its length plus [FOCUS_HOLD_MS].
- * - No language data for the app's language: silence, as before.
+ * - Lines before the engine is ready wait for it (no focus meanwhile); no engine or no language
+ *   data for the app's language: silence, as before.
  */
 class AndroidVoiceOutput(private val context: Context) : VoiceOutput {
 
@@ -36,6 +37,8 @@ class AndroidVoiceOutput(private val context: Context) : VoiceOutput {
         private const val PART_PAUSE_MS = 450L
         private const val SPEECH_ID = "voice_"
         private const val PAUSE_ID = "pause_"
+        /** Lines kept until the engine is ready; older ones are stale by then. */
+        private const val MAX_WAITING = 4
     }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -53,13 +56,20 @@ class AndroidVoiceOutput(private val context: Context) : VoiceOutput {
     private var tts: TextToSpeech? = null
     private var toneGenerator: ToneGenerator? = null
     private var focusHeld = false
-    /** Spoken parts queued and not ended yet (pauses not counted: they end before the next part). */
-    private var pendingParts = 0
+    /** The engine is bound and speaks the app's language; lines before that wait in [waiting]. */
+    private var ready = false
+    private val waiting = ArrayDeque<VoiceLine>()
+    /**
+     * Ids of the spoken parts queued and not ended yet (pauses not counted: they end before the
+     * next part). A late end of a part dropped by a focus loss is not in it, so it cannot give the
+     * focus back in the middle of the next phrase.
+     */
+    private val pendingIds = mutableSetOf<String>()
     private var beepEndsAt = 0L
     private var nextId = 0L
-    private val releaseFocus = Runnable { if (pendingParts == 0) abandonFocus() }
+    private val releaseFocus = Runnable { if (pendingIds.isEmpty()) abandonFocus() }
 
-    override val busy: Boolean get() = pendingParts > 0
+    override val busy: Boolean get() = pendingIds.isNotEmpty()
 
     init {
         tts = TextToSpeech(context) { status -> onInit(status) }.apply {
@@ -85,7 +95,11 @@ class AndroidVoiceOutput(private val context: Context) : VoiceOutput {
         when (tts?.isLanguageAvailable(locale)) {
             TextToSpeech.LANG_AVAILABLE,
             TextToSpeech.LANG_COUNTRY_AVAILABLE,
-            TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE -> tts?.language = locale
+            TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE -> {
+                tts?.language = locale
+                ready = true
+                while (waiting.isNotEmpty()) say(waiting.removeFirst())
+            }
             else -> {
                 Log.d(TAG, "TTS onInit: no language data for ${locale.language}")
                 shutdownTts()
@@ -99,18 +113,25 @@ class AndroidVoiceOutput(private val context: Context) : VoiceOutput {
             return
         }
         val engine = tts ?: return
+        if (!ready) {
+            // The engine binds in a moment after the start: the first line waits, no focus yet
+            if (waiting.size == MAX_WAITING) waiting.removeFirst()
+            waiting.addLast(line)
+            return
+        }
         val parts = VoiceLineText.render(line, context)
         if (parts.isEmpty() || !acquireFocus()) return
         parts.forEachIndexed { index, part ->
-            if (engine.speak(part, TextToSpeech.QUEUE_ADD, null, SPEECH_ID + nextId++) == TextToSpeech.SUCCESS) {
-                pendingParts++
+            val id = SPEECH_ID + nextId++
+            if (engine.speak(part, TextToSpeech.QUEUE_ADD, null, id) == TextToSpeech.SUCCESS) {
+                pendingIds += id
             }
             if (index < parts.lastIndex) {
                 engine.playSilentUtterance(PART_PAUSE_MS, TextToSpeech.QUEUE_ADD, PAUSE_ID + nextId++)
             }
         }
-        // Not bound yet or refused: nothing will end, give the focus back
-        if (pendingParts == 0) releaseLater()
+        // Refused by the engine: nothing will end, give the focus back
+        if (pendingIds.isEmpty()) releaseLater()
     }
 
     override fun beep() {
@@ -133,7 +154,7 @@ class AndroidVoiceOutput(private val context: Context) : VoiceOutput {
         } catch (_: RuntimeException) {
         }
         toneGenerator = null
-        pendingParts = 0
+        pendingIds.clear()
         abandonFocus()
     }
 
@@ -141,9 +162,7 @@ class AndroidVoiceOutput(private val context: Context) : VoiceOutput {
     private fun ended(utteranceId: String?) {
         if (utteranceId?.startsWith(SPEECH_ID) != true) return
         handler.post {
-            if (pendingParts == 0) return@post
-            pendingParts--
-            if (pendingParts == 0) releaseLater()
+            if (pendingIds.remove(utteranceId) && pendingIds.isEmpty()) releaseLater()
         }
     }
 
@@ -169,16 +188,20 @@ class AndroidVoiceOutput(private val context: Context) : VoiceOutput {
     private fun onFocusChange(change: Int) {
         when (change) {
             AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                // A call or another app took the audio: what is left of the queue is stale by then
+                // A call or another app took the audio: what is left of the queue is stale by then.
+                // The request is abandoned for real, or the player would not get the focus back
+                // after the call until our next line.
                 handler.removeCallbacks(releaseFocus)
-                focusHeld = false
-                pendingParts = 0
+                pendingIds.clear()
                 tts?.stop()
+                abandonFocus()
             }
         }
     }
 
     private fun shutdownTts() {
+        ready = false
+        waiting.clear()
         tts?.let {
             it.stop()
             it.shutdown()
