@@ -145,6 +145,39 @@ class WorkoutTrackingViewModelTest {
     }
 
     @Test
+    fun `idle under the screen's lease is searching, never a red lost`() {
+        pairedSensors.value = mapOf(SensorType.HEART_RATE to strap)
+        hrSensor.setLink(SensorLink.IDLE)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(HeartRateDisplay.LinkIcon.SEARCHING, viewModel.heartRateDisplay.value!!.link)
+
+        viewModel.holdHeartRateBeforeStart()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(HeartRateDisplay.LinkIcon.SEARCHING, viewModel.heartRateDisplay.value!!.link)
+        viewModel.releaseHeartRateBeforeStart()
+    }
+
+    @Test
+    fun `after the workout the screen still seen takes its lease again`() {
+        pairedSensors.value = mapOf(SensorType.HEART_RATE to strap)
+        viewModel.holdHeartRateBeforeStart()
+        hrSensor.acquire("workout").let { workout ->
+            viewModel.onSessionFromService(WorkoutSession(isTracking = true))
+            assertEquals(listOf("workout"), hrSensor.owners)
+            workout.release()
+        }
+
+        viewModel.resetWorkout()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(listOf(WorkoutTrackingViewModel.PRESTART_LEASE), hrSensor.owners)
+
+        // Not after the screen stopped
+        viewModel.releaseHeartRateBeforeStart()
+        viewModel.onSessionFromService(WorkoutSession())
+        assertEquals(0, hrSensor.leaseCount)
+    }
+
+    @Test
     fun `during a workout no pre-start lease is taken`() {
         pairedSensors.value = mapOf(SensorType.HEART_RATE to strap)
         viewModel.onSessionFromService(WorkoutSession(isTracking = true))

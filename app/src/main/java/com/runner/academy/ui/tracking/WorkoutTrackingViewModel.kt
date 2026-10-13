@@ -89,23 +89,34 @@ class WorkoutTrackingViewModel(
             when {
                 session.isTracking || session.isPaused -> session.heartRateDisplay
                 sensors[SensorType.HEART_RATE] == null -> null
-                else -> prestart ?: HeartRateDisplay.of(null, heartRateSensor.status.value.link, clockNanos())
+                // Paired, the lease not taken (yet): the screen is about to connect, searching
+                else -> prestart ?: HeartRateDisplay.ofLeased(null, heartRateSensor.status.value.link, clockNanos())
             }
         }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Between the screen's `onStart` and `onStop`: it wants the sensor whenever no workout runs. */
+    private var screenWantsHeartRate = false
 
     /**
      * Keeps the paired sensor connected while the workout screen is visible before the start
      * (lease `"tracking-prestart"`): by the start the heart rate is already there. Called from
      * the screen's `onStart`; nothing happens without a paired sensor or during a workout.
      * Held through the countdown; handed over once the service holds `"workout"`, see
-     * [onSessionFromService].
+     * [onSessionFromService], and taken again when the workout is over and the screen still
+     * seen ([resetWorkout]).
      */
     fun holdHeartRateBeforeStart() {
+        screenWantsHeartRate = true
+        acquirePrestart()
+    }
+
+    private fun acquirePrestart() {
         if (prestartLease != null) return
         if (pairedSensors.value[SensorType.HEART_RATE] == null) return
         val session = _workoutSession.value
         if (session.isTracking || session.isPaused) return
         prestartLease = heartRateSensor.acquire(PRESTART_LEASE)
+        refreshPrestartDisplay()
         prestartJob = viewModelScope.launch {
             launch {
                 heartRateSensor.samples.collect {
@@ -121,8 +132,14 @@ class WorkoutTrackingViewModel(
         }
     }
 
-    /** The screen stopped (`onStop`) or the service took over. Releasing twice is harmless. */
+    /** The screen stopped (`onStop`). Releasing twice is harmless. */
     fun releaseHeartRateBeforeStart() {
+        screenWantsHeartRate = false
+        dropPrestart()
+    }
+
+    /** The service took over, or the screen let go. */
+    private fun dropPrestart() {
         prestartJob?.cancel()
         prestartJob = null
         prestartLease?.release()
@@ -133,18 +150,24 @@ class WorkoutTrackingViewModel(
 
     private fun refreshPrestartDisplay() {
         if (prestartLease == null) return
-        prestartDisplay.value = HeartRateDisplay.of(prestartLatest, heartRateSensor.status.value.link, clockNanos())
+        // Under the screen's lease: IDLE is the sensor about to connect, not a lost link
+        prestartDisplay.value = HeartRateDisplay.ofLeased(prestartLatest, heartRateSensor.status.value.link, clockNanos())
     }
 
     /**
      * A session from the service. The service takes its `"workout"` lease before it publishes
      * the started (or restored) session, so once one is tracking the screen's lease can go
-     * without the connection dropping in between.
+     * without the connection dropping in between. An idle one (no workout) while the screen is
+     * seen takes the lease back.
      */
     @VisibleForTesting
     internal fun onSessionFromService(session: WorkoutSession) {
         _workoutSession.value = session
-        if (session.isTracking || session.isPaused) releaseHeartRateBeforeStart()
+        if (session.isTracking || session.isPaused) {
+            dropPrestart()
+        } else if (screenWantsHeartRate) {
+            acquirePrestart()
+        }
         updateWorkoutState()
     }
 
@@ -368,6 +391,8 @@ class WorkoutTrackingViewModel(
         _workoutSession.value = WorkoutSession()
         _workoutState.value = WorkoutState.NOT_STARTED
         clearActiveIntervalSegments()
+        // The workout's lease is gone with the service; a screen still seen takes its own again
+        if (screenWantsHeartRate) acquirePrestart()
     }
 
     private fun updateWorkoutState() {
