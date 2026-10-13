@@ -15,7 +15,10 @@ import com.runner.academy.util.DerivationInput
 import com.runner.academy.util.TrackSanitizer
 import com.runner.academy.util.WorkoutDerivation
 import com.runner.academy.sensor.HeartRateDisplay
-import com.runner.academy.ui.tracking.HrAnnouncement
+import com.runner.academy.util.UserPreferences
+import com.runner.academy.voice.FakeVoiceOutput
+import com.runner.academy.voice.StatusKind
+import com.runner.academy.voice.VoiceLine
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -61,8 +64,8 @@ class WorkoutServiceHeartRateTest {
 
     /** The heart-rate clock of the service; starts at 1 000 s. */
     private var clockNanos = 1_000 * SEC
-    /** What the heart-rate voice said: (second of [clockNanos], line). */
-    private val said = mutableListOf<Pair<Int, HrAnnouncement>>()
+    /** What the voice said of the sensor (the voice is on): (second of [clockNanos], line). */
+    private val said = mutableListOf<Pair<Int, StatusKind>>()
     private var dispatcher: CoroutineDispatcher = Dispatchers.Unconfined
     private val controllers = mutableListOf<ServiceController<WorkoutTrackingService>>()
 
@@ -76,7 +79,12 @@ class WorkoutServiceHeartRateTest {
         service.heartRateSource = HeartRateSource(sensor, paired) { true }
         service.heartRateDispatcher = dispatcher
         service.heartRateClockNanos = { clockNanos }
-        service.heartRateAnnouncer = { said += (clockNanos / SEC).toInt() to it }
+        UserPreferences(RuntimeEnvironment.getApplication()).voiceFeedback = true
+        service.voiceOutputFactory = {
+            FakeVoiceOutput { line ->
+                if (line is VoiceLine.Status && line.kind.name.startsWith("HR_")) said += (clockNanos / SEC).toInt() to line.kind
+            }
+        }
         service.foregroundStarter = { notification, types ->
             starts += types
             if (refuseAll) throw SecurityException("location in the background")
@@ -223,7 +231,7 @@ class WorkoutServiceHeartRateTest {
         clockNanos += 120 * SEC
         service.tickHeartRate()
         assertEquals(HeartRateDisplay.UNAVAILABLE, service.getCurrentSession().heartRateDisplay)
-        assertEquals(emptyList<Pair<Int, HrAnnouncement>>(), said)
+        assertEquals(emptyList<Pair<Int, StatusKind>>(), said)
     }
 
     @Test
@@ -283,13 +291,13 @@ class WorkoutServiceHeartRateTest {
         service.wear(10)
         // The last valid sample at 1 009 s; the strap goes silent
         service.tickUntil(1_038)
-        assertEquals(emptyList<Pair<Int, HrAnnouncement>>(), said)
+        assertEquals(emptyList<Pair<Int, StatusKind>>(), said)
 
         service.tickUntil(1_039)
-        assertEquals(listOf(1_039 to HrAnnouncement.LOST), said)
+        assertEquals(listOf(1_039 to StatusKind.HR_LOST), said)
 
         service.wear(1)
-        assertEquals(listOf(1_039 to HrAnnouncement.LOST, 1_040 to HrAnnouncement.CONNECTED), said)
+        assertEquals(listOf(1_039 to StatusKind.HR_LOST, 1_040 to StatusKind.HR_CONNECTED), said)
     }
 
     @Test
@@ -300,7 +308,7 @@ class WorkoutServiceHeartRateTest {
         service.tickUntil(1_037)
         service.wear(5)
 
-        assertEquals(emptyList<Pair<Int, HrAnnouncement>>(), said)
+        assertEquals(emptyList<Pair<Int, StatusKind>>(), said)
     }
 
     @Test
@@ -311,7 +319,7 @@ class WorkoutServiceHeartRateTest {
         sensor.setLink(SensorLink.CONNECTED)
         service.tickUntil(1_300, noContact = true)
 
-        assertEquals(emptyList<Pair<Int, HrAnnouncement>>(), said)
+        assertEquals(emptyList<Pair<Int, StatusKind>>(), said)
         assertTrue(service.getCurrentSession().heartRateDisplay!!.bpm == null)
     }
 
