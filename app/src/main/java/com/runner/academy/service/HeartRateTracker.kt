@@ -40,7 +40,12 @@ class HeartRateTracker(
         collecting = scope.launch {
             sensor.samples.collect { sample ->
                 synchronized(this@HeartRateTracker) {
-                    if (lease != null) history.add(sample)
+                    if (lease != null) {
+                        history.add(sample)
+                        if (sample.bpm != null) {
+                            lastValidNanos = maxOf(lastValidNanos ?: sample.elapsedNanos, sample.elapsedNanos)
+                        }
+                    }
                 }
             }
         }
@@ -54,15 +59,25 @@ class HeartRateTracker(
         lease?.release()
         lease = null
         history.clear()
+        lastValidNanos = null
     }
+
+    /**
+     * The time of the newest valid sample since [start] (kept past the 2-minute history); null
+     * before the first one. The voice counts its 30 s from here.
+     */
+    @get:Synchronized
+    var lastValidNanos: Long? = null
+        private set
 
     /** The heart rate at [elapsedNanos] (a fix's `elapsedRealtimeNanos`); null when not running. */
     @Synchronized
     fun bpmAt(elapsedNanos: Long): Int? = history.bpmAt(elapsedNanos)
 
+    /** Under the lease: a link still IDLE is the sensor about to connect ([HeartRateDisplay.ofLeased]). */
     @Synchronized
     fun display(nowNanos: Long = clockNanos()): HeartRateDisplay =
-        HeartRateDisplay.of(history.latest(), sensor.status.value.link, nowNanos)
+        HeartRateDisplay.ofLeased(history.latest(), sensor.status.value.link, nowNanos)
 
     companion object {
         const val LEASE_OWNER = "workout"

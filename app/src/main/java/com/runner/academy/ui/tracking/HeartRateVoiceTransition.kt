@@ -26,29 +26,40 @@ object HeartRateVoiceTransition {
 }
 
 /**
- * The service's once-a-second use of [HeartRateVoiceTransition]: it keeps when the valid values
- * stopped and whether "lost" was said. The count starts with the workout (a strap never put on
- * is "lost" after 30 s too). A manual pause says nothing — the runner often takes the strap off
- * or fixes it at a stop — and after the resume the 30 s count starts again. An auto-pause
- * counts as usual: at a traffic light the strap matters.
+ * The service's once-a-second use of [HeartRateVoiceTransition]. One per workout, and a new one
+ * after a restore.
+ *
+ * - The 30 s count runs from the time of the last valid sample.
+ * - It is armed only by the first valid sample of this workout (since the restore): a strap that
+ *   is paired but never worn — or a sensor the system refused — is never announced, and the
+ *   first connection is always silent.
+ * - A manual pause says nothing (the runner often takes the strap off or fixes it at a stop);
+ *   after the resume the 30 s count starts again from the resume, unless a value came since.
+ * - An auto-pause counts as usual: at a traffic light the strap matters.
  */
-class HeartRateVoiceTimer(startMs: Long) {
+class HeartRateVoiceTimer {
 
-    private var invalidSinceMs: Long? = startMs
     private var announcedLost = false
+    private var paused = false
+    /** The resume after the last manual pause: the count runs from there at the earliest. */
+    private var resumedAtMs: Long? = null
 
-    /** @param hasValidData a fresh value now ([com.runner.academy.sensor.HeartRateDisplay.isFresh]). */
-    fun onTick(hasValidData: Boolean, nowMs: Long, manualPause: Boolean): HrAnnouncement? {
+    /**
+     * @param lastValidAtMs the time of the newest valid sample of this workout (same clock as
+     *   [nowMs]); null before the first one.
+     */
+    fun onTick(lastValidAtMs: Long?, nowMs: Long, manualPause: Boolean): HrAnnouncement? {
         if (manualPause) {
-            invalidSinceMs = null
+            paused = true
             return null
         }
-        if (hasValidData) {
-            invalidSinceMs = null
-        } else if (invalidSinceMs == null) {
-            invalidSinceMs = nowMs
+        if (paused) {
+            paused = false
+            resumedAtMs = nowMs
         }
-        val since = invalidSinceMs?.let { nowMs - it } ?: 0L
+        val lastValid = lastValidAtMs ?: return null
+        val hasValidData = nowMs - lastValid < HeartRateVoiceTransition.LOST_AFTER_MS
+        val since = nowMs - maxOf(lastValid, resumedAtMs ?: lastValid)
         val announcement = HeartRateVoiceTransition.announcement(hasValidData, since, announcedLost)
         when (announcement) {
             HrAnnouncement.LOST -> announcedLost = true

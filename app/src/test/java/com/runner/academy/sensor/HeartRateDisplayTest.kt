@@ -90,6 +90,16 @@ class HeartRateDisplayTest {
     }
 
     @Test
+    fun `under a lease idle is searching, the rest as without one`() {
+        assertEquals(LinkIcon.SEARCHING, HeartRateDisplay.ofLeased(null, SensorLink.IDLE, now).link)
+        assertEquals(LinkIcon.LOST, HeartRateDisplay.ofLeased(null, SensorLink.BLUETOOTH_OFF, now).link)
+        assertEquals(
+            HeartRateDisplay.of(at(2), SensorLink.CONNECTED, now),
+            HeartRateDisplay.ofLeased(at(2), SensorLink.CONNECTED, now)
+        )
+    }
+
+    @Test
     fun `the edges are five and fifteen seconds`() {
         assertEquals(Freshness.FRESH, HeartRateDisplay.of(at(5), SensorLink.CONNECTED, now).freshness)
         assertEquals(Freshness.STALE, HeartRateDisplay.of(at(15), SensorLink.CONNECTED, now).freshness)

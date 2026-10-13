@@ -14,8 +14,14 @@ import com.runner.academy.ui.tracking.LiveWorkoutBuilder
 import com.runner.academy.util.DerivationInput
 import com.runner.academy.util.TrackSanitizer
 import com.runner.academy.util.WorkoutDerivation
+import com.runner.academy.sensor.HeartRateDisplay
+import com.runner.academy.ui.tracking.HrAnnouncement
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -36,7 +42,12 @@ import org.robolectric.annotation.Config
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
+@OptIn(ExperimentalCoroutinesApi::class)
 class WorkoutServiceHeartRateTest {
+
+    private companion object {
+        const val SEC = 1_000_000_000L
+    }
 
     private val strap = PairedSensor(SensorType.HEART_RATE, "AA:BB:CC:DD:EE:FF", "HR Strap 10", 1L, null, null)
     private val sensor = FakeHeartRateSensor(SensorLink.CONNECTED)
@@ -45,6 +56,14 @@ class WorkoutServiceHeartRateTest {
     /** Types of every `startForeground`, in order. */
     private val starts = mutableListOf<Int>()
     private var refuseConnectedDevice = false
+    /** Every `startForeground` throws, location only included (a start from the background). */
+    private var refuseAll = false
+
+    /** The heart-rate clock of the service; starts at 1 000 s. */
+    private var clockNanos = 1_000 * SEC
+    /** What the heart-rate voice said: (second of [clockNanos], line). */
+    private val said = mutableListOf<Pair<Int, HrAnnouncement>>()
+    private var dispatcher: CoroutineDispatcher = Dispatchers.Unconfined
     private val controllers = mutableListOf<ServiceController<WorkoutTrackingService>>()
 
     private val location = ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
@@ -55,9 +74,12 @@ class WorkoutServiceHeartRateTest {
         controllers += controller
         val service = controller.get()
         service.heartRateSource = HeartRateSource(sensor, paired) { true }
-        service.heartRateDispatcher = Dispatchers.Unconfined
+        service.heartRateDispatcher = dispatcher
+        service.heartRateClockNanos = { clockNanos }
+        service.heartRateAnnouncer = { said += (clockNanos / SEC).toInt() to it }
         service.foregroundStarter = { notification, types ->
             starts += types
+            if (refuseAll) throw SecurityException("location in the background")
             if (refuseConnectedDevice && types and ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE != 0) {
                 throw SecurityException("FOREGROUND_SERVICE_CONNECTED_DEVICE needs BLUETOOTH_CONNECT")
             }
@@ -92,8 +114,15 @@ class WorkoutServiceHeartRateTest {
     @Test
     fun `a workout with a paired sensor holds the workout lease and both service types`() {
         val service = service()
+        // The screen hands its pre-start lease over when it sees the first running session:
+        // by then the service must already hold its own
+        var leasesAtPublish: List<String>? = null
+        service.setSessionUpdateCallback { session ->
+            if (session.isTracking && leasesAtPublish == null) leasesAtPublish = sensor.owners
+        }
         service.startWorkout()
 
+        assertEquals(listOf(HeartRateTracker.LEASE_OWNER), leasesAtPublish)
         assertEquals(listOf(HeartRateTracker.LEASE_OWNER), sensor.owners)
         assertEquals(listOf(both), starts)
     }
@@ -185,7 +214,105 @@ class WorkoutServiceHeartRateTest {
         assertEquals(listOf(both, location), starts)
         assertEquals(0, sensor.leaseCount)
         assertTrue(service.getCurrentSession().isTracking)
-        assertNull(service.getCurrentSession().heartRateDisplay)
+        // Paired but not usable: lost on the tile, not "no sensor added"
+        assertEquals(HeartRateDisplay.UNAVAILABLE, service.getCurrentSession().heartRateDisplay)
+
+        // A pause keeps it so; it never speaks (no valid sample ever)
+        service.pauseWorkout()
+        service.resumeWorkout()
+        clockNanos += 120 * SEC
+        service.tickHeartRate()
+        assertEquals(HeartRateDisplay.UNAVAILABLE, service.getCurrentSession().heartRateDisplay)
+        assertEquals(emptyList<Pair<Int, HrAnnouncement>>(), said)
+    }
+
+    @Test
+    fun `a refusal of location only too is the restore's failure, not the sensor's`() {
+        com.runner.academy.util.UserPreferences(RuntimeEnvironment.getApplication()).gpsDiagnostics = true
+        val first = service()
+        first.startWorkout()
+        val context = RuntimeEnvironment.getApplication()
+        val startTime = first.getCurrentSession().startTime
+        ActiveWorkoutStore(context).save(
+            ActiveWorkoutCheckpoint.fromSession(
+                first.getCurrentSession(), WorkoutType.EASY_RUN, null, null, null,
+                lastLocationTime = 0L, lastUpdateTime = 0L
+            )
+        )
+        controllers.removeAt(0).destroy()
+
+        refuseAll = true
+        starts.clear()
+        val restored = service()
+        restored.onStartCommand(
+            Intent(context, WorkoutTrackingService::class.java).setAction(WorkoutTrackingService.ACTION_RESTORE_WORKOUT), 0, 1
+        )
+
+        assertEquals(listOf(both, location), starts)
+        assertEquals(0, sensor.leaseCount)
+        val lines = readDiagnostics(startTime, expected = "restore_failed")
+        assertTrue(lines.any { it.contains("restore_failed") })
+        assertTrue(lines.none { it.contains(WorkoutTrackingService.FGS_NO_CONNECTED_DEVICE) })
+    }
+
+    /** Valid samples once a second from now for [seconds] s, the tile ticked each second. */
+    private fun WorkoutTrackingService.wear(seconds: Int) {
+        repeat(seconds) {
+            sensor.emit(150, atNanos = clockNanos)
+            tickHeartRate()
+            clockNanos += SEC
+        }
+    }
+
+    /**
+     * Ticks once a second without valid samples, through second [untilSec] of the clock;
+     * [noContact]: "no contact" samples come meanwhile.
+     */
+    private fun WorkoutTrackingService.tickUntil(untilSec: Int, noContact: Boolean = false) {
+        while (clockNanos / SEC <= untilSec) {
+            if (noContact) sensor.emit(null, atNanos = clockNanos)
+            tickHeartRate()
+            clockNanos += SEC
+        }
+    }
+
+    @Test
+    fun `the voice says lost 30 s after the last valid sample, not before`() {
+        val service = service()
+        service.startWorkout()
+        service.wear(10)
+        // The last valid sample at 1 009 s; the strap goes silent
+        service.tickUntil(1_038)
+        assertEquals(emptyList<Pair<Int, HrAnnouncement>>(), said)
+
+        service.tickUntil(1_039)
+        assertEquals(listOf(1_039 to HrAnnouncement.LOST), said)
+
+        service.wear(1)
+        assertEquals(listOf(1_039 to HrAnnouncement.LOST, 1_040 to HrAnnouncement.CONNECTED), said)
+    }
+
+    @Test
+    fun `a 29 s gap in the samples stays silent`() {
+        val service = service()
+        service.startWorkout()
+        service.wear(10)
+        service.tickUntil(1_037)
+        service.wear(5)
+
+        assertEquals(emptyList<Pair<Int, HrAnnouncement>>(), said)
+    }
+
+    @Test
+    fun `a paired strap never worn never speaks`() {
+        val service = service()
+        service.startWorkout()
+        // Connected, no contact the whole time
+        sensor.setLink(SensorLink.CONNECTED)
+        service.tickUntil(1_300, noContact = true)
+
+        assertEquals(emptyList<Pair<Int, HrAnnouncement>>(), said)
+        assertTrue(service.getCurrentSession().heartRateDisplay!!.bpm == null)
     }
 
     @Test
@@ -212,9 +339,15 @@ class WorkoutServiceHeartRateTest {
      * diagnostics once [expected] is there.
      */
     private fun diagnosticsLines(service: WorkoutTrackingService, expected: String): List<String> {
-        val store = (RuntimeEnvironment.getApplication() as com.runner.academy.RunnerApplication).container.gpsDiagnosticsStore
-        val file = store.sessionFile(service.getCurrentSession().startTime)
+        val startTime = service.getCurrentSession().startTime
         service.stopWorkout()
+        return readDiagnostics(startTime, expected)
+    }
+
+    /** The diagnostics file of the workout started at [startTime], once [expected] is there. */
+    private fun readDiagnostics(startTime: Long, expected: String): List<String> {
+        val store = (RuntimeEnvironment.getApplication() as com.runner.academy.RunnerApplication).container.gpsDiagnosticsStore
+        val file = store.sessionFile(startTime)
         repeat(100) {
             if (file.isFile && file.readText().contains(expected)) return file.readLines()
             Thread.sleep(20)
@@ -241,6 +374,8 @@ class WorkoutServiceHeartRateTest {
         service.startWorkout()
         sensor.diag(com.runner.academy.sensor.SensorDiagEvent(com.runner.academy.sensor.SensorDiagEvent.Kind.DISCONNECTED, 8))
         sensor.diag(com.runner.academy.sensor.SensorDiagEvent(com.runner.academy.sensor.SensorDiagEvent.Kind.BATTERY, 80))
+        // Recorded on the main thread
+        idleMain()
 
         val lines = diagnosticsLines(service, "battery")
         assertTrue(lines.any { it.contains("\"event\":\"disconnected\"") && it.contains("\"status\":8") })
@@ -248,29 +383,31 @@ class WorkoutServiceHeartRateTest {
     }
 
     @Test
-    fun `rssi is read on its period only while the diagnostics record`() {
+    fun `rssi is read every 30 s only while the diagnostics record`() {
+        val scheduler = TestCoroutineScheduler()
+        dispatcher = StandardTestDispatcher(scheduler)
         val prefs = com.runner.academy.util.UserPreferences(RuntimeEnvironment.getApplication())
         prefs.gpsDiagnostics = false
         val quiet = service()
-        quiet.rssiEveryMs = 10L
         quiet.startWorkout()
-        Thread.sleep(200)
+        scheduler.advanceTimeBy(95_000L)
         assertEquals(0, sensor.rssiReads)
         quiet.stopWorkout()
 
         prefs.gpsDiagnostics = true
         val logging = service()
-        logging.rssiEveryMs = 10L
         logging.startWorkout()
-        awaitMain { sensor.rssiReads > 0 }
-        assertTrue(sensor.rssiReads > 0)
+        scheduler.advanceTimeBy(29_000L)
+        assertEquals(0, sensor.rssiReads)
+        scheduler.advanceTimeBy(66_000L)
+        assertEquals(3, sensor.rssiReads)
     }
 
     @Test
     fun `the tile tick puts the display on the session`() {
         val service = service()
         service.startWorkout()
-        sensor.emit(152, atNanos = android.os.SystemClock.elapsedRealtimeNanos())
+        sensor.emit(152, atNanos = clockNanos)
 
         awaitMain { service.getCurrentSession().heartRateDisplay?.bpm == 152 }
 

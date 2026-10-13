@@ -74,6 +74,30 @@ class HeartRateTrackerTest {
     }
 
     @Test
+    fun `the last valid sample is kept past the history and forgotten on stop`() {
+        tracker.start()
+        assertNull(tracker.lastValidNanos)
+        sensor.emit(150, atNanos = now)
+        sensor.emit(null, atNanos = now + s)
+        assertEquals(now, tracker.lastValidNanos)
+
+        // Three minutes of no contact: the history drops the valid one, the time stays
+        for (i in 2..180) sensor.emit(null, atNanos = now + i * s)
+        assertEquals(now, tracker.lastValidNanos)
+
+        tracker.stop()
+        assertNull(tracker.lastValidNanos)
+    }
+
+    @Test
+    fun `idle under the workout lease is searching, not lost`() {
+        sensor.setLink(SensorLink.IDLE)
+        tracker.start()
+
+        assertEquals(HeartRateDisplay.LinkIcon.SEARCHING, tracker.display().link)
+    }
+
+    @Test
     fun `the display follows the clock and the link`() {
         tracker.start()
         sensor.emit(150, atNanos = now)

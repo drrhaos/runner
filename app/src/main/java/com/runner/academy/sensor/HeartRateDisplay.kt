@@ -49,5 +49,19 @@ data class HeartRateDisplay(
             }
             return HeartRateDisplay(bpm, freshness, icon, noContact)
         }
+
+        /**
+         * [of] for a holder of a lease: [SensorLink.IDLE] there is the moment before the sensor
+         * takes the lease up (it works on its own thread), not a lost link — searching, not a red
+         * flash at the start.
+         */
+        fun ofLeased(latest: HeartRateSample?, link: SensorLink, nowNanos: Long): HeartRateDisplay =
+            of(latest, if (link == SensorLink.IDLE) SensorLink.CONNECTING else link, nowNanos)
+
+        /**
+         * The sensor is paired but this workout cannot use it (the system refused the
+         * connected-device service type): no value, the lost icon.
+         */
+        val UNAVAILABLE = HeartRateDisplay(null, Freshness.NONE, LinkIcon.LOST)
     }
 }
