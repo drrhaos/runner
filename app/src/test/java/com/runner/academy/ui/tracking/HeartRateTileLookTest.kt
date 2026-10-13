@@ -4,6 +4,7 @@ import com.runner.academy.R
 import com.runner.academy.sensor.HeartRateDisplay
 import com.runner.academy.sensor.HeartRateDisplay.Freshness
 import com.runner.academy.sensor.HeartRateDisplay.LinkIcon
+import com.runner.academy.util.HrZones
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -70,5 +71,63 @@ class HeartRateTileLookTest {
         assertEquals(R.drawable.ic_hr_link_connected, look.icon!!.drawable)
         assertEquals(com.google.android.material.R.attr.colorError, look.icon!!.tintAttr)
         assertEquals(R.string.devices_status_no_contact, look.icon!!.stateDescription)
+    }
+
+    // --- Zone badge (HRmax 190: Z1 95, Z4 152, Z5 171) ---
+
+    private val zones = HrZones(190)
+
+    @Test
+    fun `without zones there is no zone`() {
+        val look = HeartRateTileLook.of(HeartRateDisplay(165, Freshness.FRESH, LinkIcon.CONNECTED), null)
+
+        assertNull(look.zone)
+        assertNull(look.badge)
+        assertEquals(HeartRateTileLook.A11y(R.string.tracking_hr_tile_a11y, bpm = 165), look.a11y)
+    }
+
+    @Test
+    fun `a fresh value shows its zone in the zone colour and says it`() {
+        val look = HeartRateTileLook.of(HeartRateDisplay(165, Freshness.FRESH, LinkIcon.CONNECTED), zones)
+
+        assertEquals(4, look.zone)
+        assertEquals(HeartRateTileLook.ZoneBadge(4, greyed = false), look.badge)
+        assertEquals(HeartRateTileLook.A11y(R.string.tracking_hr_tile_zone_a11y, bpm = 165, zone = 4), look.a11y)
+    }
+
+    @Test
+    fun `a stale value keeps its zone, greyed`() {
+        val look = HeartRateTileLook.of(HeartRateDisplay(165, Freshness.STALE, LinkIcon.CONNECTED), zones)
+
+        assertEquals(4, look.zone)
+        assertEquals(HeartRateTileLook.ZoneBadge(4, greyed = true), look.badge)
+        assertEquals(HeartRateTileLook.A11y(R.string.tracking_hr_tile_stale_zone_a11y, bpm = 165, zone = 4), look.a11y)
+    }
+
+    @Test
+    fun `a fresh value below Z1 shows the grey below badge`() {
+        val look = HeartRateTileLook.of(HeartRateDisplay(80, Freshness.FRESH, LinkIcon.CONNECTED), zones)
+
+        assertEquals(0, look.zone)
+        assertEquals(HeartRateTileLook.ZoneBadge(0, greyed = true), look.badge)
+        assertEquals(HeartRateTileLook.A11y(R.string.tracking_hr_tile_below_zone_a11y, bpm = 80), look.a11y)
+    }
+
+    @Test
+    fun `a stale value below Z1 has no badge and the plain stale text`() {
+        val look = HeartRateTileLook.of(HeartRateDisplay(80, Freshness.STALE, LinkIcon.CONNECTED), zones)
+
+        assertEquals(0, look.zone)
+        assertNull(look.badge)
+        assertEquals(HeartRateTileLook.A11y(R.string.tracking_hr_tile_stale_a11y, bpm = 80), look.a11y)
+    }
+
+    @Test
+    fun `dashes have no zone`() {
+        val look = HeartRateTileLook.of(HeartRateDisplay(null, Freshness.NONE, LinkIcon.LOST), zones)
+
+        assertNull(look.zone)
+        assertNull(look.badge)
+        assertNull(HeartRateTileLook.of(null, zones).badge)
     }
 }
