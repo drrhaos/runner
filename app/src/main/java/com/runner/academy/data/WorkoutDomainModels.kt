@@ -22,6 +22,12 @@ data class WorkoutSession(
      * Not checkpointed: the heart rate lives in the points.
      */
     val heartRateDisplay: HeartRateDisplay? = null,
+    /**
+     * The smoothed pace of the current-pace tile, refreshed once a second by the service; null:
+     * none yet (the first 15 s after a start, a resume or a restore) or no data. Not
+     * checkpointed. [currentPace] stays for the adaptive GPS interval and the checkpoint.
+     */
+    val livePace: LivePace? = null,
     val calories: Int = 0,
     val gpsStatus: GpsStatus = GpsStatus.SEARCHING,
     val trackPoints: List<GeoPoint> = emptyList(), // для отображения на карте

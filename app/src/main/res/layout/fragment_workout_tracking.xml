@@ -371,13 +371,16 @@
                         android:alpha="0.72" />
                 </LinearLayout>
 
+                <!-- Одна точка фокуса TalkBack: описание задаётся в коде («≈» читается плохо) -->
                 <LinearLayout
+                    android:id="@+id/layout_current_pace_tile"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_columnWeight="1"
                     android:layout_margin="8dp"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:contentDescription="@string/tracking_pace_tile_no_data_a11y">
 
                     <TextView
                         android:id="@+id/textView_current_pace"
@@ -385,7 +388,8 @@
                         android:layout_height="wrap_content"
                         android:text="@string/track_info_time_placeholder"
                         android:textSize="24sp"
-                        android:textColor="?attr/colorOnSurface" />
+                        android:textColor="?attr/colorOnSurface"
+                        android:importantForAccessibility="no" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -393,7 +397,8 @@
                         android:text="@string/track_info_current_pace_label_km"
                         android:textSize="14sp"
                         android:textColor="?attr/colorOnSurface"
-                        android:alpha="0.72" />
+                        android:alpha="0.72"
+                        android:importantForAccessibility="no" />
                 </LinearLayout>
 
                 <LinearLayout
