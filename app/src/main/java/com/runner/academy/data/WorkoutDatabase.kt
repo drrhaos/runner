@@ -19,7 +19,7 @@ import android.content.Context
         ScheduledWorkout::class,
         BestEffort::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -222,6 +222,13 @@ abstract class WorkoutDatabase : RoomDatabase() {
             }
         }
 
+        /** Release 4: the heart rate zone target of a segment (1..5, null — none). */
+        internal val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE workout_template_segments ADD COLUMN targetHrZone INTEGER")
+            }
+        }
+
         /** Every migration, oldest first — shared with the migration tests. Append new ones here. */
         internal val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2,
@@ -229,7 +236,8 @@ abstract class WorkoutDatabase : RoomDatabase() {
             MIGRATION_3_4,
             MIGRATION_4_5,
             MIGRATION_5_6,
-            MIGRATION_6_7
+            MIGRATION_6_7,
+            MIGRATION_7_8
         )
 
         fun getDatabase(context: Context): WorkoutDatabase {
