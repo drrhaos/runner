@@ -69,7 +69,6 @@
     <string name="miles_per_hour_float">%.1f миль/ч</string>
     <string name="per_km">на километр</string>
     <string name="per_mile">на милю</string>
-    <string name="voice_notif_text_each_km">Дистанция: %1$s, время: %2$s, средний темп: %3$s.</string>
 
     <string name="workout_distance_label">Дистанция</string>
     <string name="workout_time_label">Время</string>
@@ -715,11 +714,7 @@
     <string name="tracking_interval_status">%1$d/%2$d · %3$s · %4$d%%</string>
     <string name="tracking_mode_plan">По плану: %1$s</string>
     <string name="tracking_free_run">Свободный бег</string>
-    <string name="voice_interval_start">Интервал: %1$s</string>
-    <string name="voice_interval_start_with_detail">Интервал: %1$s. %2$s</string>
-    <string name="voice_interval_upcoming">Следующий интервал: %1$s</string>
-    <string name="voice_interval_upcoming_with_detail">Следующий интервал: %1$s. %2$s</string>
-    <string name="voice_interval_upcoming_in_30s">Через 30 секунд начнется интервал: %1$s</string>
+    <string name="voice_interval_upcoming_in_30s">Через 30 секунд начнётся интервал: %1$s</string>
     <string name="voice_interval_goal_duration">Время %1$s</string>
     <string name="voice_interval_goal_distance">Дистанция %1$s</string>
     <string name="voice_interval_goal_pace">Темп %1$s</string>
@@ -921,5 +916,25 @@
         <item quantity="other">%d процента</item>
     </plurals>
     <!-- ===== Конец пульсовых зон ===== -->
+
+    <!-- Голосовая сводка (релиз 4): по части на метрику, между ними пауза -->
+    <string name="voice_summary_distance">Дистанция %1$s</string>
+    <string name="voice_summary_time">Время %1$s</string>
+    <string name="voice_summary_avg_pace">Средний темп %1$s</string>
+    <string name="voice_summary_split_pace">Темп за %1$s: %2$s</string>
+    <string name="voice_summary_split_pace_since">Темп с прошлой сводки: %1$s</string>
+    <string name="voice_summary_split_hr">Средний пульс за %1$s: %2$d</string>
+    <string name="voice_summary_split_hr_since">Средний пульс с прошлой сводки: %1$d</string>
+    <string name="voice_summary_split_pace_since_start">Темп с начала пробежки: %1$s</string>
+    <string name="voice_summary_split_hr_since_start">Средний пульс с начала пробежки: %1$d</string>
+    <string name="voice_summary_current_hr">Пульс %1$d</string>
+    <string name="voice_span_km_0_5">последние 500 метров</string>
+    <string name="voice_span_km_1">последний километр</string>
+    <string name="voice_span_km_2">последние 2 километра</string>
+    <string name="voice_span_km_5">последние 5 километров</string>
+    <string name="voice_span_min_1">последнюю минуту</string>
+    <string name="voice_span_min_5">последние 5 минут</string>
+    <string name="voice_span_min_10">последние 10 минут</string>
+    <string name="voice_span_min_15">последние 15 минут</string>
 
 </resources>

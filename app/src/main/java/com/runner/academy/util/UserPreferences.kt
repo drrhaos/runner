@@ -3,6 +3,8 @@ package com.runner.academy.util
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.runner.academy.voice.VoiceSettings
+import com.runner.academy.voice.VoiceSettingsCodec
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -22,7 +24,7 @@ class UserPreferences(context: Context) {
         private const val KEY_USER_BIRTH_DATE = "user_birth_date"
         private const val KEY_USER_GENDER = "user_gender"
         private const val KEY_UNIT_SYSTEM = "unit_system"
-        private const val KEY_VOICE_FEEDBACK = "voice_feedback"
+        private const val KEY_VOICE_FEEDBACK = VoiceSettingsCodec.KEY_ENABLED
         private const val KEY_FIRST_LAUNCH = "first_launch"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_APP_LANGUAGE = "app_language"
@@ -106,6 +108,34 @@ class UserPreferences(context: Context) {
     var voiceFeedback: Boolean
         get() = prefs.getBoolean(KEY_VOICE_FEEDBACK, DEFAULT_VOICE_FEEDBACK)
         set(value) = prefs.edit().putBoolean(KEY_VOICE_FEEDBACK, value).apply()
+
+    /**
+     * Все настройки голоса; [voiceFeedback] — их главный переключатель ([VoiceSettings.enabled]).
+     * Сервис читает их на каждом тике: смена посреди пробежки действует сразу.
+     */
+    fun voiceSettings(): VoiceSettings {
+        // Only the 8 keys, not a copy of every preference; a value of another type reads as absent
+        val values = HashMap<String, Any?>()
+        fun read(key: String, get: () -> Any?) {
+            if (prefs.contains(key)) values[key] = runCatching(get).getOrNull()
+        }
+        VoiceSettingsCodec.BOOLEAN_KEYS.forEach { key -> read(key) { prefs.getBoolean(key, false) } }
+        VoiceSettingsCodec.STRING_KEYS.forEach { key -> read(key) { prefs.getString(key, null) } }
+        VoiceSettingsCodec.INT_KEYS.forEach { key -> read(key) { prefs.getInt(key, 0) } }
+        return VoiceSettingsCodec.decode(values)
+    }
+
+    fun setVoiceSettings(settings: VoiceSettings) {
+        prefs.edit {
+            VoiceSettingsCodec.encode(settings).forEach { (key, value) ->
+                when (value) {
+                    is Boolean -> putBoolean(key, value)
+                    is Int -> putInt(key, value)
+                    is String -> putString(key, value)
+                }
+            }
+        }
+    }
 
     /**
      * Режим темы приложения (system/light/dark)
