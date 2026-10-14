@@ -39,6 +39,16 @@ class VoiceSettingsCodecTest {
     }
 
     @Test
+    fun `a stored list with nothing known falls back to the profile's default metrics`() {
+        val settings = VoiceSettingsCodec.decode(
+            mapOf(VoiceSettingsCodec.KEY_FREE_METRICS to "bogus,cadence", VoiceSettingsCodec.KEY_INTERVALS_METRICS to "x")
+        )
+
+        assertEquals(VoiceSettings.DEFAULT.free.metrics, settings.free.metrics)
+        assertEquals(VoiceSettings.DEFAULT.intervals.metrics, settings.intervals.metrics)
+    }
+
+    @Test
     fun `an empty metric set means no summary`() {
         val settings = VoiceSettingsCodec.decode(
             mapOf(VoiceSettingsCodec.KEY_FREE_SUMMARY to "km_1", VoiceSettingsCodec.KEY_FREE_METRICS to "")
@@ -90,6 +100,14 @@ class VoiceSettingsCodecTest {
             assertTrue(it.name, (it.meters == null) != (it.minutes == null))
         }
         assertEquals(listOf(5, 10, 15, 20), VoiceSettings.PACE_TOLERANCES_SEC)
+    }
+
+    @Test
+    fun `the typed key lists cover every stored key`() {
+        assertEquals(
+            VoiceSettingsCodec.encode(VoiceSettings.DEFAULT).keys,
+            (VoiceSettingsCodec.BOOLEAN_KEYS + VoiceSettingsCodec.STRING_KEYS + VoiceSettingsCodec.INT_KEYS).toSet()
+        )
     }
 
     @Test

@@ -61,6 +61,16 @@ class UserPreferencesVoiceTest {
     }
 
     @Test
+    fun `a value of another type reads as the default`() {
+        context.getSharedPreferences("runner_preferences", Context.MODE_PRIVATE).edit()
+            .putString("voice_pace_tolerance_sec", "15")
+            .putInt("voice_free_summary", 3)
+            .commit()
+
+        assertEquals(VoiceSettings.DEFAULT, prefs.voiceSettings())
+    }
+
+    @Test
     fun `reset to defaults resets the voice and keeps the stride model`() {
         prefs.saveStrideModel(StrideModel.fromHeight(180f))
         val model = prefs.loadStrideModel().serialize()

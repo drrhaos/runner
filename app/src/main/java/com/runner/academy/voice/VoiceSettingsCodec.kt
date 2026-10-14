@@ -17,6 +17,11 @@ object VoiceSettingsCodec {
     const val KEY_INTERVALS_TARGET_CHECK = "voice_intervals_target_check"
     const val KEY_PACE_TOLERANCE_SEC = "voice_pace_tolerance_sec"
 
+    /** The keys by stored type, for a reader that asks for each one ([decode] takes any map). */
+    val BOOLEAN_KEYS = listOf(KEY_ENABLED, KEY_INTERVALS_SEGMENT_CHANGE, KEY_INTERVALS_TARGET_CHECK)
+    val STRING_KEYS = listOf(KEY_FREE_SUMMARY, KEY_FREE_METRICS, KEY_INTERVALS_SUMMARY, KEY_INTERVALS_METRICS)
+    val INT_KEYS = listOf(KEY_PACE_TOLERANCE_SEC)
+
     fun decode(values: Map<String, *>): VoiceSettings {
         val default = VoiceSettings.DEFAULT
         return VoiceSettings(
@@ -51,10 +56,14 @@ object VoiceSettingsCodec {
 
     private fun summaryOf(value: Any?): SummaryEvery? = SummaryEvery.ofWire(value as? String)
 
-    /** Null when not stored; an empty string is an empty set. */
+    /**
+     * Null (the default) when not stored or when nothing in it is known; an empty string is an
+     * empty set (the user turned every metric off).
+     */
     private fun metricsOf(value: Any?): Set<SummaryMetric>? {
         val csv = value as? String ?: return null
-        return csv.split(',').mapNotNull { SummaryMetric.ofWire(it.trim()) }.toSet()
+        if (csv.isBlank()) return emptySet()
+        return csv.split(',').mapNotNull { SummaryMetric.ofWire(it.trim()) }.toSet().ifEmpty { null }
     }
 
     private fun metricsWire(metrics: Set<SummaryMetric>): String =

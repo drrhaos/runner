@@ -23,7 +23,10 @@ data class CoachInput(
 data class CoachResult(
     /** In the order to say them. */
     val lines: List<VoiceLine>,
-    /** The segments' state after this tick; null: a free run. */
+    /**
+     * The segments' state after this tick; null: a free run. Not used by the service yet: the
+     * target-check branch turns it into `WorkoutSession.interval` for the segment bar.
+     */
     val interval: IntervalEngine.State?
 )
 
@@ -38,6 +41,9 @@ data class CoachResult(
  *   the cursor goes to the checkpoint and switching the voice on does not replay them.
  * - Order within a tick: [VoiceLine.SegmentStart] → [VoiceLine.SegmentUpcoming] →
  *   [VoiceLine.Summary]. Status lines are the service's own: they are events and speak at once.
+ *   They still keep the order beep → status → warning → summary: the beep is outside the speech
+ *   queue, and the service queues the auto-pause line earlier in the same tick and the GPS and
+ *   sensor lines between ticks, all before this tick's lines.
  * - The profile is the interval one when the workout has segments.
  */
 class VoiceCoach {

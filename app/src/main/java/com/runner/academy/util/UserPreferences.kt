@@ -113,7 +113,17 @@ class UserPreferences(context: Context) {
      * Все настройки голоса; [voiceFeedback] — их главный переключатель ([VoiceSettings.enabled]).
      * Сервис читает их на каждом тике: смена посреди пробежки действует сразу.
      */
-    fun voiceSettings(): VoiceSettings = VoiceSettingsCodec.decode(prefs.all)
+    fun voiceSettings(): VoiceSettings {
+        // Only the 8 keys, not a copy of every preference; a value of another type reads as absent
+        val values = HashMap<String, Any?>()
+        fun read(key: String, get: () -> Any?) {
+            if (prefs.contains(key)) values[key] = runCatching(get).getOrNull()
+        }
+        VoiceSettingsCodec.BOOLEAN_KEYS.forEach { key -> read(key) { prefs.getBoolean(key, false) } }
+        VoiceSettingsCodec.STRING_KEYS.forEach { key -> read(key) { prefs.getString(key, null) } }
+        VoiceSettingsCodec.INT_KEYS.forEach { key -> read(key) { prefs.getInt(key, 0) } }
+        return VoiceSettingsCodec.decode(values)
+    }
 
     fun setVoiceSettings(settings: VoiceSettings) {
         prefs.edit {
