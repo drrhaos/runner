@@ -25,6 +25,7 @@ import com.runner.academy.util.openAppSystemSettings
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.Calendar
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 class SettingsFragment : Fragment() {
@@ -404,7 +405,7 @@ class SettingsFragment : Fragment() {
             binding.rowHrMax.contentDescription = getString(R.string.settings_hr_max_none_a11y)
             return
         }
-        value.text = hrMax.bpm.toString()
+        value.text = String.format(Locale.getDefault(), "%d", hrMax.bpm)
         value.setTextColor(MaterialColors.getColor(value, androidx.appcompat.R.attr.colorPrimary))
         val age = hrMax.ageYears
         source.text = if (age != null) {

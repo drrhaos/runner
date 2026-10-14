@@ -110,7 +110,8 @@ class HrZonesCardTest {
         )
         assertEquals(
             context.getString(
-                R.string.workout_details_hr_zone_row_a11y, 4, 152, 170,
+                R.string.workout_details_hr_zone_row_a11y, 4, 152,
+                context.resources.getQuantityString(R.plurals.heart_rate_beats_per_minute, 170, 170),
                 com.runner.academy.util.FormatUtils.formatTimeForTTS(135_000, context),
                 context.resources.getQuantityString(R.plurals.percent_a11y, 75, 75)
             ),
@@ -118,7 +119,8 @@ class HrZonesCardTest {
         )
         assertEquals(
             context.getString(
-                R.string.workout_details_hr_zone_below_a11y, 95,
+                R.string.workout_details_hr_zone_below_a11y,
+                context.resources.getQuantityString(R.plurals.heart_rate_beats_per_minute, 95, 95),
                 com.runner.academy.util.FormatUtils.formatTimeForTTS(45_000, context),
                 context.resources.getQuantityString(R.plurals.percent_a11y, 25, 25)
             ),

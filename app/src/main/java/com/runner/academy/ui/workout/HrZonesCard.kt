@@ -77,9 +77,15 @@ class HrZonesCard(
         val time = FormatUtils.formatTimeForTTS(row.ms, context)
         val percent = context.resources.getQuantityString(R.plurals.percent_a11y, row.percent, row.percent)
         views.root.contentDescription = if (below) {
-            context.getString(R.string.workout_details_hr_zone_below_a11y, row.belowBpm, time, percent)
+            context.getString(
+                R.string.workout_details_hr_zone_below_a11y,
+                HeartRateText.beatsPerMinute(context, row.belowBpm), time, percent
+            )
         } else {
-            context.getString(R.string.workout_details_hr_zone_row_a11y, row.zone, row.range.first, row.range.last, time, percent)
+            context.getString(
+                R.string.workout_details_hr_zone_row_a11y,
+                row.zone, row.range.first, HeartRateText.beatsPerMinute(context, row.range.last), time, percent
+            )
         }
     }
 }

@@ -886,9 +886,10 @@
     <string name="workout_details_hr_zone_range" translatable="false">%1$d–%2$d</string>
     <string name="workout_details_hr_zone_below_range" translatable="false">&lt; %1$d</string>
     <string name="workout_details_hr_zone_percent">%1$d%%</string>
-    <!-- %4$s: the time in words; %5$s: percent_a11y -->
-    <string name="workout_details_hr_zone_row_a11y">Zone %1$d, %2$d to %3$d beats per minute: %4$s, %5$s</string>
-    <string name="workout_details_hr_zone_below_a11y">Below zone 1, under %1$d beats per minute: %2$s, %3$s</string>
+    <!-- %3$s: the upper bound with heart_rate_beats_per_minute; %4$s: the time in words; %5$s: percent_a11y -->
+    <string name="workout_details_hr_zone_row_a11y">Zone %1$d, %2$d to %3$s: %4$s, %5$s</string>
+    <!-- %1$s: the Z1 bound with heart_rate_beats_per_minute -->
+    <string name="workout_details_hr_zone_below_a11y">Below zone 1, under %1$s: %2$s, %3$s</string>
     <string name="chart_heart_rate_zones_a11y">Heart rate chart, beats per minute: average %1$d, from %2$d to %3$d. The line is coloured by heart rate zone</string>
     <string name="chart_heart_rate_value_zone">Heart rate: %1$d bpm · Z%2$d</string>
     <string name="chart_heart_rate_value_below">Heart rate: %1$d bpm · below Z1</string>

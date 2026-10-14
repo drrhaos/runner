@@ -899,8 +899,10 @@
     <string name="workout_details_hr_zones_basis">По максимальному пульсу %1$d (%2$s)</string>
     <string name="workout_details_hr_zone_below">ниже Z1</string>
     <string name="workout_details_hr_zone_percent">%1$d&#160;%%</string>
-    <string name="workout_details_hr_zone_row_a11y">Зона %1$d, %2$d–%3$d ударов в минуту: %4$s, %5$s</string>
-    <string name="workout_details_hr_zone_below_a11y">Ниже зоны 1, меньше %1$d ударов в минуту: %2$s, %3$s</string>
+    <!-- Плюрал согласуется с последним числом диапазона: «152–171 удар в минуту» -->
+    <string name="workout_details_hr_zone_row_a11y">Зона %1$d, %2$d–%3$s: %4$s, %5$s</string>
+    <!-- «граница …»: именительный падеж, плюрал heart_rate_beats_per_minute всегда верен -->
+    <string name="workout_details_hr_zone_below_a11y">Ниже зоны 1, граница %1$s: %2$s, %3$s</string>
     <string name="chart_heart_rate_zones_a11y">График пульса, ударов в минуту: в среднем %1$d, от %2$d до %3$d. Линия раскрашена по пульсовым зонам</string>
     <string name="chart_heart_rate_value_zone">Пульс: %1$d уд/мин · Z%2$d</string>
     <string name="chart_heart_rate_value_below">Пульс: %1$d уд/мин · ниже Z1</string>
