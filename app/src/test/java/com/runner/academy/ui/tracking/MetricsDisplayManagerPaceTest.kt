@@ -68,7 +68,8 @@ class MetricsDisplayManagerPaceTest {
             textViewElapsedTimeExpanded = text(),
             layoutHeartRateTile = View(context),
             imageViewHrLink = ImageView(context),
-            imageViewHrLinkCompact = ImageView(context)
+            imageViewHrLinkCompact = ImageView(context),
+            textViewHrZoneBadge = text()
         )
     }
 
