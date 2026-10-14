@@ -632,7 +632,6 @@
     <string name="segment_goal_distance">Дистанция</string>
     <string name="segment_duration_hint">Время</string>
     <string name="segment_distance_hint">Дистанция</string>
-    <string name="segment_pace_hint">Целевой темп (опционально)</string>
     <string name="segment_dialog_duration_title">Время</string>
     <string name="segment_dialog_distance_title">Дистанция</string>
     <string name="segment_dialog_pace_title">Целевой темп</string>

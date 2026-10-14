@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.SegmentKind
 import com.runner.academy.data.WorkoutTemplateSegment
+import com.runner.academy.util.HrZones
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -48,6 +49,27 @@ class TemplateSchemeFormatTest {
     @Test
     fun `both fields - the zone wins`() {
         assertEquals("Fast 03:00 · Z2", formatSegmentParams(context, work.copy(targetHrZone = 2, targetPaceMinPerKm = 4.5f)))
+    }
+
+    @Test
+    fun `the zone field shows the range by the current maximum, or the zone alone`() {
+        assertEquals("Zone 4 · 152–170 bpm", formatSegmentZone(context, 4, HrZones(190)))
+        assertEquals("Zone 4", formatSegmentZone(context, 4, null))
+    }
+
+    @Test
+    @Config(qualifiers = "ru")
+    fun `the zone picker items - range and name`() {
+        assertEquals(
+            listOf(
+                "Зона 1 · 95–113 уд/мин · восстановление",
+                "Зона 2 · 114–132 уд/мин · аэробная база",
+                "Зона 3 · 133–151 уд/мин · темповая",
+                "Зона 4 · 152–170 уд/мин · пороговая",
+                "Зона 5 · 171–190 уд/мин · максимум"
+            ),
+            zonePickerItems(context, HrZones(190))
+        )
     }
 
     @Test

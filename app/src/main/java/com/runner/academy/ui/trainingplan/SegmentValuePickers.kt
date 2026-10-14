@@ -4,9 +4,11 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.NumberPicker
+import androidx.annotation.StringRes
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
 import com.runner.academy.databinding.DialogSegmentValuePickerBinding
+import com.runner.academy.util.HrZones
 
 internal fun NumberPicker.configure(min: Int, max: Int, value: Int) {
     minValue = min
@@ -41,6 +43,50 @@ internal fun formatSegmentPace(context: Context, paceTotalSeconds: Int): String 
     val minutes = paceTotalSeconds / 60
     val seconds = paceTotalSeconds % 60
     return context.getString(R.string.segment_pace_format, minutes, seconds)
+}
+
+/** The zone field: "Zone 4 · 152–170 bpm" by the current maximum, or "Zone 4" with the zones off. */
+internal fun formatSegmentZone(context: Context, zone: Int, zones: HrZones?): String {
+    if (zones == null) return context.getString(R.string.segment_target_zone_value_no_range, zone)
+    val range = zones.range(zone)
+    return context.getString(R.string.segment_target_zone_value, zone, range.first, range.last)
+}
+
+/** Picker rows Z1..Z5: "Zone 4 · 152–170 bpm · threshold". */
+internal fun zonePickerItems(context: Context, zones: HrZones): List<String> =
+    (1..HrZones.COUNT).map { zone ->
+        val range = zones.range(zone)
+        context.getString(R.string.segment_zone_item, zone, range.first, range.last, context.getString(zoneNameRes(zone)))
+    }
+
+@StringRes
+private fun zoneNameRes(zone: Int): Int = when (zone) {
+    1 -> R.string.hr_zone_name_1
+    2 -> R.string.hr_zone_name_2
+    3 -> R.string.hr_zone_name_3
+    4 -> R.string.hr_zone_name_4
+    else -> R.string.hr_zone_name_5
+}
+
+/** Single choice of a zone 1..5; picking a row closes the dialog. */
+internal fun showZoneValuePicker(
+    context: Context,
+    zones: HrZones,
+    initialZone: Int,
+    onPicked: (Int) -> Unit,
+    onCancel: (() -> Unit)? = null
+) {
+    val items = zonePickerItems(context, zones).toTypedArray()
+    val checked = (initialZone - 1).coerceIn(0, items.lastIndex)
+    MaterialAlertDialogBuilder(context)
+        .setTitle(R.string.segment_dialog_zone_title)
+        .setSingleChoiceItems(items, checked) { dialog, which ->
+            onPicked(which + 1)
+            dialog.dismiss()
+        }
+        .setNegativeButton(R.string.cancel) { _, _ -> onCancel?.invoke() }
+        .setOnCancelListener { onCancel?.invoke() }
+        .show()
 }
 
 internal fun showDurationValuePicker(

@@ -13,6 +13,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.data.SegmentGoalType
@@ -25,6 +26,7 @@ import com.runner.academy.data.isDefaultTitle
 import com.runner.academy.data.parseTrainingIcon
 import com.runner.academy.databinding.FragmentTemplateEditBinding
 import com.runner.academy.databinding.ItemTemplateSegmentBinding
+import com.runner.academy.util.HrZones
 import kotlinx.coroutines.launch
 
 class TemplateEditFragment : Fragment() {
@@ -43,6 +45,7 @@ class TemplateEditFragment : Fragment() {
     private var selectedType: WorkoutType = WorkoutType.INTERVAL_TRAINING
     private var selectedIcon: TrainingIcon = TrainingIcon.INTERVAL
     private var iconChosenManually = false
+    private var templateLoaded = false
     private lateinit var segmentAdapter: SegmentDraftAdapter
     private lateinit var iconAdapter: TrainingIconPickerAdapter
 
@@ -91,9 +94,15 @@ class TemplateEditFragment : Fragment() {
         binding.recyclerViewIcons.adapter = iconAdapter
         updateIconHint()
 
-        segmentAdapter = SegmentDraftAdapter(drafts) {
-            segmentAdapter.notifyDataSetChanged()
-        }
+        segmentAdapter = SegmentDraftAdapter(
+            drafts = drafts,
+            zones = readZones(),
+            onOpenSettings = {
+                flushSegmentDrafts()
+                findNavController().navigate(R.id.nav_settings)
+            },
+            onChanged = { segmentAdapter.notifyDataSetChanged() }
+        )
         binding.recyclerViewSegments.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerViewSegments.adapter = segmentAdapter
         binding.recyclerViewSegments.setHasFixedSize(false)
@@ -110,8 +119,11 @@ class TemplateEditFragment : Fragment() {
 
         if (templateId > 0) {
             binding.buttonDeleteTemplate.visibility = View.VISIBLE
+            // Back from the settings the view is rebuilt: keep the unsaved drafts.
+            if (templateLoaded) return
             viewLifecycleOwner.lifecycleScope.launch {
                 val loaded = viewModel.loadTemplate(templateId) ?: return@launch
+                templateLoaded = true
                 binding.editTextTemplateName.setText(loaded.template.name)
                 selectedType = loaded.template.workoutType
                 selectedIcon = parseTrainingIcon(
@@ -188,6 +200,19 @@ class TemplateEditFragment : Fragment() {
         segmentAdapter.notifyDataSetChanged()
         binding.root.visibility = View.VISIBLE
     }
+
+    override fun onResume() {
+        super.onResume()
+        // The maximum heart rate may have changed in the settings: redraw the zone ranges.
+        val zones = readZones()
+        if (zones != segmentAdapter.zones) {
+            flushSegmentDrafts()
+            segmentAdapter.zones = zones
+            segmentAdapter.notifyDataSetChanged()
+        }
+    }
+
+    private fun readZones(): HrZones? = requireContext().appContainer().userPreferences.hrZones()
 
     private fun updateIconHint() {
         binding.textViewIconHint.text = getString(
@@ -268,6 +293,9 @@ class TemplateEditFragment : Fragment() {
 
 private class SegmentDraftAdapter(
     private val drafts: MutableList<SegmentDraft>,
+    /** The zones by the current maximum heart rate; null — the zones are off. */
+    var zones: HrZones?,
+    private val onOpenSettings: () -> Unit,
     private val onChanged: () -> Unit
 ) : RecyclerView.Adapter<SegmentDraftAdapter.VH>() {
 
@@ -380,9 +408,26 @@ private class SegmentDraftAdapter(
                     initialPaceSeconds = draft.paceTotalSeconds,
                     onPicked = { pace ->
                         draft.paceTotalSeconds = pace
+                        // 0:00 clears the pace, and with it the target.
+                        if (pace <= 0) draft.targetKind = TargetKind.NONE
                         bindValueFields(draft)
                     }
                 )
+            }
+            binding.editTextHrZone.setOnClickListener {
+                val zones = zones
+                if (zones == null) {
+                    Snackbar.make(binding.root, R.string.segment_target_zone_disabled, Snackbar.LENGTH_LONG).show()
+                } else {
+                    showZoneValuePicker(ctx, zones, draft.hrZone, onPicked = { zone ->
+                        draft.hrZone = zone
+                        bindValueFields(draft)
+                    })
+                }
+            }
+            binding.buttonOpenSettings.setOnClickListener {
+                flushToDraft()
+                onOpenSettings()
             }
 
             binding.buttonRemoveSegment.setOnClickListener {
@@ -401,6 +446,72 @@ private class SegmentDraftAdapter(
             binding.editTextDuration.setText(formatSegmentDuration(draft.durationTotalSeconds))
             binding.editTextDistance.setText(formatSegmentDistance(ctx, draft.distanceTotalMeters))
             binding.editTextPace.setText(formatSegmentPace(ctx, draft.paceTotalSeconds))
+            binding.editTextHrZone.setText(formatSegmentZone(ctx, draft.hrZone, zones))
+            bindTarget(draft)
+        }
+
+        /** «None / Pace / Zone», the field of the selected one and the zones-off hint (design §2). */
+        private fun bindTarget(draft: SegmentDraft) {
+            val ui = ZoneTargetUi.of(draft.targetKind, zonesOn = zones != null)
+            val group = binding.toggleSegmentTarget
+            group.clearOnButtonCheckedListeners()
+            group.check(buttonId(draft.targetKind))
+            binding.buttonTargetZone.isEnabled = ui.zoneButtonEnabled
+            binding.layoutPace.visibility = if (draft.targetKind == TargetKind.PACE) View.VISIBLE else View.GONE
+            binding.layoutHrZone.visibility = if (draft.targetKind == TargetKind.ZONE) View.VISIBLE else View.GONE
+            binding.textViewZoneDisabledHint.visibility = if (ui.hintVisible) View.VISIBLE else View.GONE
+            binding.buttonOpenSettings.visibility = if (ui.hintVisible) View.VISIBLE else View.GONE
+            group.addOnButtonCheckedListener { _, checkedId, isChecked ->
+                if (isChecked) onTargetChosen(draft, kindOf(checkedId))
+            }
+        }
+
+        private fun onTargetChosen(draft: SegmentDraft, kind: TargetKind) {
+            if (kind == draft.targetKind) return
+            val ctx = binding.root.context
+            val zones = zones
+            when {
+                kind == TargetKind.NONE -> select(draft, kind)
+                kind == TargetKind.PACE && draft.paceTotalSeconds > 0 -> select(draft, kind)
+                kind == TargetKind.PACE -> showPaceValuePicker(
+                    context = ctx,
+                    titleRes = R.string.segment_dialog_pace_title,
+                    initialPaceSeconds = 0,
+                    onPicked = { pace ->
+                        if (pace > 0) draft.paceTotalSeconds = pace
+                        if (pace > 0) select(draft, kind) else bindTarget(draft)
+                    },
+                    onCancel = { bindTarget(draft) }
+                )
+                zones == null -> bindTarget(draft)
+                else -> showZoneValuePicker(
+                    context = ctx,
+                    zones = zones,
+                    initialZone = draft.hrZone,
+                    onPicked = { zone ->
+                        draft.hrZone = zone
+                        select(draft, kind)
+                    },
+                    onCancel = { bindTarget(draft) }
+                )
+            }
+        }
+
+        private fun select(draft: SegmentDraft, kind: TargetKind) {
+            draft.targetKind = kind
+            bindValueFields(draft)
+        }
+
+        private fun buttonId(kind: TargetKind): Int = when (kind) {
+            TargetKind.NONE -> R.id.button_target_none
+            TargetKind.PACE -> R.id.button_target_pace
+            TargetKind.ZONE -> R.id.button_target_zone
+        }
+
+        private fun kindOf(buttonId: Int): TargetKind = when (buttonId) {
+            R.id.button_target_pace -> TargetKind.PACE
+            R.id.button_target_zone -> TargetKind.ZONE
+            else -> TargetKind.NONE
         }
     }
 }

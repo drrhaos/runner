@@ -620,7 +620,6 @@
     <string name="segment_goal_distance">Distance</string>
     <string name="segment_duration_hint">Duration</string>
     <string name="segment_distance_hint">Distance</string>
-    <string name="segment_pace_hint">Target pace (optional)</string>
     <string name="segment_dialog_duration_title">Duration</string>
     <string name="segment_dialog_distance_title">Distance</string>
     <string name="segment_dialog_pace_title">Target pace</string>
