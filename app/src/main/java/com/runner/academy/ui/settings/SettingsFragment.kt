@@ -367,7 +367,8 @@ class SettingsFragment : Fragment() {
     private fun showBirthDateDialog() {
         val currentBirthDate = viewModel.settingsState.value.userBirthDate
         val calendar = Calendar.getInstance()
-        if (currentBirthDate > 0) {
+        // 0 is "not set"; a date before 1970 is negative and real
+        if (currentBirthDate != 0L) {
             calendar.timeInMillis = currentBirthDate
         } else {
             calendar.add(Calendar.YEAR, -25)
