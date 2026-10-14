@@ -61,6 +61,8 @@ class MetricsDisplayManager(
         val textViewWorkoutHeartRate: TextView,
         val textViewAvgSpeed: TextView,
         val textViewCurrentPace: TextView,
+        /** The current-pace tile: one TalkBack stop with its own description. */
+        val layoutCurrentPaceTile: View,
         val textViewCaloriesBurned: TextView,
         val spinnerWorkoutType: Spinner,
         val buttonStart: ImageButton,
@@ -80,6 +82,11 @@ class MetricsDisplayManager(
     private var shownTimerState: TimerState? = null
     private var heartRateTile: HeartRateTile? = null
     private var shownHeartRate: HeartRateTileLook? = null
+    private var shownPace: CurrentPaceTileLook? = null
+
+    init {
+        ViewCompat.setScreenReaderFocusable(views.layoutCurrentPaceTile, true)
+    }
 
     /**
      * The value, its colour, the link icon (on the tile and by the GPS indicator) and what
@@ -165,7 +172,7 @@ class MetricsDisplayManager(
         views.textViewWorkoutDistanceExpanded.text = formattedDistance
         views.textViewWorkoutPace.text = stripUnit(viewModel.formatPace(session.avgPace))
         views.textViewAvgSpeed.text = stripUnit(viewModel.formatSpeed(session.avgSpeed))
-        views.textViewCurrentPace.text = stripUnit(viewModel.formatPace(session.currentPace))
+        updateCurrentPace(session)
         views.textViewCaloriesBurned.text = session.calories.toString()
 
         val elapsed = views.textViewElapsedTimeExpanded
@@ -179,6 +186,18 @@ class MetricsDisplayManager(
             elapsed.visibility = View.GONE
         }
         renderTimerState(TimerState.of(session))
+    }
+
+    /**
+     * The 30 s pace of the service ([WorkoutSession.livePace]), «≈» when by steps; the tracking
+     * screen is in kilometres. The description changes quietly, only with the text.
+     */
+    private fun updateCurrentPace(session: WorkoutSession) {
+        val look = CurrentPaceTileLook.of(session.livePace, views.textViewCurrentPace.context)
+        if (look == shownPace) return
+        shownPace = look
+        views.textViewCurrentPace.text = look.text
+        views.layoutCurrentPaceTile.contentDescription = look.contentDescription
     }
 
     private fun renderTimerState(state: TimerState) {

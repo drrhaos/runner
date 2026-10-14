@@ -285,6 +285,7 @@ class WorkoutTrackingFragment : Fragment() {
                 textViewWorkoutHeartRate = binding.textViewWorkoutHeartRate,
                 textViewAvgSpeed = binding.textViewAvgSpeed,
                 textViewCurrentPace = binding.textViewCurrentPace,
+                layoutCurrentPaceTile = binding.layoutCurrentPaceTile,
                 textViewCaloriesBurned = binding.textViewCaloriesBurned,
                 spinnerWorkoutType = binding.spinnerWorkoutType,
                 buttonStart = binding.buttonStart,

@@ -210,6 +210,11 @@
     <string name="track_info_time_placeholder" translatable="false">--:--</string>
     <string name="track_info_current_pace_label_km">Current pace (min/km)</string>
     <string name="track_info_current_pace_label_miles">Current pace (min/mi)</string>
+    <!-- The smoothed pace counted from steps: U+2248 and a no-break space -->
+    <string name="tracking_pace_approximate" translatable="false">≈&#160;%1$s</string>
+    <string name="tracking_pace_tile_a11y">Current pace: %1$s</string>
+    <string name="tracking_pace_tile_approx_a11y">Current pace, approximate from steps: %1$s</string>
+    <string name="tracking_pace_tile_no_data_a11y">Current pace: no data</string>
     <string name="track_info_average_pace_label_km">Average pace (min/km)</string>
     <string name="track_info_average_pace_label_miles">Average pace (min/mi)</string>
     <string name="track_info_calories_label">Calories (kcal)</string>
