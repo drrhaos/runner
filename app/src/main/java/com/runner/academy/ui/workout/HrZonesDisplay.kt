@@ -37,6 +37,7 @@ sealed interface HrZonesDisplay {
             if (hrMax == null || ms == null) return None
             val zones = hrMax.zones
             val total = ms.sum()
+            // timeInZones never gives an empty array (under a minute is null); kept against a division by zero
             if (total <= 0L) return None
             val percents = largestRemainderPercents(ms)
             val rows = (HrZones.COUNT downTo HrZones.BELOW).map { zone ->

@@ -41,6 +41,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.ui.workout.WorkoutDetailFragmentArgs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
 
@@ -488,7 +489,7 @@ class WorkoutTrackingFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                kotlinx.coroutines.flow.combine(viewModel.heartRateDisplay, viewModel.hrZones) { display, zones ->
+                combine(viewModel.heartRateDisplay, viewModel.hrZones) { display, zones ->
                     display to zones
                 }.collect { (display, zones) -> metricsDisplayManager?.updateHeartRate(display, zones) }
             }

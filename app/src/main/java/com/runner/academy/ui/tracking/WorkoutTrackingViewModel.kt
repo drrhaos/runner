@@ -12,6 +12,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.runner.academy.RunnerApplication
 import com.runner.academy.sensor.HeartRateDisplay
 import com.runner.academy.sensor.HeartRateSample
 import com.runner.academy.sensor.HeartRateSensor
@@ -54,7 +55,7 @@ class WorkoutTrackingViewModel(
     private val heartRateSensor: HeartRateSensor,
     private val clockNanos: () -> Long = SystemClock::elapsedRealtimeNanos,
     private val hrZonesSource: () -> HrZones? = {
-        ((application as? com.runner.academy.RunnerApplication)?.container?.userPreferences ?: UserPreferences(application)).hrZones()
+        ((application as? RunnerApplication)?.container?.userPreferences ?: UserPreferences(application)).hrZones()
     }
 ) : ViewModel() {
 
