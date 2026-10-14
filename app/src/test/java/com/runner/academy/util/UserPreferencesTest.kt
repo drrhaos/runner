@@ -303,6 +303,19 @@ class UserPreferencesTest {
     }
 
     @Test
+    fun `the age row and HRmax by age agree on the day before the birthday`() {
+        // Turns 40 tomorrow: both still count 39
+        userPreferences.userBirthDate = birthMs(1986, 10, 14)
+
+        assertEquals(39, userPreferences.ageOn(today, zone))
+        assertEquals(HrMax(181, HrMaxSource.AUTO), userPreferences.hrMax(today, zone))
+
+        userPreferences.userBirthDate = birthMs(1986, 10, 13)
+        assertEquals(40, userPreferences.ageOn(today, zone))
+        assertEquals(HrMax(180, HrMaxSource.AUTO), userPreferences.hrMax(today, zone))
+    }
+
+    @Test
     fun `reset clears the manual HRmax`() {
         userPreferences.hrMaxManual = 190
 

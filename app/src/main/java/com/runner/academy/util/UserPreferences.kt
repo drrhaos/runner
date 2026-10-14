@@ -88,13 +88,10 @@ class UserPreferences(context: Context) {
      * Возраст пользователя (вычисляется из даты рождения)
      */
     val userAge: Int
-        get() {
-            if (userBirthDate == 0L) return 0
-            val birthDate = java.util.Date(userBirthDate)
-            val currentDate = java.util.Date()
-            val diffInMillis = currentDate.time - birthDate.time
-            return (diffInMillis / (365.25 * 24 * 60 * 60 * 1000)).toInt()
-        }
+        get() = ageOn(LocalDate.now(), ZoneId.systemDefault())
+
+    /** Полных лет на [today] (0 — дата рождения не задана); то же правило, что у [hrMax] по возрасту. */
+    fun ageOn(today: LocalDate, zone: ZoneId): Int = Ages.fullYears(userBirthDate, today, zone) ?: 0
     
     /**
      * Система единиц измерения

@@ -1,8 +1,6 @@
 package com.runner.academy.util
 
-import java.time.Instant
 import java.time.LocalDate
-import java.time.Period
 import java.time.ZoneId
 
 /** Where the maximum heart rate comes from. */
@@ -38,10 +36,7 @@ data class HrMax(val bpm: Int, val source: HrMaxSource) {
 
         /** 220 − full years, whatever is set by hand; null without a birth date or out of the ages. */
         fun byAge(birthDateMs: Long, today: LocalDate, zone: ZoneId): HrMax? {
-            // 0 is "not set"; a date before 1970 is negative and real
-            if (birthDateMs == 0L) return null
-            val birthday = Instant.ofEpochMilli(birthDateMs).atZone(zone).toLocalDate()
-            val age = Period.between(birthday, today).years
+            val age = Ages.fullYears(birthDateMs, today, zone) ?: return null
             if (age !in MIN_AGE..MAX_AGE) return null
             return HrMax(AGE_FORMULA_BASE - age, HrMaxSource.AUTO)
         }
