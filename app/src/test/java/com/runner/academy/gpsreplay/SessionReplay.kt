@@ -2,6 +2,7 @@ package com.runner.academy.gpsreplay
 
 import com.google.gson.GsonBuilder
 import com.runner.academy.data.GpsStatus
+import com.runner.academy.data.LivePace
 import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.Workout
@@ -13,6 +14,7 @@ import com.runner.academy.service.AutoPauseController
 import com.runner.academy.service.GpsLocationProcessor
 import com.runner.academy.service.GpsStatusWatchdog
 import com.runner.academy.service.HeartRateTracker
+import com.runner.academy.service.LivePaceTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -80,7 +82,9 @@ data class SessionReplayResult(
     /** The row the save path builds from the stopped session. */
     val savedWorkout: Workout,
     /** What the voice coach said on the timer: (ms since the start, line). */
-    val voice: List<Pair<Long, VoiceLine>> = emptyList()
+    val voice: List<Pair<Long, VoiceLine>> = emptyList(),
+    /** The current-pace tile on each tick of the timer: (ms since the start, pace). */
+    val livePace: List<Pair<Long, LivePace?>> = emptyList()
 )
 
 /**
@@ -105,6 +109,11 @@ data class SessionReplayResult(
  * collects its lines in [SessionReplayResult.voice]. Status lines (GPS, sensor, auto-pause) and
  * the speech engine are not modelled.
  *
+ * The live pace: `tickLivePace()` before the voice feeds a [LivePaceTracker] on the run's stride
+ * ([ReplaySettings.stepDistance]) with the fix age of the watchdog's clock (the request interval
+ * is 1 s here) and collects the tile's pace in [SessionReplayResult.livePace]; `paceProbe` sees
+ * the tracker after each tick (a window cut at a segment start).
+ *
  * Not modelled: the unreliable-signal latch, the lastKnown pull of the watchdog and the stride
  * learner. Keep in sync with the service when that glue changes, like [GpsReplay.live].
  */
@@ -114,13 +123,17 @@ object SessionReplay {
     /** The watchdog's period and timeout with the screen on (`WorkoutTrackingService`). */
     private const val WATCHDOG_EVERY_TICKS = 2
     private const val LOST_TIMEOUT_MS = 5_000L
+    /** The location request's interval: fixes come once a second on the bench. */
+    private const val REQUEST_INTERVAL_MS = 1_000L
     private const val NANOS_PER_MS = 1_000_000L
     private val gson = GsonBuilder().create()
 
     fun run(
         run: SyntheticRun,
         settings: ReplaySettings = ReplaySettings(),
-        events: List<ReplayEvent> = emptyList()
+        events: List<ReplayEvent> = emptyList(),
+        /** After each tick: (ms since the start, the service's live-pace tracker). */
+        paceProbe: ((Long, LivePaceTracker) -> Unit)? = null
     ): SessionReplayResult {
         val start = run.startTimeMs
         val stopSec = events.filterIsInstance<ReplayEvent.Stop>().minOfOrNull { it.atSec } ?: run.durationSec
@@ -132,7 +145,7 @@ object SessionReplay {
         val settingChanges = events.filterIsInstance<ReplayEvent.AutoPauseSetting>().associateBy { it.atSec }
         val fixes = ArrayDeque(run.rawPoints())
 
-        val live = Live(run, settings)
+        val live = Live(run, settings, paceProbe)
         live.start(start)
         var deadUntilSec = -1
         var killedAtMs = 0L
@@ -181,7 +194,11 @@ object SessionReplay {
     }
 
     /** One service process: its session manager, fix processor, auto-pause detector and watchdog. */
-    private class Live(private val run: SyntheticRun, private val settings: ReplaySettings) {
+    private class Live(
+        private val run: SyntheticRun,
+        private val settings: ReplaySettings,
+        private val paceProbe: ((Long, LivePaceTracker) -> Unit)?
+    ) {
         var manager = WorkoutSessionManager()
         var processor = GpsLocationProcessor()
         var autoPause = AutoPauseController()
@@ -200,6 +217,9 @@ object SessionReplay {
         private var savedCursor = engine?.snapshot()
         private var coach = VoiceCoach()
         val voice = mutableListOf<Pair<Long, VoiceLine>>()
+        /** `livePace`: one per run (and per restore) on the run's stride. */
+        private var livePace = LivePaceTracker(settings.stepDistance)
+        val paces = mutableListOf<Pair<Long, LivePace?>>()
 
         /** Sensor steps the step tracker never counted (pauses, a dead process). */
         private var droppedSteps = 0
@@ -251,6 +271,7 @@ object SessionReplay {
             watchdogTicks = 0
             autoPause.reset()
             processor.reset(workoutType = settings.type, stepDistance = settings.stepDistance)
+            livePace = LivePaceTracker(settings.stepDistance)
             startHeartRate()
             manager.startNewSession(initialGpsStatus = GpsStatus.SEARCHING, now = now)
             tracking = true
@@ -269,7 +290,25 @@ object SessionReplay {
             }
             tickAutoPause(now)
             manager.tickElapsedTime(broadcast = false, now = now)
+            tickLivePace(now)
             tickVoice(now)
+        }
+
+        /** `tickLivePace()`: auto-paused, the window starts over; else GPS while its last good fix is fresh. */
+        private fun tickLivePace(now: Long) {
+            val session = manager.getSession()
+            if (session.autoPaused) {
+                livePace.restart()
+                manager.setLive(null)
+            } else {
+                val fixAgeMs = lastGoodFixMs.takeIf { it > 0L }?.let { now - it }
+                val fresh = LivePaceTracker.isGpsFresh(fixAgeMs, REQUEST_INTERVAL_MS, processor.inFalseSignal, session.gpsStatus)
+                val steps = trackerSteps(now)
+                livePace.onTick(session.movingTime, session.distance * 1000f, steps?.first, steps?.second, fresh, fixAgeMs ?: 0L)
+                manager.setLive(livePace.pace())
+            }
+            paces += (now - run.startTimeMs) to manager.getSession().livePace
+            paceProbe?.invoke(now - run.startTimeMs, livePace)
         }
 
         /** `tickVoice()`: the coach on the tick, the tile's heart rate of this second. */
@@ -394,6 +433,7 @@ object SessionReplay {
             stepsAtPause = null
             processor.onResume()
             autoPause.reset()
+            livePace.restart()
             manager.resume(now)
             // The watchdog's grace after the pause, and its loop restarts
             if (lastGoodFixMs != 0L) lastGoodFixMs = now
@@ -437,6 +477,8 @@ object SessionReplay {
                 )
             }
             val restored = checkpoint.toRestoredSession(now)
+            // Not checkpointed: the window starts over
+            livePace = LivePaceTracker(settings.stepDistance)
             // A new tracker with an empty history; the machine connects again
             startHeartRate()
             manager = WorkoutSessionManager().apply {
@@ -478,7 +520,8 @@ object SessionReplay {
                 pauses = stopped.clock.pauses,
                 livePoints = stopped.trackDataPoints,
                 savedWorkout = workout,
-                voice = voice.toList()
+                voice = voice.toList(),
+                livePace = paces.toList()
             )
         }
     }
