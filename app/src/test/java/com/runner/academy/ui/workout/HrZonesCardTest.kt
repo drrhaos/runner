@@ -111,7 +111,7 @@ class HrZonesCardTest {
         assertEquals(
             context.getString(
                 R.string.workout_details_hr_zone_row_a11y, 4, 152,
-                context.resources.getQuantityString(R.plurals.heart_rate_beats_per_minute, 170, 170),
+                context.resources.getQuantityString(R.plurals.hr_zone_bound_a11y, 170, 170),
                 com.runner.academy.util.FormatUtils.formatTimeForTTS(135_000, context),
                 context.resources.getQuantityString(R.plurals.percent_a11y, 75, 75)
             ),
@@ -120,12 +120,21 @@ class HrZonesCardTest {
         assertEquals(
             context.getString(
                 R.string.workout_details_hr_zone_below_a11y,
-                context.resources.getQuantityString(R.plurals.heart_rate_beats_per_minute, 95, 95),
+                context.resources.getQuantityString(R.plurals.hr_zone_bound_a11y, 95, 95),
                 com.runner.academy.util.FormatUtils.formatTimeForTTS(45_000, context),
                 context.resources.getQuantityString(R.plurals.percent_a11y, 25, 25)
             ),
             below.contentDescription.toString()
         )
+    }
+
+    @Test
+    @Config(qualifiers = "ru")
+    fun `in Russian the bounds are read without a dash and need no case`() {
+        val rowViews = show()
+
+        assertTrue(rowViews[1].contentDescription.toString().startsWith("Зона 4, от 152 до 170 уд/мин: "))
+        assertTrue(rowViews.last().contentDescription.toString().startsWith("Ниже зоны 1, меньше 95 уд/мин: "))
     }
 
     @Test

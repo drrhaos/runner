@@ -77,15 +77,16 @@ class HrZonesCard(
         val time = FormatUtils.formatTimeForTTS(row.ms, context)
         val percent = context.resources.getQuantityString(R.plurals.percent_a11y, row.percent, row.percent)
         views.root.contentDescription = if (below) {
-            context.getString(
-                R.string.workout_details_hr_zone_below_a11y,
-                HeartRateText.beatsPerMinute(context, row.belowBpm), time, percent
-            )
+            context.getString(R.string.workout_details_hr_zone_below_a11y, boundA11y(row.belowBpm), time, percent)
         } else {
             context.getString(
                 R.string.workout_details_hr_zone_row_a11y,
-                row.zone, row.range.first, HeartRateText.beatsPerMinute(context, row.range.last), time, percent
+                row.zone, row.range.first, boundA11y(row.range.last), time, percent
             )
         }
     }
+
+    /** "170 beats per minute" / «170 уд/мин»: the abbreviation needs no case after «до», «меньше». */
+    private fun boundA11y(bpm: Int): String =
+        context.resources.getQuantityString(R.plurals.hr_zone_bound_a11y, bpm, bpm)
 }
