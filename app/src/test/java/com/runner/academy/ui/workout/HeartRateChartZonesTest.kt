@@ -15,6 +15,7 @@ import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.util.HrZones
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -66,6 +67,25 @@ class HeartRateChartZonesTest {
     )
 
     private fun color(id: Int) = ContextCompat.getColor(context, id)
+
+    @Test
+    fun `the axis is fitted to the line, not from zero`() {
+        renderer.updateAllCharts(track())
+
+        // 140..160 with the axis' spacing either side
+        assertTrue(chart.axisLeft.axisMinimum in 130f..140f)
+        assertTrue(chart.axisLeft.axisMaximum in 160f..170f)
+    }
+
+    @Test
+    fun `a bound inside the fitted axis is drawn even just below the line`() {
+        // HRmax 199: Z3 from 139 (under the line's 140, inside the axis), Z4 from 159, Z5 from 179 (above)
+        renderer.hrZones = HrZones(199)
+
+        renderer.updateAllCharts(track())
+
+        assertEquals(listOf("Z3", "Z4"), chart.axisLeft.limitLines.map { it.label })
+    }
 
     @Test
     fun `without zones the line is one colour and has no bounds`() {

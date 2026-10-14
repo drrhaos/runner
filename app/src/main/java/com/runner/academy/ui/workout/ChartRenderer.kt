@@ -7,6 +7,7 @@ import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.localizedTitle
+import com.runner.academy.util.HeartRatePoint
 import com.runner.academy.util.HrZones
 import com.runner.academy.util.SegmentStats
 import com.runner.academy.util.SpeedPaceCalculator
@@ -336,6 +337,8 @@ class ChartRenderer(
         chart.axisLeft.setDrawLimitLinesBehindData(true)
         chart.axisRight.isEnabled = false
         chart.setDrawMarkers(false)
+        // resetAxisMinimum only drops the flag: the 0 set above stays until the axis is fitted again
+        chart.notifyDataSetChanged()
 
         selectByTime(chart, points, valuesView) { e ->
             context.getString(R.string.chart_time_format, e.x.toInt()) + "\n" + valueText(e.y.roundToInt())
@@ -412,6 +415,7 @@ class ChartRenderer(
             valuesView = heartRate.values,
             runColors = zones?.let { z -> runs.map { run -> zoneColors(run, z) } }
         ) { value ->
+            // The tapped point's own zone; the line's colour is its segment's (the mean of two points)
             when {
                 zones == null -> context.getString(R.string.chart_heart_rate_value, value)
                 zones.zoneOf(value) == HrZones.BELOW -> context.getString(R.string.chart_heart_rate_value_below, value)
@@ -426,16 +430,19 @@ class ChartRenderer(
      * segment j takes colour j): the zone of each segment, the last entry repeating the last
      * one; a lone point takes its own zone.
      */
-    private fun zoneColors(run: List<com.runner.academy.util.HeartRatePoint>, zones: HrZones): List<Int> {
+    private fun zoneColors(run: List<HeartRatePoint>, zones: HrZones): List<Int> {
         if (run.size == 1) return listOf(color(HrZoneBadge.colorOf(zones.zoneOf(run[0].bpm.roundToInt()))))
         val segments = TrackChartBuilder.zoneOfSegments(run, zones).map { color(HrZoneBadge.colorOf(it)) }
         return segments + segments.last()
     }
 
-    /** "Z1"…"Z5" dashed at the zone bounds inside the drawn [range]: they are the colour legend. */
-    private fun zoneBoundLines(zones: HrZones, range: Pair<Int, Int>): List<LimitLine> =
+    /**
+     * "Z1"…"Z5" dashed at the zone bounds inside the fitted axis ([axisMin]..[axisMax], read
+     * after the line is drawn): they are the colour legend.
+     */
+    private fun zoneBoundLines(zones: HrZones, axisMin: Float, axisMax: Float): List<LimitLine> =
         zones.lowerBounds.withIndex()
-            .filter { (_, bound) -> bound in range.first..range.second }
+            .filter { (_, bound) -> bound.toFloat() in axisMin..axisMax }
             .map { (i, bound) ->
                 LimitLine(bound.toFloat(), context.getString(R.string.hr_zone_badge, i + 1)).apply {
                     lineColor = color(R.color.chart_grid)
@@ -459,7 +466,7 @@ class ChartRenderer(
         val leftAxis = chart.axisLeft
         leftAxis.removeAllLimitLines()
         val zones = hrZones
-        zones?.let { zoneBoundLines(it, range).forEach(leftAxis::addLimitLine) }
+        zones?.let { zoneBoundLines(it, leftAxis.axisMinimum, leftAxis.axisMaximum).forEach(leftAxis::addLimitLine) }
         when (val display = heartRateDisplay) {
             is HeartRateSummaryDisplay.Value -> {
                 leftAxis.addLimitLine(
