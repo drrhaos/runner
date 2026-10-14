@@ -380,7 +380,6 @@
                     android:layout_margin="8dp"
                     android:orientation="vertical"
                     android:gravity="center"
-                    android:focusable="true"
                     android:contentDescription="@string/tracking_pace_tile_no_data_a11y">
 
                     <TextView
