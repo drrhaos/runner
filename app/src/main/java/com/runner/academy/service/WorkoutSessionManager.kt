@@ -1,6 +1,7 @@
 package com.runner.academy.service
 
 import com.runner.academy.data.GpsStatus
+import com.runner.academy.data.LivePace
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.sensor.HeartRateDisplay
 import com.runner.academy.util.FormatUtils
@@ -86,12 +87,13 @@ class WorkoutSessionManager {
 
     fun pause(now: Long = System.currentTimeMillis()) {
         clock.pauseManual(now)
-        // The paused time shows exactly what a Stop now would save
+        // The paused time shows exactly what a Stop now would save; no live pace while standing
         session = session.copy(
             isPaused = true,
             pauseTime = now,
             currentTime = clock.elapsedMs(now),
-            movingTime = clock.movingMs(now)
+            movingTime = clock.movingMs(now),
+            livePace = null
         ).withClock()
         notifyChanged()
     }
@@ -167,6 +169,11 @@ class WorkoutSessionManager {
         if (session.heartRateDisplay == display) return false
         session = session.copy(heartRateDisplay = display)
         return true
+    }
+
+    /** See [WorkoutSession.livePace]; no listeners: the timer's tick pushes the session itself. */
+    fun setLive(livePace: LivePace?) {
+        if (session.livePace != livePace) session = session.copy(livePace = livePace)
     }
 
     /** See [WorkoutSession.openStepMeters]; no listeners (the next update carries it). */

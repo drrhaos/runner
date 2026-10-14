@@ -141,6 +141,8 @@ class WorkoutTrackingService : Service() {
     private var voiceCoach = VoiceCoach()
     private var lastAnnouncedGpsStatus: GpsStatus? = null
     private var serviceIntervalEngine: IntervalEngine? = null
+    /** The current-pace tile's pace; one per run on its frozen stride (see [tickLivePace]). */
+    private var livePace = LivePaceTracker(stride = null)
 
     // Steps: tracker while allowed, the model that learns this run, and the learner feeding it
     private var stepTracker: StepTracker? = null
@@ -585,6 +587,7 @@ class WorkoutTrackingService : Service() {
         unreliableLatch.reset()
         autoPause.reset()
         val runStride = startSteps(initialSteps = 0, frozenState = null)
+        livePace = LivePaceTracker(runStride?.estimator)
         // No barometer: false, the points carry no baro_m and the elevation stays GPS
         barometerTracker?.start()
         gpsProcessor.reset(workoutType = selectedWorkoutType, stepDistance = runStride?.estimator)
@@ -643,6 +646,7 @@ class WorkoutTrackingService : Service() {
         gpsProcessor.onResume()
         // A new auto-pause needs a fresh 10 s of standing after the resume
         autoPause.reset()
+        livePace.restart()
         sessionManager.resume(sessionClockMs())
         // Grace after the pause: no fixes were processed, so the watchdog must not flag the
         // whole pause as a GPS loss before the first fix arrives
@@ -728,6 +732,8 @@ class WorkoutTrackingService : Service() {
             ?: checkpoint.strideModelState?.let { state ->
                 RunStride(StrideModel.frozenEstimatorOf(state, userPreferences.userHeight), state)
             }
+        // Not checkpointed: the window starts over
+        livePace = LivePaceTracker(runStride?.estimator)
         // The gap clock is not checkpointed: it falls back to the anchor's own time
         gpsProcessor.reset(
             workoutType = selectedWorkoutType,
@@ -1504,10 +1510,37 @@ class WorkoutTrackingService : Service() {
         tickAutoPause()
         // Advance clock without fan-out to checkpoint; UI + notification only
         sessionManager.tickElapsedTime(broadcast = false, now = sessionClockMs())
+        tickLivePace()
         tickVoice()
         val session = sessionManager.getSession()
         sessionUpdateCallback?.invoke(session)
         notificationManager.updateNotification(session)
+    }
+
+    /**
+     * The current-pace tile's pace ([WorkoutSession.livePace]) on the timer, after the clock
+     * ticked, before the voice. GPS counts while the last good fix is fresh
+     * ([LivePaceTracker.isGpsFresh]); otherwise the steps. An auto-pause starts the window over
+     * on each of its ticks, so the drift at a light never enters it.
+     */
+    private fun tickLivePace() {
+        val session = sessionManager.getSession()
+        if (!session.isTracking || session.isPaused) return
+        if (session.autoPaused) {
+            livePace.restart()
+            sessionManager.setLive(null)
+            return
+        }
+        val fixAgeMs = lastLocationTime.takeIf { it > 0L }?.let { sessionClockMs() - it }
+        val fresh = LivePaceTracker.isGpsFresh(
+            fixAgeMs = fixAgeMs,
+            requestIntervalMs = lastAppliedAdaptiveIntervalMs.takeIf { it > 0L } ?: GpsConfig.HIGH_ACCURACY_INTERVAL,
+            inFalseSignal = gpsProcessor.inFalseSignal,
+            status = session.gpsStatus
+        )
+        val tracker = stepTracker?.takeIf { it.isRunning }
+        livePace.onTick(session.movingTime, session.distance * 1000f, tracker?.steps, tracker?.cadence, fresh, fixAgeMs ?: 0L)
+        sessionManager.setLive(livePace.pace())
     }
 
     /**
