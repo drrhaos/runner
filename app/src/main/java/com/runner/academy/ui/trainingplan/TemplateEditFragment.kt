@@ -208,7 +208,7 @@ class TemplateEditFragment : Fragment() {
         if (zones != segmentAdapter.zones) {
             flushSegmentDrafts()
             segmentAdapter.zones = zones
-            segmentAdapter.notifyDataSetChanged()
+            segmentAdapter.notifyItemRangeChanged(0, segmentAdapter.itemCount)
         }
     }
 
