@@ -5,6 +5,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.SegmentKind
+import com.runner.academy.data.SegmentTarget
 import com.runner.academy.data.TrainingIcon
 import com.runner.academy.data.TrainingPlan
 import com.runner.academy.data.TrainingPlanDay
@@ -29,7 +30,9 @@ object TrainingPlanBackupFormat {
         val goalType: String = SegmentGoalType.DURATION.name,
         val durationMs: Long? = null,
         val distanceMeters: Float? = null,
-        val targetPaceMinPerKm: Float? = null
+        val targetPaceMinPerKm: Float? = null,
+        /** Heart rate zone 1..5; additive in format 1, older readers ignore it. */
+        val targetHrZone: Int? = null
     )
 
     data class TemplateDto(
@@ -110,6 +113,7 @@ object TrainingPlanBackupFormat {
                         seg.durationMs?.let { addProperty("durationMs", it) }
                         seg.distanceMeters?.let { addProperty("distanceMeters", it) }
                         seg.targetPaceMinPerKm?.let { addProperty("targetPaceMinPerKm", it) }
+                        seg.targetHrZone?.let { addProperty("targetHrZone", it) }
                     }
                 )
             }
@@ -252,6 +256,8 @@ object TrainingPlanBackupFormat {
         val goal = SegmentGoalType.entries.find {
             it.name.equals(stringOr("goalType", SegmentGoalType.DURATION.name), true)
         } ?: SegmentGoalType.DURATION
+        // One target: a valid zone wins over a pace (a hand-edited file may carry both).
+        val zone = SegmentTarget.validZoneOrNull(intOrNull("targetHrZone"))
         return WorkoutTemplateSegment(
             id = 0,
             templateId = 0,
@@ -261,7 +267,8 @@ object TrainingPlanBackupFormat {
             goalType = goal,
             durationMs = longOrNull("durationMs"),
             distanceMeters = floatOrNull("distanceMeters"),
-            targetPaceMinPerKm = floatOrNull("targetPaceMinPerKm")
+            targetPaceMinPerKm = if (zone == null) floatOrNull("targetPaceMinPerKm") else null,
+            targetHrZone = zone
         )
     }
 
@@ -318,6 +325,20 @@ object TrainingPlanBackupFormat {
             when {
                 el.isJsonPrimitive && el.asJsonPrimitive.isNumber -> el.asLong
                 el.isJsonPrimitive && el.asJsonPrimitive.isString -> el.asString.toLongOrNull()
+                else -> null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun JsonObject.intOrNull(key: String): Int? {
+        val el = get(key) ?: return null
+        if (el.isJsonNull) return null
+        return try {
+            when {
+                el.isJsonPrimitive && el.asJsonPrimitive.isNumber -> el.asInt
+                el.isJsonPrimitive && el.asJsonPrimitive.isString -> el.asString.toIntOrNull()
                 else -> null
             }
         } catch (_: Exception) {
