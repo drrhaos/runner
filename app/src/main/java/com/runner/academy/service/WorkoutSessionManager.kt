@@ -171,8 +171,11 @@ class WorkoutSessionManager {
         return true
     }
 
-    /** See [WorkoutSession.livePace]; no listeners: the timer's tick pushes the session itself. */
-    fun setLive(livePace: LivePace?) {
+    /**
+     * See [WorkoutSession.livePace]; no listeners: the timer's tick pushes the session itself.
+     * The target check (release 4, branch 6) adds the segment's live state here as `interval`.
+     */
+    fun setLivePace(livePace: LivePace?) {
         if (session.livePace != livePace) session = session.copy(livePace = livePace)
     }
 

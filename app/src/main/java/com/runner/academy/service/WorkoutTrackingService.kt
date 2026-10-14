@@ -142,7 +142,7 @@ class WorkoutTrackingService : Service() {
     private var lastAnnouncedGpsStatus: GpsStatus? = null
     private var serviceIntervalEngine: IntervalEngine? = null
     /** The current-pace tile's pace; one per run on its frozen stride (see [tickLivePace]). */
-    private var livePace = LivePaceTracker(stride = null)
+    private var livePaceTracker = LivePaceTracker(stride = null)
 
     // Steps: tracker while allowed, the model that learns this run, and the learner feeding it
     private var stepTracker: StepTracker? = null
@@ -587,7 +587,7 @@ class WorkoutTrackingService : Service() {
         unreliableLatch.reset()
         autoPause.reset()
         val runStride = startSteps(initialSteps = 0, frozenState = null)
-        livePace = LivePaceTracker(runStride?.estimator)
+        livePaceTracker = LivePaceTracker(runStride?.estimator)
         // No barometer: false, the points carry no baro_m and the elevation stays GPS
         barometerTracker?.start()
         gpsProcessor.reset(workoutType = selectedWorkoutType, stepDistance = runStride?.estimator)
@@ -646,7 +646,8 @@ class WorkoutTrackingService : Service() {
         gpsProcessor.onResume()
         // A new auto-pause needs a fresh 10 s of standing after the resume
         autoPause.reset()
-        livePace.restart()
+        // The moving time stood still over the pause: the window starts where it stopped
+        livePaceTracker.restart(atMovingMs = sessionManager.getSession().movingTime)
         sessionManager.resume(sessionClockMs())
         // Grace after the pause: no fixes were processed, so the watchdog must not flag the
         // whole pause as a GPS loss before the first fix arrives
@@ -733,7 +734,7 @@ class WorkoutTrackingService : Service() {
                 RunStride(StrideModel.frozenEstimatorOf(state, userPreferences.userHeight), state)
             }
         // Not checkpointed: the window starts over
-        livePace = LivePaceTracker(runStride?.estimator)
+        livePaceTracker = LivePaceTracker(runStride?.estimator)
         // The gap clock is not checkpointed: it falls back to the anchor's own time
         gpsProcessor.reset(
             workoutType = selectedWorkoutType,
@@ -746,6 +747,8 @@ class WorkoutTrackingService : Service() {
         // Elapsed recomputed after the gap so the clock doesn't freeze at kill time
         val restoredSession = checkpoint.toRestoredSession(sessionClockMs())
             .copy(strideModelState = runStride?.state)
+        // No fix time before the restore counts (the anchor may be from before the kill)
+        livePaceTracker.restart(atMovingMs = restoredSession.movingTime)
         // Afresh, before the session is published (see startWorkout); the machine starts with a
         // direct connection and the first one is silent. A refused restore stops it again.
         heartRateRefused = false
@@ -1527,8 +1530,8 @@ class WorkoutTrackingService : Service() {
         val session = sessionManager.getSession()
         if (!session.isTracking || session.isPaused) return
         if (session.autoPaused) {
-            livePace.restart()
-            sessionManager.setLive(null)
+            livePaceTracker.restart(atMovingMs = session.movingTime)
+            sessionManager.setLivePace(null)
             return
         }
         val fixAgeMs = lastLocationTime.takeIf { it > 0L }?.let { sessionClockMs() - it }
@@ -1539,8 +1542,8 @@ class WorkoutTrackingService : Service() {
             status = session.gpsStatus
         )
         val tracker = stepTracker?.takeIf { it.isRunning }
-        livePace.onTick(session.movingTime, session.distance * 1000f, tracker?.steps, tracker?.cadence, fresh, fixAgeMs ?: 0L)
-        sessionManager.setLive(livePace.pace())
+        livePaceTracker.onTick(session.movingTime, session.distance * 1000f, tracker?.steps, fresh, fixAgeMs ?: 0L)
+        sessionManager.setLivePace(livePaceTracker.pace())
     }
 
     /**

@@ -110,9 +110,11 @@ data class SessionReplayResult(
  * the speech engine are not modelled.
  *
  * The live pace: `tickLivePace()` before the voice feeds a [LivePaceTracker] on the run's stride
- * ([ReplaySettings.stepDistance]) with the fix age of the watchdog's clock (the request interval
- * is 1 s here) and collects the tile's pace in [SessionReplayResult.livePace]; `paceProbe` sees
- * the tracker after each tick (a window cut at a segment start).
+ * ([ReplaySettings.stepDistance]) with the fix age of the watchdog's clock and collects the
+ * tile's pace in [SessionReplayResult.livePace]; `paceProbe` sees the tracker after each tick (a
+ * window cut at a segment start). The request interval is a fixed 1 s here, so GPS is fresh for
+ * 5 s after a fix; the service uses its adaptive interval (`lastAppliedAdaptiveIntervalMs`, 1–3 s
+ * on foot), which gives the same 5–6 s.
  *
  * Not modelled: the unreliable-signal latch, the lastKnown pull of the watchdog and the stride
  * learner. Keep in sync with the service when that glue changes, like [GpsReplay.live].
@@ -217,8 +219,8 @@ object SessionReplay {
         private var savedCursor = engine?.snapshot()
         private var coach = VoiceCoach()
         val voice = mutableListOf<Pair<Long, VoiceLine>>()
-        /** `livePace`: one per run (and per restore) on the run's stride. */
-        private var livePace = LivePaceTracker(settings.stepDistance)
+        /** `livePaceTracker`: one per run (and per restore) on the run's stride. */
+        private var livePaceTracker = LivePaceTracker(settings.stepDistance)
         val paces = mutableListOf<Pair<Long, LivePace?>>()
 
         /** Sensor steps the step tracker never counted (pauses, a dead process). */
@@ -271,7 +273,7 @@ object SessionReplay {
             watchdogTicks = 0
             autoPause.reset()
             processor.reset(workoutType = settings.type, stepDistance = settings.stepDistance)
-            livePace = LivePaceTracker(settings.stepDistance)
+            livePaceTracker = LivePaceTracker(settings.stepDistance)
             startHeartRate()
             manager.startNewSession(initialGpsStatus = GpsStatus.SEARCHING, now = now)
             tracking = true
@@ -298,17 +300,17 @@ object SessionReplay {
         private fun tickLivePace(now: Long) {
             val session = manager.getSession()
             if (session.autoPaused) {
-                livePace.restart()
-                manager.setLive(null)
+                livePaceTracker.restart(atMovingMs = session.movingTime)
+                manager.setLivePace(null)
             } else {
                 val fixAgeMs = lastGoodFixMs.takeIf { it > 0L }?.let { now - it }
                 val fresh = LivePaceTracker.isGpsFresh(fixAgeMs, REQUEST_INTERVAL_MS, processor.inFalseSignal, session.gpsStatus)
                 val steps = trackerSteps(now)
-                livePace.onTick(session.movingTime, session.distance * 1000f, steps?.first, steps?.second, fresh, fixAgeMs ?: 0L)
-                manager.setLive(livePace.pace())
+                livePaceTracker.onTick(session.movingTime, session.distance * 1000f, steps?.first, fresh, fixAgeMs ?: 0L)
+                manager.setLivePace(livePaceTracker.pace())
             }
             paces += (now - run.startTimeMs) to manager.getSession().livePace
-            paceProbe?.invoke(now - run.startTimeMs, livePace)
+            paceProbe?.invoke(now - run.startTimeMs, livePaceTracker)
         }
 
         /** `tickVoice()`: the coach on the tick, the tile's heart rate of this second. */
@@ -433,7 +435,7 @@ object SessionReplay {
             stepsAtPause = null
             processor.onResume()
             autoPause.reset()
-            livePace.restart()
+            livePaceTracker.restart(atMovingMs = manager.getSession().movingTime)
             manager.resume(now)
             // The watchdog's grace after the pause, and its loop restarts
             if (lastGoodFixMs != 0L) lastGoodFixMs = now
@@ -478,7 +480,7 @@ object SessionReplay {
             }
             val restored = checkpoint.toRestoredSession(now)
             // Not checkpointed: the window starts over
-            livePace = LivePaceTracker(settings.stepDistance)
+            livePaceTracker = LivePaceTracker(settings.stepDistance).apply { restart(atMovingMs = restored.movingTime) }
             // A new tracker with an empty history; the machine connects again
             startHeartRate()
             manager = WorkoutSessionManager().apply {

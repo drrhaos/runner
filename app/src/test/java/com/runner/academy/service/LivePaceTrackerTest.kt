@@ -27,9 +27,8 @@ class LivePaceTrackerTest {
         steps: Int? = null,
         fresh: Boolean = true,
         ageMs: Long = 0L,
-        cadence: Float? = null,
         movingMs: Long = sec * 1_000L
-    ) = tracker.onTick(movingMs, distanceM, steps, cadence, fresh, ageMs)
+    ) = tracker.onTick(movingMs, distanceM, steps, fresh, ageMs)
 
     /** Runs at [mps] by GPS and by steps (1 m stride) from [fromSec] to [toSec] inclusive. */
     private fun run(
@@ -103,16 +102,41 @@ class LivePaceTrackerTest {
     }
 
     @Test
-    fun `a stale fix in the window - the pace by steps, with the cadence of the last tick`() {
+    fun `a stale fix in the window - the pace by steps`() {
         run(0, 40, fresh = { it < 30 })
         assertPace(5f, tracker.pace(), approximate = true, toleranceSec = STEPS_TOLERANCE_SEC)
     }
 
     @Test
-    fun `the steps pace takes the cadence of the last tick`() {
-        for (sec in 0..20) tick(sec, 0f, steps = sec * 3, fresh = false, cadence = 170f + sec)
+    fun `the steps pace takes the window's mean cadence, like the bridges`() {
+        // 3 steps a second for 10 s, then 2: 50 steps over 20 s
+        var steps = 0
+        for (sec in 0..20) {
+            if (sec > 0) steps += if (sec <= 10) 3 else 2
+            tick(sec, 0f, steps = steps, fresh = false)
+        }
         assertNotNull(tracker.pace())
-        assertEquals(190f, strideCadence)
+        assertEquals(150f, strideCadence!!, 0.01f)
+    }
+
+    @Test
+    fun `a stale tick before the segment start does not force steps inside it`() {
+        // Stale at 50, the segment starts at 55: its own window is all fresh GPS
+        val meters = run(0, 60, fresh = { it != 50 })
+        run(60, 75, startM = meters)
+        assertPace(5f, tracker.pace(sinceMovingMs = 55_000L), approximate = false)
+        assertPace(5f, tracker.pace(), approximate = true, toleranceSec = STEPS_TOLERANCE_SEC)
+    }
+
+    @Test
+    fun `after a restart the first fix's age does not reach into the paused time`() {
+        run(0, 60)
+        // Auto-paused at moving 100 s, the run goes on from there; the first tick's fix is 4 s
+        // old (taken standing at the same place)
+        tracker.restart(atMovingMs = 100_000L)
+        tick(101, 0f, ageMs = 4_000L)
+        for (sec in 102..116) tick(sec, (sec - 100) * FIVE_MIN_MPS)
+        assertPace(5f, tracker.pace(), approximate = false)
     }
 
     @Test
@@ -156,7 +180,7 @@ class LivePaceTrackerTest {
     @Test
     fun `no stride model - no pace by steps`() {
         val plain = LivePaceTracker(stride = null)
-        for (sec in 0..40) plain.onTick(sec * 1_000L, sec * FIVE_MIN_MPS, sec * 3, 180f, false, 0L)
+        for (sec in 0..40) plain.onTick(sec * 1_000L, sec * FIVE_MIN_MPS, sec * 3, false, 0L)
         assertNull(plain.pace())
     }
 
@@ -215,6 +239,8 @@ class LivePaceTrackerTest {
         assertTrue(fresh(6_000L, 3_000L, false, GpsStatus.FOUND))
         assertFalse(fresh(6_001L, 3_000L, false, GpsStatus.FOUND))
         assertFalse("no fix yet", fresh(null, 1_000L, false, GpsStatus.SEARCHING))
+        assertTrue(fresh(0L, 1_000L, false, GpsStatus.FOUND))
+        assertFalse("the wall clock stepped back", fresh(-1L, 1_000L, false, GpsStatus.FOUND))
         assertFalse("false signal", fresh(1_000L, 1_000L, true, GpsStatus.FOUND))
         assertFalse("lost", fresh(1_000L, 1_000L, false, GpsStatus.LOST))
         assertFalse("unreliable", fresh(1_000L, 1_000L, false, GpsStatus.UNRELIABLE))
