@@ -152,4 +152,70 @@ class TrackHeartRateTest {
         assertNull(TrackHeartRate.average(points, null))
         assertNull(TrackHeartRate.max(points, null))
     }
+
+    // --- Time in zones (HRmax 190: Z1 95, Z2 114, Z3 133, Z4 152, Z5 171) ---
+
+    private val zones190 = HrZones(190)
+
+    @Test
+    fun `an auto-paused stand is left out of the zones`() {
+        // 150 (Z3) for 5 min, 2 min standing on an auto-pause at 100 (Z1), 150 again for 5 min
+        val points = fixes(0, 720) { sec -> if (sec in 301..419) 100 else 150 }
+        val pauses = listOf(PauseInterval(at(300), at(420), PauseKind.AUTO))
+
+        val ms = TrackHeartRate.timeInZones(points, pauses, zones190)!!
+
+        assertEquals(6, ms.size)
+        assertEquals(600_000L, ms[3])
+        assertEquals(600_000L, ms.sum())
+    }
+
+    @Test
+    fun `a pair counts in the zone of its mean`() {
+        // 151 and 153: the mean 152 is Z4; 150 and 153: 151 (floored) is Z3
+        val points = fixes(0, 120) { sec -> if ((sec / 2) % 2 == 0) 151 else 153 }
+        val floored = fixes(0, 120) { sec -> if ((sec / 2) % 2 == 0) 150 else 153 }
+
+        assertEquals(120_000L, TrackHeartRate.timeInZones(points, null, zones190)!![4])
+        assertEquals(120_000L, TrackHeartRate.timeInZones(floored, null, zones190)!![3])
+    }
+
+    @Test
+    fun `below Z1 has its own bucket`() {
+        val points = fixes(0, 120) { 80 }
+
+        val ms = TrackHeartRate.timeInZones(points, null, zones190)!!
+
+        assertEquals(120_000L, ms[0])
+        assertEquals(120_000L, ms.sum())
+    }
+
+    @Test
+    fun `a gap over 10 s and points without a value are not counted`() {
+        // 0..60 s at 150, a 30 s gap, 90..150 s at 175 with a no-contact point at 120 s
+        val points = fixes(0, 60) { 150 } + fixes(90, 150) { sec -> if (sec == 120) null else 175 }
+
+        val ms = TrackHeartRate.timeInZones(points, null, zones190)!!
+
+        assertEquals(60_000L, ms[3])
+        assertEquals(56_000L, ms[5])
+        assertEquals(116_000L, ms.sum())
+    }
+
+    @Test
+    fun `the zones sum up to the time the average covers`() {
+        val points = fixes(0, 600) { sec -> 90 + sec / 6 }
+
+        val ms = TrackHeartRate.timeInZones(points, null, zones190)!!
+
+        assertEquals(600_000L, ms.sum())
+        assertNotNull(TrackHeartRate.average(points, null))
+    }
+
+    @Test
+    fun `under a minute of heart rate gives no zones`() {
+        assertNull(TrackHeartRate.timeInZones(fixes(0, 58) { 150 }, null, zones190))
+        assertNull(TrackHeartRate.timeInZones(fixes(0, 600) { null }, null, zones190))
+        assertNull(TrackHeartRate.timeInZones(emptyList(), null, zones190))
+    }
 }

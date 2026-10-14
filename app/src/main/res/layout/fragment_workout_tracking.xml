@@ -457,13 +457,42 @@
                     android:gravity="center"
                     android:layout_columnSpan="2">
 
-                    <TextView
-                        android:id="@+id/textView_workout_heart_rate"
+                    <!-- Значение и значок зоны (gone без зон, без значения и при сером «ниже Z1») -->
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/track_info_pulse_placeholder"
-                        android:textSize="24sp"
-                        android:textColor="?attr/colorOnSurface" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/textView_workout_heart_rate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/track_info_pulse_placeholder"
+                            android:textSize="24sp"
+                            android:textColor="?attr/colorOnSurface" />
+
+                        <!-- Ширина постоянная (minWidth вмещает «<Z1»): смена зоны не двигает число -->
+                        <TextView
+                            android:id="@+id/textView_hr_zone_badge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="6dp"
+                            android:minWidth="36sp"
+                            android:gravity="center"
+                            android:paddingStart="6dp"
+                            android:paddingEnd="6dp"
+                            android:paddingTop="1dp"
+                            android:paddingBottom="1dp"
+                            android:background="@drawable/bg_hr_zone_badge"
+                            android:includeFontPadding="false"
+                            android:textSize="12sp"
+                            android:textStyle="bold"
+                            android:importantForAccessibility="no"
+                            android:visibility="gone"
+                            tools:text="Z4"
+                            tools:visibility="visible" />
+                    </LinearLayout>
 
                     <!-- Подпись и значок связи датчика (gone без датчика). Отдельный ImageView,
                          а не compound drawable: значок 16dp не растёт со шрифтом и меняет tint -->

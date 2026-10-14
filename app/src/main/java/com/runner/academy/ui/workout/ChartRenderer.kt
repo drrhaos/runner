@@ -7,6 +7,8 @@ import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.localizedTitle
+import com.runner.academy.util.HeartRatePoint
+import com.runner.academy.util.HrZones
 import com.runner.academy.util.SegmentStats
 import com.runner.academy.util.SpeedPaceCalculator
 import com.runner.academy.util.TrackChartBuilder
@@ -97,6 +99,12 @@ class ChartRenderer(
 
     /** Min and max of the drawn heart rate line; null: under two points to draw. */
     private var heartRateRange: Pair<Int, Int>? = null
+
+    /**
+     * The zones by the current HRmax, set before [updateAllCharts]: the heart rate line is
+     * coloured by zone, with a dashed line and "Z1"…"Z5" at each bound; null: one colour.
+     */
+    var hrZones: HrZones? = null
 
     /** The stored gain and loss of the workout, as the tiles show them; set on every row update. */
     var elevationDisplay: ElevationDisplay = ElevationDisplay.None
@@ -289,6 +297,7 @@ class ChartRenderer(
      * A line over time from [runs], one data set per run (MPAndroidChart joins every entry of a
      * set), on an axis fitted to the values (not from zero: cadence and heart rate sit far above
      * it), the tap values by [valueText] of the rounded value. The cadence and heart rate cards.
+     * [runColors]: a colour per entry of each run instead of [seriesColor] (heart rate zones).
      */
     private fun drawRunsOverTime(
         chart: LineChart,
@@ -297,6 +306,7 @@ class ChartRenderer(
         label: String,
         points: List<TrackPoint>,
         valuesView: android.widget.TextView,
+        runColors: List<List<Int>>? = null,
         valueText: (Int) -> String
     ) {
         configureInteraction(chart, legend = false)
@@ -304,13 +314,14 @@ class ChartRenderer(
         val gridColor = color(R.color.chart_grid)
 
         chart.data = LineData(
-            runs.map { run ->
+            runs.mapIndexed { i, run ->
                 LineDataSet(run, label).apply {
-                    color = seriesColor
+                    val entryColors = runColors?.get(i)
+                    if (entryColors == null) color = seriesColor else colors = entryColors
                     lineWidth = 2f
                     // A lone point between breaks would draw nothing without its circle
                     setDrawCircles(run.size == 1)
-                    setCircleColor(seriesColor)
+                    setCircleColor(entryColors?.first() ?: seriesColor)
                     circleRadius = 2f
                     setDrawCircleHole(false)
                     setDrawValues(false)
@@ -326,6 +337,8 @@ class ChartRenderer(
         chart.axisLeft.setDrawLimitLinesBehindData(true)
         chart.axisRight.isEnabled = false
         chart.setDrawMarkers(false)
+        // resetAxisMinimum only drops the flag: the 0 set above stays until the axis is fitted again
+        chart.notifyDataSetChanged()
 
         selectByTime(chart, points, valuesView) { e ->
             context.getString(R.string.chart_time_format, e.x.toInt()) + "\n" + valueText(e.y.roundToInt())
@@ -392,16 +405,54 @@ class ChartRenderer(
             return
         }
 
+        val zones = hrZones
         drawRunsOverTime(
             chart = chart,
             runs = runs.map { run -> run.map { Entry(it.timeMinutes, it.bpm) } },
             seriesColor = color(R.color.chart_series_heart_rate),
             label = context.getString(R.string.chart_heart_rate_label),
             points = points,
-            valuesView = heartRate.values
-        ) { value -> context.getString(R.string.chart_heart_rate_value, value) }
+            valuesView = heartRate.values,
+            runColors = zones?.let { z -> runs.map { run -> zoneColors(run, z) } }
+        ) { value ->
+            // The tapped point's own zone; the line's colour is its segment's (the mean of two points)
+            when {
+                zones == null -> context.getString(R.string.chart_heart_rate_value, value)
+                zones.zoneOf(value) == HrZones.BELOW -> context.getString(R.string.chart_heart_rate_value_below, value)
+                else -> context.getString(R.string.chart_heart_rate_value_zone, value, zones.zoneOf(value))
+            }
+        }
         applyHeartRateDisplay()
     }
+
+    /**
+     * One colour per entry of [run] for MPAndroidChart's per-segment drawing (`colors.size > 1`:
+     * segment j takes colour j): the zone of each segment, the last entry repeating the last
+     * one; a lone point takes its own zone.
+     */
+    private fun zoneColors(run: List<HeartRatePoint>, zones: HrZones): List<Int> {
+        if (run.size == 1) return listOf(color(HrZoneBadge.colorOf(zones.zoneOf(run[0].bpm.roundToInt()))))
+        val segments = TrackChartBuilder.zoneOfSegments(run, zones).map { color(HrZoneBadge.colorOf(it)) }
+        return segments + segments.last()
+    }
+
+    /**
+     * "Z1"…"Z5" dashed at the zone bounds inside the fitted axis ([axisMin]..[axisMax], read
+     * after the line is drawn): they are the colour legend.
+     */
+    private fun zoneBoundLines(zones: HrZones, axisMin: Float, axisMax: Float): List<LimitLine> =
+        zones.lowerBounds.withIndex()
+            .filter { (_, bound) -> bound.toFloat() in axisMin..axisMax }
+            .map { (i, bound) ->
+                LimitLine(bound.toFloat(), context.getString(R.string.hr_zone_badge, i + 1)).apply {
+                    lineColor = color(R.color.chart_grid)
+                    lineWidth = 1f
+                    enableDashedLine(4f, 6f, 0f)
+                    textColor = color(R.color.chart_axis_text)
+                    textSize = 10f
+                    labelPosition = LimitLine.LimitLabelPosition.LEFT_TOP
+                }
+            }
 
     /** Card visibility, title, dashed average and summary from the drawn line and [heartRateDisplay]. */
     private fun applyHeartRateDisplay() {
@@ -414,13 +465,16 @@ class ChartRenderer(
         val chart = heartRate.chart
         val leftAxis = chart.axisLeft
         leftAxis.removeAllLimitLines()
+        val zones = hrZones
+        zones?.let { zoneBoundLines(it, leftAxis.axisMinimum, leftAxis.axisMaximum).forEach(leftAxis::addLimitLine) }
         when (val display = heartRateDisplay) {
             is HeartRateSummaryDisplay.Value -> {
                 leftAxis.addLimitLine(
                     averageLine(
                         display.avgBpm,
                         context.getString(R.string.chart_heart_rate_limit_label, display.avgBpm),
-                        R.color.chart_series_heart_rate
+                        // Over a zone-coloured line a red dash would read as Z5
+                        if (zones != null) R.color.chart_axis_text else R.color.chart_series_heart_rate
                     )
                 )
                 heartRate.summary.visibility = android.view.View.VISIBLE
@@ -428,8 +482,12 @@ class ChartRenderer(
                     context.getString(R.string.chart_heart_rate_summary_format, display.avgBpm, max)
                 } ?: context.getString(R.string.chart_heart_rate_avg_format, display.avgBpm)
                 heartRate.summary.contentDescription = HeartRateText.summaryA11y(context, display.avgBpm, display.maxBpm)
-                chart.contentDescription =
-                    context.getString(R.string.chart_heart_rate_a11y, display.avgBpm, range.first, range.second)
+                chart.contentDescription = context.getString(
+                    if (zones != null) R.string.chart_heart_rate_zones_a11y else R.string.chart_heart_rate_a11y,
+                    display.avgBpm,
+                    range.first,
+                    range.second
+                )
             }
             HeartRateSummaryDisplay.Pending -> {
                 heartRate.summary.visibility = android.view.View.VISIBLE

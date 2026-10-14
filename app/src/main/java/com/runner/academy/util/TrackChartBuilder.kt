@@ -7,6 +7,7 @@ import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutTemplateSegment
 import com.runner.academy.data.knownAltitude
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /** Single data point for pace/speed chart series. */
 data class PaceSpeedPoint(
@@ -173,6 +174,15 @@ object TrackChartBuilder {
             run.map { HeartRatePoint(minutesFrom(startTime, it), it.heartRate!!.toFloat()) }
         }
     }
+
+    /**
+     * The zone of each line segment of [run] (`run.size - 1` of them): of the mean of its two
+     * points, in whole beats floored, the rule [TrackHeartRate.timeInZones] counts by.
+     */
+    fun zoneOfSegments(run: List<HeartRatePoint>, zones: HrZones): IntArray =
+        IntArray((run.size - 1).coerceAtLeast(0)) { i ->
+            zones.zoneOf(((run[i].bpm.roundToInt() + run[i + 1].bpm.roundToInt()) / 2))
+        }
 
     /**
      * A per-point value line split into runs: a point without the value ([hasValue]) or

@@ -39,6 +39,37 @@ object TrackHeartRate {
     fun average(points: List<TrackPoint>, pauses: List<PauseInterval>?): Int? {
         var weighted = 0.0
         var coveredMs = 0L
+        forEachCountedPair(points, pauses) { from, to, countedMs ->
+            weighted += (from + to) / 2.0 * countedMs
+            coveredMs += countedMs
+        }
+        if (coveredMs < MIN_COVERED_MS) return null
+        return (weighted / coveredMs).roundToInt()
+    }
+
+    /**
+     * Time in each of [zones]' buckets, ms: index 0 below Z1, 1..5 the zones. The pairs of
+     * [average], each in the zone of its mean `(from + to) / 2` (whole beats, floored), so the
+     * buckets sum up to the time the average covers. Null on the same coverage rule.
+     */
+    fun timeInZones(points: List<TrackPoint>, pauses: List<PauseInterval>?, zones: HrZones): LongArray? {
+        val ms = LongArray(HrZones.COUNT + 1)
+        forEachCountedPair(points, pauses) { from, to, countedMs ->
+            ms[zones.zoneOf((from + to) / 2)] += countedMs
+        }
+        if (ms.sum() < MIN_COVERED_MS) return null
+        return ms
+    }
+
+    /**
+     * Pairs of neighbouring points that both carry a heart rate, at most [MAX_PAIR_MS] apart,
+     * with the time left after their overlap with [pauses] of any kind (when there is some).
+     */
+    private inline fun forEachCountedPair(
+        points: List<TrackPoint>,
+        pauses: List<PauseInterval>?,
+        action: (from: Int, to: Int, countedMs: Long) -> Unit
+    ) {
         for (i in 1 until points.size) {
             val p = points[i - 1]
             val q = points[i]
@@ -48,11 +79,8 @@ object TrackHeartRate {
             if (spanMs <= 0L || spanMs > MAX_PAIR_MS) continue
             val countedMs = spanMs - TrackPauses.overlapMs(pauses, p.timestamp, q.timestamp)
             if (countedMs <= 0L) continue
-            weighted += (from + to) / 2.0 * countedMs
-            coveredMs += countedMs
+            action(from, to, countedMs)
         }
-        if (coveredMs < MIN_COVERED_MS) return null
-        return (weighted / coveredMs).roundToInt()
     }
 
     /**

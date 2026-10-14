@@ -220,6 +220,33 @@ class WorkoutTrackingViewModelTest {
     }
 
     @Test
+    fun `the zones are read from the preferences again on refresh`() {
+        var zones: com.runner.academy.util.HrZones? = null
+        val vm = WorkoutTrackingViewModel(
+            WorkoutRepository(database), context as Application, pairedSensors, hrSensor,
+            hrZonesSource = { zones }
+        )
+        assertNull(vm.hrZones.value)
+
+        // HRmax set in the settings while the screen was away: seen once it is back (onResume)
+        zones = com.runner.academy.util.HrZones(185)
+        assertNull(vm.hrZones.value)
+        vm.refreshHrZones()
+
+        assertEquals(com.runner.academy.util.HrZones(185), vm.hrZones.value)
+    }
+
+    @Test
+    fun `by default the zones come from the user preferences`() {
+        val prefs = (context as com.runner.academy.RunnerApplication).container.userPreferences
+        prefs.hrMaxManual = 190
+
+        viewModel.refreshHrZones()
+
+        assertEquals(com.runner.academy.util.HrZones(190), viewModel.hrZones.value)
+    }
+
+    @Test
     fun viewmodel_should_initialize_with_default_state() {
         val session = viewModel.workoutSession.value
 

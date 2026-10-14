@@ -847,6 +847,52 @@
 
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Время в зонах: по текущему максимальному пульсу; скрыто без зон, без пульса и при
+         покрытии меньше минуты. Строки (layout_hr_zone_row) создаются из кода -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_hr_zones"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:visibility="gone"
+        tools:visibility="visible"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/textView_hr_zones_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/workout_details_hr_zones_title"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface" />
+
+            <TextView
+                android:id="@+id/textView_hr_zones_basis"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:text="По максимальному пульсу 185 (по возрасту)"
+                android:textSize="12sp"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <LinearLayout
+                android:id="@+id/layout_hr_zone_rows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
     <!-- График высоты: скрыт целиком, когда высот в точках нет -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_chart_elevation"

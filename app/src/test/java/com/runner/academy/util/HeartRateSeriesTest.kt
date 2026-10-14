@@ -65,4 +65,30 @@ class HeartRateSeriesTest {
 
         assertEquals(listOf(listOf(0, 5), listOf(10, 15)), runs(points, pauses))
     }
+
+    // --- Zone colours (HRmax 190: Z3 133, Z4 152, Z5 171) ---
+
+    private fun run(vararg bpm: Int) = bpm.mapIndexed { i, v -> HeartRatePoint(i / 60f, v.toFloat()) }
+
+    @Test
+    fun `each segment takes the zone of the mean of its two points`() {
+        val zones = HrZones(190)
+
+        // 150–150: Z3; 150–154 (152): Z4; 154–190 (172): Z5; 190–90 (140): Z3
+        assertEquals(
+            listOf(3, 4, 5, 3),
+            TrackChartBuilder.zoneOfSegments(run(150, 150, 154, 190, 90), zones).toList()
+        )
+    }
+
+    @Test
+    fun `a mean on a half is floored like the time in zones`() {
+        // 151 and 152: 151.5 is still Z3
+        assertEquals(listOf(3), TrackChartBuilder.zoneOfSegments(run(151, 152), HrZones(190)).toList())
+    }
+
+    @Test
+    fun `a lone point has no segments`() {
+        assertEquals(0, TrackChartBuilder.zoneOfSegments(run(150), HrZones(190)).size)
+    }
 }

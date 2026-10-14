@@ -18,8 +18,17 @@ import com.runner.academy.appContainer
 import com.runner.academy.sensor.PairedSensor
 import com.runner.academy.sensor.PairedSensorStore
 import com.runner.academy.sensor.SensorType
+import android.widget.NumberPicker
+import androidx.appcompat.app.AlertDialog
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Assert.assertNull
+import org.robolectric.shadows.ShadowDialog
+import org.robolectric.shadows.ShadowToast
+import java.time.LocalDate
+import java.time.ZoneId
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
@@ -109,5 +118,166 @@ class SettingsFragmentTest {
         navController.popBackStack()
 
         assertEquals(R.id.nav_settings, navController.currentDestination?.id)
+    }
+
+    // --- Maximum heart rate ---
+
+    private val prefs get() = context.appContainer().userPreferences
+
+    /** Turned [years] some weeks ago: the age is [years] whatever today is. */
+    private fun bornYearsAgo(years: Long) {
+        prefs.userBirthDate = LocalDate.now().minusYears(years).minusDays(20)
+            .atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+    }
+
+    private fun View.text(id: Int) = findViewById<TextView>(id).text.toString()
+
+    private fun latestDialog(): AlertDialog = ShadowDialog.getLatestDialog() as AlertDialog
+
+    @Test
+    fun `without a birth date or a manual value the zones are said to be off`() {
+        val view = launch().first.requireView()
+
+        assertEquals(context.getString(R.string.settings_hr_max_none), view.text(R.id.textView_hr_max_value))
+        assertEquals(context.getString(R.string.settings_hr_max_source_none), view.text(R.id.textView_hr_max_source))
+        assertEquals(
+            context.getString(R.string.settings_hr_max_none_a11y),
+            view.findViewById<View>(R.id.row_hr_max).contentDescription.toString()
+        )
+    }
+
+    @Test
+    fun `with a birth date the row shows 220 minus the age`() {
+        bornYearsAgo(40)
+        val view = launch().first.requireView()
+
+        assertEquals("180", view.text(R.id.textView_hr_max_value))
+        assertEquals(context.getString(R.string.settings_hr_max_source_auto, 40), view.text(R.id.textView_hr_max_source))
+        assertEquals(
+            context.getString(
+                R.string.settings_hr_max_a11y,
+                context.resources.getQuantityString(R.plurals.heart_rate_beats_per_minute, 180, 180),
+                context.getString(R.string.hr_max_source_auto_short)
+            ),
+            view.findViewById<View>(R.id.row_hr_max).contentDescription.toString()
+        )
+    }
+
+    @Test
+    fun `a manual value is said to be set by hand`() {
+        bornYearsAgo(40)
+        prefs.hrMaxManual = 192
+        val view = launch().first.requireView()
+
+        assertEquals("192", view.text(R.id.textView_hr_max_value))
+        assertEquals(context.getString(R.string.settings_hr_max_source_manual), view.text(R.id.textView_hr_max_source))
+    }
+
+    @Test
+    fun `without a birth date the dialog starts at 190, shows its zones and saves it`() {
+        val (fragment, _) = launch()
+
+        fragment.requireView().findViewById<View>(R.id.row_hr_max).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        val dialog = latestDialog()
+
+        assertEquals(190, dialog.findViewById<NumberPicker>(R.id.numberPicker_hr_max)!!.value)
+        assertEquals(
+            context.getString(R.string.settings_dialog_hr_max_no_birth),
+            dialog.findViewById<TextView>(R.id.textView_hr_max_explain)!!.text.toString()
+        )
+        assertEquals(
+            "Z5 171–190",
+            dialog.findViewById<TextView>(R.id.textView_hr_max_zones_preview)!!.text.lines().first()
+        )
+        assertFalse(dialog.getButton(AlertDialog.BUTTON_NEUTRAL).isShown)
+
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(190, prefs.hrMaxManual)
+        assertEquals("190", fragment.requireView().text(R.id.textView_hr_max_value))
+    }
+
+    @Test
+    fun `saving an untouched age value keeps it by age`() {
+        bornYearsAgo(40)
+        val (fragment, _) = launch()
+
+        fragment.requireView().findViewById<View>(R.id.row_hr_max).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        val dialog = latestDialog()
+        assertEquals(
+            context.getString(R.string.settings_dialog_hr_max_auto_formula, 40, 180),
+            dialog.findViewById<TextView>(R.id.textView_hr_max_explain)!!.text.toString()
+        )
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(0, prefs.hrMaxManual)
+        // Nothing was saved: no "saved" toast
+        assertNull(ShadowToast.getLatestToast())
+    }
+
+    @Test
+    fun `a manual value without a birth date can turn the zones off`() {
+        prefs.hrMaxManual = 192
+        val (fragment, _) = launch()
+
+        fragment.requireView().findViewById<View>(R.id.row_hr_max).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        val zonesOff = latestDialog().getButton(AlertDialog.BUTTON_NEUTRAL)
+        assertTrue(zonesOff.isShown)
+        assertEquals(context.getString(R.string.settings_dialog_hr_max_zones_off), zonesOff.text.toString())
+        zonesOff.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(0, prefs.hrMaxManual)
+        assertEquals(context.getString(R.string.settings_hr_max_none), fragment.requireView().text(R.id.textView_hr_max_value))
+        assertEquals(context.getString(R.string.settings_hr_max_zones_off_done), ShadowToast.getTextOfLatestToast())
+    }
+
+    @Test
+    fun `an age out of 10 to 100 is explained as such, not as no birth date`() {
+        bornYearsAgo(5)
+        val (fragment, _) = launch()
+
+        fragment.requireView().findViewById<View>(R.id.row_hr_max).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(
+            context.getString(R.string.settings_dialog_hr_max_age_out_of_range),
+            latestDialog().findViewById<TextView>(R.id.textView_hr_max_explain)!!.text.toString()
+        )
+    }
+
+    @Test
+    fun `By age drops a manual value`() {
+        bornYearsAgo(40)
+        prefs.hrMaxManual = 192
+        val (fragment, _) = launch()
+
+        fragment.requireView().findViewById<View>(R.id.row_hr_max).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        val byAge = latestDialog().getButton(AlertDialog.BUTTON_NEUTRAL)
+        assertTrue(byAge.isShown)
+        byAge.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(0, prefs.hrMaxManual)
+        assertEquals("180", fragment.requireView().text(R.id.textView_hr_max_value))
+    }
+
+    @Test
+    fun `a new birth date recounts the row`() {
+        val (fragment, _) = launch()
+        val viewModel = androidx.lifecycle.ViewModelProvider(fragment)[SettingsViewModel::class.java]
+
+        viewModel.updateUserBirthDate(
+            LocalDate.now().minusYears(30).minusDays(20).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        )
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals("190", fragment.requireView().text(R.id.textView_hr_max_value))
     }
 }

@@ -272,5 +272,56 @@ class UserPreferencesTest {
         assertEquals("Gender should persist", gender, userPreferences.userGender)
         assertEquals("Unit system should persist", unitSystem, userPreferences.unitSystem)
     }
+
+    // --- Maximum heart rate ---
+
+    private val today = java.time.LocalDate.of(2026, 10, 13)
+    private val zone = java.time.ZoneId.systemDefault()
+
+    private fun birthMs(year: Int, month: Int, day: Int) =
+        java.time.LocalDate.of(year, month, day).atStartOfDay(zone).toInstant().toEpochMilli()
+
+    @Test
+    fun `no manual HRmax and no birth date turn the zones off`() {
+        assertEquals(0, userPreferences.hrMaxManual)
+        assertNull(userPreferences.hrMax(today, zone))
+        assertNull(userPreferences.hrZones(today, zone))
+    }
+
+    @Test
+    fun `HRmax comes from the birth date until set by hand`() {
+        userPreferences.userBirthDate = birthMs(1986, 10, 13)
+        assertEquals(HrMax(180, HrMaxSource.AUTO), userPreferences.hrMax(today, zone))
+        assertEquals(HrZones(180), userPreferences.hrZones(today, zone))
+
+        userPreferences.hrMaxManual = 190
+        assertEquals(HrMax(190, HrMaxSource.MANUAL), userPreferences.hrMax(today, zone))
+
+        // Back to "by age"
+        userPreferences.hrMaxManual = 0
+        assertEquals(HrMax(180, HrMaxSource.AUTO), userPreferences.hrMax(today, zone))
+    }
+
+    @Test
+    fun `the age row and HRmax by age agree on the day before the birthday`() {
+        // Turns 40 tomorrow: both still count 39
+        userPreferences.userBirthDate = birthMs(1986, 10, 14)
+
+        assertEquals(39, userPreferences.ageOn(today, zone))
+        assertEquals(HrMax(181, HrMaxSource.AUTO), userPreferences.hrMax(today, zone))
+
+        userPreferences.userBirthDate = birthMs(1986, 10, 13)
+        assertEquals(40, userPreferences.ageOn(today, zone))
+        assertEquals(HrMax(180, HrMaxSource.AUTO), userPreferences.hrMax(today, zone))
+    }
+
+    @Test
+    fun `reset clears the manual HRmax`() {
+        userPreferences.hrMaxManual = 190
+
+        userPreferences.resetToDefaults()
+
+        assertEquals(0, userPreferences.hrMaxManual)
+    }
 }
 
