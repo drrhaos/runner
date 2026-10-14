@@ -79,7 +79,6 @@
     <string name="miles_per_hour_float">%.1f mi/h</string>
     <string name="per_km">per kilometer</string>
     <string name="per_mile">per mile</string>
-    <string name="voice_notif_text_each_km">Distance: %1$s, time: %2$s, average pace: %3$s.</string>
 
     <string name="workout_distance_label">Distance</string>
     <string name="workout_time_label">Time</string>
@@ -703,10 +702,6 @@
     <string name="tracking_interval_status">%1$d/%2$d · %3$s · %4$d%%</string>
     <string name="tracking_mode_plan">Plan: %1$s</string>
     <string name="tracking_free_run">Free run</string>
-    <string name="voice_interval_start">Interval: %1$s</string>
-    <string name="voice_interval_start_with_detail">Interval: %1$s. %2$s</string>
-    <string name="voice_interval_upcoming">Next interval: %1$s</string>
-    <string name="voice_interval_upcoming_with_detail">Next interval: %1$s. %2$s</string>
     <string name="voice_interval_upcoming_in_30s">In 30 seconds: %1$s</string>
     <string name="voice_interval_goal_duration">Duration %1$s</string>
     <string name="voice_interval_goal_distance">Distance %1$s</string>
@@ -858,5 +853,25 @@
     <string name="tracking_hr_link_lost">sensor lost</string>
     <string name="voice_hr_sensor_lost">Heart rate sensor lost</string>
     <string name="voice_hr_sensor_connected">Heart rate sensor connected</string>
+
+    <!-- Voice summary (release 4): one part per metric, a pause between them -->
+    <string name="voice_summary_distance">Distance %1$s</string>
+    <string name="voice_summary_time">Time %1$s</string>
+    <string name="voice_summary_avg_pace">Average pace %1$s</string>
+    <string name="voice_summary_split_pace">Pace for the %1$s: %2$s</string>
+    <string name="voice_summary_split_pace_since">Pace since the last summary: %1$s</string>
+    <string name="voice_summary_split_hr">Average heart rate for the %1$s: %2$d</string>
+    <string name="voice_summary_split_hr_since">Average heart rate since the last summary: %1$d</string>
+    <string name="voice_summary_split_pace_since_start">Pace since the start: %1$s</string>
+    <string name="voice_summary_split_hr_since_start">Average heart rate since the start: %1$d</string>
+    <string name="voice_summary_current_hr">Heart rate %1$d</string>
+    <string name="voice_span_km_0_5">last 500 meters</string>
+    <string name="voice_span_km_1">last kilometer</string>
+    <string name="voice_span_km_2">last 2 kilometers</string>
+    <string name="voice_span_km_5">last 5 kilometers</string>
+    <string name="voice_span_min_1">last minute</string>
+    <string name="voice_span_min_5">last 5 minutes</string>
+    <string name="voice_span_min_10">last 10 minutes</string>
+    <string name="voice_span_min_15">last 15 minutes</string>
 
 </resources>
