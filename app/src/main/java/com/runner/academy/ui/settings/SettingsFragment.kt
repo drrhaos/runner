@@ -430,10 +430,12 @@ class SettingsFragment : Fragment() {
         val current = state.hrMax
         val byAge = state.hrMaxByAge
         val dialogBinding = DialogHrMaxBinding.inflate(layoutInflater)
-        dialogBinding.textViewHrMaxExplain.text = if (byAge != null) {
-            getString(R.string.settings_dialog_hr_max_auto_formula, byAge.ageYears, byAge.bpm)
-        } else {
-            getString(R.string.settings_dialog_hr_max_no_birth)
+        dialogBinding.textViewHrMaxExplain.text = when (HrMaxDialog.explanation(state.userBirthDate, byAge)) {
+            HrMaxDialog.Explanation.FORMULA ->
+                getString(R.string.settings_dialog_hr_max_auto_formula, byAge?.ageYears, byAge?.bpm)
+            HrMaxDialog.Explanation.NO_BIRTH_DATE -> getString(R.string.settings_dialog_hr_max_no_birth)
+            HrMaxDialog.Explanation.AGE_OUT_OF_RANGE ->
+                getString(R.string.settings_dialog_hr_max_age_out_of_range)
         }
         val picker = dialogBinding.numberPickerHrMax
         picker.minValue = HrMax.MIN_MANUAL_BPM
@@ -452,14 +454,21 @@ class SettingsFragment : Fragment() {
             .setTitle(R.string.settings_dialog_hr_max_title)
             .setView(dialogBinding.root)
             .setPositiveButton(R.string.save) { _, _ ->
-                HrMaxDialog.manualToSave(current, picker.value)?.let { viewModel.updateHrMaxManual(it) }
-                Toast.makeText(requireContext(), getString(R.string.settings_hr_max_saved), Toast.LENGTH_SHORT).show()
+                HrMaxDialog.manualToSave(current, picker.value)?.let {
+                    viewModel.updateHrMaxManual(it)
+                    Toast.makeText(requireContext(), getString(R.string.settings_hr_max_saved), Toast.LENGTH_SHORT).show()
+                }
             }
             .setNegativeButton(R.string.cancel, null)
-        if (HrMaxDialog.offersByAge(current, byAge)) {
-            builder.setNeutralButton(R.string.settings_dialog_hr_max_auto) { _, _ ->
+        val (neutralLabel, neutralToast) = when (HrMaxDialog.neutral(current, byAge)) {
+            HrMaxDialog.Neutral.BY_AGE -> R.string.settings_dialog_hr_max_auto to R.string.settings_hr_max_saved
+            HrMaxDialog.Neutral.ZONES_OFF -> R.string.settings_dialog_hr_max_zones_off to R.string.settings_hr_max_zones_off_done
+            null -> null to null
+        }
+        if (neutralLabel != null && neutralToast != null) {
+            builder.setNeutralButton(neutralLabel) { _, _ ->
                 viewModel.updateHrMaxManual(0)
-                Toast.makeText(requireContext(), getString(R.string.settings_hr_max_saved), Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(neutralToast), Toast.LENGTH_SHORT).show()
             }
         }
         builder.show()

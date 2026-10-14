@@ -24,7 +24,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Assert.assertNull
 import org.robolectric.shadows.ShadowDialog
+import org.robolectric.shadows.ShadowToast
 import java.time.LocalDate
 import java.time.ZoneId
 import org.junit.Test
@@ -213,6 +215,40 @@ class SettingsFragmentTest {
         shadowOf(Looper.getMainLooper()).idle()
 
         assertEquals(0, prefs.hrMaxManual)
+        // Nothing was saved: no "saved" toast
+        assertNull(ShadowToast.getLatestToast())
+    }
+
+    @Test
+    fun `a manual value without a birth date can turn the zones off`() {
+        prefs.hrMaxManual = 192
+        val (fragment, _) = launch()
+
+        fragment.requireView().findViewById<View>(R.id.row_hr_max).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        val zonesOff = latestDialog().getButton(AlertDialog.BUTTON_NEUTRAL)
+        assertTrue(zonesOff.isShown)
+        assertEquals(context.getString(R.string.settings_dialog_hr_max_zones_off), zonesOff.text.toString())
+        zonesOff.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(0, prefs.hrMaxManual)
+        assertEquals(context.getString(R.string.settings_hr_max_none), fragment.requireView().text(R.id.textView_hr_max_value))
+        assertEquals(context.getString(R.string.settings_hr_max_zones_off_done), ShadowToast.getTextOfLatestToast())
+    }
+
+    @Test
+    fun `an age out of 10 to 100 is explained as such, not as no birth date`() {
+        bornYearsAgo(5)
+        val (fragment, _) = launch()
+
+        fragment.requireView().findViewById<View>(R.id.row_hr_max).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(
+            context.getString(R.string.settings_dialog_hr_max_age_out_of_range),
+            latestDialog().findViewById<TextView>(R.id.textView_hr_max_explain)!!.text.toString()
+        )
     }
 
     @Test

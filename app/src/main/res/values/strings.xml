@@ -886,10 +886,18 @@
     <string name="workout_details_hr_zone_range" translatable="false">%1$d–%2$d</string>
     <string name="workout_details_hr_zone_below_range" translatable="false">&lt; %1$d</string>
     <string name="workout_details_hr_zone_percent">%1$d%%</string>
-    <!-- %3$s: the upper bound with heart_rate_beats_per_minute; %4$s: the time in words; %5$s: percent_a11y -->
+    <!-- %3$s: the upper bound with hr_zone_bound_a11y; %4$s: the time in words; %5$s: percent_a11y -->
     <string name="workout_details_hr_zone_row_a11y">Zone %1$d, %2$d to %3$s: %4$s, %5$s</string>
-    <!-- %1$s: the Z1 bound with heart_rate_beats_per_minute -->
+    <!-- %1$s: the Z1 bound with hr_zone_bound_a11y -->
     <string name="workout_details_hr_zone_below_a11y">Below zone 1, under %1$s: %2$s, %3$s</string>
+    <!-- A zone bound for TalkBack -->
+    <plurals name="hr_zone_bound_a11y">
+        <item quantity="one">%d beat per minute</item>
+        <item quantity="other">%d beats per minute</item>
+    </plurals>
+    <string name="settings_dialog_hr_max_age_out_of_range">The maximum by age needs an age from 10 to 100. Set your maximum manually: zones are off without it.</string>
+    <string name="settings_dialog_hr_max_zones_off">Turn zones off</string>
+    <string name="settings_hr_max_zones_off_done">Heart rate zones are off</string>
     <string name="chart_heart_rate_zones_a11y">Heart rate chart, beats per minute: average %1$d, from %2$d to %3$d. The line is coloured by heart rate zone</string>
     <string name="chart_heart_rate_value_zone">Heart rate: %1$d bpm · Z%2$d</string>
     <string name="chart_heart_rate_value_below">Heart rate: %1$d bpm · below Z1</string>

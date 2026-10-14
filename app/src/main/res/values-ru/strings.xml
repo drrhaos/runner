@@ -899,10 +899,18 @@
     <string name="workout_details_hr_zones_basis">По максимальному пульсу %1$d (%2$s)</string>
     <string name="workout_details_hr_zone_below">ниже Z1</string>
     <string name="workout_details_hr_zone_percent">%1$d&#160;%%</string>
-    <!-- Плюрал согласуется с последним числом диапазона: «152–171 удар в минуту» -->
-    <string name="workout_details_hr_zone_row_a11y">Зона %1$d, %2$d–%3$s: %4$s, %5$s</string>
-    <!-- «граница …»: именительный падеж, плюрал heart_rate_beats_per_minute всегда верен -->
-    <string name="workout_details_hr_zone_below_a11y">Ниже зоны 1, граница %1$s: %2$s, %3$s</string>
+    <!-- Без тире для TalkBack; «уд/мин» не склоняется, поэтому «до 171 уд/мин» и «меньше 95 уд/мин» верны -->
+    <string name="workout_details_hr_zone_row_a11y">Зона %1$d, от %2$d до %3$s: %4$s, %5$s</string>
+    <string name="workout_details_hr_zone_below_a11y">Ниже зоны 1, меньше %1$s: %2$s, %3$s</string>
+    <plurals name="hr_zone_bound_a11y">
+        <item quantity="one">%d уд/мин</item>
+        <item quantity="few">%d уд/мин</item>
+        <item quantity="many">%d уд/мин</item>
+        <item quantity="other">%d уд/мин</item>
+    </plurals>
+    <string name="settings_dialog_hr_max_age_out_of_range">Максимум по возрасту считается для возраста от 10 до 100 лет. Задайте его вручную — без него зоны выключены.</string>
+    <string name="settings_dialog_hr_max_zones_off">Выключить зоны</string>
+    <string name="settings_hr_max_zones_off_done">Пульсовые зоны выключены</string>
     <string name="chart_heart_rate_zones_a11y">График пульса, ударов в минуту: в среднем %1$d, от %2$d до %3$d. Линия раскрашена по пульсовым зонам</string>
     <string name="chart_heart_rate_value_zone">Пульс: %1$d уд/мин · Z%2$d</string>
     <string name="chart_heart_rate_value_below">Пульс: %1$d уд/мин · ниже Z1</string>

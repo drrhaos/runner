@@ -3,9 +3,7 @@ package com.runner.academy.ui.settings
 import com.runner.academy.util.HrMax
 import com.runner.academy.util.HrMaxSource
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HrMaxDialogTest {
@@ -33,11 +31,24 @@ class HrMaxDialogTest {
     }
 
     @Test
-    fun `By age is offered only over a manual value with a birth date`() {
-        assertTrue(HrMaxDialog.offersByAge(manual190, byAge = auto180))
-        assertFalse(HrMaxDialog.offersByAge(manual190, byAge = null))
-        assertFalse(HrMaxDialog.offersByAge(auto180, byAge = auto180))
-        assertFalse(HrMaxDialog.offersByAge(null, byAge = null))
+    fun `over a manual value the neutral button goes back by age, or turns the zones off without an age`() {
+        assertEquals(HrMaxDialog.Neutral.BY_AGE, HrMaxDialog.neutral(manual190, byAge = auto180))
+        assertEquals(HrMaxDialog.Neutral.ZONES_OFF, HrMaxDialog.neutral(manual190, byAge = null))
+    }
+
+    @Test
+    fun `without a manual value there is nothing to clear`() {
+        assertNull(HrMaxDialog.neutral(auto180, byAge = auto180))
+        assertNull(HrMaxDialog.neutral(null, byAge = null))
+    }
+
+    @Test
+    fun `the explanation tells no birth date from an age out of 10 to 100`() {
+        assertEquals(HrMaxDialog.Explanation.FORMULA, HrMaxDialog.explanation(birthDateMs = 500L, byAge = auto180))
+        assertEquals(HrMaxDialog.Explanation.NO_BIRTH_DATE, HrMaxDialog.explanation(birthDateMs = 0L, byAge = null))
+        assertEquals(HrMaxDialog.Explanation.AGE_OUT_OF_RANGE, HrMaxDialog.explanation(birthDateMs = 500L, byAge = null))
+        // Before 1970 is a real date
+        assertEquals(HrMaxDialog.Explanation.AGE_OUT_OF_RANGE, HrMaxDialog.explanation(birthDateMs = -500L, byAge = null))
     }
 
     @Test
