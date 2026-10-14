@@ -26,6 +26,8 @@ import com.runner.academy.ui.records.RecordCardText
 import com.runner.academy.ui.records.SavedRunCongratulation
 import com.runner.academy.util.DisplayTrack
 import com.runner.academy.util.ErrorHandler
+import com.runner.academy.util.HrMax
+import com.runner.academy.util.TrackHeartRate
 import com.runner.academy.util.ShareExports
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -69,6 +71,10 @@ class WorkoutDetailFragment : Fragment() {
     private var chartRenderer: ChartRenderer? = null
     private var exportManager: ExportManager? = null
     private var statsDisplay: DetailStatsDisplay? = null
+    private var hrZonesCard: HrZonesCard? = null
+
+    /** The current HRmax, read when the view is made: the zones of an old workout follow it. */
+    private var hrMax: HrMax? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -117,6 +123,14 @@ class WorkoutDetailFragment : Fragment() {
         )
         exportManager = ExportManager(requireContext(), viewLifecycleOwner)
         statsDisplay = DetailStatsDisplay(binding, requireContext(), viewModel)
+        hrMax = userPreferences?.hrMax()
+        chartRenderer?.hrZones = hrMax?.zones
+        hrZonesCard = HrZonesCard(
+            card = binding.cardHrZones,
+            title = binding.textViewHrZonesTitle,
+            basis = binding.textViewHrZonesBasis,
+            rowsContainer = binding.layoutHrZoneRows
+        )
 
         setupClickListeners()
         setupRecords()
@@ -336,6 +350,7 @@ class WorkoutDetailFragment : Fragment() {
                             currentTrackHasHeartRate = false
                             currentTrackHasAltitude = false
                             excludeRow = ExcludeFromRecordsRow.Hidden
+                            hrZonesCard?.show(HrZonesDisplay.None)
                             showCadence(workout)
                             showHeartRate(workout)
                             showElevation(workout)
@@ -390,13 +405,19 @@ class WorkoutDetailFragment : Fragment() {
                     }
                     else -> {
                         // Scanned off the main thread, the fragment's fields set back on it
+                        val hrMax = hrMax
                         val scan = withContext(Dispatchers.Default) {
                             TrackScan(
                                 hasSteps = cleanedTrackData.points.any { it.steps != null },
                                 hasHeartRate = cleanedTrackData.points.any { it.heartRate != null },
                                 // GPS, file or barometer altitudes: a barometric track may have no GPS ones
                                 hasAltitude = ElevationSource.of(cleanedTrackData) != ElevationSource.NONE,
-                                excludeRow = ExcludeFromRecordsRow.of(cleanedTrackData)
+                                excludeRow = ExcludeFromRecordsRow.of(cleanedTrackData),
+                                // By the current HRmax, on the track the average is taken from
+                                hrZones = HrZonesDisplay.of(
+                                    hrMax,
+                                    hrMax?.let { TrackHeartRate.timeInZones(cleanedTrackData.points, cleanedTrackData.pauses, it.zones) }
+                                )
                             )
                         }
                         if (_binding == null || !isAdded || isDetached) return@launch
@@ -405,6 +426,7 @@ class WorkoutDetailFragment : Fragment() {
                         currentTrackHasHeartRate = scan.hasHeartRate
                         currentTrackHasAltitude = scan.hasAltitude
                         excludeRow = scan.excludeRow
+                        hrZonesCard?.show(scan.hrZones)
                         mapManager?.displayTrack(cleanedTrackData)
                         chartRenderer?.updateAllCharts(cleanedTrackData)
                         currentWorkout?.let {
@@ -498,6 +520,7 @@ class WorkoutDetailFragment : Fragment() {
         chartRenderer = null
         exportManager = null
         statsDisplay = null
+        hrZonesCard = null
         mapManager = null
         _binding = null
     }
@@ -561,7 +584,8 @@ class WorkoutDetailFragment : Fragment() {
         val hasSteps: Boolean,
         val hasHeartRate: Boolean,
         val hasAltitude: Boolean,
-        val excludeRow: ExcludeFromRecordsRow
+        val excludeRow: ExcludeFromRecordsRow,
+        val hrZones: HrZonesDisplay
     )
 
     private fun deleteWorkout() {

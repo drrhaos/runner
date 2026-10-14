@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import androidx.core.content.edit
 import com.runner.academy.voice.VoiceSettings
 import com.runner.academy.voice.VoiceSettingsCodec
+import java.time.LocalDate
+import java.time.ZoneId
 
 /**
  * Управление настройками пользователя
@@ -33,6 +35,7 @@ class UserPreferences(context: Context) {
         private const val KEY_STEP_PERMISSION_ASKED = "step_permission_asked"
         private const val KEY_STRIDE_MODEL = "stride_model"
         private const val KEY_AUTO_PAUSE = "auto_pause"
+        private const val KEY_HR_MAX_MANUAL = "hr_max_manual"
 
         // Значения по умолчанию
         private const val DEFAULT_WEIGHT = 70f
@@ -87,13 +90,10 @@ class UserPreferences(context: Context) {
      * Возраст пользователя (вычисляется из даты рождения)
      */
     val userAge: Int
-        get() {
-            if (userBirthDate == 0L) return 0
-            val birthDate = java.util.Date(userBirthDate)
-            val currentDate = java.util.Date()
-            val diffInMillis = currentDate.time - birthDate.time
-            return (diffInMillis / (365.25 * 24 * 60 * 60 * 1000)).toInt()
-        }
+        get() = ageOn(LocalDate.now(), ZoneId.systemDefault())
+
+    /** Полных лет на [today] (0 — дата рождения не задана); то же правило, что у [hrMax] по возрасту. */
+    fun ageOn(today: LocalDate, zone: ZoneId): Int = Ages.fullYears(userBirthDate, today, zone) ?: 0
     
     /**
      * Система единиц измерения
@@ -191,6 +191,19 @@ class UserPreferences(context: Context) {
     var autoPause: Boolean
         get() = prefs.getBoolean(KEY_AUTO_PAUSE, DEFAULT_AUTO_PAUSE)
         set(value) = prefs.edit { putBoolean(KEY_AUTO_PAUSE, value) }
+
+    /** Максимальный пульс, заданный вручную; 0 — по возрасту (220 − возраст). */
+    var hrMaxManual: Int
+        get() = prefs.getInt(KEY_HR_MAX_MANUAL, 0)
+        set(value) = prefs.edit { putInt(KEY_HR_MAX_MANUAL, value) }
+
+    /** Максимальный пульс для зон; null — зоны выключены (нет ни даты рождения, ни ручного значения). */
+    fun hrMax(today: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault()): HrMax? =
+        HrMax.resolve(userBirthDate, hrMaxManual, today, zone)
+
+    /** Пульсовые зоны по текущему [hrMax]; null — зоны выключены. */
+    fun hrZones(today: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault()): HrZones? =
+        hrMax(today, zone)?.zones
 
     /** Разрешение ACTIVITY_RECOGNITION уже запрашивалось — повторно автоматически не спрашиваем. */
     var stepPermissionAsked: Boolean

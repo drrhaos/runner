@@ -12,6 +12,7 @@ import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.runner.academy.RunnerApplication
 import com.runner.academy.sensor.HeartRateDisplay
 import com.runner.academy.sensor.HeartRateSample
 import com.runner.academy.sensor.HeartRateSensor
@@ -30,6 +31,7 @@ import com.runner.academy.data.WorkoutState
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.service.IntervalCursor
 import com.runner.academy.service.WorkoutTrackingService
+import com.runner.academy.util.HrZones
 import com.runner.academy.util.IntervalSegmentsJson
 import com.runner.academy.util.StrideModel
 import com.runner.academy.util.UserPreferences
@@ -51,8 +53,21 @@ class WorkoutTrackingViewModel(
     private val application: Application,
     private val pairedSensors: StateFlow<Map<SensorType, PairedSensor>>,
     private val heartRateSensor: HeartRateSensor,
-    private val clockNanos: () -> Long = SystemClock::elapsedRealtimeNanos
+    private val clockNanos: () -> Long = SystemClock::elapsedRealtimeNanos,
+    private val hrZonesSource: () -> HrZones? = {
+        ((application as? RunnerApplication)?.container?.userPreferences ?: UserPreferences(application)).hrZones()
+    }
 ) : ViewModel() {
+
+    private val _hrZones = MutableStateFlow(hrZonesSource())
+
+    /** The zones of the heart-rate tile's badge; null: off. Read again by [refreshHrZones]. */
+    val hrZones: StateFlow<HrZones?> = _hrZones.asStateFlow()
+
+    /** The screen's `onResume`: HRmax may have been changed in the settings meanwhile. */
+    fun refreshHrZones() {
+        _hrZones.value = hrZonesSource()
+    }
 
     /**
      * The heart-rate tile; also during a workout (its state lives in the service). Without a

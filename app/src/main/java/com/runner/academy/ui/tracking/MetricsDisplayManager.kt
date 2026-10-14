@@ -15,6 +15,8 @@ import com.runner.academy.R
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutState
 import com.runner.academy.sensor.HeartRateDisplay
+import com.runner.academy.ui.workout.HrZoneBadge
+import com.runner.academy.util.HrZones
 
 /** What the timer shows besides its digits. */
 enum class TimerState {
@@ -77,6 +79,8 @@ class MetricsDisplayManager(
         val imageViewHrLink: ImageView,
         /** The same icon by the GPS indicator: seen with the panel collapsed. */
         val imageViewHrLinkCompact: ImageView,
+        /** "Z4" by the heart rate value; gone without zones. */
+        val textViewHrZoneBadge: TextView,
     )
 
     private var shownTimerState: TimerState? = null
@@ -92,10 +96,11 @@ class MetricsDisplayManager(
      * The value, its colour, the link icon (on the tile and by the GPS indicator) and what
      * TalkBack says, from the service's session during a workout or the screen's own lease
      * before it ([WorkoutTrackingViewModel.heartRateDisplay]); null: no sensor. No live region:
-     * the description changes quietly, the voice tells about a lost sensor.
+     * the description changes quietly, the voice tells about a lost sensor. With [zones] the
+     * value's zone shows in a badge and is said with it.
      */
-    fun updateHeartRate(display: HeartRateDisplay?) {
-        val look = HeartRateTileLook.of(display)
+    fun updateHeartRate(display: HeartRateDisplay?, zones: HrZones? = null) {
+        val look = HeartRateTileLook.of(display, zones)
         val previous = shownHeartRate
         if (look == previous) return
         shownHeartRate = look
@@ -111,11 +116,19 @@ class MetricsDisplayManager(
         val tile = views.layoutHeartRateTile
         val context = tile.context
         tile.contentDescription = look.a11y.bpm?.let { bpm ->
-            context.getString(
-                look.a11y.text,
-                context.resources.getQuantityString(R.plurals.heart_rate_beats_per_minute, bpm, bpm)
-            )
+            val beats = context.resources.getQuantityString(R.plurals.heart_rate_beats_per_minute, bpm, bpm)
+            look.a11y.zone?.let { zone -> context.getString(look.a11y.text, beats, zone) }
+                ?: context.getString(look.a11y.text, beats)
         } ?: context.getString(look.a11y.text)
+
+        val badge = look.badge
+        val badgeView = views.textViewHrZoneBadge
+        if (badge == null) {
+            badgeView.visibility = View.GONE
+        } else {
+            HrZoneBadge.bind(badgeView, badge.zone, badge.greyed)
+            badgeView.visibility = View.VISIBLE
+        }
 
         val icon = look.icon
         val state = icon?.let { context.getString(it.stateDescription) }

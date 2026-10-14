@@ -148,6 +148,59 @@
 
                 </LinearLayout>
 
+                <!-- Максимальный пульс: по возрасту или вручную; без него зоны выключены.
+                     Кликабельна всегда: значение можно задать и без даты рождения -->
+                <LinearLayout
+                    android:id="@+id/row_hr_max"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingStart="0dp"
+                    android:paddingEnd="8dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:importantForAccessibility="noHideDescendants">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_label_hr_max"
+                            android:textSize="16sp"
+                            android:textColor="?attr/colorOnSurface" />
+
+                        <TextView
+                            android:id="@+id/textView_hr_max_source"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            tools:text="по возрасту: 220 − 40"
+                            android:textSize="13sp"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/textView_hr_max_value"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:importantForAccessibility="no"
+                        tools:text="180"
+                        android:textSize="16sp"
+                        android:textColor="?attr/colorPrimary" />
+
+                </LinearLayout>
+
                 <!-- Пол -->
                 <LinearLayout
                     android:id="@+id/row_gender"

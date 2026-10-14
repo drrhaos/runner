@@ -5,6 +5,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import com.runner.academy.R
 import com.runner.academy.sensor.HeartRateDisplay
+import com.runner.academy.util.HrZones
 
 /**
  * The link icon of the heart-rate tile and of its compact copy by the GPS indicator. The state
@@ -32,19 +33,32 @@ enum class HrLinkIcon(
  * @param text the value; null: no value, the placeholder `track_info_pulse_placeholder` (`--`).
  * @param greyed the value is 5–15 s old: `colorOnSurfaceVariant` instead of `colorOnSurface`.
  * @param icon null: no sensor, the icon is gone.
+ * @param zone the zone of the shown value (0 below Z1); null: no value or the zones are off.
+ * @param badge the zone badge by the value; null: gone.
  */
 data class HeartRateTileLook(
     val text: String?,
     val greyed: Boolean,
     val icon: HrLinkIcon?,
-    val a11y: A11y
+    val a11y: A11y,
+    val zone: Int? = null,
+    val badge: ZoneBadge? = null
 ) {
 
-    /** The tile's `contentDescription`: [text], with the `heart_rate_beats_per_minute` plural of [bpm]. */
-    data class A11y(@StringRes val text: Int, val bpm: Int? = null)
+    /**
+     * The tile's `contentDescription`: [text], with the `heart_rate_beats_per_minute` plural of
+     * [bpm] and then [zone] when the text takes one.
+     */
+    data class A11y(@StringRes val text: Int, val bpm: Int? = null, val zone: Int? = null)
+
+    /**
+     * "Z4" in the zone's colour, or on the grey background when [greyed]: a stale value, or a
+     * fresh one below Z1 ([zone] 0, "<Z1": told apart from zones that are off).
+     */
+    data class ZoneBadge(val zone: Int, val greyed: Boolean)
 
     companion object {
-        fun of(display: HeartRateDisplay?): HeartRateTileLook {
+        fun of(display: HeartRateDisplay?, zones: HrZones? = null): HeartRateTileLook {
             if (display == null) {
                 return HeartRateTileLook(null, false, null, A11y(R.string.tracking_hr_tile_no_sensor_a11y))
             }
@@ -55,11 +69,22 @@ data class HeartRateTileLook(
                 else -> HrLinkIcon.LOST
             }
             val bpm = display.bpm
-            return when {
-                bpm == null -> HeartRateTileLook(null, false, icon, A11y(R.string.tracking_hr_tile_no_data_a11y))
-                display.isFresh -> HeartRateTileLook(bpm.toString(), false, icon, A11y(R.string.tracking_hr_tile_a11y, bpm))
-                else -> HeartRateTileLook(bpm.toString(), true, icon, A11y(R.string.tracking_hr_tile_stale_a11y, bpm))
+                ?: return HeartRateTileLook(null, false, icon, A11y(R.string.tracking_hr_tile_no_data_a11y))
+            val fresh = display.isFresh
+            val zone = zones?.zoneOf(bpm)
+            val badge = when {
+                zone == null -> null
+                zone == HrZones.BELOW -> if (fresh) ZoneBadge(zone, greyed = true) else null
+                else -> ZoneBadge(zone, greyed = !fresh)
             }
+            val a11y = when {
+                zone == null -> A11y(if (fresh) R.string.tracking_hr_tile_a11y else R.string.tracking_hr_tile_stale_a11y, bpm)
+                zone == HrZones.BELOW ->
+                    A11y(if (fresh) R.string.tracking_hr_tile_below_zone_a11y else R.string.tracking_hr_tile_stale_a11y, bpm)
+                fresh -> A11y(R.string.tracking_hr_tile_zone_a11y, bpm, zone)
+                else -> A11y(R.string.tracking_hr_tile_stale_zone_a11y, bpm, zone)
+            }
+            return HeartRateTileLook(bpm.toString(), !fresh, icon, a11y, zone, badge)
         }
     }
 }

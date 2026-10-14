@@ -41,6 +41,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.ui.workout.WorkoutDetailFragmentArgs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
 
@@ -305,6 +306,7 @@ class WorkoutTrackingFragment : Fragment() {
                 layoutHeartRateTile = binding.layoutHeartRateTile,
                 imageViewHrLink = binding.imageViewHrLink,
                 imageViewHrLinkCompact = binding.imageViewHrLinkCompact,
+                textViewHrZoneBadge = binding.textViewHrZoneBadge,
             ),
             viewModel
         ) { expanded ->
@@ -488,7 +490,9 @@ class WorkoutTrackingFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.heartRateDisplay.collect { metricsDisplayManager?.updateHeartRate(it) }
+                combine(viewModel.heartRateDisplay, viewModel.hrZones) { display, zones ->
+                    display to zones
+                }.collect { (display, zones) -> metricsDisplayManager?.updateHeartRate(display, zones) }
             }
         }
 
@@ -967,6 +971,8 @@ class WorkoutTrackingFragment : Fragment() {
         mapManager?.onResume()
         // The setting may have changed meanwhile
         updateAutoPauseUnavailable()
+        // So may HRmax: the zone badge follows it
+        viewModel.refreshHrZones()
     }
 
     override fun onPause() {
