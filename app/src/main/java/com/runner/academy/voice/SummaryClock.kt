@@ -13,8 +13,10 @@ import kotlin.math.roundToInt
  * - A mark reached during an auto-pause waits for the run to go on.
  * - The split pace is Δmoving / Δdistance since the previous summary (or the resume); the
  *   split heart rate averages the [HeartRateDisplay.Freshness.FRESH] values of the moving ticks
- *   since then, left out when they cover under half of them. Both carry the interval their
- *   stretch really covered; after a resume or a change of the interval it is partial (null).
+ *   since then, left out when they cover under half of them. Both carry the stretch they
+ *   really covered ([SplitSpan]): one whole interval; the run so far, when the interval was
+ *   changed or switched on before any summary; or "since the last summary" after a resume or a
+ *   later change.
  */
 class SummaryClock {
 
@@ -30,8 +32,10 @@ class SummaryClock {
 
     private var splitMovingMs = 0L
     private var splitDistanceM = 0f
-    /** The interval the current split covers in full; null: a partial one. */
-    private var splitSpan: SummaryEvery? = null
+    /** What stretch the current split covers. */
+    private var splitSpan: SplitSpan = SplitSpan.SinceStart
+    /** The current split starts at the start of the run: no summary or resume since. */
+    private var splitFromStart = true
     private var hrSum = 0L
     private var hrCount = 0
     private var movingTicks = 0
@@ -40,7 +44,7 @@ class SummaryClock {
     fun resume(movingMs: Long, distanceM: Float) {
         markedFor = null
         started = true
-        startSplit(movingMs, distanceM, span = null)
+        startSplit(movingMs, distanceM, span = SplitSpan.SinceLastSummary)
         pendingResume = movingMs to distanceM
     }
 
@@ -61,8 +65,13 @@ class SummaryClock {
             val (fromMs, fromM) = pendingResume ?: (movingMs to distanceM)
             markedFor = every
             nextMark = markAfter(every, fromMs, fromM)
-            // From the start of the run the split is whole; after a change it is not
-            splitSpan = if (started) null else every
+            // From the start of the run the split is one whole interval; after a change it covers
+            // the run so far (no summary yet) or the stretch since the last one
+            splitSpan = when {
+                !started -> SplitSpan.Every(every)
+                splitFromStart -> SplitSpan.SinceStart
+                else -> SplitSpan.SinceLastSummary
+            }
             started = true
         }
         pendingResume = null
@@ -73,7 +82,7 @@ class SummaryClock {
             partOf(metric, movingMs, distanceM, avgPace, heartRate)
         }
         nextMark = markAfter(every, movingMs, distanceM)
-        startSplit(movingMs, distanceM, span = every)
+        startSplit(movingMs, distanceM, span = SplitSpan.Every(every))
         return VoiceLine.Summary(parts)
     }
 
@@ -107,10 +116,12 @@ class SummaryClock {
         return (hrSum.toFloat() / hrCount).roundToInt()
     }
 
-    private fun startSplit(movingMs: Long, distanceM: Float, span: SummaryEvery?) {
+    /** A new split after a summary or a resume: no longer from the start of the run. */
+    private fun startSplit(movingMs: Long, distanceM: Float, span: SplitSpan) {
         splitMovingMs = movingMs
         splitDistanceM = distanceM
         splitSpan = span
+        splitFromStart = false
         hrSum = 0L
         hrCount = 0
         movingTicks = 0

@@ -881,6 +881,8 @@
     <string name="voice_summary_split_pace_since">Темп с прошлой сводки: %1$s</string>
     <string name="voice_summary_split_hr">Средний пульс за %1$s: %2$d</string>
     <string name="voice_summary_split_hr_since">Средний пульс с прошлой сводки: %1$d</string>
+    <string name="voice_summary_split_pace_since_start">Темп с начала пробежки: %1$s</string>
+    <string name="voice_summary_split_hr_since_start">Средний пульс с начала пробежки: %1$d</string>
     <string name="voice_summary_current_hr">Пульс %1$d</string>
     <string name="voice_span_km_0_5">последние 500 метров</string>
     <string name="voice_span_km_1">последний километр</string>

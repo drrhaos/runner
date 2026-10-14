@@ -24,13 +24,16 @@ class VoiceLineTextTest {
     )
     private val allSplits = VoiceLine.Summary(
         listOf(
-            SummaryPart.SplitPace(4f + 58f / 60f, SummaryEvery.KM_1),
-            SummaryPart.SplitHr(152, SummaryEvery.MIN_5),
+            SummaryPart.SplitPace(4f + 58f / 60f, SplitSpan.Every(SummaryEvery.KM_1)),
+            SummaryPart.SplitHr(152, SplitSpan.Every(SummaryEvery.MIN_5)),
             SummaryPart.CurrentHr(158)
         )
     )
     private val partialSplits = VoiceLine.Summary(
-        listOf(SummaryPart.SplitPace(5f, null), SummaryPart.SplitHr(150, null))
+        listOf(SummaryPart.SplitPace(5f, SplitSpan.SinceLastSummary), SummaryPart.SplitHr(150, SplitSpan.SinceLastSummary))
+    )
+    private val fromStart = VoiceLine.Summary(
+        listOf(SummaryPart.SplitPace(5f, SplitSpan.SinceStart), SummaryPart.SplitHr(150, SplitSpan.SinceStart))
     )
     private val upcoming = VoiceLine.SegmentUpcoming(
         WorkoutTemplateSegment(
@@ -59,6 +62,10 @@ class VoiceLineTextTest {
             listOf("Pace since the last summary: 5 minutes per kilometer", "Average heart rate since the last summary: 150"),
             render(partialSplits)
         )
+        assertEquals(
+            listOf("Pace since the start: 5 minutes per kilometer", "Average heart rate since the start: 150"),
+            render(fromStart)
+        )
     }
 
     @Test
@@ -76,6 +83,10 @@ class VoiceLineTextTest {
             listOf("Темп с прошлой сводки: 5 минут на километр", "Средний пульс с прошлой сводки: 150"),
             render(partialSplits)
         )
+        assertEquals(
+            listOf("Темп с начала пробежки: 5 минут на километр", "Средний пульс с начала пробежки: 150"),
+            render(fromStart)
+        )
     }
 
     @Test
@@ -87,7 +98,7 @@ class VoiceLineTextTest {
     @Test
     fun `every summary interval has its span words`() {
         SummaryEvery.entries.filter { it != SummaryEvery.OFF }.forEach { every ->
-            val text = render(VoiceLine.Summary(listOf(SummaryPart.SplitHr(140, every)))).single()
+            val text = render(VoiceLine.Summary(listOf(SummaryPart.SplitHr(140, SplitSpan.Every(every))))).single()
             assertEquals(every.name, true, text.startsWith("Average heart rate for the last"))
         }
     }

@@ -31,14 +31,20 @@ object VoiceLineText {
             context.getString(R.string.voice_summary_avg_pace, FormatUtils.formatPaceForTTS(part.minPerKm, context))
         is SummaryPart.SplitPace -> {
             val pace = FormatUtils.formatPaceForTTS(part.minPerKm, context)
-            val span = part.span?.let { spanText(it) }
-            if (span == null) context.getString(R.string.voice_summary_split_pace_since, pace)
-            else context.getString(R.string.voice_summary_split_pace, context.getString(span), pace)
+            when (val span = part.span) {
+                is SplitSpan.Every -> spanText(span.every)
+                    ?.let { context.getString(R.string.voice_summary_split_pace, context.getString(it), pace) }
+                    ?: context.getString(R.string.voice_summary_split_pace_since, pace)
+                SplitSpan.SinceStart -> context.getString(R.string.voice_summary_split_pace_since_start, pace)
+                SplitSpan.SinceLastSummary -> context.getString(R.string.voice_summary_split_pace_since, pace)
+            }
         }
-        is SummaryPart.SplitHr -> {
-            val span = part.span?.let { spanText(it) }
-            if (span == null) context.getString(R.string.voice_summary_split_hr_since, part.bpm)
-            else context.getString(R.string.voice_summary_split_hr, context.getString(span), part.bpm)
+        is SummaryPart.SplitHr -> when (val span = part.span) {
+            is SplitSpan.Every -> spanText(span.every)
+                ?.let { context.getString(R.string.voice_summary_split_hr, context.getString(it), part.bpm) }
+                ?: context.getString(R.string.voice_summary_split_hr_since, part.bpm)
+            SplitSpan.SinceStart -> context.getString(R.string.voice_summary_split_hr_since_start, part.bpm)
+            SplitSpan.SinceLastSummary -> context.getString(R.string.voice_summary_split_hr_since, part.bpm)
         }
         is SummaryPart.CurrentHr -> context.getString(R.string.voice_summary_current_hr, part.bpm)
     }

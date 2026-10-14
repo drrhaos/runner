@@ -862,6 +862,8 @@
     <string name="voice_summary_split_pace_since">Pace since the last summary: %1$s</string>
     <string name="voice_summary_split_hr">Average heart rate for the %1$s: %2$d</string>
     <string name="voice_summary_split_hr_since">Average heart rate since the last summary: %1$d</string>
+    <string name="voice_summary_split_pace_since_start">Pace since the start: %1$s</string>
+    <string name="voice_summary_split_hr_since_start">Average heart rate since the start: %1$d</string>
     <string name="voice_summary_current_hr">Heart rate %1$d</string>
     <string name="voice_span_km_0_5">last 500 meters</string>
     <string name="voice_span_km_1">last kilometer</string>

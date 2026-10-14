@@ -27,15 +27,27 @@ sealed interface SummaryPart {
     data class Distance(val meters: Float) : SummaryPart
     data class Time(val movingMs: Long) : SummaryPart
     data class AvgPace(val minPerKm: Float) : SummaryPart
-    /**
-     * The pace since the previous summary. [span]: the interval that stretch really covered
-     * ("the last kilometre"); null when it is partial (after a restore or a change of the
-     * interval), said as "since the last summary".
-     */
-    data class SplitPace(val minPerKm: Float, val span: SummaryEvery?) : SummaryPart
+    /** The pace since the previous summary, over the stretch [span] says. */
+    data class SplitPace(val minPerKm: Float, val span: SplitSpan) : SummaryPart
     /** The average heart rate since the previous summary; [span] as in [SplitPace]. */
-    data class SplitHr(val bpm: Int, val span: SummaryEvery?) : SummaryPart
+    data class SplitHr(val bpm: Int, val span: SplitSpan) : SummaryPart
     data class CurrentHr(val bpm: Int) : SummaryPart
+}
+
+/** What stretch a split part really covered, as the summary clock knows it. */
+sealed interface SplitSpan {
+    /** One whole interval: "the last kilometre". */
+    data class Every(val every: SummaryEvery) : SplitSpan
+
+    /** No summary has played yet and the interval was changed (or switched on) mid-run. */
+    object SinceStart : SplitSpan {
+        override fun toString() = "SinceStart"
+    }
+
+    /** A partial stretch: after a restore or a change of the interval. */
+    object SinceLastSummary : SplitSpan {
+        override fun toString() = "SinceLastSummary"
+    }
 }
 
 enum class StatusKind {
