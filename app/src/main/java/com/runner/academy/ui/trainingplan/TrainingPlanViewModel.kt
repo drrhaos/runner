@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.SegmentKind
+import com.runner.academy.data.SegmentTarget
 import com.runner.academy.data.TrainingIcon
 import com.runner.academy.data.TrainingPlan
 import com.runner.academy.data.TrainingPlanDay
@@ -13,6 +14,7 @@ import com.runner.academy.data.WorkoutTemplate
 import com.runner.academy.data.WorkoutTemplateSegment
 import com.runner.academy.data.WorkoutTemplateWithSegments
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.data.target
 import com.runner.academy.util.TrainingPlanBackupFormat
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -143,7 +145,13 @@ class TrainingPlanViewModelFactory(
     }
 }
 
-/** Editable segment draft for the template editor UI. */
+/** Which target the segment editor has selected: «None / Pace / Zone». */
+enum class TargetKind { NONE, PACE, ZONE }
+
+/**
+ * Editable segment draft for the template editor UI. It remembers both the pace and the zone,
+ * so switching the target back and forth loses neither; [toEntity] keeps only the selected one.
+ */
 data class SegmentDraft(
     var title: String = "",
     var kind: SegmentKind = SegmentKind.WORK,
@@ -152,11 +160,16 @@ data class SegmentDraft(
     var durationTotalSeconds: Int = 10 * 60,
     /** Total distance in meters (km + m pickers). Default 200 m. */
     var distanceTotalMeters: Int = 200,
-    /** Target pace as total seconds per km; 0 means no target. */
-    var paceTotalSeconds: Int = 0
+    /** Target pace as total seconds per km; 0 means no pace set. */
+    var paceTotalSeconds: Int = 0,
+    /** The selected target; by default a set pace is the target (the wizard sets only paces). */
+    var targetKind: TargetKind = if (paceTotalSeconds > 0) TargetKind.PACE else TargetKind.NONE,
+    /** Heart rate zone 1..5 for [TargetKind.ZONE]. */
+    var hrZone: Int = DEFAULT_HR_ZONE
 ) {
     fun toEntity(templateId: Long, order: Int): WorkoutTemplateSegment {
-        val pace = if (paceTotalSeconds > 0) paceTotalSeconds / 60f else null
+        val pace = if (targetKind == TargetKind.PACE && paceTotalSeconds > 0) paceTotalSeconds / 60f else null
+        val zone = if (targetKind == TargetKind.ZONE) SegmentTarget.validZoneOrNull(hrZone) else null
         return when (goalType) {
             SegmentGoalType.DURATION -> WorkoutTemplateSegment(
                 templateId = templateId,
@@ -166,7 +179,8 @@ data class SegmentDraft(
                 goalType = goalType,
                 durationMs = durationTotalSeconds.coerceAtLeast(1) * 1000L,
                 distanceMeters = null,
-                targetPaceMinPerKm = pace
+                targetPaceMinPerKm = pace,
+                targetHrZone = zone
             )
             SegmentGoalType.DISTANCE -> WorkoutTemplateSegment(
                 templateId = templateId,
@@ -176,27 +190,39 @@ data class SegmentDraft(
                 goalType = goalType,
                 durationMs = null,
                 distanceMeters = distanceTotalMeters.coerceAtLeast(1).toFloat(),
-                targetPaceMinPerKm = pace
+                targetPaceMinPerKm = pace,
+                targetHrZone = zone
             )
         }
     }
 
     companion object {
-        fun fromEntity(segment: WorkoutTemplateSegment) = SegmentDraft(
-            title = segment.title,
-            kind = segment.kind,
-            goalType = segment.goalType,
-            durationTotalSeconds = segment.durationMs
-                ?.let { (it / 1000L).toInt().coerceAtLeast(1) }
-                ?: (10 * 60),
-            distanceTotalMeters = segment.distanceMeters
-                ?.toInt()
-                ?.coerceAtLeast(1)
-                ?: 200,
-            paceTotalSeconds = segment.targetPaceMinPerKm
-                ?.takeIf { it > 0f }
-                ?.let { (it * 60f).toInt().coerceAtLeast(0) }
-                ?: 0
-        )
+        /** The zone a new zone target starts from. */
+        const val DEFAULT_HR_ZONE = 3
+
+        fun fromEntity(segment: WorkoutTemplateSegment): SegmentDraft {
+            val target = segment.target
+            return SegmentDraft(
+                title = segment.title,
+                kind = segment.kind,
+                goalType = segment.goalType,
+                durationTotalSeconds = segment.durationMs
+                    ?.let { (it / 1000L).toInt().coerceAtLeast(1) }
+                    ?: (10 * 60),
+                distanceTotalMeters = segment.distanceMeters
+                    ?.toInt()
+                    ?.coerceAtLeast(1)
+                    ?: 200,
+                paceTotalSeconds = (target as? SegmentTarget.Pace)
+                    ?.let { (it.minPerKm * 60f).toInt().coerceAtLeast(0) }
+                    ?: 0,
+                targetKind = when (target) {
+                    SegmentTarget.None -> TargetKind.NONE
+                    is SegmentTarget.Pace -> TargetKind.PACE
+                    is SegmentTarget.HrZone -> TargetKind.ZONE
+                },
+                hrZone = (target as? SegmentTarget.HrZone)?.zone ?: DEFAULT_HR_ZONE
+            )
+        }
     }
 }
