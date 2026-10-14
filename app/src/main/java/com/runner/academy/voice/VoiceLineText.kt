@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.annotation.StringRes
 import com.runner.academy.R
 import com.runner.academy.data.SegmentGoalType
+import com.runner.academy.data.SegmentTarget
 import com.runner.academy.data.WorkoutTemplateSegment
 import com.runner.academy.data.localizedTitle
+import com.runner.academy.data.target
 import com.runner.academy.ui.workout.MetricSpeech
 import com.runner.academy.util.FormatUtils
 
@@ -49,7 +51,7 @@ object VoiceLineText {
         is SummaryPart.CurrentHr -> context.getString(R.string.voice_summary_current_hr, part.bpm)
     }
 
-    /** "In 30 seconds: [title]", then the goal, then the target pace if any. */
+    /** "In 30 seconds: [title]", then the goal, then the target (a pace or a zone) if any. */
     private fun upcoming(segment: WorkoutTemplateSegment, context: Context): List<String> = buildList {
         add(context.getString(R.string.voice_interval_upcoming_in_30s, segment.localizedTitle(context)))
         when (segment.goalType) {
@@ -60,8 +62,11 @@ object VoiceLineText {
                 add(context.getString(R.string.voice_interval_goal_distance, FormatUtils.formatDistanceMetersForTTS(meters, context)))
             }
         }
-        segment.targetPaceMinPerKm?.takeIf { it > 0f }?.let { pace ->
-            add(context.getString(R.string.voice_interval_goal_pace, FormatUtils.formatPaceForTTS(pace, context)))
+        when (val target = segment.target) {
+            SegmentTarget.None -> Unit
+            is SegmentTarget.Pace ->
+                add(context.getString(R.string.voice_interval_goal_pace, FormatUtils.formatPaceForTTS(target.minPerKm, context)))
+            is SegmentTarget.HrZone -> add(context.getString(R.string.voice_interval_goal_zone, target.zone))
         }
     }
 

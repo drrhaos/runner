@@ -116,6 +116,19 @@ class VoiceLineTextTest {
     }
 
     @Test
+    fun `the 30 s warning with a zone target says the zone`() {
+        val line = VoiceLine.SegmentUpcoming(upcoming.segment.copy(targetPaceMinPerKm = null, targetHrZone = 4))
+        assertEquals(listOf("In 30 seconds: Fast 400", "Distance 400 meters", "Zone 4"), render(line))
+    }
+
+    @Test
+    @Config(qualifiers = "ru")
+    fun `the 30 s warning in russian with a zone target`() {
+        val line = VoiceLine.SegmentUpcoming(upcoming.segment.copy(targetPaceMinPerKm = 4.5f, targetHrZone = 2))
+        assertEquals(listOf("Через 30 секунд начнётся интервал: Fast 400", "Дистанция 400 метров", "Зона 2"), render(line))
+    }
+
+    @Test
     fun `status lines and the beep`() {
         assertEquals(listOf("GPS signal lost"), render(VoiceLine.Status(StatusKind.GPS_LOST)))
         assertEquals(listOf("Heart rate sensor connected"), render(VoiceLine.Status(StatusKind.HR_CONNECTED)))

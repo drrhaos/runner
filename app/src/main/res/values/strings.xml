@@ -922,4 +922,26 @@
     <string name="voice_span_min_10">last 10 minutes</string>
     <string name="voice_span_min_15">last 15 minutes</string>
 
+    <!-- ===== Release 4: segment zone target (feature/r4-zone-target) ===== -->
+    <string name="segment_target_label">Target pace or zone</string>
+    <string name="segment_target_none">None</string>
+    <string name="segment_target_pace">Pace</string>
+    <string name="segment_target_zone">Zone</string>
+    <string name="segment_target_zone_hint">Heart rate zone</string>
+    <string name="segment_target_zone_value">Zone %1$d · %2$d–%3$d bpm</string>
+    <string name="segment_target_zone_value_no_range">Zone %1$d</string>
+    <string name="segment_target_zone_disabled">Zones are off: set your date of birth or maximum heart rate</string>
+    <string name="segment_target_open_settings">Open settings</string>
+    <string name="segment_dialog_zone_title">Heart rate zone</string>
+    <string name="segment_zone_item">Zone %1$d · %2$d–%3$d bpm · %4$s</string>
+    <string name="segment_target_zone_short">Z%1$d</string>
+    <string name="segment_target_zone_a11y">zone %1$d</string>
+    <string name="hr_zone_name_1">recovery</string>
+    <string name="hr_zone_name_2">aerobic base</string>
+    <string name="hr_zone_name_3">tempo</string>
+    <string name="hr_zone_name_4">threshold</string>
+    <string name="hr_zone_name_5">maximum</string>
+    <string name="voice_interval_goal_zone">Zone %1$d</string>
+    <!-- ===== End of segment zone target ===== -->
+
 </resources>
