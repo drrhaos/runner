@@ -39,16 +39,17 @@ class WorkoutServiceVoiceTest {
     private var nowMs = 1_700_000_000_000L
     private val startMs = nowMs
     private var outputs = mutableListOf<FakeVoiceOutput>()
-    private lateinit var controller: ServiceController<WorkoutTrackingService>
+    private val controllers = mutableListOf<ServiceController<WorkoutTrackingService>>()
 
     /** (second since the start on the wall clock, line). */
     private val said = mutableListOf<Pair<Int, VoiceLine>>()
 
     private fun service(): WorkoutTrackingService {
-        controller = Robolectric.buildService(WorkoutTrackingService::class.java)
+        val controller = Robolectric.buildService(WorkoutTrackingService::class.java)
+        controllers += controller
         val service = controller.get()
         service.heartRateSource = HeartRateSource(FakeHeartRateSensor(SensorLink.IDLE), MutableStateFlow(emptyMap())) { true }
-        service.voiceClockMs = { nowMs }
+        service.sessionClockMs = { nowMs }
         service.voiceOutputFactory = {
             FakeVoiceOutput { line -> said += ((nowMs - startMs) / 1_000L).toInt() to line }.also { outputs += it }
         }
@@ -58,10 +59,29 @@ class WorkoutServiceVoiceTest {
 
     @After
     fun tearDown() {
-        val service = controller.get()
-        if (service.getCurrentSession().isTracking || service.getCurrentSession().isPaused) service.stopWorkout()
-        controller.destroy()
+        controllers.forEach { controller ->
+            val service = controller.get()
+            if (service.getCurrentSession().isTracking || service.getCurrentSession().isPaused) service.stopWorkout()
+            controller.destroy()
+        }
         ActiveWorkoutStore(app).clear()
+    }
+
+    /**
+     * The process dies without `onDestroy` (no last save): a new service restores from what is on
+     * disk once [saved] holds for it (the service writes the checkpoint on a background thread).
+     */
+    private fun killAndRestore(saved: (ActiveWorkoutCheckpoint) -> Boolean): WorkoutTrackingService {
+        val store = ActiveWorkoutStore(app)
+        for (attempt in 1..100) {
+            if (store.load()?.let(saved) == true) break
+            Thread.sleep(20)
+        }
+        val restored = service()
+        restored.onStartCommand(
+            Intent(app, WorkoutTrackingService::class.java).setAction(WorkoutTrackingService.ACTION_RESTORE_WORKOUT), 0, 1
+        )
+        return restored
     }
 
     private fun timed(sortOrder: Int, sec: Int, kind: SegmentKind) = WorkoutTemplateSegment(
@@ -123,6 +143,59 @@ class WorkoutServiceVoiceTest {
 
         // The warning and the beep moved by the 2 minutes of the pause
         assertEquals(listOf(1, 210, 240), segmentLines().map { it.first })
+    }
+
+    @Test
+    fun `a kill after the warning with no fix at all - the restore neither warns nor beeps again`() {
+        prefs.voiceFeedback = true
+        val first = service()
+        first.startIntervals()
+        first.tickUntil(100)
+
+        // Saved on the tick that consumed the warning: no fix ever came to save it
+        val restored = killAndRestore { it.intervalCursor()?.lastUpcomingWarnedIndex == 0 }
+        said.clear()
+        restored.tickUntil(130)
+
+        assertEquals(listOf(120 to "beep"), segmentLines().map { (sec, line) -> sec to describeSegment(line) })
+    }
+
+    @Test
+    fun `a restore mid-run resumes the summaries from the restored position on the session clock`() {
+        prefs.setVoiceSettings(
+            VoiceSettings.DEFAULT.copy(
+                enabled = true,
+                free = VoiceSettings.DEFAULT.free.copy(
+                    summary = SummaryEvery.MIN_1,
+                    metrics = setOf(SummaryMetric.DISTANCE, SummaryMetric.TIME)
+                )
+            )
+        )
+        val first = service()
+        first.startWorkout()
+        first.tickUntil(1_020)
+        // The run so far covered 3.4 km (by fixes this test does not replay)
+        ActiveWorkoutStore(app).save(
+            ActiveWorkoutCheckpoint.fromSession(
+                first.getCurrentSession().copy(distance = 3.4f), com.runner.academy.data.WorkoutType.EASY_RUN,
+                null, null, null, lastLocationTime = 0L, lastUpdateTime = 0L
+            )
+        )
+        val restored = killAndRestore { it.distance == 3.4f }
+        said.clear()
+
+        restored.tickUntil(1_100)
+
+        // Nothing for the past: the next minute mark after 17 min of moving, with the restored distance
+        assertEquals(
+            listOf(1_080 to VoiceLine.Summary(listOf(SummaryPart.Distance(3_400f), SummaryPart.Time(1_080_000L)))),
+            segmentLines()
+        )
+    }
+
+    private fun describeSegment(line: VoiceLine) = when (line) {
+        is VoiceLine.SegmentUpcoming -> "next ${line.segment.title}"
+        else -> "beep".takeIf { line == VoiceLine.SegmentStart } ?: line.toString()
     }
 
     @Test

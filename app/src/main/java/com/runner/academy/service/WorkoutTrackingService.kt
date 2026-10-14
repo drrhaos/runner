@@ -194,11 +194,13 @@ class WorkoutTrackingService : Service() {
     internal var voiceOutputFactory: (Context) -> VoiceOutput = ::AndroidVoiceOutput
 
     /**
-     * The wall clock of the session's start, pause, resume and timer tick (session time,
-     * segments, summaries); tests set their own.
+     * The service's wall clock: the session's start, pause, resume, restore and timer tick
+     * (session time, segments, summaries), the fixes' receipt times and the GPS watchdog, the
+     * checkpoint throttle; tests set their own.
      */
     @VisibleForTesting
-    internal var voiceClockMs: () -> Long = System::currentTimeMillis
+    internal var sessionClockMs: () -> Long = System::currentTimeMillis
+
     /** The service is in the foreground for a workout (a new pairing restarts it with new types). */
     private var foregroundStarted = false
     private val unreliableLatch = UnreliableSignalLatch()
@@ -430,7 +432,7 @@ class WorkoutTrackingService : Service() {
                 baroM = baroM,
                 heartRate = hr
             )
-            lastAnyFixTime = System.currentTimeMillis()
+            lastAnyFixTime = sessionClockMs()
             lastProcessedFixTimeMs = maxOf(lastProcessedFixTimeMs, location.time)
             // Before the session update below, so a stop right after a closing fix saves no tail
             sessionManager.setOpenStepMeters(gpsProcessor.pendingStepMeters)
@@ -493,12 +495,12 @@ class WorkoutTrackingService : Service() {
                     }
 
                     lastLocation = filtered
-                    lastLocationTime = System.currentTimeMillis()
+                    lastLocationTime = sessionClockMs()
                 }
 
                 is GpsLocationProcessor.ProcessResult.Rejected -> {
                     if (result.refreshGapClock) {
-                        lastLocationTime = System.currentTimeMillis()
+                        lastLocationTime = sessionClockMs()
                         // Standing still: the stride sample would mix in time without steps
                         strideLearner?.reset()
                         // Near-duplicate fix: move map tip / icon without committing a track point
@@ -598,7 +600,7 @@ class WorkoutTrackingService : Service() {
         sessionManager.startNewSession(
             initialGpsStatus = initialGpsStatus,
             strideModelState = runStride?.state,
-            now = voiceClockMs()
+            now = sessionClockMs()
         )
         maybeSaveCheckpoint(sessionManager.getSession(), force = true)
         if (userPreferences.gpsDiagnostics) {
@@ -624,7 +626,7 @@ class WorkoutTrackingService : Service() {
         isCurrentlyTracking = false
         stepTracker?.pause()
         strideLearner?.reset()
-        sessionManager.pause(voiceClockMs())
+        sessionManager.pause(sessionClockMs())
         stopLocationUpdates()
         stopPeriodicLocationRequest()
         stopWorkoutTimer()
@@ -641,11 +643,11 @@ class WorkoutTrackingService : Service() {
         gpsProcessor.onResume()
         // A new auto-pause needs a fresh 10 s of standing after the resume
         autoPause.reset()
-        sessionManager.resume(voiceClockMs())
+        sessionManager.resume(sessionClockMs())
         // Grace after the pause: no fixes were processed, so the watchdog must not flag the
         // whole pause as a GPS loss before the first fix arrives
-        if (lastLocationTime != 0L) lastLocationTime = System.currentTimeMillis()
-        if (lastAnyFixTime != 0L) lastAnyFixTime = System.currentTimeMillis()
+        if (lastLocationTime != 0L) lastLocationTime = sessionClockMs()
+        if (lastAnyFixTime != 0L) lastAnyFixTime = sessionClockMs()
         if (hasLocationPermission()) {
             startLocationUpdates()
             startPeriodicLocationRequest()
@@ -736,7 +738,7 @@ class WorkoutTrackingService : Service() {
         )
 
         // Elapsed recomputed after the gap so the clock doesn't freeze at kill time
-        val restoredSession = checkpoint.toRestoredSession(System.currentTimeMillis())
+        val restoredSession = checkpoint.toRestoredSession(sessionClockMs())
             .copy(strideModelState = runStride?.state)
         // Afresh, before the session is published (see startWorkout); the machine starts with a
         // direct connection and the first one is silent. A refused restore stops it again.
@@ -1001,7 +1003,7 @@ class WorkoutTrackingService : Service() {
 
     private fun maybeSaveCheckpoint(session: WorkoutSession, force: Boolean = false) {
         if (!session.isTracking && !session.isPaused) return
-        val now = System.currentTimeMillis()
+        val now = sessionClockMs()
         if (!force && now - lastCheckpointSaveAt < CHECKPOINT_SAVE_MIN_INTERVAL_MS) return
         lastCheckpointSaveAt = now
         val snapshot = ActiveWorkoutCheckpoint.fromSession(
@@ -1088,7 +1090,8 @@ class WorkoutTrackingService : Service() {
     /** The voice when it is switched on (made on first use), released when it is off. */
     private fun voiceOutputFor(settings: VoiceSettings): VoiceOutput? {
         if (!settings.enabled) {
-            releaseVoice()
+            // Only on the switch from on to off, not on every tick while off
+            if (voiceOutput != null) releaseVoice()
             return null
         }
         return voiceOutput ?: voiceOutputFactory(applicationContext).also { voiceOutput = it }
@@ -1126,7 +1129,7 @@ class WorkoutTrackingService : Service() {
         if (!(session.isTracking || session.isPaused)) return
         // Cheaper than the whole settings on every fix; the status needs only the master switch
         if (!userPreferences.voiceFeedback) {
-            releaseVoice()
+            if (voiceOutput != null) releaseVoice()
             return
         }
         val announcement = GpsVoiceTransition.announcement(session.gpsStatus, lastAnnouncedGpsStatus)
@@ -1144,6 +1147,11 @@ class WorkoutTrackingService : Service() {
      * come due without waiting for a fix (a silent GPS does not delay them). The settings are
      * read live: a change mid-run applies at once. A manual pause stops the timer, so the voice
      * and the segments stand still.
+     *
+     * Status lines are not in the coach's list: they are events said where they happen. They
+     * still come in the spec's order (beep → status → warning → summary): the beep is outside the
+     * speech queue, the auto-pause line is said by [tickAutoPause] earlier in the same tick, and
+     * the GPS and sensor lines come between ticks, so all are queued before this tick's lines.
      */
     private fun tickVoice() {
         val session = sessionManager.getSession()
@@ -1165,7 +1173,14 @@ class WorkoutTrackingService : Service() {
                 engine = engine
             )
         )
-        if (engine != null) intervalCursor = engine.snapshot()
+        if (engine != null) {
+            val cursor = engine.snapshot()
+            val changed = cursor != intervalCursor
+            intervalCursor = cursor
+            // A new segment, a beep or a warning consumed: saved now, not with the next fix (a
+            // silent GPS may bring none), so a restore neither repeats them nor goes back
+            if (changed) maybeSaveCheckpoint(session, force = true)
+        }
         val output = voiceOutputFor(settings) ?: return
         result.lines.forEach(output::say)
     }
@@ -1182,7 +1197,7 @@ class WorkoutTrackingService : Service() {
         if (isCurrentlyTracking || sessionManager.getSession().isTracking) return
         if (!isUsablePreStartLocation(location)) return
         lastLocation = location
-        lastLocationTime = System.currentTimeMillis()
+        lastLocationTime = sessionClockMs()
     }
 
     private fun isUsablePreStartLocation(location: Location): Boolean {
@@ -1291,7 +1306,7 @@ class WorkoutTrackingService : Service() {
             while (isActive && isCurrentlyTracking && !sessionManager.getSession().isPaused) {
                 delay(intervalMs)
                 if (!isActive) break
-                val currentTime = System.currentTimeMillis()
+                val currentTime = sessionClockMs()
                 // Any fix counts here: while false fixes keep arriving there is nothing to pull
                 if (currentTime - maxOf(lastLocationTime, lastAnyFixTime) > lostTimeoutMs) {
                     // Do NOT stamp lastLocationTime here — only Accepted / refreshGapClock
@@ -1341,7 +1356,7 @@ class WorkoutTrackingService : Service() {
         val currentStatus = sessionManager.getSession().gpsStatus
         val next = GpsStatusWatchdog.resolve(
             current = currentStatus,
-            nowMs = System.currentTimeMillis(),
+            nowMs = sessionClockMs(),
             lastGoodFixMs = lastLocationTime,
             lastAnyFixMs = lastAnyFixTime,
             lostTimeoutMs = locationLostTimeoutMs()
@@ -1482,13 +1497,13 @@ class WorkoutTrackingService : Service() {
         }
     }
 
-    /** One second of the running workout's timer; tests call it with their own [voiceClockMs]. */
+    /** One second of the running workout's timer; tests call it with their own [sessionClockMs]. */
     @VisibleForTesting
     internal fun tickWorkout() {
         countSilenceBySteps()
         tickAutoPause()
         // Advance clock without fan-out to checkpoint; UI + notification only
-        sessionManager.tickElapsedTime(broadcast = false, now = voiceClockMs())
+        sessionManager.tickElapsedTime(broadcast = false, now = sessionClockMs())
         tickVoice()
         val session = sessionManager.getSession()
         sessionUpdateCallback?.invoke(session)
@@ -1521,7 +1536,7 @@ class WorkoutTrackingService : Service() {
             enabled = userPreferences.autoPause && intervalSegmentsJson.isNullOrBlank(),
             steps = stepTracker?.takeIf { it.isRunning }?.steps,
             nowMono = SystemClock.elapsedRealtime(),
-            nowWall = voiceClockMs()
+            nowWall = sessionClockMs()
         ) ?: return
         if (transition.announce) {
             when (AutoPauseVoiceTransition.announcement(transition.event, transition.closedAutoPauseMs)) {

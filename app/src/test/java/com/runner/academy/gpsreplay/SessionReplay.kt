@@ -100,7 +100,8 @@ data class SessionReplayResult(
  * at 1 Hz into the service's [HeartRateTracker]; each fix takes `bpmAt` its own time.
  *
  * The voice: `tickVoice()` after the clock tick feeds the service's [VoiceCoach] (segments from
- * [ReplaySettings.segments], their cursor checkpointed; a restore resumes a new coach) and
+ * [ReplaySettings.segments]; a kill restores their cursor as the service last saved it, on the
+ * tick that changed it; a restore resumes a new coach) and
  * collects its lines in [SessionReplayResult.voice]. Status lines (GPS, sensor, auto-pause) and
  * the speech engine are not modelled.
  *
@@ -192,6 +193,11 @@ object SessionReplay {
 
         /** `serviceIntervalEngine` and `voiceCoach`: a new process restores the first, not the second. */
         private var engine = settings.segments?.takeIf { it.isNotEmpty() }?.let { IntervalEngine(it) }
+        /**
+         * The cursor as last written to disk: the service saves it when the tick changes it (not
+         * with the session's throttled saves), so a kill restores from here, not from the live one.
+         */
+        private var savedCursor = engine?.snapshot()
         private var coach = VoiceCoach()
         val voice = mutableListOf<Pair<Long, VoiceLine>>()
 
@@ -282,6 +288,8 @@ object SessionReplay {
                 )
             )
             result.lines.forEach { voice += (now - run.startTimeMs) to it }
+            // `maybeSaveCheckpoint(force = true)` on a changed cursor
+            engine?.snapshot()?.takeIf { it != savedCursor }?.let { savedCursor = it }
         }
 
         /** `resolveGpsStatusDuringWorkout()` with the screen on (permission granted). */
@@ -401,7 +409,7 @@ object SessionReplay {
                 workoutType = settings.type,
                 modeSelection = null,
                 intervalSegmentsJson = settings.segments?.let { IntervalSegmentsJson.toJson(it) },
-                intervalCursor = engine?.snapshot(),
+                intervalCursor = savedCursor,
                 lastLocationTime = lastGoodFixMs,
                 lastUpdateTime = manager.getLastUpdateTime(),
                 steps = trackerSteps(now)?.first,
