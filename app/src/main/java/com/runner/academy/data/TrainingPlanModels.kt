@@ -64,7 +64,7 @@ private fun Context.stringInLocale(locale: Locale, @StringRes resId: Int): Strin
 
 /**
  * Primary completion goal for a segment (MVP: one primary goal).
- * Optional [targetPaceMinPerKm] is guidance only.
+ * The optional pace or zone target is guidance only, see [SegmentTarget].
  */
 enum class SegmentGoalType {
     DURATION,
@@ -113,8 +113,10 @@ data class WorkoutTemplateSegment(
     val durationMs: Long? = null,
     /** Target distance in meters when [goalType] is DISTANCE. */
     val distanceMeters: Float? = null,
-    /** Optional target pace in minutes per km (guidance). */
-    val targetPaceMinPerKm: Float? = null
+    /** Optional target pace in minutes per km (guidance). Exclusive with [targetHrZone]. */
+    val targetPaceMinPerKm: Float? = null,
+    /** Optional target heart rate zone 1..5 (schema 8). Read through [target]. */
+    val targetHrZone: Int? = null
 )
 
 @Entity(tableName = "training_plans")

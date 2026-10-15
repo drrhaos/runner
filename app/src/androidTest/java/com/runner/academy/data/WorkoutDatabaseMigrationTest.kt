@@ -252,6 +252,40 @@ class WorkoutDatabaseMigrationTest {
         }
     }
 
+    @Test
+    @Throws(IOException::class)
+    fun migrate7To8_addsTargetHrZone_keepsPace() {
+        helper.createDatabase(testDb, 7).apply {
+            execSQL(
+                """
+                INSERT INTO workout_templates (id, name, workoutType, iconKey, notes, createdAt, updatedAt)
+                VALUES (1, 'Intervals', 'INTERVAL_TRAINING', 'INTERVAL', NULL, 1700000000000, 1700000000000)
+                """.trimIndent()
+            )
+            execSQL(
+                """
+                INSERT INTO workout_template_segments (templateId, sortOrder, kind, title, goalType, durationMs, distanceMeters, targetPaceMinPerKm)
+                VALUES (1, 0, 'WORK', 'Fast', 'DISTANCE', NULL, 400.0, 4.5)
+                """.trimIndent()
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            testDb,
+            8,
+            true,
+            WorkoutDatabase.MIGRATION_7_8
+        ).apply {
+            query("SELECT targetPaceMinPerKm, targetHrZone FROM workout_template_segments").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(4.5, cursor.getDouble(0), 0.0001)
+                assertTrue(cursor.isNull(1))
+            }
+            close()
+        }
+    }
+
     /** Oldest schema → current: the whole chain must land exactly on the latest schema. */
     @Test
     @Throws(IOException::class)

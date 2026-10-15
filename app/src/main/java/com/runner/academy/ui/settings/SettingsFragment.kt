@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.runner.academy.NavDestinations
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.databinding.DialogHrMaxBinding
@@ -151,7 +152,7 @@ class SettingsFragment : Fragment() {
         binding.rowDevices.setOnClickListener {
             // A double tap would open it twice
             val navController = findNavController()
-            if (navController.currentDestination?.id == R.id.nav_settings) navController.navigate(R.id.nav_devices)
+            if (navController.currentDestination?.id in NavDestinations.settings) navController.navigate(R.id.nav_devices)
         }
 
         // Сброс настроек
