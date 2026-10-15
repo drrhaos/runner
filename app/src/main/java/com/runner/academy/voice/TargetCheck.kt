@@ -57,7 +57,7 @@ class TargetCheck {
     data class Result(val state: TargetState, val hint: VoiceLine.TargetHint?)
 
     private var segmentIndex = -1
-    private var verdict = TargetVerdict.NO_TARGET
+    private var lastVerdict = TargetVerdict.NO_TARGET
     /** When the current off verdict began, for the voice (a steps pace does not count). */
     private var offSinceMs: Long? = null
     private var lastHintMs: Long? = null
@@ -68,6 +68,8 @@ class TargetCheck {
      *   ([com.runner.academy.service.LivePaceTracker.VERDICT_WINDOW_MS]), cut at the segment's start.
      * @param zones null: the zones are off.
      * @param nowMs the workout clock of this tick.
+     * @param paceSinceRestartMs moving time since the live pace last started over (a manual
+     *   resume, a restore): its window refills then too, so no pace that early is pending.
      */
     fun onTick(
         segmentIndex: Int,
@@ -78,20 +80,21 @@ class TargetCheck {
         heartRate: HeartRateDisplay?,
         zones: HrZones?,
         toleranceSec: Int,
-        nowMs: Long
+        nowMs: Long,
+        paceSinceRestartMs: Long = Long.MAX_VALUE
     ): Result {
         if (segmentIndex != this.segmentIndex) {
             this.segmentIndex = segmentIndex
-            verdict = TargetVerdict.NO_TARGET
+            lastVerdict = TargetVerdict.NO_TARGET
             offSinceMs = null
         }
         val state = when (target) {
             SegmentTarget.None -> TargetState.NONE
-            is SegmentTarget.Pace -> paceState(target, segmentElapsedMs, pace, toleranceSec)
+            is SegmentTarget.Pace -> paceState(target, minOf(segmentElapsedMs, paceSinceRestartMs), pace, toleranceSec)
             is SegmentTarget.HrZone -> zoneState(target, segmentElapsedMs, heartRate, zones)
         }
-        val previous = verdict
-        verdict = state.verdict
+        val previous = lastVerdict
+        lastVerdict = state.verdict
 
         val voiced = state.verdict.isOff && !state.approximate
         offSinceMs = when {
@@ -122,24 +125,24 @@ class TargetCheck {
         lastHintMs = nowMs
     }
 
-    private fun paceState(target: SegmentTarget.Pace, elapsedMs: Long, pace: LivePace?, toleranceSec: Int): TargetState {
+    private fun paceState(target: SegmentTarget.Pace, windowAgeMs: Long, pace: LivePace?, toleranceSec: Int): TargetState {
         if (pace == null) {
-            return TargetState(if (elapsedMs < PACE_PENDING_MS) TargetVerdict.PENDING else TargetVerdict.NO_DATA)
+            return TargetState(if (windowAgeMs < PACE_PENDING_MS) TargetVerdict.PENDING else TargetVerdict.NO_DATA)
         }
         // Seconds per km; positive: slower than the target
         val diff = (pace.minPerKm - target.minPerKm) * 60f
         // A float's minutes are not exact seconds: 4:43 against 4:30 is 13.00001
         val band = toleranceSec + SEC_EPSILON
         val out = toleranceSec + PACE_HYST_SEC + SEC_EPSILON
-        val verdict = when {
+        val next = when {
             abs(diff) <= band -> TargetVerdict.IN
             diff > out -> TargetVerdict.TOO_SLOW
             diff < -out -> TargetVerdict.TOO_FAST
-            diff > 0f && verdict == TargetVerdict.TOO_SLOW -> TargetVerdict.TOO_SLOW
-            diff < 0f && verdict == TargetVerdict.TOO_FAST -> TargetVerdict.TOO_FAST
+            diff > 0f && lastVerdict == TargetVerdict.TOO_SLOW -> TargetVerdict.TOO_SLOW
+            diff < 0f && lastVerdict == TargetVerdict.TOO_FAST -> TargetVerdict.TOO_FAST
             else -> TargetVerdict.IN
         }
-        return TargetState(verdict, pace.approximate, pace.minPerKm)
+        return TargetState(next, pace.approximate, pace.minPerKm)
     }
 
     private fun zoneState(target: SegmentTarget.HrZone, elapsedMs: Long, heartRate: HeartRateDisplay?, zones: HrZones?): TargetState {
@@ -147,15 +150,15 @@ class TargetCheck {
         if (elapsedMs < ZONE_GRACE_MS) return TargetState(TargetVerdict.PENDING)
         val bpm = heartRate?.takeIf { it.isFresh }?.bpm ?: return TargetState(TargetVerdict.NO_DATA)
         val range = zones.range(target.zone)
-        val verdict = when {
+        val next = when {
             bpm in range -> TargetVerdict.IN
             bpm > range.last + ZONE_HYST_BPM -> TargetVerdict.ABOVE_ZONE
             bpm < range.first - ZONE_HYST_BPM -> TargetVerdict.BELOW_ZONE
-            bpm > range.last && verdict == TargetVerdict.ABOVE_ZONE -> TargetVerdict.ABOVE_ZONE
-            bpm < range.first && verdict == TargetVerdict.BELOW_ZONE -> TargetVerdict.BELOW_ZONE
+            bpm > range.last && lastVerdict == TargetVerdict.ABOVE_ZONE -> TargetVerdict.ABOVE_ZONE
+            bpm < range.first && lastVerdict == TargetVerdict.BELOW_ZONE -> TargetVerdict.BELOW_ZONE
             else -> TargetVerdict.IN
         }
-        return TargetState(verdict, approximate = false, value = bpm.toFloat())
+        return TargetState(next, approximate = false, value = bpm.toFloat())
     }
 
     companion object {

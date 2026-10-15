@@ -97,6 +97,17 @@ class LivePaceTrackerTest {
     }
 
     @Test
+    fun `the time since the last restart`() {
+        assertEquals(0L, tracker.sinceRestartMs)
+        run(0, 40)
+        assertEquals(40_000L, tracker.sinceRestartMs)
+        tracker.restart(atMovingMs = 40_000L)
+        assertEquals(0L, tracker.sinceRestartMs)
+        tick(43, 200f)
+        assertEquals(3_000L, tracker.sinceRestartMs)
+    }
+
+    @Test
     fun `the ring keeps the window after a long run`() {
         run(0, 1_000)
         assertPace(5f, tracker.pace(), approximate = false)

@@ -170,6 +170,16 @@ class TargetCheckTest {
     }
 
     @Test
+    fun `no pace soon after a resume or a restore mid-segment is pending, not no data`() {
+        fun at(sinceRestartMs: Long) =
+            check.onTick(0, 100_000L, 500_000L, pace430, null, null, null, 10, 100_000L, paceSinceRestartMs = sinceRestartMs).state.verdict
+
+        assertEquals(PENDING, at(1_000L))
+        assertEquals(PENDING, at(19_000L))
+        assertEquals(NO_DATA, at(20_000L))
+    }
+
+    @Test
     fun `the last 10 s of a segment - no hint`() {
         // 15 s left at 30, when the hold ends; 10 s left from 35 on
         val hints = (15..60).filter { sec -> tick(sec, pace = slow, remainingMs = (45 - sec) * 1_000L).hint != null }

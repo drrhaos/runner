@@ -267,6 +267,20 @@ class VoiceCoachTest {
     }
 
     @Test
+    fun `a manual resume mid-segment - pending while the window refills, then the verdict`() {
+        val engine = IntervalEngine(listOf(paced(0, 600, 4.5f)))
+        val tracker = LivePaceTracker(stride = null)
+        runTarget(engine, to = 100, tracker = tracker)
+        // Resume: the service starts the window over where the moving clock stood
+        tracker.restart(atMovingMs = 100_000L)
+
+        val ticks = runTarget(engine, from = 101, to = 120, tracker = tracker).toMap()
+
+        assertTrue((101..115).all { ticks.getValue(it).interval!!.target.verdict == TargetVerdict.PENDING })
+        assertEquals(TargetVerdict.TOO_SLOW, ticks.getValue(116).interval!!.target.verdict)
+    }
+
+    @Test
     fun `a free run has no interval state`() {
         assertEquals(null, coach.onTick(input(10)).interval)
     }

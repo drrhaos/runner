@@ -109,7 +109,8 @@ class VoiceCoach {
                 heartRate = input.heartRate,
                 zones = input.zones,
                 toleranceSec = input.settings.paceToleranceSec,
-                nowMs = input.elapsedMs
+                nowMs = input.elapsedMs,
+                paceSinceRestartMs = input.livePace?.sinceRestartMs ?: Long.MAX_VALUE
             )
             var due = false
             var voiced = false

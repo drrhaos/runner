@@ -97,6 +97,13 @@ class LivePaceTracker(private val stride: StepDistanceEstimator?) {
     }
 
     /**
+     * Moving time since the start or the last [restart] (a resume, a restore) to the latest tick:
+     * under [MIN_SPAN_MS] no pace is possible yet, which is "pending", not "no data".
+     */
+    val sinceRestartMs: Long
+        get() = ((samples.lastOrNull()?.movingMs ?: floorMovingMs) - floorMovingMs).coerceAtLeast(0L)
+
+    /**
      * Forgets the window: no pace for the next [MIN_SPAN_MS]. [atMovingMs] is the moving time of
      * the restart (a resume, an auto-pause, a restore): no fix time counts before it.
      */
