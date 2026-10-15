@@ -136,7 +136,13 @@ class VoiceSettingsFragment : Fragment() {
         })
     }
 
+    /**
+     * A new state description is announced by TalkBack: the checked flag of a row whose own
+     * switch is hidden from it may not be.
+     */
     private fun LayoutVoiceSwitchRowBinding.show(checked: Boolean, enabled: Boolean) {
+        val state = getString(if (checked) R.string.voice_switch_on_a11y else R.string.voice_switch_off_a11y)
+        if (ViewCompat.getStateDescription(root)?.toString() != state) ViewCompat.setStateDescription(root, state)
         switchValue.isChecked = checked
         switchValue.isEnabled = enabled
         root.setRowEnabled(enabled)

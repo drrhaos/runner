@@ -984,6 +984,9 @@
     <string name="voice_pace_tolerance_value">±%1$d s/km</string>
     <string name="voice_pace_tolerance_hint">Within the tolerance the pace counts as on target, for the voice and the segment bar.</string>
     <string name="voice_metric_units_note">The voice uses kilometers, and summaries are counted in kilometers.</string>
+    <!-- TalkBack: the state of a switch row, announced when it changes -->
+    <string name="voice_switch_on_a11y">on</string>
+    <string name="voice_switch_off_a11y">off</string>
     <!-- ===== End of voice coaching settings ===== -->
 
     <!-- ===== Release 4: segment zone target (feature/r4-zone-target) ===== -->

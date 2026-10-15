@@ -995,6 +995,8 @@
     <string name="voice_pace_tolerance_value">±%1$d с/км</string>
     <string name="voice_pace_tolerance_hint">В пределах допуска темп считается попаданием в цель — для голоса и для полосы отрезков.</string>
     <string name="voice_metric_units_note">Голос говорит в километрах, и сводка считается по километрам.</string>
+    <string name="voice_switch_on_a11y">включено</string>
+    <string name="voice_switch_off_a11y">выключено</string>
     <!-- ===== End of voice coaching settings ===== -->
 
     <!-- ===== Релиз 4: цель «зона» в отрезке (feature/r4-zone-target) ===== -->

@@ -148,7 +148,11 @@ class VoiceSettingsFragmentTest {
         prefs.setVoiceSettings(on)
         val view = launch()
 
-        assertEquals("distance, time, average pace", view.value(R.id.row_free_metrics))
+        assertEquals(
+            listOf(R.string.voice_metric_distance_lower, R.string.voice_metric_time_lower, R.string.voice_metric_avg_pace_lower)
+                .joinToString(", ") { context.getString(it) },
+            view.value(R.id.row_free_metrics)
+        )
     }
 
     @Test
@@ -170,7 +174,7 @@ class VoiceSettingsFragmentTest {
         idle()
 
         assertEquals(setOf(SummaryMetric.SPLIT_PACE), stored().free.metrics)
-        assertEquals("pace since last summary", view.value(R.id.row_free_metrics))
+        assertEquals(context.getString(R.string.voice_metric_split_pace_lower), view.value(R.id.row_free_metrics))
     }
 
     @Test
@@ -216,6 +220,18 @@ class VoiceSettingsFragmentTest {
             context.getString(R.string.voice_segment_change_label),
             view.row(R.id.row_intervals_segment_change).findViewById<TextView>(R.id.textView_switch_label).text.toString()
         )
+    }
+
+    @Test
+    fun `a toggled switch row says its new state to TalkBack`() {
+        val view = launch()
+        val row = view.row(R.id.row_voice_enabled)
+        assertEquals(context.getString(R.string.voice_switch_off_a11y), androidx.core.view.ViewCompat.getStateDescription(row).toString())
+
+        view.click(R.id.row_voice_enabled)
+
+        assertEquals(context.getString(R.string.voice_switch_on_a11y), androidx.core.view.ViewCompat.getStateDescription(row).toString())
+        assertTrue(checked(row))
     }
 
     @Test
