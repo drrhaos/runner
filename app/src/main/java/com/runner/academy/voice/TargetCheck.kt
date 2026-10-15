@@ -28,7 +28,7 @@ enum class TargetVerdict {
  * The verdict the indicator shows.
  *
  * @param approximate the pace behind it was counted from steps: shown with «≈», never spoken.
- * @param value what the verdict was made from: the pace of the segment's window in minutes per
+ * @param value what the verdict was made from: the pace of the verdict's window in minutes per
  *   km, or the heart rate in bpm; null without one (no target, pending, no data).
  */
 data class TargetState(val verdict: TargetVerdict, val approximate: Boolean = false, val value: Float? = null) {
@@ -64,7 +64,8 @@ class TargetCheck {
 
     /**
      * @param segmentRemainingMs null: unknown (a distance segment without any pace yet).
-     * @param pace the live pace over the segment's own window (cut at its start).
+     * @param pace the live pace over the verdict's window: the last 60 s
+     *   ([com.runner.academy.service.LivePaceTracker.VERDICT_WINDOW_MS]), cut at the segment's start.
      * @param zones null: the zones are off.
      * @param nowMs the workout clock of this tick.
      */
@@ -159,11 +160,14 @@ class TargetCheck {
 
     companion object {
         /**
-         * A pace verdict leaves "in" only this far past the band, seconds per km. 5, not the
-         * planned 3: the 30 s pace swings ~5 s per km (1σ) on the bench's GPS noise, slowly (the
-         * error is correlated over ~20 s), see `TargetReplayTest`.
+         * A pace verdict leaves "in" only this far past the band, seconds per km (owner's decision
+         * after the bench, 2026-10-15). Path noise makes the GPS pace read ~2.5 s per km fast and
+         * swing ~5 s per km (1σ) over 30 s, correlated over ~20 s; so the verdict takes a 60 s
+         * window (~3 s per km) and a hint comes past ≈ 17 s per km off a ±10 target. With 30 s
+         * and 3–5 s an even run 5 s off the target heard up to two false hints in 10 min; see
+         * `TargetReplayTest`.
          */
-        const val PACE_HYST_SEC = 5f
+        const val PACE_HYST_SEC = 7f
         /** A zone verdict leaves "in" only this far past a bound, bpm. */
         const val ZONE_HYST_BPM = 2
         /**
@@ -174,7 +178,7 @@ class TargetCheck {
         const val PACE_PENDING_MS = 20_000L
         /** The heart rate lags the effort: a zone is pending this long into its segment. */
         const val ZONE_GRACE_MS = 45_000L
-        /** An off verdict is held this long before the voice says it; 15 s, not the planned 10, as above. */
+        /** An off verdict is held this long before the voice says it; 15 s, not the planned 10, for the noise as above. */
         const val PERSIST_MS = 15_000L
         /** One hint at most this often, over all the segments. */
         const val HINT_EVERY_MS = 30_000L

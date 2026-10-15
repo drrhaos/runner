@@ -5,7 +5,8 @@ import com.runner.academy.data.LivePace
 import com.runner.academy.util.StepDistanceEstimator
 
 /**
- * The live pace: the last [WINDOW_MS] of moving time, ticked once a second while the workout
+ * The live pace: the last [WINDOW_MS] of moving time (the target's verdict asks for
+ * [VERDICT_WINDOW_MS]), ticked once a second while the workout
  * runs. One per run, on the run's frozen [stride] (the one that bridges silences), null without
  * steps.
  *
@@ -63,12 +64,14 @@ class LivePaceTracker(private val stride: StepDistanceEstimator?) {
     }
 
     /**
-     * The pace over `[max(now − 30 s, sinceMovingMs), now]` of moving time; [sinceMovingMs] cuts
-     * the window at a segment's start, so the pace before it does not count.
+     * The pace over `[max(now − windowMs, sinceMovingMs), now]` of moving time; [sinceMovingMs]
+     * cuts the window at a segment's start, so the pace before it does not count. The tile's
+     * window is [WINDOW_MS]; the target's verdict asks for [VERDICT_WINDOW_MS]. GPS or steps is
+     * decided over the window asked for, from its own start.
      */
-    fun pace(sinceMovingMs: Long = 0L): LivePace? {
+    fun pace(sinceMovingMs: Long = 0L, windowMs: Long = WINDOW_MS): LivePace? {
         val end = samples.lastOrNull() ?: return null
-        val from = maxOf(end.movingMs - WINDOW_MS, sinceMovingMs)
+        val from = maxOf(end.movingMs - windowMs.coerceIn(MIN_SPAN_MS, MAX_WINDOW_MS), sinceMovingMs)
         val start = samples.firstOrNull { it.movingMs >= from } ?: return null
         if (end.movingMs - start.movingMs < MIN_SPAN_MS) return null
 
@@ -104,12 +107,20 @@ class LivePaceTracker(private val stride: StepDistanceEstimator?) {
     }
 
     companion object {
+        /** The current-pace tile's window. */
         const val WINDOW_MS = 30_000L
+        /**
+         * The segment target's verdict: twice the tile's, so the GPS noise (~5 s per km over
+         * 30 s, correlated over ~20 s) swings it half as much and an even run gets no false hint.
+         */
+        const val VERDICT_WINDOW_MS = 60_000L
         const val MIN_SPAN_MS = 15_000L
         const val MIN_METERS = 10f
         const val MAX_PACE_MIN_PER_KM = 20f
-        /** A sample a second: the window and some slack for late ticks. */
-        private const val CAPACITY = 40
+        /** The longest window a caller may ask for. */
+        private const val MAX_WINDOW_MS = VERDICT_WINDOW_MS
+        /** A sample a second: the longest window and some slack for late ticks. */
+        private const val CAPACITY = 70
         private const val FRESH_MIN_MS = 5_000L
 
         /**

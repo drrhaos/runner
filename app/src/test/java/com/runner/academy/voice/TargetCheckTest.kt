@@ -19,8 +19,8 @@ import org.junit.Test
 
 /**
  * Architecture §04: the verdict, the hysteresis, the hold, the 30 s cooldown and the segment's
- * end. The hold is 15 s and the hysteresis 5 s per km, as tuned on the bench (`TargetReplayTest`):
- * with the planned 10 s and 3 s the cases read "the hint 10 s after the verdict".
+ * end. The hold is 15 s and the hysteresis 7 s per km, as the owner chose after the bench
+ * (`TargetReplayTest`); the planned 10 s and 3 s gave false hints on an even run.
  */
 class TargetCheckTest {
 
@@ -31,7 +31,7 @@ class TargetCheckTest {
 
     private fun pace(min: Int, sec: Int, approximate: Boolean = false) = LivePace(min + sec / 60f, approximate)
 
-    /** 18 s per km slower than 4:30: past the band (10) and the hysteresis (5). */
+    /** 18 s per km slower than 4:30: past the band (10) and the hysteresis (7). */
     private val slow = pace(4, 48)
 
     private fun fresh(bpm: Int) = HeartRateDisplay(bpm, HeartRateDisplay.Freshness.FRESH, HeartRateDisplay.LinkIcon.CONNECTED)
@@ -83,11 +83,11 @@ class TargetCheckTest {
     }
 
     @Test
-    fun `a pace swinging 4 38 to 4 45 - never a hint (hysteresis)`() {
-        val swinging = { sec: Int -> pace(4, 38 + (sec % 8)) }
+    fun `a pace swinging 4 38 to 4 47 - never a hint (hysteresis)`() {
+        val swinging = { sec: Int -> pace(4, 38 + (sec % 10)) }
 
         assertEquals(emptyList<Int>(), hintSeconds(15, 300, swinging))
-        assertEquals(IN, tick(301, pace = pace(4, 45)).state.verdict)
+        assertEquals(IN, tick(301, pace = pace(4, 47)).state.verdict)
     }
 
     @Test
@@ -97,7 +97,7 @@ class TargetCheckTest {
         assertEquals(IN, tick(17, pace = pace(4, 40)).state.verdict)
         assertEquals(IN, tick(18, pace = pace(4, 44)).state.verdict)
         assertEquals(IN, tick(19, pace = pace(4, 16)).state.verdict)
-        assertEquals(TOO_FAST, tick(20, pace = pace(4, 14)).state.verdict)
+        assertEquals(TOO_FAST, tick(20, pace = pace(4, 12)).state.verdict)
     }
 
     @Test

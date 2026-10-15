@@ -9,7 +9,6 @@ import com.runner.academy.voice.TargetVerdict
 import com.runner.academy.voice.VoiceLine
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -19,8 +18,7 @@ import org.robolectric.annotation.Config
  * The target check on the bench (architecture §04, acceptance after the `r4-live-pace` review):
  * the bench's default GPS noise (AR(1), ~1.3 m), seeds 1..10, GPS pace only. On 6 × 400 m hints
  * only on the repeats really off the target, and the voice and the segment bar on the same
- * segment on every tick. No false hints on an even run at the target or 5 s per km off it: not
- * met, see the ignored test.
+ * segment on every tick. No false hint on an even run at the target or 5 s per km off it.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -57,32 +55,17 @@ class TargetReplayTest {
         SEEDS.associateWith { seed -> evenRun(mps(min, sec), seed).hints().map { it.first / 1_000L } }
 
     /**
-     * The acceptance as written: not met. With the whole fallback (hold 10 → 15 s, hysteresis
-     * 3 → 5 s per km; a 20 s verdict window does not apply, the false hints come mid-run) seeds
-     * 1..10 still give: at 5:00 one hint (seed 8); at 5:05 one each on seeds 6 and 8; at 4:55
-     * 1–2 on 7 seeds. The 30 s pace swings ~5 s per km (1σ) with the error correlated over ~20 s,
-     * and the noise makes it ~2.5 s per km fast (4:55 reads 4:52.5). Escalated to the architect.
+     * The acceptance: 10 min even at the target, 5 s per km faster or slower, never a hint. It
+     * holds with the verdict over 60 s and a hysteresis of 7 s per km (owner, 2026-10-15); over
+     * the tile's 30 s with 5 s it did not (up to two false hints at 4:55, the noise reading
+     * ~2.5 s per km fast).
      */
-    @Ignore("Acceptance not met on the bench with the planned fallback knobs; escalated, see KDoc")
     @Test
     fun `10 min even at the target or 5 s per km off it - no hint on any seed`() {
         for ((min, sec) in listOf(5 to 0, 4 to 55, 5 to 5)) {
             val hints = evenHints(min, sec)
-            assertTrue("$min:$sec $hints", hints.values.all { it.isEmpty() })
-        }
-    }
-
-    /**
-     * What holds instead (a guard against going back): at most one false hint in 10 min at the
-     * target, at most two at 5 s per km off it, on every seed. The planned hold and hysteresis
-     * (10 s, 3 s) gave up to 6 at 4:55.
-     */
-    @Test
-    fun `10 min even at the target or 5 s per km off it - false hints stay rare`() {
-        for ((min, sec, most) in listOf(Triple(5, 0, 1), Triple(4, 55, 2), Triple(5, 5, 2))) {
-            val hints = evenHints(min, sec)
             println("target 5:00, run $min:${"%02d".format(sec)} - hint seconds by seed: $hints")
-            assertTrue("$min:$sec $hints", hints.values.all { it.size <= most })
+            assertTrue("$min:$sec $hints", hints.values.all { it.isEmpty() })
         }
     }
 

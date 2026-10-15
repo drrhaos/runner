@@ -104,7 +104,8 @@ class VoiceCoach {
                 segmentElapsedMs = s.segmentElapsedMs,
                 segmentRemainingMs = remainingMs,
                 target = target,
-                pace = input.livePace?.pace(sinceMovingMs = segmentStartMovingMs),
+                // The verdict's own 60 s window, not the tile's 30 s: half the swing of the noise
+                pace = input.livePace?.pace(sinceMovingMs = segmentStartMovingMs, windowMs = LivePaceTracker.VERDICT_WINDOW_MS),
                 heartRate = input.heartRate,
                 zones = input.zones,
                 toleranceSec = input.settings.paceToleranceSec,
