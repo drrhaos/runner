@@ -1,6 +1,8 @@
 package com.runner.academy.ui.trainingplan
 
 import android.content.Context
+import android.text.Spanned
+import android.text.style.TtsSpan
 import androidx.test.core.app.ApplicationProvider
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.SegmentKind
@@ -47,15 +49,43 @@ class TemplateSchemeFormatTest {
     }
 
     @Test
+    fun `the detailed scheme spells the zone out`() {
+        assertEquals(
+            "• Fast 03:00 · zone 4\n• Fast 03:00 @ 4:30",
+            formatTemplateSchemeDetailed(context, listOf(work.copy(targetHrZone = 4), work.copy(sortOrder = 1, targetPaceMinPerKm = 4.5f)))
+        )
+    }
+
+    @Test
     fun `both fields - the zone wins`() {
         assertEquals("Fast 03:00 · Z2", formatSegmentParams(context, work.copy(targetHrZone = 2, targetPaceMinPerKm = 4.5f)))
     }
 
     @Test
     fun `the zone field shows the range by the current maximum, or the zone alone`() {
-        assertEquals("Zone 4 · 152–170 bpm", formatSegmentZone(context, 4, HrZones(190)))
-        assertEquals("Zone 4", formatSegmentZone(context, 4, null))
+        assertEquals("Zone 4 · 152–170 bpm", formatSegmentZone(context, 4, HrZones(190)).toString())
+        assertEquals("Zone 4", formatSegmentZone(context, 4, null).toString())
     }
+
+    @Test
+    @Config(qualifiers = "ru")
+    fun `TalkBack hears the zone field bounds in words, not the dash`() {
+        assertEquals("Зона 4, от 152 до 170 уд/мин", spoken(formatSegmentZone(context, 4, HrZones(190))))
+        assertEquals(null, spoken(formatSegmentZone(context, 4, null)))
+    }
+
+    @Test
+    fun `TalkBack hears the picker rows bounds in words`() {
+        assertEquals(
+            "Zone 4, 152 to 170 beats per minute, threshold",
+            spoken(zonePickerItems(context, HrZones(190))[3])
+        )
+    }
+
+    /** What TalkBack says for [text]: the [TtsSpan] over it, null without one. */
+    private fun spoken(text: CharSequence): String? =
+        (text as? Spanned)?.getSpans(0, text.length, TtsSpan::class.java)?.singleOrNull()
+            ?.args?.getString(TtsSpan.ARG_TEXT)
 
     @Test
     @Config(qualifiers = "ru")
@@ -68,7 +98,7 @@ class TemplateSchemeFormatTest {
                 "Зона 4 · 152–170 уд/мин · пороговая",
                 "Зона 5 · 171–190 уд/мин · максимум"
             ),
-            zonePickerItems(context, HrZones(190))
+            zonePickerItems(context, HrZones(190)).map { it.toString() }
         )
     }
 

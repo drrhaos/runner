@@ -24,7 +24,11 @@ fun formatTemplateScheme(
     }
 }
 
-/** Multiline bullet list of segments with goals and optional pace. */
+/**
+ * Multiline bullet list of segments with goals and targets, for the scheme details dialog.
+ * The zone is spelled out ("zone 4"): the dialog text is what TalkBack reads, and in a
+ * detailed list the word reads better than the badge.
+ */
 fun formatTemplateSchemeDetailed(
     context: Context,
     segments: List<WorkoutTemplateSegment>
@@ -33,7 +37,7 @@ fun formatTemplateSchemeDetailed(
         return context.getString(R.string.template_scheme_empty)
     }
     return segments.joinToString("\n") { segment ->
-        "• ${formatSegmentParams(context, segment)}"
+        "• ${formatSegmentParams(context, segment, forA11y = true)}"
     }
 }
 

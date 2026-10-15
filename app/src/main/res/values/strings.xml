@@ -933,6 +933,10 @@
     <string name="segment_target_open_settings">Open settings</string>
     <string name="segment_dialog_zone_title">Heart rate zone</string>
     <string name="segment_zone_item">Zone %1$d · %2$d–%3$d bpm · %4$s</string>
+    <!-- For TalkBack. %3$s: the upper bound with hr_zone_bound_a11y -->
+    <string name="segment_target_zone_value_a11y">Zone %1$d, %2$d to %3$s</string>
+    <!-- For TalkBack. %3$s: the upper bound with hr_zone_bound_a11y; %4$s: hr_zone_name_N -->
+    <string name="segment_zone_item_a11y">Zone %1$d, %2$d to %3$s, %4$s</string>
     <string name="segment_target_zone_short">Z%1$d</string>
     <string name="segment_target_zone_a11y">zone %1$d</string>
     <string name="hr_zone_name_1">recovery</string>

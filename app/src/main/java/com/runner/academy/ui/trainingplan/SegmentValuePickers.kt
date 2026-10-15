@@ -1,6 +1,9 @@
 package com.runner.academy.ui.trainingplan
 
 import android.content.Context
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.TtsSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.NumberPicker
@@ -45,18 +48,38 @@ internal fun formatSegmentPace(context: Context, paceTotalSeconds: Int): String 
     return context.getString(R.string.segment_pace_format, minutes, seconds)
 }
 
-/** The zone field: "Zone 4 · 152–170 bpm" by the current maximum, or "Zone 4" with the zones off. */
-internal fun formatSegmentZone(context: Context, zone: Int, zones: HrZones?): String {
+/**
+ * The zone field: "Zone 4 · 152–170 bpm" by the current maximum, or "Zone 4" with the zones off.
+ * TalkBack hears the bounds in words ("Zone 4, 152 to 170 beats per minute"), not the dash.
+ */
+internal fun formatSegmentZone(context: Context, zone: Int, zones: HrZones?): CharSequence {
     if (zones == null) return context.getString(R.string.segment_target_zone_value_no_range, zone)
     val range = zones.range(zone)
-    return context.getString(R.string.segment_target_zone_value, zone, range.first, range.last)
+    return spokenAs(
+        context.getString(R.string.segment_target_zone_value, zone, range.first, range.last),
+        context.getString(R.string.segment_target_zone_value_a11y, zone, range.first, boundA11y(context, range.last))
+    )
 }
 
-/** Picker rows Z1..Z5: "Zone 4 · 152–170 bpm · threshold". */
-internal fun zonePickerItems(context: Context, zones: HrZones): List<String> =
+/** Picker rows Z1..Z5: "Zone 4 · 152–170 bpm · threshold", the bounds in words for TalkBack. */
+internal fun zonePickerItems(context: Context, zones: HrZones): List<CharSequence> =
     (1..HrZones.COUNT).map { zone ->
         val range = zones.range(zone)
-        context.getString(R.string.segment_zone_item, zone, range.first, range.last, context.getString(zoneNameRes(zone)))
+        val name = context.getString(zoneNameRes(zone))
+        spokenAs(
+            context.getString(R.string.segment_zone_item, zone, range.first, range.last, name),
+            context.getString(R.string.segment_zone_item_a11y, zone, range.first, boundA11y(context, range.last), name)
+        )
+    }
+
+/** "170 beats per minute" / «170 уд/мин», as the time-in-zones card says it. */
+private fun boundA11y(context: Context, bpm: Int): String =
+    context.resources.getQuantityString(R.plurals.hr_zone_bound_a11y, bpm, bpm)
+
+/** [text] on screen, [speech] for TalkBack (a [TtsSpan] over the whole text). */
+private fun spokenAs(text: String, speech: String): CharSequence =
+    SpannableString(text).apply {
+        setSpan(TtsSpan.TextBuilder(speech).build(), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     }
 
 @StringRes
