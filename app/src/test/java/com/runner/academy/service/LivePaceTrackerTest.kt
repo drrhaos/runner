@@ -97,6 +97,21 @@ class LivePaceTrackerTest {
     }
 
     @Test
+    fun `after the GPS is back the verdict window stays by steps for 60 s, the tile's for 30 s`() {
+        // GPS stale from 20 to 40 s, fresh again from 41
+        run(0, 70, fresh = { it !in 20..40 })
+        assertEquals(true, tracker.pace()?.approximate)
+        run(70, 71, startM = 70 * FIVE_MIN_MPS)
+        assertEquals(false, tracker.pace()?.approximate)
+        assertEquals(true, tracker.pace(windowMs = 60_000L)?.approximate)
+
+        run(71, 100, startM = 71 * FIVE_MIN_MPS)
+        assertEquals(true, tracker.pace(windowMs = 60_000L)?.approximate)
+        run(100, 101, startM = 100 * FIVE_MIN_MPS)
+        assertPace(5f, tracker.pace(windowMs = 60_000L), approximate = false)
+    }
+
+    @Test
     fun `the time since the last restart`() {
         assertEquals(0L, tracker.sinceRestartMs)
         run(0, 40)

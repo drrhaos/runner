@@ -131,7 +131,9 @@ class TargetReplayTest {
             val next = listOf(0.0) + beeps.drop(1)
             val moved = next.zip(starts).maxOf { (a, b) -> kotlin.math.abs(a - b) }
             starts = next
-            if (moved <= 1.0 || ++pass == MAX_PASSES) break
+            if (moved <= 1.0) break
+            // Not settled: the run would not follow its beeps, and the test would not mean much
+            assertTrue("seed $seed: the pace changes still move by $moved s after $MAX_PASSES passes", ++pass < MAX_PASSES)
         }
         return result
     }

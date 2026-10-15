@@ -119,6 +119,8 @@ class LivePaceTracker(private val stride: StepDistanceEstimator?) {
         /**
          * The segment target's verdict: twice the tile's, so the GPS noise (~5 s per km over
          * 30 s, correlated over ~20 s) swings it half as much and an even run gets no false hint.
+         * The price: a window with a stale tick in it goes by steps, so after the GPS comes back
+         * the verdict stays «≈» (and silent) for up to 60 s, while the tile has GPS after 30 s.
          */
         const val VERDICT_WINDOW_MS = 60_000L
         const val MIN_SPAN_MS = 15_000L
