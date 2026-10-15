@@ -57,7 +57,7 @@ class VoiceSettingsFragmentTest {
     private fun idle() = shadowOf(Looper.getMainLooper()).idle()
 
     private fun View.row(id: Int): View = findViewById(id)
-    private fun View.value(rowId: Int) = row(rowId).findViewById<TextView>(R.id.textView_value).text.toString()
+    private fun View.value(rowId: Int) = row(rowId).let { it.findViewById<TextView>(R.id.textView_choice_value) ?: it.findViewById(R.id.textView_metrics_value) }.text.toString()
     private fun View.click(id: Int) {
         row(id).performClick()
         idle()
@@ -214,7 +214,7 @@ class VoiceSettingsFragmentTest {
         assertFalse(checked(view.row(R.id.row_intervals_segment_change)))
         assertEquals(
             context.getString(R.string.voice_segment_change_label),
-            view.row(R.id.row_intervals_segment_change).findViewById<TextView>(R.id.textView_label).text.toString()
+            view.row(R.id.row_intervals_segment_change).findViewById<TextView>(R.id.textView_switch_label).text.toString()
         )
     }
 

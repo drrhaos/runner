@@ -64,12 +64,12 @@ class VoiceSettingsFragment : Fragment() {
         rowIntervalsSegmentChange.setTexts(R.string.voice_segment_change_label, R.string.voice_segment_change_hint)
         rowIntervalsTargetCheck.setTexts(R.string.voice_target_check_label, R.string.voice_target_check_hint)
         for (row in listOf(rowFreeSummary, rowIntervalsSummary)) {
-            row.textViewLabel.setText(R.string.voice_summary_label)
+            row.textViewChoiceLabel.setText(R.string.voice_summary_label)
         }
-        rowPaceTolerance.textViewLabel.setText(R.string.voice_pace_tolerance_label)
+        rowPaceTolerance.textViewChoiceLabel.setText(R.string.voice_pace_tolerance_label)
         for (row in listOf(rowFreeSummary, rowIntervalsSummary, rowPaceTolerance)) {
             // At 200 % the value wraps within half the row instead of squeezing the label
-            row.root.doOnLayout { row.textViewValue.maxWidth = it.width / 2 }
+            row.root.doOnLayout { row.textViewChoiceValue.maxWidth = it.width / 2 }
         }
 
         rowVoiceEnabled.root.onClickIfEnabled { viewModel.updateVoiceEnabled(!current.enabled) }
@@ -110,7 +110,7 @@ class VoiceSettingsFragment : Fragment() {
     }
 
     private fun showMetrics(row: LayoutVoiceMetricsRowBinding, profile: VoiceProfileRows) {
-        row.textViewValue.text = VoiceSettingsTexts.metricsLower(profile.metrics)
+        row.textViewMetricsValue.text = VoiceSettingsTexts.metricsLower(profile.metrics)
             .joinToString(", ") { getString(it) }
         row.textViewHrNote.visibility = if (profile.heartRateSkipped) View.VISIBLE else View.GONE
         row.root.setRowEnabled(profile.metricsEnabled)
@@ -118,14 +118,14 @@ class VoiceSettingsFragment : Fragment() {
 
     /** "Summary, every 1 km" as one group. */
     private fun LayoutVoiceChoiceRowBinding.showValue(value: String) {
-        textViewValue.text = value
-        root.contentDescription = textViewLabel.text.toString() + ", " + value
+        textViewChoiceValue.text = value
+        root.contentDescription = textViewChoiceLabel.text.toString() + ", " + value
     }
 
     /** The switch only shows the state; TalkBack hears it from the row, a checkable group. */
     private fun LayoutVoiceSwitchRowBinding.setTexts(label: Int, hint: Int) {
-        textViewLabel.setText(label)
-        textViewHint.setText(hint)
+        textViewSwitchLabel.setText(label)
+        textViewSwitchHint.setText(hint)
         ViewCompat.setAccessibilityDelegate(root, object : AccessibilityDelegateCompat() {
             override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
                 super.onInitializeAccessibilityNodeInfo(host, info)
