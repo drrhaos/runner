@@ -12,6 +12,7 @@ import com.runner.academy.voice.FakeVoiceOutput
 import com.runner.academy.voice.SummaryEvery
 import com.runner.academy.voice.SummaryMetric
 import com.runner.academy.voice.SummaryPart
+import com.runner.academy.voice.TargetVerdict
 import com.runner.academy.voice.VoiceLine
 import com.runner.academy.voice.VoiceSettings
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -196,6 +197,47 @@ class WorkoutServiceVoiceTest {
     private fun describeSegment(line: VoiceLine) = when (line) {
         is VoiceLine.SegmentUpcoming -> "next ${line.segment.title}"
         else -> "beep".takeIf { line == VoiceLine.SegmentStart } ?: line.toString()
+    }
+
+    @Test
+    fun `the session carries the service's segment and its verdict on the tick, voice off too`() {
+        val service = service()
+        val paced = listOf(segments[0].copy(targetPaceMinPerKm = 4.5f), segments[1])
+        service.onStartCommand(
+            Intent(app, WorkoutTrackingService::class.java)
+                .setAction(WorkoutTrackingService.ACTION_START_WORKOUT)
+                .putExtra(WorkoutTrackingService.EXTRA_INTERVAL_SEGMENTS_JSON, IntervalSegmentsJson.toJson(paced)),
+            0, 1
+        )
+        assertEquals(null, service.getCurrentSession().interval)
+
+        service.tickUntil(10)
+        val at10 = service.getCurrentSession().interval!!
+        assertEquals(0, at10.segmentIndex)
+        assertEquals(10_000L, at10.segmentElapsedMs)
+        assertEquals(TargetVerdict.PENDING, at10.target.verdict)
+        // No fix ever: no pace
+        service.tickUntil(30)
+        assertEquals(TargetVerdict.NO_DATA, service.getCurrentSession().interval!!.target.verdict)
+
+        // A manual pause keeps what the bar shows
+        service.pauseWorkout()
+        assertEquals(30_000L, service.getCurrentSession().interval!!.segmentElapsedMs)
+        service.resumeWorkout()
+
+        service.tickUntil(125)
+        val recovery = service.getCurrentSession().interval!!
+        assertEquals(1, recovery.segmentIndex)
+        assertEquals(TargetVerdict.NO_TARGET, recovery.target.verdict)
+        assertEquals(service.getIntervalCursor()?.segmentIndex, recovery.segmentIndex)
+    }
+
+    @Test
+    fun `a free run has no interval state`() {
+        val service = service()
+        service.startWorkout()
+        service.tickUntil(5)
+        assertEquals(null, service.getCurrentSession().interval)
     }
 
     @Test

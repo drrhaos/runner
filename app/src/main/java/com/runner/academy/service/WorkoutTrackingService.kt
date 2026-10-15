@@ -1155,7 +1155,8 @@ class WorkoutTrackingService : Service() {
      * On the 1 s workout timer, after the clock ticked: the segments advance and the summaries
      * come due without waiting for a fix (a silent GPS does not delay them). The settings are
      * read live: a change mid-run applies at once. A manual pause stops the timer, so the voice
-     * and the segments stand still.
+     * and the segments stand still. The segment and its target's verdict go to
+     * [WorkoutSession.interval] for the screen: this engine is the only one of a running workout.
      *
      * Status lines are not in the coach's list: they are events said where they happen. They
      * still come in the spec's order (beep → status → warning → summary): the beep is outside the
@@ -1179,9 +1180,15 @@ class WorkoutTrackingService : Service() {
                 avgPace = session.avgPace,
                 settings = settings,
                 heartRate = session.heartRateDisplay,
-                engine = engine
+                engine = engine,
+                livePace = livePaceTracker,
+                // Live: HRmax changed mid-run applies on the next tick
+                zones = if (engine != null) userPreferences.hrZones() else null,
+                speechBusy = voiceOutput?.busy == true
             )
         )
+        // The segment bar and the target indicator draw from this, not from an engine of their own
+        sessionManager.setInterval(result.interval)
         if (engine != null) {
             val cursor = engine.snapshot()
             val changed = cursor != intervalCursor
