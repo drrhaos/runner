@@ -69,7 +69,10 @@ class AndroidVoiceOutput(private val context: Context) : VoiceOutput {
     private var nextId = 0L
     private val releaseFocus = Runnable { if (pendingIds.isEmpty()) abandonFocus() }
 
-    override val busy: Boolean get() = pendingIds.isNotEmpty()
+    /** Not ready yet counts too: a target hint must not wait in [waiting] and come late. */
+    override val busy: Boolean get() = !ready || waiting.isNotEmpty() || pendingIds.isNotEmpty()
+
+    override val canSpeak: Boolean get() = tts != null
 
     init {
         tts = TextToSpeech(context) { status -> onInit(status) }.apply {

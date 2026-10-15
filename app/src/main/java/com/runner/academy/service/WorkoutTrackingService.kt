@@ -1180,6 +1180,8 @@ class WorkoutTrackingService : Service() {
             rebuildIntervalEngineFromMetadata()
             serviceIntervalEngine
         }
+        // Made (or released) before the coach decides: it needs to know whether speech can play
+        val output = voiceOutputFor(settings)
         val result = voiceCoach.onTick(
             CoachInput(
                 elapsedMs = session.currentTime,
@@ -1193,7 +1195,8 @@ class WorkoutTrackingService : Service() {
                 livePace = livePaceTracker,
                 // Live: HRmax changed mid-run applies on the next tick
                 zones = if (engine != null) userPreferences.hrZones() else null,
-                speechBusy = voiceOutput?.busy == true
+                speechBusy = output?.busy == true,
+                canSpeak = output?.canSpeak == true
             )
         )
         // The segment bar and the target indicator draw from this, not from an engine of their own
@@ -1206,7 +1209,7 @@ class WorkoutTrackingService : Service() {
             // silent GPS may bring none), so a restore neither repeats them nor goes back
             if (changed) maybeSaveCheckpoint(session, force = true)
         }
-        val output = voiceOutputFor(settings) ?: return
+        output ?: return
         result.lines.forEach(output::say)
     }
 

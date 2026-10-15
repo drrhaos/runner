@@ -27,8 +27,10 @@ data class CoachInput(
     val livePace: LivePaceTracker? = null,
     /** Null: the zones are off. */
     val zones: HrZones? = null,
-    /** Speech is playing or queued: a target hint is not said over it. */
-    val speechBusy: Boolean = false
+    /** Speech is playing or queued (or the engine is not ready): a target hint is not said over it. */
+    val speechBusy: Boolean = false,
+    /** The speech engine works ([VoiceOutput.canSpeak]); false: the hints go to the screen, as with the voice off. */
+    val canSpeak: Boolean = true
 )
 
 data class CoachResult(
@@ -115,7 +117,7 @@ class VoiceCoach {
             var due = false
             var voiced = false
             check.hint?.let { hint ->
-                val voiceSpeaksHints = input.settings.enabled && profile.targetCheck
+                val voiceSpeaksHints = input.settings.enabled && profile.targetCheck && input.canSpeak
                 when {
                     !voiceSpeaksHints -> due = true
                     lines.isEmpty() && !input.speechBusy -> {

@@ -11,6 +11,8 @@ class FakeVoiceOutput(private val onSay: (VoiceLine) -> Unit = {}) : VoiceOutput
 
     override var busy: Boolean = false
 
+    override var canSpeak: Boolean = true
+
     override fun say(line: VoiceLine) {
         lines += line
         onSay(line)

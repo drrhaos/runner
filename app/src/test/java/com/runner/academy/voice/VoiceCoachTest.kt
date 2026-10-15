@@ -281,6 +281,22 @@ class VoiceCoachTest {
     }
 
     @Test
+    fun `voice on but the speech engine dead - nothing said, the due hint left to the screen`() {
+        val engine = IntervalEngine(listOf(paced(0, 600, 4.5f)))
+        val tracker = LivePaceTracker(stride = null)
+
+        val ticks = (1..65).map { sec ->
+            val distanceM = sec * slow
+            tracker.onTick(sec * 1_000L, distanceM, steps = null, gpsFresh = true)
+            sec to coach.onTick(input(sec, distanceM, on, engine).copy(livePace = tracker, canSpeak = false))
+        }
+
+        assertEquals(emptyList<Int>(), ticks.hints())
+        assertEquals(listOf(31, 61), ticks.filter { it.second.interval!!.hintDue }.map { it.first })
+        assertTrue(ticks.none { it.second.interval!!.hintVoiced })
+    }
+
+    @Test
     fun `a free run has no interval state`() {
         assertEquals(null, coach.onTick(input(10)).interval)
     }
