@@ -130,7 +130,7 @@ class SettingsFragment : Fragment() {
         // Голосовые подсказки: свой экран, главный переключатель там
         binding.rowVoiceSettings.setOnClickListener {
             val navController = findNavController()
-            if (navController.currentDestination?.id == R.id.nav_settings) navController.navigate(R.id.nav_voice_settings)
+            if (navController.currentDestination?.id in NavDestinations.settings) navController.navigate(R.id.nav_voice_settings)
         }
         ViewCompat.replaceAccessibilityAction(
             binding.rowVoiceSettings,

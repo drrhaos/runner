@@ -59,7 +59,8 @@ class SettingsFragmentTest {
         context.getSharedPreferences(PairedSensorStore.PREFS_NAME, Context.MODE_PRIVATE).edit { clear() }
     }
 
-    private fun launch(): Pair<SettingsFragment, NavHostController> {
+    /** [from]: Settings from the drawer, or [R.id.nav_settings_from_editor]. */
+    private fun launch(from: Int = R.id.nav_settings): Pair<SettingsFragment, NavHostController> {
         val activity = Robolectric.buildActivity(AppCompatActivity::class.java).create().start().resume().get()
         activity.setTheme(R.style.Theme_Runner)
         val fragment = SettingsFragment()
@@ -67,7 +68,7 @@ class SettingsFragmentTest {
         val navController = NavHostController(activity).apply {
             navigatorProvider.addNavigator(RecordingNavigator())
             setGraph(R.navigation.mobile_navigation)
-            navigate(R.id.nav_settings)
+            navigate(from)
         }
         Navigation.setViewNavController(fragment.requireView(), navController)
         shadowOf(Looper.getMainLooper()).idle()
@@ -162,6 +163,15 @@ class SettingsFragmentTest {
         navController.popBackStack()
 
         assertEquals(R.id.nav_settings, navController.currentDestination?.id)
+    }
+
+    @Test
+    fun `the voice row opens the voice screen from the editor's Settings too`() {
+        val (fragment, navController) = launch(from = R.id.nav_settings_from_editor)
+
+        fragment.requireView().findViewById<View>(R.id.row_voice_settings).performClick()
+
+        assertEquals(R.id.nav_voice_settings, navController.currentDestination?.id)
     }
 
     @Test
