@@ -5,11 +5,15 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.text.TextPaint
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
 import com.runner.academy.data.SegmentGoalType
@@ -64,12 +68,23 @@ class SegmentProgressView @JvmOverloads constructor(
     private val dimColor = ContextCompat.getColor(context, R.color.segment_track_dim)
     private val currentStrokeColor = ContextCompat.getColor(context, R.color.segment_scheme_current_stroke)
 
+    /** The target's indicator under the current segment; null: none (no target, a preview). */
+    var target: TargetIndicatorLook? = null
+        private set
+    private var targetColor = 0
+    private var targetGlyph: Drawable? = null
+    private val targetPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+    private val targetRadiusPx = 6f * density
+    private val targetStrokePx = 1.5f * density
+    private val targetGlyphPx = 9f * density
+
     fun setSegments(segments: List<WorkoutTemplateSegment>) {
         this.segments = segments
         weights = FloatArray(segments.size) { i -> relativeWeight(segments[i]) }
         labels = Array(segments.size) { i -> shortLabel(segments, i) }
         currentIndex = 0
         currentProgress = 0f
+        setTarget(null)
         contentDescription = if (segments.isEmpty()) {
             null
         } else {
@@ -101,6 +116,31 @@ class SegmentProgressView @JvmOverloads constructor(
     fun setProgress(index: Int, progress: Float) {
         currentIndex = index.coerceAtLeast(0)
         currentProgress = progress.coerceIn(0f, 1f)
+        invalidate()
+    }
+
+    /**
+     * The target's verdict as a 12dp circle with its glyph in place of the current segment's
+     * label: filled, or a ring for a pace by steps. The bar itself keeps the segment's colours.
+     * TalkBack hears the verdict as the bar's state, set only when it changes; the scheme's
+     * description stays.
+     */
+    fun setTarget(look: TargetIndicatorLook?) {
+        if (look == target) return
+        target = look
+        if (look != null) {
+            targetColor = when (look.tone) {
+                TargetIndicatorLook.Tone.IN -> ContextCompat.getColor(context, R.color.target_in)
+                TargetIndicatorLook.Tone.OFF -> ContextCompat.getColor(context, R.color.target_off)
+                TargetIndicatorLook.Tone.NEUTRAL ->
+                    MaterialColors.getColor(this, com.google.android.material.R.attr.colorOnSurfaceVariant)
+            }
+            val glyphColor = if (look.outlined) targetColor else ContextCompat.getColor(context, R.color.target_glyph_on_fill)
+            targetGlyph = AppCompatResources.getDrawable(context, look.icon)?.mutate()?.apply { setTint(glyphColor) }
+        } else {
+            targetGlyph = null
+        }
+        ViewCompat.setStateDescription(this, look?.description)
         invalidate()
     }
 
@@ -161,13 +201,34 @@ class SegmentProgressView @JvmOverloads constructor(
                 }
             }
 
-            if (segW >= minLabelWidthPx) {
+            val look = target
+            if (index == currentIndex && look != null) {
+                // Drawn even on a segment narrower than a label, centred, past its edges if need be
+                drawTarget(canvas, look, x + segW / 2f, bottom + labelGapPx + labelAreaPx / 2f)
+            } else if (segW >= minLabelWidthPx) {
                 val label = labels[index]
                 if (label.isNotEmpty()) {
                     canvas.drawText(label, x + segW / 2f, labelY, labelPaint)
                 }
             }
             x += segW + gapPx
+        }
+    }
+
+    private fun drawTarget(canvas: Canvas, look: TargetIndicatorLook, cx: Float, cy: Float) {
+        targetPaint.color = targetColor
+        if (look.outlined) {
+            targetPaint.style = Paint.Style.STROKE
+            targetPaint.strokeWidth = targetStrokePx
+            canvas.drawCircle(cx, cy, targetRadiusPx - targetStrokePx / 2f, targetPaint)
+        } else {
+            targetPaint.style = Paint.Style.FILL
+            canvas.drawCircle(cx, cy, targetRadiusPx, targetPaint)
+        }
+        targetGlyph?.let { glyph ->
+            val half = targetGlyphPx / 2f
+            glyph.setBounds((cx - half).toInt(), (cy - half).toInt(), (cx + half).toInt(), (cy + half).toInt())
+            glyph.draw(canvas)
         }
     }
 

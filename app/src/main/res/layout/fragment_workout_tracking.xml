@@ -207,6 +207,18 @@
                 android:textColor="?attr/colorOnSurface"
                 android:visibility="gone" />
 
+            <!-- The segment target's verdict; TalkBack hears it as the bar's state -->
+            <TextView
+                android:id="@+id/textView_interval_target"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:gravity="center"
+                android:drawablePadding="4dp"
+                android:importantForAccessibility="no"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/textView_interval_progress_label"
                 android:layout_width="match_parent"
