@@ -3,8 +3,12 @@ package com.runner.academy.ui.workout
 import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.util.CalorieProfile
+import com.runner.academy.util.Calories
 import com.runner.academy.util.PaceMath
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Date
 
@@ -114,5 +118,42 @@ class WorkoutFormMapperTest {
         assertEquals(Date(1_800_000_000_000L), workout.date)
         assertEquals(null, workout.trackData)
         assertEquals("[]", workout.intervalSegmentsJson)
+    }
+
+    private val profile = CalorieProfile(weightKg = 70f, sex = CalorieProfile.Sex.MALE, ageYears = null)
+
+    @Test
+    fun autoCalories_newWorkout_wholeTimeMovingNoClimb() {
+        assertEquals(
+            Calories.estimate(profile, 5000f, 1_800_000L, climbM = null, avgHeartRate = null),
+            WorkoutFormMapper.autoCalories(profile, distanceKm = 5f, durationMs = 1_800_000L, original = null)
+        )
+    }
+
+    @Test
+    fun autoCalories_sameTime_keepsMovingTimeClimbAndHeartRate() {
+        val aged = profile.copy(ageYears = 40)
+        assertEquals(
+            Calories.estimate(aged, 10_000f, 3_300_000L, climbM = 120f, avgHeartRate = 150),
+            WorkoutFormMapper.autoCalories(aged, distanceKm = 10f, durationMs = 3_600_000L, original = original)
+        )
+    }
+
+    @Test
+    fun autoCalories_newTime_isAllMoving() {
+        assertEquals(
+            Calories.estimate(profile, 10_000f, 3_000_000L, climbM = 120f, avgHeartRate = 150),
+            WorkoutFormMapper.autoCalories(profile, distanceKm = 10f, durationMs = 3_000_000L, original = original)
+        )
+    }
+
+    @Test
+    fun caloriesAreAuto_whenEmptyOrComputedByEitherFormula() {
+        val auto = WorkoutFormMapper.autoCalories(profile, 10f, 3_600_000L, original)
+        assertTrue(WorkoutFormMapper.caloriesAreAuto(original.copy(calories = null), profile))
+        assertTrue(WorkoutFormMapper.caloriesAreAuto(original.copy(calories = auto), profile))
+        // Older versions saved distance × weight
+        assertTrue(WorkoutFormMapper.caloriesAreAuto(original.copy(calories = 700), profile))
+        assertFalse(WorkoutFormMapper.caloriesAreAuto(original.copy(calories = 650), profile))
     }
 }

@@ -225,11 +225,4 @@ object FormatUtils {
     fun calculatePaceMph(distanceKm: Float, durationMs: Long): Float {
         return SpeedPaceCalculator.segmentPaceMetric(durationMs, distanceKm, metric = false)
     }
-    
-    /**
-     * Вычисляет калории (приблизительно)
-     */
-    fun calculateCalories(distanceKm: Float, weightKg: Float = 70f): Int {
-        return (distanceKm * weightKg).toInt()
-    }
 }

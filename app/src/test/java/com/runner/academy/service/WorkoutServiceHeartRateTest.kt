@@ -11,6 +11,7 @@ import com.runner.academy.sensor.PairedSensor
 import com.runner.academy.sensor.SensorLink
 import com.runner.academy.sensor.SensorType
 import com.runner.academy.ui.tracking.LiveWorkoutBuilder
+import com.runner.academy.util.CalorieProfile
 import com.runner.academy.util.DerivationInput
 import com.runner.academy.util.TrackSanitizer
 import com.runner.academy.util.WorkoutDerivation
@@ -167,7 +168,8 @@ class WorkoutServiceHeartRateTest {
 
         val now = System.currentTimeMillis()
         val workout = LiveWorkoutBuilder.build(
-            LiveWorkoutBuilder.stopped(session, now), WorkoutType.EASY_RUN, null, null, null, 70f, now
+            LiveWorkoutBuilder.stopped(session, now), WorkoutType.EASY_RUN, null, null, null,
+            CalorieProfile(70f, CalorieProfile.Sex.MALE, null), now
         )!!
         val derived = WorkoutDerivation.derive(DerivationInput(workout.trackData, workout.type, workout.duration))
         assertEquals(150, derived.avgHeartRate)

@@ -6,12 +6,15 @@ import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.service.SessionClock
-import com.runner.academy.util.FormatUtils
+import com.runner.academy.util.CalorieProfile
+import com.runner.academy.util.Calories
+import com.runner.academy.util.DerivationInput
 import com.runner.academy.util.PaceMath
 import com.runner.academy.util.SpeedPaceCalculator
 import com.runner.academy.util.StepDistanceEstimator
 import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.TrackSanitizer
+import com.runner.academy.util.WorkoutDerivation
 import java.util.Date
 
 /**
@@ -38,6 +41,8 @@ object LiveWorkoutBuilder {
 
     /**
      * @param stepDistance the run's frozen stride ([WorkoutSession.strideModelState]), as live
+     * @param calorieProfile the runner for [Calories]; the climb and the average heart rate are the
+     *   shown track's, as the details screen derives them
      * @param stopAt the moment of Stop when the clock was not stopped yet
      * @return null when there is nothing to save (no time)
      */
@@ -47,7 +52,7 @@ object LiveWorkoutBuilder {
         manualDistanceKm: Float?,
         intervalSegmentsJson: String?,
         stepDistance: StepDistanceEstimator?,
-        userWeightKg: Float,
+        calorieProfile: CalorieProfile,
         stopAt: Long
     ): Workout? {
         val clock = SessionClock(session.clock)
@@ -106,6 +111,7 @@ object LiveWorkoutBuilder {
         } else {
             null
         }
+        val derived = trackDataJson?.let { WorkoutDerivation.derive(DerivationInput(it, workoutType, durationMs)) }
 
         return Workout(
             date = Date(session.startTime),
@@ -113,7 +119,9 @@ object LiveWorkoutBuilder {
             duration = durationMs,
             movingDuration = movingDurationMs,
             avgPace = PaceMath.avgPace(totalDistanceKm, movingDurationMs),
-            calories = FormatUtils.calculateCalories(totalDistanceKm, userWeightKg),
+            calories = Calories.estimate(
+                calorieProfile, totalDistanceMeters, movingDurationMs, derived?.elevationGain, derived?.avgHeartRate
+            ),
             notes = null,
             type = workoutType,
             trackData = trackDataJson,

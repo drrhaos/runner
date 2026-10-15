@@ -7,7 +7,11 @@ import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.service.SessionClock
+import com.runner.academy.util.CalorieProfile
+import com.runner.academy.util.Calories
+import com.runner.academy.util.DerivationInput
 import com.runner.academy.util.TrackDataJson
+import com.runner.academy.util.WorkoutDerivation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -22,6 +26,7 @@ class LiveWorkoutBuilderTest {
 
     private val t0 = 1_700_000_000_000L
     private fun at(sec: Int) = t0 + sec * 1_000L
+    private val profile = CalorieProfile(weightKg = 70f, sex = CalorieProfile.Sex.MALE, ageYears = null)
 
     /** 1 Hz points due north at 3 m/s for [seconds]. */
     private fun points(seconds: Int) = (0..seconds).map { s ->
@@ -38,7 +43,7 @@ class LiveWorkoutBuilderTest {
     )
 
     private fun build(session: WorkoutSession, stopAt: Long) = LiveWorkoutBuilder.build(
-        session, WorkoutType.EASY_RUN, null, null, null, 70f, stopAt
+        session, WorkoutType.EASY_RUN, null, null, null, profile, stopAt
     )!!
 
     @Test
@@ -135,5 +140,34 @@ class LiveWorkoutBuilderTest {
 
         assertEquals(ElevationSource.GPS, track.elevationSource)
         assertEquals(ElevationSource.GPS, ElevationSource.of(track))
+    }
+
+    @Test
+    fun `the saved calories add the climb of the shown track`() {
+        val climbing = (0..600).map { s ->
+            TrackPoint(55.75 + s * 3.0 / 111_320.0, 37.6, at(s), 5f, 3f, 150.0 + s * 0.1)
+        }
+        val session = session(SessionClock().apply { start(t0) }, 600_000L).copy(rawTrackDataPoints = climbing)
+        val workout = build(session, stopAt = at(600))
+
+        val derived = WorkoutDerivation.derive(DerivationInput(workout.trackData, workout.type, workout.duration))
+        val climb = derived.elevationGain!!
+        assertTrue("climb $climb", climb > 30f)
+        val expected = Calories.estimate(profile, workout.distance * 1000f, workout.movingDuration, climb, avgHeartRate = null)
+        assertEquals(expected, workout.calories)
+        assertTrue(expected > Calories.estimate(profile, workout.distance * 1000f, workout.movingDuration, null, null))
+    }
+
+    @Test
+    fun `the saved calories use the average heart rate with an age`() {
+        val withHr = (0..300).map { s ->
+            TrackPoint(55.75 + s * 3.0 / 111_320.0, 37.6, at(s), 5f, 3f, 150.0, heartRate = 160)
+        }
+        val session = session(SessionClock().apply { start(t0) }, 300_000L).copy(rawTrackDataPoints = withHr)
+        val aged = profile.copy(ageYears = 40)
+        val workout = LiveWorkoutBuilder.build(session, WorkoutType.EASY_RUN, null, null, null, aged, at(300))!!
+
+        val expected = Calories.estimate(aged, workout.distance * 1000f, workout.movingDuration, null, avgHeartRate = 160)
+        assertEquals(expected, workout.calories)
     }
 }

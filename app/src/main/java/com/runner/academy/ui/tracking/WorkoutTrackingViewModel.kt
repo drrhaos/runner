@@ -459,7 +459,7 @@ class WorkoutTrackingViewModel(
             manualDistanceKm = manualDistanceKm,
             intervalSegmentsJson = intervalSegmentsJson,
             stepDistance = stepDistance,
-            userWeightKg = userPrefs.userWeight,
+            calorieProfile = userPrefs.calorieProfile(),
             stopAt = System.currentTimeMillis()
         )
         if (workout == null) {

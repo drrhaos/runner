@@ -289,7 +289,7 @@ class WorkoutTrackingService : Service() {
         }
     }
 
-    // User preferences for calorie calculation / voice
+    // User preferences for calories / voice
     private lateinit var userPreferences: UserPreferences
 
     inner class WorkoutTrackingBinder : Binder() {
@@ -472,7 +472,6 @@ class WorkoutTrackingService : Service() {
                         trackPoints = result.trackPoints,
                         trackDataPoints = result.trackDataPoints,
                         rawTrackDataPoints = result.rawTrackDataPoints,
-                        userWeightKg = userPreferences.userWeight,
                         currentLocation = result.filteredLocation,
                         gpsStatus = if (unreliable) GpsStatus.UNRELIABLE else GpsStatus.FOUND
                     )
@@ -520,7 +519,6 @@ class WorkoutTrackingService : Service() {
                             trackPoints = result.trackPoints,
                             trackDataPoints = result.trackDataPoints,
                             addedDistanceMeters = result.distanceDeltaMeters,
-                            userWeightKg = userPreferences.userWeight,
                             gpsStatus = statusOverride
                         )
                     } else {
@@ -530,7 +528,6 @@ class WorkoutTrackingService : Service() {
                             currentLocation = lastLocation ?: location,
                             rawTrackDataPoints = result.rawTrackDataPoints,
                             addedDistanceMeters = result.distanceDeltaMeters,
-                            userWeightKg = userPreferences.userWeight,
                             gpsStatus = statusOverride
                         )
                     }
@@ -1532,6 +1529,7 @@ class WorkoutTrackingService : Service() {
         tickAutoPause()
         // Advance clock without fan-out to checkpoint; UI + notification only
         sessionManager.tickElapsedTime(broadcast = false, now = sessionClockMs())
+        sessionManager.updateCalories(userPreferences.calorieProfile())
         tickLivePace()
         tickVoice()
         val session = sessionManager.getSession()
@@ -1575,7 +1573,7 @@ class WorkoutTrackingService : Service() {
         // Monotonic, like the fixes' elapsedRealtime the filter measures a silence against
         val added = gpsProcessor.countSilence(SystemClock.elapsedRealtime(), tracker.steps, tracker.cadence)
         sessionManager.setOpenStepMeters(gpsProcessor.pendingStepMeters)
-        sessionManager.addStepDistance(added, userPreferences.userWeight)
+        sessionManager.addStepDistance(added)
     }
 
     /**

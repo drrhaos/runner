@@ -20,7 +20,6 @@ class WorkoutSessionManagerStepsTest {
             currentLocation = Location("test"),
             rawTrackDataPoints = emptyList(),
             addedDistanceMeters = 250f,
-            userWeightKg = 70f,
             gpsStatus = GpsStatus.UNRELIABLE
         )
 
@@ -40,9 +39,9 @@ class WorkoutSessionManagerStepsTest {
 
     @Test
     fun `an accepted fix keeps the unreliable status while the latch holds`() {
-        manager.updateMetricsFromLocation(10f, emptyList(), emptyList(), emptyList(), 70f, gpsStatus = GpsStatus.UNRELIABLE)
+        manager.updateMetricsFromLocation(10f, emptyList(), emptyList(), emptyList(), gpsStatus = GpsStatus.UNRELIABLE)
         assertEquals(GpsStatus.UNRELIABLE, manager.getSession().gpsStatus)
-        manager.updateMetricsFromLocation(10f, emptyList(), emptyList(), emptyList(), 70f)
+        manager.updateMetricsFromLocation(10f, emptyList(), emptyList(), emptyList())
         assertEquals(GpsStatus.FOUND, manager.getSession().gpsStatus)
     }
 }

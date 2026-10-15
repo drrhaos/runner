@@ -5,8 +5,10 @@ import com.runner.academy.data.IntervalLive
 import com.runner.academy.data.LivePace
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.sensor.HeartRateDisplay
-import com.runner.academy.util.FormatUtils
+import com.runner.academy.util.CalorieProfile
+import com.runner.academy.util.Calories
 import com.runner.academy.util.SpeedPaceCalculator
+import com.runner.academy.util.TrackHeartRate
 
 /**
  * Manages workout session state, metrics aggregation, and timer logic.
@@ -14,7 +16,7 @@ import com.runner.academy.util.SpeedPaceCalculator
  * Responsibilities:
  *  - Start / pause / resume / stop transitions
  *  - Elapsed time tracking via periodic ticks
- *  - Distance, speed, pace, calories aggregation from processed GPS data
+ *  - Distance, speed, pace aggregation from processed GPS data; calories on the timer
  *  - Track point collection within the session
  *  - Provide immutable snapshots of the current session state
  */
@@ -188,18 +190,28 @@ class WorkoutSessionManager {
     }
 
     /**
+     * [WorkoutSession.calories] from the distance, the moving time and the average heart rate of
+     * the points so far ([Calories]; no climb live, the save adds it). On the timer's tick, so
+     * the moving time counts between fixes; no listeners: the tick pushes the session itself.
+     */
+    fun updateCalories(profile: CalorieProfile) {
+        val avgHeartRate = TrackHeartRate.average(session.trackDataPoints, clock.pauses())
+        val calories = Calories.estimate(profile, session.distance * 1000f, session.movingTime, climbM = null, avgHeartRate)
+        if (session.calories != calories) session = session.copy(calories = calories)
+    }
+
+    /**
      * Distance counted by steps while no fix arrives (a silence, see
      * [GpsLocationProcessor.countSilence]).
      */
-    fun addStepDistance(addedMeters: Float, userWeightKg: Float) {
+    fun addStepDistance(addedMeters: Float) {
         if (addedMeters <= 0f) return
         val newDistance = session.distance + addedMeters / 1000f
         val avgSpeed = SpeedPaceCalculator.computeAverageSpeedKmH(newDistance.toDouble(), session.movingTime)
         session = session.copy(
             distance = newDistance,
             avgSpeed = avgSpeed,
-            avgPace = SpeedPaceCalculator.computePaceRaw(avgSpeed),
-            calories = FormatUtils.calculateCalories(newDistance, userWeightKg)
+            avgPace = SpeedPaceCalculator.computePaceRaw(avgSpeed)
         )
         notifyChanged()
     }
@@ -216,14 +228,12 @@ class WorkoutSessionManager {
      * @param trackPoints Updated display track points list.
      * @param trackDataPoints Updated data track points list.
      * @param rawTrackDataPoints Updated raw track points list.
-     * @param userWeightKg User weight for calorie calculation.
      */
     fun updateMetricsFromLocation(
         segmentDistanceMeters: Float,
         trackPoints: List<org.osmdroid.util.GeoPoint>,
         trackDataPoints: List<com.runner.academy.data.TrackPoint>,
         rawTrackDataPoints: List<com.runner.academy.data.TrackPoint>,
-        userWeightKg: Float,
         currentLocation: android.location.Location? = null,
         gpsStatus: GpsStatus = GpsStatus.FOUND
     ) {
@@ -236,7 +246,6 @@ class WorkoutSessionManager {
         val avgSpeed = SpeedPaceCalculator.computeAverageSpeedKmH(newDistance.toDouble(), session.movingTime)
         val currentPace = SpeedPaceCalculator.computePaceRaw(currentSpeed)
         val avgPace = SpeedPaceCalculator.computePaceRaw(avgSpeed)
-        val calories = FormatUtils.calculateCalories(newDistance, userWeightKg)
 
         session = session.copy(
             currentLocation = currentLocation ?: session.currentLocation,
@@ -248,7 +257,6 @@ class WorkoutSessionManager {
             avgSpeed = avgSpeed,
             currentPace = currentPace,
             avgPace = avgPace,
-            calories = calories,
             gpsStatus = gpsStatus
         )
         lastUpdateTime = currentTime
@@ -267,7 +275,6 @@ class WorkoutSessionManager {
         trackPoints: List<org.osmdroid.util.GeoPoint>? = null,
         trackDataPoints: List<com.runner.academy.data.TrackPoint>? = null,
         addedDistanceMeters: Float = 0f,
-        userWeightKg: Float = 0f,
         gpsStatus: GpsStatus? = null
     ) {
         var updated = session.copy(
@@ -283,8 +290,7 @@ class WorkoutSessionManager {
             updated = updated.copy(
                 distance = newDistance,
                 avgSpeed = avgSpeed,
-                avgPace = SpeedPaceCalculator.computePaceRaw(avgSpeed),
-                calories = FormatUtils.calculateCalories(newDistance, userWeightKg)
+                avgPace = SpeedPaceCalculator.computePaceRaw(avgSpeed)
             )
         }
         session = updated

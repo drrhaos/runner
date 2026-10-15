@@ -205,6 +205,10 @@ class UserPreferences(context: Context) {
     fun hrZones(today: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault()): HrZones? =
         hrMax(today, zone)?.zones
 
+    /** Вес, пол и возраст для формул калорий ([Calories]). */
+    fun calorieProfile(today: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault()): CalorieProfile =
+        CalorieProfile.of(userWeight, userGender, userBirthDate, today, zone)
+
     /** Разрешение ACTIVITY_RECOGNITION уже запрашивалось — повторно автоматически не спрашиваем. */
     var stepPermissionAsked: Boolean
         get() = prefs.getBoolean(KEY_STEP_PERMISSION_ASKED, false)

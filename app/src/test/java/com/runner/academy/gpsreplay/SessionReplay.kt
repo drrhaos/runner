@@ -22,6 +22,7 @@ import kotlinx.coroutines.cancel
 import com.runner.academy.service.WorkoutSessionManager
 import com.runner.academy.ui.tracking.LiveWorkoutBuilder
 import com.runner.academy.data.WorkoutTemplateSegment
+import com.runner.academy.util.CalorieProfile
 import com.runner.academy.util.HrZones
 import com.runner.academy.util.IntervalEngine
 import com.runner.academy.util.IntervalSegmentsJson
@@ -45,7 +46,8 @@ data class ReplaySettings(
     /** The run's frozen stride for bridges, as the service gives the processor. */
     val stepDistance: StepDistanceEstimator? = null,
     val type: WorkoutType = WorkoutType.EASY_RUN,
-    val userWeightKg: Float = 70f,
+    /** `userPreferences.calorieProfile()` the timer and the save read. */
+    val calorieProfile: CalorieProfile = CalorieProfile(weightKg = 70f, sex = CalorieProfile.Sex.MALE, ageYears = null),
     /** The workout's segments, as the service gets them; an interval workout (no auto-pause). */
     val segments: List<WorkoutTemplateSegment>? = null,
     /** The voice settings the service reads on each tick; on by default on the bench. */
@@ -292,7 +294,7 @@ object SessionReplay {
         }
 
         /**
-         * The 1 s timer: `countSilenceBySteps()`, `tickAutoPause()`, then `tickElapsedTime`.
+         * The 1 s timer: `countSilenceBySteps()`, `tickAutoPause()`, then `tickElapsedTime` and `updateCalories`.
          * The watchdog runs on its own 2 s loop, modelled here on every second tick.
          */
         fun tick(now: Long) {
@@ -300,10 +302,11 @@ object SessionReplay {
             trackerSteps(now)?.let { (steps, cadence) ->
                 val added = processor.countSilence(now, steps, cadence)
                 manager.setOpenStepMeters(processor.pendingStepMeters)
-                manager.addStepDistance(added, settings.userWeightKg)
+                manager.addStepDistance(added)
             }
             tickAutoPause(now)
             manager.tickElapsedTime(broadcast = false, now = now)
+            manager.updateCalories(settings.calorieProfile)
             tickLivePace(now)
             tickVoice(now)
         }
@@ -413,7 +416,6 @@ object SessionReplay {
                     trackPoints = result.trackPoints,
                     trackDataPoints = result.trackDataPoints,
                     rawTrackDataPoints = result.rawTrackDataPoints,
-                    userWeightKg = settings.userWeightKg,
                     currentLocation = result.filteredLocation,
                     gpsStatus = GpsStatus.FOUND
                 )
@@ -427,14 +429,12 @@ object SessionReplay {
                         rawTrackDataPoints = result.rawTrackDataPoints,
                         trackPoints = result.trackPoints,
                         trackDataPoints = result.trackDataPoints,
-                        addedDistanceMeters = result.distanceDeltaMeters,
-                        userWeightKg = settings.userWeightKg
+                        addedDistanceMeters = result.distanceDeltaMeters
                     )
                     else -> manager.updateLocationOnly(
                         currentLocation = session.currentLocation ?: location,
                         rawTrackDataPoints = result.rawTrackDataPoints,
-                        addedDistanceMeters = result.distanceDeltaMeters,
-                        userWeightKg = settings.userWeightKg
+                        addedDistanceMeters = result.distanceDeltaMeters
                     )
                 }
             }
@@ -532,7 +532,7 @@ object SessionReplay {
                 manualDistanceKm = null,
                 intervalSegmentsJson = null,
                 stepDistance = settings.stepDistance,
-                userWeightKg = settings.userWeightKg,
+                calorieProfile = settings.calorieProfile,
                 stopAt = now
             ) ?: error("nothing saved")
             return SessionReplayResult(

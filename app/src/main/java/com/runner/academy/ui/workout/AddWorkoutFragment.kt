@@ -27,7 +27,6 @@ import com.runner.academy.data.displayName
 import com.runner.academy.databinding.DialogRoutePickerBinding
 import com.runner.academy.databinding.FragmentAddWorkoutBinding
 import com.runner.academy.util.ErrorHandler
-import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.WorkoutTrackRebuilder
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -197,11 +196,14 @@ class AddWorkoutFragment : Fragment() {
     }
 
     private fun setupCaloriesAutoCalculation() {
-        binding.editTextDistance.doAfterTextChanged { text ->
-            if (!form.caloriesAuto) return@doAfterTextChanged
-            val distance = text?.toString()?.toFloatOrNull() ?: return@doAfterTextChanged
-            setCaloriesText(calculateCalories(distance).toString())
-        }
+        // Дистанция и время: калории зависят от времени в движении, не только от дистанции.
+        listOf(binding.editTextDistance, binding.editTextHours, binding.editTextMinutes, binding.editTextSeconds)
+            .forEach { field ->
+                field.doAfterTextChanged {
+                    // Загрузка тренировки не пересчитывает: сохранённые калории не меняются без правки.
+                    if (form.caloriesAuto && !isBindingFields) recomputeCalories()
+                }
+            }
         binding.editTextCalories.doAfterTextChanged { text ->
             if (isBindingFields) return@doAfterTextChanged
             // Ручной ввод отключает автоподсчёт; пустое поле возвращает его.
@@ -218,8 +220,16 @@ class AddWorkoutFragment : Fragment() {
         }
     }
 
-    private fun calculateCalories(distanceKm: Float): Int =
-        FormatUtils.calculateCalories(distanceKm, requireContext().appContainer().userPreferences.userWeight)
+    private fun recomputeCalories() {
+        val distance = binding.editTextDistance.text?.toString()?.toFloatOrNull() ?: return
+        val seconds = listOf(binding.editTextHours to 3600, binding.editTextMinutes to 60, binding.editTextSeconds to 1)
+            .sumOf { (field, unit) -> (field.text?.toString()?.toIntOrNull() ?: 0) * unit }
+        if (seconds <= 0) return
+        val calories = WorkoutFormMapper.autoCalories(calorieProfile(), distance, seconds * 1000L, form.originalWorkout)
+        setCaloriesText(calories.toString())
+    }
+
+    private fun calorieProfile() = requireContext().appContainer().userPreferences.calorieProfile()
 
     private fun loadExistingWorkout() {
         viewLifecycleOwner.lifecycleScope.launch {
@@ -261,9 +271,8 @@ class AddWorkoutFragment : Fragment() {
         form.selectedDate = workout.date
         form.selectedType = workout.type
         form.selectedTrackDataJson = workout.trackData
-        // Калории, совпадающие с авторасчётом, продолжают пересчитываться от дистанции.
-        form.caloriesAuto = workout.calories == null ||
-            workout.calories == calculateCalories(workout.distance)
+        // Калории, совпадающие с авторасчётом, продолжают пересчитываться от дистанции и времени.
+        form.caloriesAuto = WorkoutFormMapper.caloriesAreAuto(workout, calorieProfile())
 
         isBindingFields = true
         try {
