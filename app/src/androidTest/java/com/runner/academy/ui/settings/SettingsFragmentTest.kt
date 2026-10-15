@@ -37,9 +37,9 @@ class SettingsFragmentTest {
         onView(withId(R.id.textView_unit_system_value))
             .check(matches(isDisplayed()))
         
-        onView(withId(R.id.switch_voice_feedback))
+        onView(withId(R.id.row_voice_settings))
             .check(matches(isDisplayed()))
-        
+
         onView(withId(R.id.button_reset_settings))
             .check(matches(isDisplayed()))
     }
@@ -111,12 +111,12 @@ class SettingsFragmentTest {
     }
 
     @Test
-    fun voice_feedback_switch_should_be_clickable() {
+    fun voice_settings_row_should_be_clickable() {
         // Given
         val scenario = launchFragmentInContainer<SettingsFragment>(themeResId = R.style.Theme_Runner)
 
         // When & Then
-        onView(withId(R.id.switch_voice_feedback))
+        onView(withId(R.id.row_voice_settings))
             .check(matches(isDisplayed()))
             .check(matches(isClickable()))
     }
