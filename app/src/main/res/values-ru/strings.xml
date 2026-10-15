@@ -199,6 +199,9 @@
     <string name="track_info_average_speed_label_miles">Средняя скорость (миль/ч)</string>
     <string name="track_info_current_pace_label_km">Текущий темп (мин/км)</string>
     <string name="track_info_current_pace_label_miles">Текущий темп (мин/милю)</string>
+    <string name="tracking_pace_tile_a11y">Текущий темп: %1$s</string>
+    <string name="tracking_pace_tile_approx_a11y">Текущий темп приблизительно, по шагам: %1$s</string>
+    <string name="tracking_pace_tile_no_data_a11y">Текущий темп: нет данных</string>
     <string name="track_info_average_pace_label_km">Средний темп (мин/км)</string>
     <string name="track_info_average_pace_label_miles">Средний темп (мин/милю)</string>
     <string name="track_info_calories_label">Калории (ккал)</string>
