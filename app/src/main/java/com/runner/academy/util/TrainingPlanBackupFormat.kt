@@ -30,9 +30,7 @@ object TrainingPlanBackupFormat {
         val goalType: String = SegmentGoalType.DURATION.name,
         val durationMs: Long? = null,
         val distanceMeters: Float? = null,
-        val targetPaceMinPerKm: Float? = null,
-        /** Heart rate zone 1..5; additive in format 1, older readers ignore it. */
-        val targetHrZone: Int? = null
+        val targetPaceMinPerKm: Float? = null
     )
 
     data class TemplateDto(
