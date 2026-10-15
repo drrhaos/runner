@@ -35,6 +35,13 @@ Current release: **`v.0.1.5`**.
 - Heart rate is stored in every track point: average and maximum in details and on a chart, in GPX export and import (including other apps' tracks with heart rate)
 - The sensor link survives drop-outs, Bluetooth being switched off and an app restart mid-workout; Android 12+ needs the "Nearby devices" permission, without it the workout runs without heart rate
 - GPS diagnostics record sensor events (connection, drop-outs, battery, signal strength)
+- A Voice coaching screen replaces the single switch: two profiles — "Runs without segments" and "Intervals" (picked automatically by whether the workout has segments). A summary every 0.5 / 1 / 2 / 5 km or 1 / 5 / 10 / 15 min; what to say — time, distance, average pace, pace and average heart rate over the summary stretch, current heart rate. Summaries are off by default in intervals
+- The voice speaks on time even without GPS (a summary "every N minutes", a timed segment ending in a tunnel); music is ducked while it speaks, lines don't pile up during a call; the segment beep is heard in silent mode too; no extra summary or repeated beep after an app restart
+- Current pace is smoothed over 30 s; when GPS drops out it comes from steps and shows as "≈ 4:52"
+- Heart rate zones: 5 zones from the maximum heart rate (220 − age or set by hand in settings). The zone on the heart rate tile, a "Time in zones" card and a zone-coloured heart rate chart in details; older workouts are recalculated when the maximum changes
+- A segment target is a pace or a heart rate zone: "None / Pace / Zone" in the template editor, "Zone 4" in the 30-s warning
+- Target cues in intervals: "Speed up, pace …" / "Slow down…" / "Above zone, heart rate …" at most every 30 s, and an indicator under the current segment; pace tolerance in settings (±10 s/km by default). The cue pace is averaged over 60 s, so a noisy GPS gives no false cues; no voice cues on a step-based pace
+- Heart rate and cadence charts no longer start at zero
 
 ## 0.1.5a1 — `v.0.1.5a1`
 
