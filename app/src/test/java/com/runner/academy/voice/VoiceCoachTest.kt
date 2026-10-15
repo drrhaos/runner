@@ -151,8 +151,8 @@ class VoiceCoachTest {
     private fun paced(sortOrder: Int, sec: Int, paceMinPerKm: Float?, kind: SegmentKind = SegmentKind.WORK) =
         timed(sortOrder, sec, kind).copy(targetPaceMinPerKm = paceMinPerKm)
 
-    /** 4:45 per km all along: 1 000 / 285 m a second. */
-    private val slow = 1_000f / 285f
+    /** 4:48 per km all along (18 s off a 4:30 target): 1 000 / 288 m a second. */
+    private val slow = 1_000f / 288f
 
     /**
      * Ticks [from]..[to] at [mps] with a live-pace tracker fed like the service's; the results,
@@ -178,29 +178,29 @@ class VoiceCoachTest {
         filter { (_, r) -> r.lines.any { it is VoiceLine.TargetHint } }.map { it.first }
 
     @Test
-    fun `a 4 30 target run at 4 45 - too slow once the window is full, the hint 10 s later and every 30 s`() {
+    fun `a 4 30 target run at 4 48 - too slow once the window is full, the hint after the hold and every 30 s`() {
         val engine = IntervalEngine(listOf(paced(0, 600, 4.5f)))
 
-        val ticks = runTarget(engine, to = 90)
+        val ticks = runTarget(engine, to = 95)
 
         // The first tick is at 1 s, so the 15 s window is full at 16 s
-        assertEquals(listOf(26, 56, 86), ticks.hints())
-        val at26 = ticks.single { it.first == 26 }.second
-        val hint = at26.lines.single() as VoiceLine.TargetHint
+        assertEquals(listOf(31, 61, 91), ticks.hints())
+        val at31 = ticks.single { it.first == 31 }.second
+        val hint = at31.lines.single() as VoiceLine.TargetHint
         assertEquals(TargetVerdict.TOO_SLOW, hint.verdict)
-        assertEquals(4.75f, hint.pace!!, 0.01f)
+        assertEquals(4.8f, hint.pace!!, 0.01f)
         assertEquals(TargetVerdict.PENDING, ticks.single { it.first == 15 }.second.interval!!.target.verdict)
         assertEquals(TargetVerdict.TOO_SLOW, ticks.single { it.first == 16 }.second.interval!!.target.verdict)
-        val live = at26.interval!!
+        val live = at31.interval!!
         assertEquals(0, live.segmentIndex)
-        assertEquals(26_000L, live.segmentElapsedMs)
+        assertEquals(31_000L, live.segmentElapsedMs)
         assertTrue(live.hintDue && live.hintVoiced)
-        assertTrue(ticks.filter { it.first !in listOf(26, 56, 86) }.none { it.second.interval!!.hintDue })
+        assertTrue(ticks.filter { it.first !in listOf(31, 61, 91) }.none { it.second.interval!!.hintDue })
     }
 
     @Test
     fun `the warning and the summary in one tick - the hint drops, and plays on the first quiet tick`() {
-        // The warning and a minute summary at 60 s (a 90 s segment); the hint is due from 25 s on
+        // The warning and a minute summary at 60 s (a 90 s segment); the hint is due from 31 s on
         // but the speech is busy until 60 s and while those two are said (61–63)
         val settings = on.copy(intervals = on.intervals.copy(summary = SummaryEvery.MIN_1))
         val engine = IntervalEngine(listOf(paced(0, 90, 4.5f), paced(1, 600, 4.5f)))
@@ -218,8 +218,8 @@ class VoiceCoachTest {
 
     @Test
     fun `the last 10 s of a segment - no hint`() {
-        // A 36 s segment: the hold ends at 26 (10 s left: none), the next segment has no target
-        val engine = IntervalEngine(listOf(paced(0, 36, 4.5f), paced(1, 600, null, SegmentKind.RECOVERY)))
+        // A 41 s segment: the hold ends at 31 (10 s left: none), the next segment has no target
+        val engine = IntervalEngine(listOf(paced(0, 41, 4.5f), paced(1, 600, null, SegmentKind.RECOVERY)))
 
         val ticks = runTarget(engine, to = 120)
 
@@ -231,10 +231,10 @@ class VoiceCoachTest {
     fun `voice off - the verdict and the due hint for the screen, nothing said`() {
         val engine = IntervalEngine(listOf(paced(0, 600, 4.5f)))
 
-        val ticks = runTarget(engine, to = 60, settings = on.copy(enabled = false))
+        val ticks = runTarget(engine, to = 65, settings = on.copy(enabled = false))
 
         assertTrue(ticks.all { it.second.lines.isEmpty() })
-        assertEquals(listOf(26, 56), ticks.filter { it.second.interval!!.hintDue }.map { it.first })
+        assertEquals(listOf(31, 61), ticks.filter { it.second.interval!!.hintDue }.map { it.first })
         assertTrue(ticks.none { it.second.interval!!.hintVoiced })
     }
 
@@ -243,10 +243,10 @@ class VoiceCoachTest {
         val settings = on.copy(intervals = on.intervals.copy(targetCheck = false))
         val engine = IntervalEngine(listOf(paced(0, 600, 4.5f)))
 
-        val ticks = runTarget(engine, to = 60, settings = settings)
+        val ticks = runTarget(engine, to = 65, settings = settings)
 
         assertEquals(listOf(1), ticks.filter { it.second.lines.isNotEmpty() }.map { it.first })
-        assertEquals(listOf(26, 56), ticks.filter { it.second.interval!!.hintDue }.map { it.first })
+        assertEquals(listOf(31, 61), ticks.filter { it.second.interval!!.hintDue }.map { it.first })
     }
 
     @Test
