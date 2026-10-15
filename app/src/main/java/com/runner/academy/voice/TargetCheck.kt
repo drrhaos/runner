@@ -162,8 +162,12 @@ class TargetCheck {
         const val PACE_HYST_SEC = 3f
         /** A zone verdict leaves "in" only this far past a bound, bpm. */
         const val ZONE_HYST_BPM = 2
-        /** No pace this early in a segment is pending, not no data: the window is not full yet. */
-        const val PACE_PENDING_MS = 15_000L
+        /**
+         * No pace this early in a segment is pending, not no data: the window is not full yet. It
+         * needs 15 s ([com.runner.academy.service.LivePaceTracker.MIN_SPAN_MS]) from its first
+         * tick, up to a second after the start; the rest is slack, so "no pace" never flickers.
+         */
+        const val PACE_PENDING_MS = 20_000L
         /** The heart rate lags the effort: a zone is pending this long into its segment. */
         const val ZONE_GRACE_MS = 45_000L
         /** An off verdict is held this long before the voice says it. */
