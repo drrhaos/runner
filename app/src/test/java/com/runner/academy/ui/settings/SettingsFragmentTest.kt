@@ -120,6 +120,65 @@ class SettingsFragmentTest {
         assertEquals(R.id.nav_settings, navController.currentDestination?.id)
     }
 
+    // --- Voice coaching ---
+
+    @Test
+    fun `the voice row says off by default and reads as one group`() {
+        val view = launch().first.requireView()
+        val row = view.findViewById<View>(R.id.row_voice_settings)
+
+        assertEquals(context.getString(R.string.settings_voice_summary_off), view.text(R.id.textView_voice_summary))
+        assertEquals(
+            context.getString(R.string.settings_label_voice) + ", " + context.getString(R.string.settings_voice_summary_off),
+            row.contentDescription.toString()
+        )
+        val info = android.view.accessibility.AccessibilityNodeInfo.obtain()
+        row.onInitializeAccessibilityNodeInfo(info)
+        assertEquals(
+            context.getString(R.string.settings_voice_open_a11y),
+            info.actionList.first { it.id == android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK }.label.toString()
+        )
+    }
+
+    @Test
+    fun `the voice row names the free run summary when on`() {
+        prefs.setVoiceSettings(com.runner.academy.voice.VoiceSettings.DEFAULT.copy(enabled = true))
+        val view = launch().first.requireView()
+
+        assertEquals(
+            context.getString(R.string.settings_voice_summary_on, context.getString(R.string.voice_every_short_km_1)),
+            view.text(R.id.textView_voice_summary)
+        )
+    }
+
+    @Test
+    fun `tapping the voice row opens the voice screen once`() {
+        val (fragment, navController) = launch()
+        val row = fragment.requireView().findViewById<View>(R.id.row_voice_settings)
+
+        row.performClick()
+        assertEquals(R.id.nav_voice_settings, navController.currentDestination?.id)
+        row.performClick()
+        navController.popBackStack()
+
+        assertEquals(R.id.nav_settings, navController.currentDestination?.id)
+    }
+
+    @Test
+    fun `back from the voice screen the row shows what was changed there`() {
+        val (fragment, _) = launch()
+        prefs.setVoiceSettings(com.runner.academy.voice.VoiceSettings.DEFAULT.copy(enabled = true))
+
+        fragment.onPause()
+        fragment.onResume()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(
+            context.getString(R.string.settings_voice_summary_on, context.getString(R.string.voice_every_short_km_1)),
+            fragment.requireView().text(R.id.textView_voice_summary)
+        )
+    }
+
     // --- Maximum heart rate ---
 
     private val prefs get() = context.appContainer().userPreferences

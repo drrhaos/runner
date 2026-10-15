@@ -116,6 +116,13 @@
         android:label="@string/devices_title"
         tools:layout="@layout/fragment_devices" />
 
+    <!-- Voice coaching: from Settings, with Up -->
+    <fragment
+        android:id="@+id/nav_voice_settings"
+        android:name="com.runner.academy.ui.settings.VoiceSettingsFragment"
+        android:label="@string/voice_settings_title"
+        tools:layout="@layout/fragment_voice_settings" />
+
     <fragment
         android:id="@+id/nav_add_sensor"
         android:name="com.runner.academy.ui.devices.AddSensorFragment"

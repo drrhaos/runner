@@ -19,11 +19,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.runner.academy.voice.SummaryEvery
+import com.runner.academy.voice.SummaryMetric
+import com.runner.academy.voice.VoiceProfile
+import com.runner.academy.voice.VoiceSettings
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
+
+/** Which of the two voice profiles a change is for. */
+enum class VoiceProfileKind { FREE, INTERVALS }
 
 data class SettingsState(
     val userWeight: Float = 70f,
@@ -32,7 +40,8 @@ data class SettingsState(
     val userGender: String = "male",
     val userAge: Int = 0,
     val unitSystem: String = "metric",
-    val voiceFeedback: Boolean = false,
+    /** The voice coaching settings, as the service reads them on its tick. */
+    val voice: VoiceSettings = VoiceSettings.DEFAULT,
     val gpsDiagnostics: Boolean = false,
     /** Steps really in use: enabled and permission granted (or not needed). */
     val stepsForDistance: Boolean = false,
@@ -68,6 +77,14 @@ class SettingsViewModel(
             DevicesSummary.of(pairedSensors.value[SensorType.HEART_RATE], sensorStatus.value.link)
         )
 
+    /** Heart rate in a voice summary needs a paired monitor; without one it is skipped. */
+    val hasHeartRateSensor: StateFlow<Boolean> =
+        pairedSensors.map { SensorType.HEART_RATE in it }.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            SensorType.HEART_RATE in pairedSensors.value
+        )
+
     init {
         loadSettings()
     }
@@ -81,7 +98,7 @@ class SettingsViewModel(
                 userGender = userPreferences.userGender,
                 userAge = userPreferences.userAge,
                 unitSystem = userPreferences.unitSystem,
-                voiceFeedback = userPreferences.voiceFeedback,
+                voice = userPreferences.voiceSettings(),
                 gpsDiagnostics = userPreferences.gpsDiagnostics,
                 stepsForDistance = StepTrackingAccess.isStepTrackingAllowed(context),
                 hasStepSensor = StepTrackingAccess.hasStepSensor(context),
@@ -163,9 +180,48 @@ class SettingsViewModel(
         )
     }
 
-    fun updateVoiceFeedback(voiceFeedback: Boolean) {
-        userPreferences.voiceFeedback = voiceFeedback
-        _settingsState.value = _settingsState.value.copy(voiceFeedback = voiceFeedback)
+    fun updateVoiceEnabled(enabled: Boolean) = updateVoice { it.copy(enabled = enabled) }
+
+    /** A summary turned on with nothing to say gets the default metrics: it would stay silent. */
+    fun updateVoiceSummary(kind: VoiceProfileKind, every: SummaryEvery) = updateProfile(kind) { profile ->
+        val metrics = if (every != SummaryEvery.OFF && profile.metrics.isEmpty()) VoiceSettings.DEFAULT_METRICS else profile.metrics
+        profile.copy(summary = every, metrics = metrics)
+    }
+
+    /** An empty set is not saved: the summary is turned off by its interval. */
+    fun updateVoiceMetrics(kind: VoiceProfileKind, metrics: Set<SummaryMetric>) {
+        if (metrics.isEmpty()) return
+        updateProfile(kind) { it.copy(metrics = metrics) }
+    }
+
+    fun updateVoiceSegmentChange(enabled: Boolean) =
+        updateProfile(VoiceProfileKind.INTERVALS) { it.copy(segmentChange = enabled) }
+
+    fun updateVoiceTargetCheck(enabled: Boolean) =
+        updateProfile(VoiceProfileKind.INTERVALS) { it.copy(targetCheck = enabled) }
+
+    fun updateVoicePaceTolerance(seconds: Int) {
+        if (seconds !in VoiceSettings.PACE_TOLERANCES_SEC) return
+        updateVoice { it.copy(paceToleranceSec = seconds) }
+    }
+
+    /** Re-reads the voice settings, e.g. back from the voice screen with its own view model. */
+    fun refreshVoice() {
+        _settingsState.value = _settingsState.value.copy(voice = userPreferences.voiceSettings())
+    }
+
+    private fun updateProfile(kind: VoiceProfileKind, change: (VoiceProfile) -> VoiceProfile) = updateVoice {
+        when (kind) {
+            VoiceProfileKind.FREE -> it.copy(free = change(it.free))
+            VoiceProfileKind.INTERVALS -> it.copy(intervals = change(it.intervals))
+        }
+    }
+
+    /** Written through at once: the service reads the preferences on its next tick. */
+    private fun updateVoice(change: (VoiceSettings) -> VoiceSettings) {
+        val voice = change(userPreferences.voiceSettings())
+        userPreferences.setVoiceSettings(voice)
+        _settingsState.value = _settingsState.value.copy(voice = voice)
     }
 
     /** No step permission is asked for: without steps auto-pause works by GPS alone. */

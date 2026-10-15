@@ -7,6 +7,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -124,10 +126,17 @@ class SettingsFragment : Fragment() {
             showStartCountdownDialog()
         }
 
-        // Голосовые уведомления
-        binding.switchVoiceFeedback.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.updateVoiceFeedback(isChecked)
+        // Голосовые подсказки: свой экран, главный переключатель там
+        binding.rowVoiceSettings.setOnClickListener {
+            val navController = findNavController()
+            if (navController.currentDestination?.id == R.id.nav_settings) navController.navigate(R.id.nav_voice_settings)
         }
+        ViewCompat.replaceAccessibilityAction(
+            binding.rowVoiceSettings,
+            AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK,
+            getString(R.string.settings_voice_open_a11y),
+            null
+        )
 
         // Автопауза: нажатие на всю строку переключает свитч
         binding.rowAutoPause.setOnClickListener { binding.switchAutoPause.toggle() }
@@ -188,7 +197,7 @@ class SettingsFragment : Fragment() {
         binding.textViewThemeModeValue.text = viewModel.getThemeModeDisplayName(settings.themeMode)
         binding.textViewLanguageValue.text = viewModel.getLanguageDisplayName(settings.appLanguage)
         binding.textViewStartCountdownValue.text = "${settings.startCountdownSeconds} s"
-        binding.switchVoiceFeedback.isChecked = settings.voiceFeedback
+        showVoiceSummary(settings)
         binding.switchGpsDiagnostics.isChecked = settings.gpsDiagnostics
         bindingState = true
         binding.switchStepsForDistance.isChecked = settings.stepsForDistance && settings.hasStepSensor
@@ -204,6 +213,14 @@ class SettingsFragment : Fragment() {
         binding.textViewAutoPauseHint.text = autoPauseHint(settings)
     }
 
+    /** "On · summary every 1 km"; TalkBack reads the label and the subtitle as one row. */
+    private fun showVoiceSummary(settings: SettingsState) {
+        val summary = VoiceRowSummary.of(settings.voice)
+        val text = summary.every?.let { getString(summary.text, getString(it)) } ?: getString(summary.text)
+        binding.textViewVoiceSummary.text = text
+        binding.rowVoiceSettings.contentDescription = getString(R.string.settings_label_voice) + ", " + text
+    }
+
     /** Without steps the detector relies on GPS alone: say so under the setting. */
     private fun autoPauseHint(settings: SettingsState): String = buildString {
         append(getString(R.string.settings_hint_auto_pause))
@@ -217,6 +234,8 @@ class SettingsFragment : Fragment() {
         super.onResume()
         // The permission may have been changed in system settings meanwhile.
         viewModel.refreshStepsForDistance()
+        // Back from the voice screen, which writes through its own view model.
+        viewModel.refreshVoice()
     }
 
     private fun onStepsForDistanceToggled(enabled: Boolean) {
