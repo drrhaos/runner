@@ -36,7 +36,7 @@ class TargetIndicatorLookTest {
     @Test
     fun `pace verdicts - word, value, glyph by what to do, tone`() {
         assertEquals(
-            TargetIndicatorLook("On target · 4:31", "On target, 4 minutes 31 seconds per kilometer", Tone.IN, R.drawable.ic_target_in, outlined = false),
+            TargetIndicatorLook("On target · 4:31", "On target, 4 minutes 31 seconds per kilometer", Tone.IN, R.drawable.ic_target_in, outlined = false, stateDescription = "On target"),
             look(TargetState(TargetVerdict.IN, value = 4.5f + 1f / 60f))
         )
         val slow = look(TargetState(TargetVerdict.TOO_SLOW, value = 4.75f))!!
@@ -53,6 +53,7 @@ class TargetIndicatorLookTest {
         assertEquals("≈ Speed up · 4:45", approx.text)
         assertEquals("Speed up, 4 minutes 45 seconds per kilometer, approximate from steps", approx.description)
         assertEquals(true, approx.outlined)
+        assertEquals("Speed up, approximate from steps", approx.stateDescription)
     }
 
     @Test
@@ -67,7 +68,7 @@ class TargetIndicatorLookTest {
     @Test
     fun `neutral states - by the kind of target`() {
         val wait = look(TargetState(TargetVerdict.PENDING))!!
-        assertEquals(TargetIndicatorLook("Measuring pace…", "Measuring pace…", Tone.NEUTRAL, R.drawable.ic_target_wait, false), wait)
+        assertEquals(TargetIndicatorLook("Measuring pace…", "Measuring pace…", Tone.NEUTRAL, R.drawable.ic_target_wait, false, "Measuring pace…"), wait)
         assertEquals("Heart rate catching up…", look(TargetState(TargetVerdict.PENDING), target = zone)!!.text)
         assertEquals("No pace", look(TargetState(TargetVerdict.NO_DATA))!!.text)
         assertEquals("No heart rate", look(TargetState(TargetVerdict.NO_DATA), target = zone)!!.text)

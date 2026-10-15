@@ -122,11 +122,14 @@ class SegmentProgressView @JvmOverloads constructor(
     /**
      * The target's verdict as a 12dp circle with its glyph in place of the current segment's
      * label: filled, or a ring for a pace by steps. The bar itself keeps the segment's colours.
-     * TalkBack hears the verdict as the bar's state, set only when it changes; the scheme's
-     * description stays.
+     * TalkBack hears the verdict as the bar's state ([TargetIndicatorLook.stateDescription],
+     * without the value), set only when the verdict changes, not with every second's pace; the
+     * scheme's description stays.
      */
     fun setTarget(look: TargetIndicatorLook?) {
         if (look == target) return
+        val state = look?.stateDescription
+        if (state != target?.stateDescription) ViewCompat.setStateDescription(this, state)
         target = look
         if (look != null) {
             targetColor = when (look.tone) {
@@ -140,7 +143,6 @@ class SegmentProgressView @JvmOverloads constructor(
         } else {
             targetGlyph = null
         }
-        ViewCompat.setStateDescription(this, look?.description)
         invalidate()
     }
 
@@ -215,7 +217,9 @@ class SegmentProgressView @JvmOverloads constructor(
         }
     }
 
-    private fun drawTarget(canvas: Canvas, look: TargetIndicatorLook, cx: Float, cy: Float) {
+    private fun drawTarget(canvas: Canvas, look: TargetIndicatorLook, segmentCx: Float, cy: Float) {
+        // A narrow first or last segment: the circle stays inside the view
+        val cx = segmentCx.coerceIn(targetRadiusPx, (width - targetRadiusPx).coerceAtLeast(targetRadiusPx))
         targetPaint.color = targetColor
         if (look.outlined) {
             targetPaint.style = Paint.Style.STROKE

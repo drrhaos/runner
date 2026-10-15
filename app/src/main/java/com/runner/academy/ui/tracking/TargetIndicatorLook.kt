@@ -18,15 +18,19 @@ import kotlin.math.roundToInt
  * was made from ("Speed up · 4:45"). The screen is in kilometres.
  *
  * @param text the verdict line; «≈» first for a pace by steps.
- * @param description for TalkBack: the value in words, "approximate from steps" for a steps pace.
+ * @param description for TalkBack's announcement: the value in words, "approximate from steps"
+ *   for a steps pace.
  * @param outlined the circle is drawn as a ring (a steps pace), not filled.
+ * @param stateDescription the bar's state for TalkBack: the verdict (and "approximate") without
+ *   the value, so it changes with the verdict, not with every second's pace.
  */
 data class TargetIndicatorLook(
     val text: String,
     val description: String,
     val tone: Tone,
     @DrawableRes val icon: Int,
-    val outlined: Boolean
+    val outlined: Boolean,
+    val stateDescription: String
 ) {
     /** In the target (green), off it (orange) or neutral (`colorOnSurfaceVariant`). */
     enum class Tone { IN, OFF, NEUTRAL }
@@ -71,7 +75,12 @@ data class TargetIndicatorLook(
                 text = context.getString(R.string.target_state_approx, text)
                 description = context.getString(R.string.target_state_approx_a11y, description)
             }
-            return TargetIndicatorLook(text, description, tone, icon, outlined = state.approximate)
+            val stateDescription = if (state.approximate) {
+                context.getString(R.string.target_state_approx_a11y, wordText)
+            } else {
+                wordText
+            }
+            return TargetIndicatorLook(text, description, tone, icon, outlined = state.approximate, stateDescription = stateDescription)
         }
 
         @StringRes

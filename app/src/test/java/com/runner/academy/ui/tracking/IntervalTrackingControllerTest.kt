@@ -112,13 +112,28 @@ class IntervalTrackingControllerTest {
         controller.update(live(1, 0.3f, TargetState(TargetVerdict.TOO_SLOW, value = 4.25f)))
         assertEquals(View.VISIBLE, binding.textViewIntervalTarget.visibility)
         assertEquals("Speed up · 4:15", binding.textViewIntervalTarget.text.toString())
-        assertEquals("Speed up, 4 minutes 15 seconds per kilometer", ViewCompat.getStateDescription(binding.progressIntervalSegments))
+        assertEquals("Speed up", ViewCompat.getStateDescription(binding.progressIntervalSegments))
         assertEquals(TargetIndicatorLook.Tone.OFF, binding.progressIntervalSegments.target?.tone)
 
         controller.update(live(2, 0.1f, TargetState.NONE))
         assertEquals(View.GONE, binding.textViewIntervalTarget.visibility)
         assertNull(ViewCompat.getStateDescription(binding.progressIntervalSegments))
         assertNull(binding.progressIntervalSegments.target)
+    }
+
+    @Test
+    fun `a new value with the same verdict does not set the bar's state again - TalkBack is not re-read every second`() {
+        controller.prepareForNewWorkout()
+        controller.update(live(1, 0.3f, TargetState(TargetVerdict.TOO_SLOW, value = 4.25f)))
+        // A marker: set again, it would be replaced
+        ViewCompat.setStateDescription(binding.progressIntervalSegments, "marker")
+
+        controller.update(live(1, 0.31f, TargetState(TargetVerdict.TOO_SLOW, value = 4.5f)))
+        assertEquals("Speed up · 4:30", binding.textViewIntervalTarget.text.toString())
+        assertEquals("marker", ViewCompat.getStateDescription(binding.progressIntervalSegments))
+
+        controller.update(live(1, 0.32f, TargetState(TargetVerdict.IN, value = 4.6f)))
+        assertEquals("On target", ViewCompat.getStateDescription(binding.progressIntervalSegments))
     }
 
     @Test

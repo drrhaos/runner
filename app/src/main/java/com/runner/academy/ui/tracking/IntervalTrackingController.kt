@@ -18,6 +18,7 @@ import com.runner.academy.data.target
 import com.runner.academy.databinding.FragmentWorkoutTrackingBinding
 import com.runner.academy.ui.trainingplan.formatSegmentParams
 import com.runner.academy.util.IntervalSegmentsJson
+import com.runner.academy.voice.TargetState
 
 /**
  * The interval panel: the plan of the selected mode before the start (a preview), then the
@@ -43,6 +44,15 @@ class IntervalTrackingController(
     private val announcer = TargetAnnouncer()
     private var shownTarget: TargetIndicatorLook? = null
 
+    /** What [shownTarget] was built from. */
+    private data class LookKey(val index: Int, val completed: Boolean, val target: TargetState, val zonesOn: Boolean)
+    private var lookKey: LookKey? = null
+
+    private fun resetTarget() {
+        lookKey = null
+        showTarget(null)
+    }
+
     var activeScheduledId: Long? = null
         private set
 
@@ -58,7 +68,7 @@ class IntervalTrackingController(
             binding.layoutIntervalPanel.visibility = View.VISIBLE
             binding.progressIntervalSegments.setSegments(segments)
             binding.progressIntervalSegments.setProgress(0, 0f)
-            showTarget(null)
+            resetTarget()
             val first = segments.firstOrNull()
             val title = mode.displayTitle()
             val firstTitle = first?.localizedTitle(context)
@@ -141,10 +151,14 @@ class IntervalTrackingController(
             percent
         )
 
-        val target = if (live.completed) SegmentTarget.None else segment.target
-        val look = TargetIndicatorLook.of(live.target, target, zonesOn = viewModel.hrZones.value != null, context)
-        showTarget(look)
-        announce(live, look)
+        // The session comes with every fix too: the look is built again only when its inputs change
+        val key = LookKey(index, live.completed, live.target, zonesOn = viewModel.hrZones.value != null)
+        if (key != lookKey) {
+            lookKey = key
+            val target = if (live.completed) SegmentTarget.None else segment.target
+            showTarget(TargetIndicatorLook.of(live.target, target, key.zonesOn, context))
+        }
+        announce(live, shownTarget)
     }
 
     fun onExpandedInfoChanged(expanded: Boolean) {
@@ -158,7 +172,9 @@ class IntervalTrackingController(
     }
 
     private fun announce(live: IntervalLive, look: TargetIndicatorLook?) {
-        if (look == null || !announcer.shouldAnnounce(live, talkBackOn())) return
+        // The cheap checks first: the accessibility service is asked only for a hint to announce
+        if (look == null || !live.hintDue || live.hintVoiced) return
+        if (!announcer.shouldAnnounce(live, talkBackOn())) return
         announce(binding.progressIntervalSegments, context.getString(R.string.target_announce, look.description))
     }
 
@@ -200,6 +216,6 @@ class IntervalTrackingController(
         binding.layoutIntervalPanel.visibility = View.VISIBLE
         binding.progressIntervalSegments.setSegments(plan)
         binding.progressIntervalSegments.setProgress(0, 0f)
-        showTarget(null)
+        resetTarget()
     }
 }
