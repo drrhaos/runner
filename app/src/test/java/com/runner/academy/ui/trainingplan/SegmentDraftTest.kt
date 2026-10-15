@@ -5,6 +5,7 @@ import com.runner.academy.data.SegmentKind
 import com.runner.academy.data.SegmentTarget
 import com.runner.academy.data.WorkoutTemplateSegment
 import com.runner.academy.data.target
+import com.runner.academy.util.HrZones
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -78,29 +79,27 @@ class SegmentDraftTest {
     }
 
     @Test
-    fun `zones on - zone button enabled, picker allowed, no hint`() {
-        val ui = ZoneTargetUi.of(TargetKind.NONE, zonesOn = true)
+    fun `zones on - zone button enabled, the picker shows these zones`() {
+        val ui = ZoneTargetUi.of(TargetKind.NONE, HrZones(190))
 
         assertTrue(ui.zoneButtonEnabled)
         assertTrue(ui.pickerAllowed)
-        assertFalse(ui.hintVisible)
+        assertEquals(HrZones(190), ui.pickerZones)
     }
 
     @Test
-    fun `zones off - zone button disabled with the hint`() {
-        val ui = ZoneTargetUi.of(TargetKind.PACE, zonesOn = false)
+    fun `zones off - zone button disabled, no picker`() {
+        val ui = ZoneTargetUi.of(TargetKind.PACE, null)
 
         assertFalse(ui.zoneButtonEnabled)
         assertFalse(ui.pickerAllowed)
-        assertTrue(ui.hintVisible)
     }
 
     @Test
     fun `zones off with a saved zone - the zone stays selectable, no picker`() {
-        val ui = ZoneTargetUi.of(TargetKind.ZONE, zonesOn = false)
+        val ui = ZoneTargetUi.of(TargetKind.ZONE, null)
 
         assertTrue(ui.zoneButtonEnabled)
         assertFalse(ui.pickerAllowed)
-        assertTrue(ui.hintVisible)
     }
 }

@@ -68,6 +68,25 @@
             android:text="@string/template_segments"
             android:textStyle="bold" />
 
+        <!-- Shown once for the whole list when the zones are off (no maximum heart rate) -->
+        <TextView
+            android:id="@+id/textView_zone_disabled_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/segment_target_zone_disabled"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="13sp"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_open_settings"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/segment_target_open_settings"
+            android:visibility="gone" />
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerView_segments"
             android:layout_width="match_parent"

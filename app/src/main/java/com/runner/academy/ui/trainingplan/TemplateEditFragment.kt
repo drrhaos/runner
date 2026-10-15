@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -41,11 +42,19 @@ class TemplateEditFragment : Fragment() {
         TrainingPlanViewModelFactory(requireContext().appContainer().trainingPlanRepository)
     }
 
-    private val drafts = mutableListOf<SegmentDraft>()
-    private var selectedType: WorkoutType = WorkoutType.INTERVAL_TRAINING
-    private var selectedIcon: TrainingIcon = TrainingIcon.INTERVAL
-    private var iconChosenManually = false
-    private var templateLoaded = false
+    /** Unsaved drafts, type and icon: kept across a rotation and the trip to the settings. */
+    private val editor: TemplateEditorViewModel by viewModels()
+
+    private val drafts: MutableList<SegmentDraft> get() = editor.drafts
+    private var selectedType: WorkoutType
+        get() = editor.selectedType
+        set(value) { editor.selectedType = value }
+    private var selectedIcon: TrainingIcon
+        get() = editor.selectedIcon
+        set(value) { editor.selectedIcon = value }
+    private var iconChosenManually: Boolean
+        get() = editor.iconChosenManually
+        set(value) { editor.iconChosenManually = value }
     private lateinit var segmentAdapter: SegmentDraftAdapter
     private lateinit var iconAdapter: TrainingIconPickerAdapter
 
@@ -94,15 +103,16 @@ class TemplateEditFragment : Fragment() {
         binding.recyclerViewIcons.adapter = iconAdapter
         updateIconHint()
 
+        val zones = readZones()
         segmentAdapter = SegmentDraftAdapter(
             drafts = drafts,
-            zones = readZones(),
-            onOpenSettings = {
-                flushSegmentDrafts()
-                findNavController().navigate(R.id.nav_settings)
-            },
+            zones = zones,
             onChanged = { segmentAdapter.notifyDataSetChanged() }
         )
+        updateZonesOffHint(zones)
+        binding.buttonOpenSettings.setOnClickListener {
+            findNavController().navigate(R.id.nav_settings_from_editor)
+        }
         binding.recyclerViewSegments.layoutManager = LinearLayoutManager(requireContext())
         binding.recyclerViewSegments.adapter = segmentAdapter
         binding.recyclerViewSegments.setHasFixedSize(false)
@@ -119,11 +129,11 @@ class TemplateEditFragment : Fragment() {
 
         if (templateId > 0) {
             binding.buttonDeleteTemplate.visibility = View.VISIBLE
-            // Back from the settings the view is rebuilt: keep the unsaved drafts.
-            if (templateLoaded) return
+            // A rebuilt view (rotation, back from the settings) keeps the unsaved drafts.
+            if (editor.initialized) return
             viewLifecycleOwner.lifecycleScope.launch {
                 val loaded = viewModel.loadTemplate(templateId) ?: return@launch
-                templateLoaded = true
+                editor.initialized = true
                 binding.editTextTemplateName.setText(loaded.template.name)
                 selectedType = loaded.template.workoutType
                 selectedIcon = parseTrainingIcon(
@@ -144,7 +154,7 @@ class TemplateEditFragment : Fragment() {
                 }
                 segmentAdapter.notifyDataSetChanged()
             }
-        } else if (drafts.isEmpty()) {
+        } else if (!editor.initialized) {
             selectedIcon = selectedType.defaultTrainingIcon()
             iconAdapter.selected = selectedIcon
             updateIconHint()
@@ -167,6 +177,7 @@ class TemplateEditFragment : Fragment() {
     }
 
     private fun applyGeneratedTemplate(config: TemplateCreateConfig) {
+        editor.initialized = true
         drafts.clear()
         drafts.addAll(TemplateCreateWizard.buildSegments(requireContext(), config))
         binding.editTextTemplateName.setText(
@@ -186,6 +197,7 @@ class TemplateEditFragment : Fragment() {
     }
 
     private fun applySkippedTemplate() {
+        editor.initialized = true
         drafts.clear()
         drafts.add(SegmentDraft(kind = SegmentKind.WORK))
         selectedType = WorkoutType.INTERVAL_TRAINING
@@ -203,16 +215,25 @@ class TemplateEditFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // The maximum heart rate may have changed in the settings: redraw the zone ranges.
+        // Zones are re-read on every resume (back from the settings among others): when the
+        // maximum heart rate was set, changed or cleared, the cards redraw the ranges and the
+        // zone button, and the zones-off hint follows.
         val zones = readZones()
+        updateZonesOffHint(zones)
         if (zones != segmentAdapter.zones) {
-            flushSegmentDrafts()
             segmentAdapter.zones = zones
             segmentAdapter.notifyItemRangeChanged(0, segmentAdapter.itemCount)
         }
     }
 
     private fun readZones(): HrZones? = requireContext().appContainer().userPreferences.hrZones()
+
+    /** «Zones are off…» and «Open settings» once above the segment list, not on every card. */
+    private fun updateZonesOffHint(zones: HrZones?) {
+        val visibility = if (zones == null) View.VISIBLE else View.GONE
+        binding.textViewZoneDisabledHint.visibility = visibility
+        binding.buttonOpenSettings.visibility = visibility
+    }
 
     private fun updateIconHint() {
         binding.textViewIconHint.text = getString(
@@ -237,7 +258,6 @@ class TemplateEditFragment : Fragment() {
 
     private fun save() {
         binding.root.clearFocus()
-        flushSegmentDrafts()
         val name = binding.editTextTemplateName.text?.toString()?.trim().orEmpty()
         if (name.isEmpty() || drafts.isEmpty()) {
             Toast.makeText(requireContext(), R.string.fill_required_fields, Toast.LENGTH_SHORT).show()
@@ -260,14 +280,6 @@ class TemplateEditFragment : Fragment() {
             )
             Toast.makeText(requireContext(), R.string.template_saved, Toast.LENGTH_SHORT).show()
             findNavController().navigateUp()
-        }
-    }
-
-    private fun flushSegmentDrafts() {
-        for (i in 0 until binding.recyclerViewSegments.childCount) {
-            val child = binding.recyclerViewSegments.getChildAt(i)
-            val holder = binding.recyclerViewSegments.getChildViewHolder(child) as? SegmentDraftAdapter.VH
-            holder?.flushToDraft()
         }
     }
 
@@ -295,7 +307,6 @@ private class SegmentDraftAdapter(
     private val drafts: MutableList<SegmentDraft>,
     /** The zones by the current maximum heart rate; null — the zones are off. */
     var zones: HrZones?,
-    private val onOpenSettings: () -> Unit,
     private val onChanged: () -> Unit
 ) : RecyclerView.Adapter<SegmentDraftAdapter.VH>() {
 
@@ -316,9 +327,17 @@ private class SegmentDraftAdapter(
         RecyclerView.ViewHolder(binding.root) {
         private var boundDraft: SegmentDraft? = null
 
-        fun flushToDraft() {
-            val draft = boundDraft ?: return
-            draft.title = binding.editTextSegmentTitle.text?.toString().orEmpty()
+        init {
+            // The title goes straight into the draft: nothing to flush before a save, a removal
+            // or the view going away (rotation, the trip to the settings).
+            binding.editTextSegmentTitle.doAfterTextChanged { text ->
+                boundDraft?.title = text?.toString().orEmpty()
+            }
+            // TalkBack: «Target pace or zone» labels this card's toggle group. Card views share
+            // the layout ids, so the group gets an id of its own for the label to point at.
+            val groupId = View.generateViewId()
+            binding.toggleSegmentTarget.id = groupId
+            binding.textViewTargetLabel.labelFor = groupId
         }
 
         fun bind(draft: SegmentDraft, position: Int) {
@@ -376,9 +395,6 @@ private class SegmentDraftAdapter(
             binding.editTextSegmentTitle.setText(titleForUi)
             bindValueFields(draft)
 
-            binding.editTextSegmentTitle.setOnFocusChangeListener { _, hasFocus ->
-                if (!hasFocus) draft.title = binding.editTextSegmentTitle.text?.toString().orEmpty()
-            }
             binding.editTextDuration.setOnClickListener {
                 showDurationValuePicker(
                     context = ctx,
@@ -415,23 +431,18 @@ private class SegmentDraftAdapter(
                 )
             }
             binding.editTextHrZone.setOnClickListener {
-                val zones = zones
-                if (zones == null) {
+                val pickerZones = ZoneTargetUi.of(draft.targetKind, zones).pickerZones
+                if (pickerZones == null) {
                     Snackbar.make(binding.root, R.string.segment_target_zone_disabled, Snackbar.LENGTH_LONG).show()
                 } else {
-                    showZoneValuePicker(ctx, zones, draft.hrZone, onPicked = { zone ->
+                    showZoneValuePicker(ctx, pickerZones, draft.hrZone, onPicked = { zone ->
                         draft.hrZone = zone
                         bindValueFields(draft)
                     })
                 }
             }
-            binding.buttonOpenSettings.setOnClickListener {
-                flushToDraft()
-                onOpenSettings()
-            }
 
             binding.buttonRemoveSegment.setOnClickListener {
-                flushToDraft()
                 val pos = drafts.indexOf(draft)
                 if (pos >= 0) {
                     drafts.removeAt(pos)
@@ -450,17 +461,16 @@ private class SegmentDraftAdapter(
             bindTarget(draft)
         }
 
-        /** «None / Pace / Zone», the field of the selected one and the zones-off hint (design §2). */
+        /** «None / Pace / Zone» and the field of the selected one (design §2). */
         private fun bindTarget(draft: SegmentDraft) {
-            val ui = ZoneTargetUi.of(draft.targetKind, zonesOn = zones != null)
+            val ui = ZoneTargetUi.of(draft.targetKind, zones)
             val group = binding.toggleSegmentTarget
             group.clearOnButtonCheckedListeners()
-            group.check(buttonId(draft.targetKind))
+            // Enable first: a saved zone with the zones off must be checkable.
             binding.buttonTargetZone.isEnabled = ui.zoneButtonEnabled
+            group.check(buttonId(draft.targetKind))
             binding.layoutPace.visibility = if (draft.targetKind == TargetKind.PACE) View.VISIBLE else View.GONE
             binding.layoutHrZone.visibility = if (draft.targetKind == TargetKind.ZONE) View.VISIBLE else View.GONE
-            binding.textViewZoneDisabledHint.visibility = if (ui.hintVisible) View.VISIBLE else View.GONE
-            binding.buttonOpenSettings.visibility = if (ui.hintVisible) View.VISIBLE else View.GONE
             group.addOnButtonCheckedListener { _, checkedId, isChecked ->
                 if (isChecked) onTargetChosen(draft, kindOf(checkedId))
             }
@@ -469,7 +479,7 @@ private class SegmentDraftAdapter(
         private fun onTargetChosen(draft: SegmentDraft, kind: TargetKind) {
             if (kind == draft.targetKind) return
             val ctx = binding.root.context
-            val zones = zones
+            val ui = ZoneTargetUi.of(draft.targetKind, zones)
             when {
                 kind == TargetKind.NONE -> select(draft, kind)
                 kind == TargetKind.PACE && draft.paceTotalSeconds > 0 -> select(draft, kind)
@@ -483,17 +493,19 @@ private class SegmentDraftAdapter(
                     },
                     onCancel = { bindTarget(draft) }
                 )
-                zones == null -> bindTarget(draft)
-                else -> showZoneValuePicker(
-                    context = ctx,
-                    zones = zones,
-                    initialZone = draft.hrZone,
-                    onPicked = { zone ->
-                        draft.hrZone = zone
-                        select(draft, kind)
-                    },
-                    onCancel = { bindTarget(draft) }
-                )
+                // «Zone» is only enabled from another kind when the zones are on: the picker opens.
+                else -> ui.pickerZones?.let { pickerZones ->
+                    showZoneValuePicker(
+                        context = ctx,
+                        zones = pickerZones,
+                        initialZone = draft.hrZone,
+                        onPicked = { zone ->
+                            draft.hrZone = zone
+                            select(draft, kind)
+                        },
+                        onCancel = { bindTarget(draft) }
+                    )
+                } ?: bindTarget(draft)
             }
         }
 
