@@ -233,6 +233,25 @@ class WorkoutServiceVoiceTest {
     }
 
     @Test
+    fun `restored while paused mid-interval - the session has the segment at once, without a tick`() {
+        val first = service()
+        first.startIntervals()
+        first.tickUntil(150)
+        first.pauseWorkout()
+
+        val restored = killAndRestore { it.isPaused && it.intervalCursor()?.segmentIndex == 1 }
+        nowMs += 600_000L
+
+        val session = restored.getCurrentSession()
+        assertTrue(session.isPaused)
+        val live = session.interval!!
+        assertEquals(1, live.segmentIndex)
+        assertEquals(0.5f, live.segmentProgress, 0.02f)
+        assertEquals(TargetVerdict.NO_TARGET, live.target.verdict)
+        assertEquals(false, live.hintDue)
+    }
+
+    @Test
     fun `a free run has no interval state`() {
         val service = service()
         service.startWorkout()

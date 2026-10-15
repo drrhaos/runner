@@ -629,6 +629,9 @@ class WorkoutTrackingService : Service() {
         isCurrentlyTracking = false
         stepTracker?.pause()
         strideLearner?.reset()
+        // The bar stays over the pause, a hint already given does not: a screen made again
+        // during the pause would announce it once more
+        sessionManager.getSession().interval?.let { sessionManager.setInterval(it.copy(hintDue = false, hintVoiced = false)) }
         sessionManager.pause(sessionClockMs())
         stopLocationUpdates()
         stopPeriodicLocationRequest()
@@ -760,6 +763,12 @@ class WorkoutTrackingService : Service() {
         autoPause.reset(autoPaused = restoredSession.autoPaused, restored = true)
         rebuildIntervalEngineFromMetadata()
         prepareVoiceForWorkout(restored = sessionManager.getSession())
+        // Not checkpointed, and a paused restore has no tick until the resume: the bar's segment
+        // now, from the restored cursor and position
+        serviceIntervalEngine?.let { engine ->
+            val session = sessionManager.getSession()
+            sessionManager.setInterval(VoiceCoach.intervalAt(engine, session.currentTime, session.distance * 1000f))
+        }
         if (!resumeTrackingAfterRestore(restoredSession)) return false
         // Only once the restore holds (a refused one never starts it). Afresh: no calibration
         // to carry, the pressure altitudes go on from the same scale

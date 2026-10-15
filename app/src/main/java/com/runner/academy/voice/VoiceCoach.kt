@@ -137,4 +137,23 @@ class VoiceCoach {
         }
         return CoachResult(lines = lines, interval = interval)
     }
+
+    companion object {
+        /**
+         * The segment at [elapsedMs] and [distanceM] without a tick: a restored workout before
+         * its first tick (a paused one has none until the resume). Nothing is consumed (the beep
+         * and the warning stay the tick's); a target is pending until the tick checks it.
+         */
+        fun intervalAt(engine: IntervalEngine, elapsedMs: Long, distanceM: Float): IntervalLive {
+            val s = engine.update(elapsedMs, distanceM)
+            val hasTarget = !s.completed && s.segment?.target?.let { it != SegmentTarget.None } == true
+            return IntervalLive(
+                segmentIndex = s.segmentIndex,
+                segmentProgress = s.segmentProgress,
+                segmentElapsedMs = s.segmentElapsedMs,
+                completed = s.completed,
+                target = if (hasTarget) TargetState(TargetVerdict.PENDING) else TargetState.NONE
+            )
+        }
+    }
 }
