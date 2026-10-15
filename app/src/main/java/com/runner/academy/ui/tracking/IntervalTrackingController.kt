@@ -57,6 +57,7 @@ class IntervalTrackingController(
             if (first != null) {
                 binding.textViewIntervalParams.visibility = View.VISIBLE
                 binding.textViewIntervalParams.text = formatSegmentParams(context, first)
+                binding.textViewIntervalParams.contentDescription = formatSegmentParams(context, first, forA11y = true)
                 binding.textViewIntervalProgressLabel.text = context.getString(
                     R.string.tracking_interval_status,
                     1,
@@ -114,6 +115,7 @@ class IntervalTrackingController(
         if (segment != null) {
             binding.textViewIntervalParams.visibility = View.VISIBLE
             binding.textViewIntervalParams.text = formatSegmentParams(context, segment)
+            binding.textViewIntervalParams.contentDescription = formatSegmentParams(context, segment, forA11y = true)
             binding.textViewIntervalProgressLabel.text = context.getString(
                 R.string.tracking_interval_status,
                 (state.segmentIndex + 1).coerceAtMost(engine.segmentCount()),

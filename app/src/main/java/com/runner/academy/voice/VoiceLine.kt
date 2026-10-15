@@ -10,7 +10,7 @@ sealed interface VoiceLine {
     /** The periodic summary, values included, in the order of [SummaryMetric]. */
     data class Summary(val parts: List<SummaryPart>) : VoiceLine
 
-    /** "In 30 seconds: [segment]", with its goal and target pace. */
+    /** "In 30 seconds: [segment]", with its goal and its target (a pace or a zone). */
     data class SegmentUpcoming(val segment: WorkoutTemplateSegment) : VoiceLine
 
     /** A segment starts: the beep only, outside the speech queue. */

@@ -634,7 +634,6 @@
     <string name="segment_goal_distance">Дистанция</string>
     <string name="segment_duration_hint">Время</string>
     <string name="segment_distance_hint">Дистанция</string>
-    <string name="segment_pace_hint">Целевой темп (опционально)</string>
     <string name="segment_dialog_duration_title">Время</string>
     <string name="segment_dialog_distance_title">Дистанция</string>
     <string name="segment_dialog_pace_title">Целевой темп</string>
@@ -997,5 +996,29 @@
     <string name="voice_pace_tolerance_hint">В пределах допуска темп считается попаданием в цель — для голоса и для полосы отрезков.</string>
     <string name="voice_metric_units_note">Голос говорит в километрах, и сводка считается по километрам.</string>
     <!-- ===== End of voice coaching settings ===== -->
+
+    <!-- ===== Релиз 4: цель «зона» в отрезке (feature/r4-zone-target) ===== -->
+    <string name="segment_target_label">Целевой темп или зона</string>
+    <string name="segment_target_none">Нет</string>
+    <string name="segment_target_pace">Темп</string>
+    <string name="segment_target_zone">Зона</string>
+    <string name="segment_target_zone_hint">Пульсовая зона</string>
+    <string name="segment_target_zone_value">Зона %1$d · %2$d–%3$d уд/мин</string>
+    <string name="segment_target_zone_value_no_range">Зона %1$d</string>
+    <string name="segment_target_zone_disabled">Зоны выключены: укажите дату рождения или максимальный пульс</string>
+    <string name="segment_target_open_settings">Открыть настройки</string>
+    <string name="segment_dialog_zone_title">Пульсовая зона</string>
+    <string name="segment_zone_item">Зона %1$d · %2$d–%3$d уд/мин · %4$s</string>
+    <string name="segment_target_zone_value_a11y">Зона %1$d, от %2$d до %3$s</string>
+    <string name="segment_zone_item_a11y">Зона %1$d, от %2$d до %3$s, %4$s</string>
+    <string name="segment_target_zone_short">Z%1$d</string>
+    <string name="segment_target_zone_a11y">зона %1$d</string>
+    <string name="hr_zone_name_1">восстановление</string>
+    <string name="hr_zone_name_2">аэробная база</string>
+    <string name="hr_zone_name_3">темповая</string>
+    <string name="hr_zone_name_4">пороговая</string>
+    <string name="hr_zone_name_5">максимум</string>
+    <string name="voice_interval_goal_zone">Зона %1$d</string>
+    <!-- ===== Конец цели «зона» ===== -->
 
 </resources>

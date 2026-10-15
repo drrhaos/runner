@@ -60,7 +60,7 @@ class WorkoutDatabaseMigrationJvmTest {
             )
         }
 
-        openWithRoom(WorkoutDatabase.MIGRATION_6_7).apply {
+        openWithRoom(WorkoutDatabase.MIGRATION_6_7, WorkoutDatabase.MIGRATION_7_8).apply {
             query(
                 """
                 SELECT duration, movingDuration, elevationGain, elevationLoss, elevationSource,
@@ -94,13 +94,73 @@ class WorkoutDatabaseMigrationJvmTest {
                 """.trimIndent()
             )
         }
-        openWithRoom(WorkoutDatabase.MIGRATION_6_7)
+        openWithRoom(WorkoutDatabase.MIGRATION_6_7, WorkoutDatabase.MIGRATION_7_8)
 
         val rows = requireNotNull(room).workoutDao().getStatsRows()
 
         assertEquals(1, rows.size)
         assertEquals(1_800_000L, rows[0].movingDuration)
         assertEquals(null, rows[0].elevationSource)
+    }
+
+    @Test
+    fun migrate7To8_paceSegmentKeepsPace_zoneIsNull() = runBlocking {
+        createDatabase(7) {
+            execSQL(
+                """
+                INSERT INTO workout_templates (id, name, workoutType, iconKey, notes, createdAt, updatedAt)
+                VALUES (1, 'Intervals', 'INTERVAL_TRAINING', 'INTERVAL', NULL, 1700000000000, 1700000000000)
+                """.trimIndent()
+            )
+            execSQL(
+                """
+                INSERT INTO workout_template_segments (templateId, sortOrder, kind, title, goalType, durationMs, distanceMeters, targetPaceMinPerKm)
+                VALUES (1, 0, 'WORK', 'Fast', 'DISTANCE', NULL, 400.0, 4.5)
+                """.trimIndent()
+            )
+        }
+
+        openWithRoom(WorkoutDatabase.MIGRATION_7_8).apply {
+            query("SELECT targetPaceMinPerKm, targetHrZone, distanceMeters FROM workout_template_segments").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(4.5, cursor.getDouble(0), 0.0001)
+                assertTrue(cursor.isNull(1))
+                assertEquals(400.0, cursor.getDouble(2), 0.0001)
+            }
+        }
+        val segments = requireNotNull(room).workoutTemplateDao().getSegmentsForTemplate(1L)
+        assertEquals(1, segments.size)
+        assertEquals(null, segments[0].targetHrZone)
+        assertEquals(SegmentTarget.Pace(4.5f), segments[0].target)
+    }
+
+    @Test
+    fun migrate4ToLatest_keepsTemplateSegmentPace() {
+        // Templates exist from schema 4 on; a segment added there must survive 4 → latest.
+        createDatabase(4) {
+            execSQL(
+                """
+                INSERT INTO workout_templates (id, name, workoutType, notes, createdAt, updatedAt)
+                VALUES (1, 'Intervals', 'INTERVAL_TRAINING', NULL, 1700000000000, 1700000000000)
+                """.trimIndent()
+            )
+            execSQL(
+                """
+                INSERT INTO workout_template_segments (templateId, sortOrder, kind, title, goalType, durationMs, distanceMeters, targetPaceMinPerKm)
+                VALUES (1, 0, 'WORK', 'Fast', 'DURATION', 180000, NULL, 4.5)
+                """.trimIndent()
+            )
+        }
+
+        openWithRoom(*WorkoutDatabase.ALL_MIGRATIONS).apply {
+            assertEquals(WorkoutDatabase.ALL_MIGRATIONS.last().endVersion, version)
+            query("SELECT durationMs, targetPaceMinPerKm, targetHrZone FROM workout_template_segments").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(180_000L, cursor.getLong(0))
+                assertEquals(4.5, cursor.getDouble(1), 0.0001)
+                assertTrue(cursor.isNull(2))
+            }
+        }
     }
 
     /** Oldest schema → current: the whole chain must land exactly on the latest schema. */

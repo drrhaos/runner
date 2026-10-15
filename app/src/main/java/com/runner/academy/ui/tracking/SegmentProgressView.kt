@@ -73,7 +73,7 @@ class SegmentProgressView @JvmOverloads constructor(
         contentDescription = if (segments.isEmpty()) {
             null
         } else {
-            formatTemplateScheme(context, segments)
+            formatTemplateScheme(context, segments, forA11y = true)
         }
         updateDetailsClickListener()
         requestLayout()

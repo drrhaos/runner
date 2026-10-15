@@ -624,7 +624,6 @@
     <string name="segment_goal_distance">Distance</string>
     <string name="segment_duration_hint">Duration</string>
     <string name="segment_distance_hint">Distance</string>
-    <string name="segment_pace_hint">Target pace (optional)</string>
     <string name="segment_dialog_duration_title">Duration</string>
     <string name="segment_dialog_distance_title">Distance</string>
     <string name="segment_dialog_pace_title">Target pace</string>
@@ -986,5 +985,31 @@
     <string name="voice_pace_tolerance_hint">Within the tolerance the pace counts as on target, for the voice and the segment bar.</string>
     <string name="voice_metric_units_note">The voice uses kilometers, and summaries are counted in kilometers.</string>
     <!-- ===== End of voice coaching settings ===== -->
+
+    <!-- ===== Release 4: segment zone target (feature/r4-zone-target) ===== -->
+    <string name="segment_target_label">Target pace or zone</string>
+    <string name="segment_target_none">None</string>
+    <string name="segment_target_pace">Pace</string>
+    <string name="segment_target_zone">Zone</string>
+    <string name="segment_target_zone_hint">Heart rate zone</string>
+    <string name="segment_target_zone_value">Zone %1$d · %2$d–%3$d bpm</string>
+    <string name="segment_target_zone_value_no_range">Zone %1$d</string>
+    <string name="segment_target_zone_disabled">Zones are off: set your date of birth or maximum heart rate</string>
+    <string name="segment_target_open_settings">Open settings</string>
+    <string name="segment_dialog_zone_title">Heart rate zone</string>
+    <string name="segment_zone_item">Zone %1$d · %2$d–%3$d bpm · %4$s</string>
+    <!-- For TalkBack. %3$s: the upper bound with hr_zone_bound_a11y -->
+    <string name="segment_target_zone_value_a11y">Zone %1$d, %2$d to %3$s</string>
+    <!-- For TalkBack. %3$s: the upper bound with hr_zone_bound_a11y; %4$s: hr_zone_name_N -->
+    <string name="segment_zone_item_a11y">Zone %1$d, %2$d to %3$s, %4$s</string>
+    <string name="segment_target_zone_short">Z%1$d</string>
+    <string name="segment_target_zone_a11y">zone %1$d</string>
+    <string name="hr_zone_name_1">recovery</string>
+    <string name="hr_zone_name_2">aerobic base</string>
+    <string name="hr_zone_name_3">tempo</string>
+    <string name="hr_zone_name_4">threshold</string>
+    <string name="hr_zone_name_5">maximum</string>
+    <string name="voice_interval_goal_zone">Zone %1$d</string>
+    <!-- ===== End of segment zone target ===== -->
 
 </resources>
