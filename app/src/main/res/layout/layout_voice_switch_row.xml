@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- A switch row of the voice screen, like row_auto_pause: one group, a tap anywhere toggles.
-     The switch only shows the state; TalkBack hears it from the row (checkable, set from code). -->
+     The switch only shows the state; TalkBack hears it from the row (checkable, set from code).
+     Its state is not saved: three rows share the id, and the state always comes from the view model. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -44,6 +45,7 @@
         android:layout_marginStart="16dp"
         android:clickable="false"
         android:focusable="false"
+        android:saveEnabled="false"
         android:importantForAccessibility="no" />
 
 </LinearLayout>

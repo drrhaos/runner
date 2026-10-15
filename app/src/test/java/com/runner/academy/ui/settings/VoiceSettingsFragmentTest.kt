@@ -219,6 +219,27 @@ class VoiceSettingsFragmentTest {
     }
 
     @Test
+    fun `after recreation each switch shows its own setting`() {
+        prefs.setVoiceSettings(on.copy(intervals = on.intervals.copy(segmentChange = false, targetCheck = true)))
+        val controller = Robolectric.buildActivity(AppCompatActivity::class.java).create().start().resume()
+        controller.get().setTheme(R.style.Theme_Runner)
+        controller.get().supportFragmentManager.beginTransaction()
+            .add(android.R.id.content, VoiceSettingsFragment()).commitNow()
+        idle()
+
+        controller.recreate()
+        idle()
+        val view = controller.get().supportFragmentManager.fragments
+            .filterIsInstance<VoiceSettingsFragment>().single().requireView()
+
+        fun switchOf(rowId: Int) =
+            view.row(rowId).findViewById<com.google.android.material.materialswitch.MaterialSwitch>(R.id.switch_value)
+        assertTrue(switchOf(R.id.row_voice_enabled).isChecked)
+        assertFalse(switchOf(R.id.row_intervals_segment_change).isChecked)
+        assertTrue(switchOf(R.id.row_intervals_target_check).isChecked)
+    }
+
+    @Test
     fun `the tolerance can be changed with the voice off`() {
         val view = launch()
 
