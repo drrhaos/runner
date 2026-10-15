@@ -927,4 +927,65 @@
     <string name="voice_span_min_10">last 10 minutes</string>
     <string name="voice_span_min_15">last 15 minutes</string>
 
+    <!-- ===== Release 4: voice coaching settings (feature/r4-voice-settings) ===== -->
+    <string name="settings_label_voice">Voice coaching</string>
+    <string name="settings_voice_summary_off">Off</string>
+    <!-- %1$s: voice_every_short_* -->
+    <string name="settings_voice_summary_on">On · summary %1$s</string>
+    <string name="settings_voice_summary_on_no_summary">On · no summary</string>
+    <string name="settings_voice_open_a11y">open voice settings</string>
+    <string name="voice_settings_title">Voice coaching</string>
+    <string name="voice_enabled_label">Voice coaching</string>
+    <string name="voice_enabled_hint">Summaries, segments and target cues. Music gets quieter while the voice speaks.</string>
+    <string name="voice_status_note">GPS signal, heart rate sensor and auto-pause are always announced while voice is on.</string>
+    <string name="voice_profile_free">Runs without segments</string>
+    <string name="voice_profile_intervals">Intervals</string>
+    <string name="voice_profile_intervals_hint">When the workout has segments</string>
+    <string name="voice_summary_label">Summary</string>
+    <string name="voice_summary_dialog_title">How often to speak a summary</string>
+    <string name="voice_every_off">Off</string>
+    <string name="voice_every_km_0_5">Every 0.5 km</string>
+    <string name="voice_every_km_1">Every 1 km</string>
+    <string name="voice_every_km_2">Every 2 km</string>
+    <string name="voice_every_km_5">Every 5 km</string>
+    <string name="voice_every_min_1">Every minute</string>
+    <string name="voice_every_min_5">Every 5 min</string>
+    <string name="voice_every_min_10">Every 10 min</string>
+    <string name="voice_every_min_15">Every 15 min</string>
+    <string name="voice_every_short_km_0_5">every 0.5 km</string>
+    <string name="voice_every_short_km_1">every 1 km</string>
+    <string name="voice_every_short_km_2">every 2 km</string>
+    <string name="voice_every_short_km_5">every 5 km</string>
+    <string name="voice_every_short_min_1">every minute</string>
+    <string name="voice_every_short_min_5">every 5 min</string>
+    <string name="voice_every_short_min_10">every 10 min</string>
+    <string name="voice_every_short_min_15">every 15 min</string>
+    <string name="voice_metrics_label">What to say</string>
+    <string name="voice_metrics_dialog_title">What to say in a summary</string>
+    <string name="voice_metrics_done">Done</string>
+    <string name="voice_metric_distance">Distance</string>
+    <string name="voice_metric_time">Time</string>
+    <string name="voice_metric_avg_pace">Average pace</string>
+    <string name="voice_metric_split_pace">Pace since last summary</string>
+    <string name="voice_metric_split_hr">Average heart rate since last summary</string>
+    <string name="voice_metric_current_hr">Current heart rate</string>
+    <!-- The metrics row's subtitle, joined with a comma: not lowercase() (would break abbreviations) -->
+    <string name="voice_metric_distance_lower">distance</string>
+    <string name="voice_metric_time_lower">time</string>
+    <string name="voice_metric_avg_pace_lower">average pace</string>
+    <string name="voice_metric_split_pace_lower">pace since last summary</string>
+    <string name="voice_metric_split_hr_lower">average heart rate since last summary</string>
+    <string name="voice_metric_current_hr_lower">current heart rate</string>
+    <string name="voice_metrics_hr_no_sensor">No heart rate monitor: heart rate will be skipped</string>
+    <string name="voice_segment_change_label">Segment change</string>
+    <string name="voice_segment_change_hint">What\'s next 30 seconds ahead, a beep at the start</string>
+    <string name="voice_target_check_label">Target cues</string>
+    <string name="voice_target_check_hint">"Speed up", "Slow down", "Above zone", "Below zone" — at most once every 30 seconds</string>
+    <string name="voice_target_section">Segment target</string>
+    <string name="voice_pace_tolerance_label">Pace tolerance</string>
+    <string name="voice_pace_tolerance_value">±%1$d s/km</string>
+    <string name="voice_pace_tolerance_hint">Within the tolerance the pace counts as on target, for the voice and the segment bar.</string>
+    <string name="voice_metric_units_note">The voice uses kilometers, and summaries are counted in kilometers.</string>
+    <!-- ===== End of voice coaching settings ===== -->
+
 </resources>

@@ -940,4 +940,63 @@
     <string name="voice_span_min_10">последние 10 минут</string>
     <string name="voice_span_min_15">последние 15 минут</string>
 
+    <!-- ===== Release 4: voice coaching settings (feature/r4-voice-settings) ===== -->
+    <string name="settings_label_voice">Голосовые подсказки</string>
+    <string name="settings_voice_summary_off">Выключены</string>
+    <string name="settings_voice_summary_on">Включены · сводка %1$s</string>
+    <string name="settings_voice_summary_on_no_summary">Включены · без сводки</string>
+    <string name="settings_voice_open_a11y">открыть настройки голоса</string>
+    <string name="voice_settings_title">Голосовые подсказки</string>
+    <string name="voice_enabled_label">Голосовые подсказки</string>
+    <string name="voice_enabled_hint">Сводки, отрезки и подсказки по цели. Музыка на время фразы становится тише.</string>
+    <string name="voice_status_note">Сигнал GPS, датчик пульса и автопауза озвучиваются всегда, когда голос включён.</string>
+    <string name="voice_profile_free">Бег без отрезков</string>
+    <string name="voice_profile_intervals">Интервалы</string>
+    <string name="voice_profile_intervals_hint">Когда в тренировке есть отрезки</string>
+    <string name="voice_summary_label">Сводка</string>
+    <string name="voice_summary_dialog_title">Как часто говорить сводку</string>
+    <string name="voice_every_off">Выкл.</string>
+    <string name="voice_every_km_0_5">Каждые 0,5 км</string>
+    <string name="voice_every_km_1">Каждый 1 км</string>
+    <string name="voice_every_km_2">Каждые 2 км</string>
+    <string name="voice_every_km_5">Каждые 5 км</string>
+    <string name="voice_every_min_1">Каждую минуту</string>
+    <string name="voice_every_min_5">Каждые 5 мин</string>
+    <string name="voice_every_min_10">Каждые 10 мин</string>
+    <string name="voice_every_min_15">Каждые 15 мин</string>
+    <string name="voice_every_short_km_0_5">каждые 0,5 км</string>
+    <string name="voice_every_short_km_1">каждый 1 км</string>
+    <string name="voice_every_short_km_2">каждые 2 км</string>
+    <string name="voice_every_short_km_5">каждые 5 км</string>
+    <string name="voice_every_short_min_1">каждую минуту</string>
+    <string name="voice_every_short_min_5">каждые 5 мин</string>
+    <string name="voice_every_short_min_10">каждые 10 мин</string>
+    <string name="voice_every_short_min_15">каждые 15 мин</string>
+    <string name="voice_metrics_label">Что говорить</string>
+    <string name="voice_metrics_dialog_title">Что говорить в сводке</string>
+    <string name="voice_metrics_done">Готово</string>
+    <string name="voice_metric_distance">Дистанция</string>
+    <string name="voice_metric_time">Время</string>
+    <string name="voice_metric_avg_pace">Средний темп</string>
+    <string name="voice_metric_split_pace">Темп за отрезок сводки</string>
+    <string name="voice_metric_split_hr">Средний пульс за отрезок сводки</string>
+    <string name="voice_metric_current_hr">Текущий пульс</string>
+    <string name="voice_metric_distance_lower">дистанция</string>
+    <string name="voice_metric_time_lower">время</string>
+    <string name="voice_metric_avg_pace_lower">средний темп</string>
+    <string name="voice_metric_split_pace_lower">темп за отрезок сводки</string>
+    <string name="voice_metric_split_hr_lower">средний пульс за отрезок сводки</string>
+    <string name="voice_metric_current_hr_lower">текущий пульс</string>
+    <string name="voice_metrics_hr_no_sensor">Пульсометр не добавлен: пульс в сводке будет пропущен</string>
+    <string name="voice_segment_change_label">Смена отрезка</string>
+    <string name="voice_segment_change_hint">За 30 секунд — что дальше, на старте — сигнал</string>
+    <string name="voice_target_check_label">Подсказки по цели</string>
+    <string name="voice_target_check_hint">«Быстрее», «Медленнее», «Выше зоны», «Ниже зоны» — не чаще раза в 30 секунд</string>
+    <string name="voice_target_section">Цель отрезка</string>
+    <string name="voice_pace_tolerance_label">Допуск темпа</string>
+    <string name="voice_pace_tolerance_value">±%1$d с/км</string>
+    <string name="voice_pace_tolerance_hint">В пределах допуска темп считается попаданием в цель — для голоса и для полосы отрезков.</string>
+    <string name="voice_metric_units_note">Голос говорит в километрах, и сводка считается по километрам.</string>
+    <!-- ===== End of voice coaching settings ===== -->
+
 </resources>
