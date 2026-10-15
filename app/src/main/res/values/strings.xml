@@ -978,7 +978,7 @@
     <string name="voice_segment_change_label">Segment change</string>
     <string name="voice_segment_change_hint">What\'s next 30 seconds ahead, a beep at the start</string>
     <string name="voice_target_check_label">Target cues</string>
-    <string name="voice_target_check_hint">"Speed up", "Slow down", "Above zone", "Below zone" — at most once every 30 seconds</string>
+    <string name="voice_target_check_hint">“Speed up”, “Slow down”, “Above zone”, “Below zone” — at most once every 30 seconds</string>
     <string name="voice_target_section">Segment target</string>
     <string name="voice_pace_tolerance_label">Pace tolerance</string>
     <string name="voice_pace_tolerance_value">±%1$d s/km</string>

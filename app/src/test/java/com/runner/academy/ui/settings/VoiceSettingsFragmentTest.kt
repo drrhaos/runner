@@ -219,6 +219,15 @@ class VoiceSettingsFragmentTest {
     }
 
     @Test
+    @Config(qualifiers = "en")
+    fun `the target cue hint keeps the quotes around the cues`() {
+        val hint = launch().row(R.id.row_intervals_target_check)
+            .findViewById<TextView>(R.id.textView_switch_hint).text.toString()
+
+        assertTrue(hint, hint.startsWith("“Speed up”, “Slow down”, “Above zone”, “Below zone”"))
+    }
+
+    @Test
     fun `after recreation each switch shows its own setting`() {
         prefs.setVoiceSettings(on.copy(intervals = on.intervals.copy(segmentChange = false, targetCheck = true)))
         val controller = Robolectric.buildActivity(AppCompatActivity::class.java).create().start().resume()
