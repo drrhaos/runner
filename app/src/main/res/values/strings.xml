@@ -952,4 +952,33 @@
     <string name="voice_interval_goal_zone">Zone %1$d</string>
     <!-- ===== End of segment zone target ===== -->
 
+    <!-- ===== Release 4: segment target check (feature/r4-target-check) ===== -->
+    <!-- %1$s: the pace in words without the unit, "4 minutes 52 seconds" -->
+    <string name="voice_target_faster">Speed up, pace %1$s</string>
+    <string name="voice_target_slower">Slow down, pace %1$s</string>
+    <string name="voice_target_above_zone">Above zone, heart rate %1$d</string>
+    <string name="voice_target_below_zone">Below zone, heart rate %1$d</string>
+    <string name="voice_target_faster_short">Speed up</string>
+    <string name="voice_target_slower_short">Slow down</string>
+    <string name="voice_target_above_zone_short">Above zone</string>
+    <string name="voice_target_below_zone_short">Below zone</string>
+    <string name="target_state_in">On target</string>
+    <string name="target_state_faster">Speed up</string>
+    <string name="target_state_slower">Slow down</string>
+    <string name="target_state_above_zone">Above zone</string>
+    <string name="target_state_below_zone">Below zone</string>
+    <string name="target_state_pending_pace">Measuring pace…</string>
+    <string name="target_state_pending_zone">Heart rate catching up…</string>
+    <string name="target_state_no_pace">No pace</string>
+    <string name="target_state_no_hr">No heart rate</string>
+    <string name="target_state_zones_off">Zones are off</string>
+    <string name="target_state_approx" translatable="false">≈&#160;%1$s</string>
+    <!-- %1$s: the verdict, %2$s: the pace "4:45" or the heart rate "172" it was made from -->
+    <string name="target_state_with_value" translatable="false">%1$s · %2$s</string>
+    <!-- For TalkBack: %1$s the verdict, %2$s the value in words -->
+    <string name="target_state_with_value_a11y" translatable="false">%1$s, %2$s</string>
+    <string name="target_state_approx_a11y">%1$s, approximate from steps</string>
+    <string name="target_announce">Segment target: %1$s</string>
+    <!-- ===== End of segment target check ===== -->
+
 </resources>

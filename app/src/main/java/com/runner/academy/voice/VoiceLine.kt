@@ -18,6 +18,13 @@ sealed interface VoiceLine {
         override fun toString() = "SegmentStart"
     }
 
+    /**
+     * "Speed up, pace 4:52" / "Above zone, heart rate 172": the segment's target is missed.
+     * Never queued: dropped when anything else is said or speech plays. [pace] (minutes per km)
+     * for a pace verdict, [bpm] for a zone one; without it the word alone.
+     */
+    data class TargetHint(val verdict: TargetVerdict, val pace: Float?, val bpm: Int?) : VoiceLine
+
     /** An event of the GPS, the heart-rate sensor or the auto-pause; spoken at once. */
     data class Status(val kind: StatusKind) : VoiceLine
 }

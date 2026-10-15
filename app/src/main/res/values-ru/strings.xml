@@ -963,4 +963,27 @@
     <string name="voice_interval_goal_zone">Зона %1$d</string>
     <!-- ===== Конец цели «зона» ===== -->
 
+    <!-- ===== Релиз 4: контроль цели отрезка (feature/r4-target-check) ===== -->
+    <string name="voice_target_faster">Быстрее, темп %1$s</string>
+    <string name="voice_target_slower">Медленнее, темп %1$s</string>
+    <string name="voice_target_above_zone">Выше зоны, пульс %1$d</string>
+    <string name="voice_target_below_zone">Ниже зоны, пульс %1$d</string>
+    <string name="voice_target_faster_short">Быстрее</string>
+    <string name="voice_target_slower_short">Медленнее</string>
+    <string name="voice_target_above_zone_short">Выше зоны</string>
+    <string name="voice_target_below_zone_short">Ниже зоны</string>
+    <string name="target_state_in">В цели</string>
+    <string name="target_state_faster">Быстрее</string>
+    <string name="target_state_slower">Медленнее</string>
+    <string name="target_state_above_zone">Выше зоны</string>
+    <string name="target_state_below_zone">Ниже зоны</string>
+    <string name="target_state_pending_pace">Набираем темп…</string>
+    <string name="target_state_pending_zone">Пульс догоняет нагрузку…</string>
+    <string name="target_state_no_pace">Нет темпа</string>
+    <string name="target_state_no_hr">Нет пульса</string>
+    <string name="target_state_zones_off">Зоны выключены</string>
+    <string name="target_state_approx_a11y">%1$s, приблизительно, по шагам</string>
+    <string name="target_announce">Цель отрезка: %1$s</string>
+    <!-- ===== Конец контроля цели отрезка ===== -->
+
 </resources>

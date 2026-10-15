@@ -143,4 +143,30 @@ class VoiceLineTextTest {
         assertEquals("4 минуты 52 секунды", FormatUtils.formatPaceForTTS(4f + 52f / 60f, context, perUnit = false))
         assertEquals("4 минуты 52 секунды на километр", FormatUtils.formatPaceForTTS(4f + 52f / 60f, context))
     }
+
+    private val pace452 = 4f + 52f / 60f
+
+    @Test
+    fun `the target cues in english - one part, the word and the value`() {
+        assertEquals(listOf("Speed up, pace 4 minutes 52 seconds"), render(VoiceLine.TargetHint(TargetVerdict.TOO_SLOW, pace452, null)))
+        assertEquals(listOf("Slow down, pace 4 minutes 18 seconds"), render(VoiceLine.TargetHint(TargetVerdict.TOO_FAST, 4.3f, null)))
+        assertEquals(listOf("Above zone, heart rate 172"), render(VoiceLine.TargetHint(TargetVerdict.ABOVE_ZONE, null, 172)))
+        assertEquals(listOf("Below zone, heart rate 131"), render(VoiceLine.TargetHint(TargetVerdict.BELOW_ZONE, null, 131)))
+        assertEquals(listOf("Speed up"), render(VoiceLine.TargetHint(TargetVerdict.TOO_SLOW, null, null)))
+        assertEquals(listOf("Slow down"), render(VoiceLine.TargetHint(TargetVerdict.TOO_FAST, null, null)))
+        assertEquals(listOf("Above zone"), render(VoiceLine.TargetHint(TargetVerdict.ABOVE_ZONE, null, null)))
+        assertEquals(listOf("Below zone"), render(VoiceLine.TargetHint(TargetVerdict.BELOW_ZONE, null, null)))
+        assertEquals(emptyList<String>(), render(VoiceLine.TargetHint(TargetVerdict.IN, pace452, null)))
+    }
+
+    @Test
+    @Config(qualifiers = "ru")
+    fun `the target cues in russian`() {
+        assertEquals(listOf("Быстрее, темп 4 минуты 52 секунды"), render(VoiceLine.TargetHint(TargetVerdict.TOO_SLOW, pace452, null)))
+        assertEquals(listOf("Медленнее, темп 4 минуты 18 секунд"), render(VoiceLine.TargetHint(TargetVerdict.TOO_FAST, 4.3f, null)))
+        assertEquals(listOf("Выше зоны, пульс 172"), render(VoiceLine.TargetHint(TargetVerdict.ABOVE_ZONE, null, 172)))
+        assertEquals(listOf("Ниже зоны, пульс 131"), render(VoiceLine.TargetHint(TargetVerdict.BELOW_ZONE, null, 131)))
+        assertEquals(listOf("Быстрее"), render(VoiceLine.TargetHint(TargetVerdict.TOO_SLOW, null, null)))
+        assertEquals(listOf("Ниже зоны"), render(VoiceLine.TargetHint(TargetVerdict.BELOW_ZONE, null, null)))
+    }
 }
