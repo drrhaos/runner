@@ -4,6 +4,7 @@ import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.SegmentKind
 import com.runner.academy.data.WorkoutTemplateSegment
 import com.runner.academy.gpsreplay.SyntheticRun.Phase
+import com.runner.academy.util.HrZones
 import com.runner.academy.voice.TargetVerdict
 import com.runner.academy.voice.VoiceLine
 import org.junit.Assert.assertEquals
@@ -185,6 +186,25 @@ class TargetReplayTest {
             val indices = result.interval.mapNotNull { it.second?.segmentIndex }
             assertEquals("seed $seed", indices.sorted(), indices)
         }
+    }
+
+    @Test
+    fun `a zone 4 segment at 175 bpm (HRmax 190) - above the zone after 45 s, the hint after the hold`() {
+        val segment = timed(0, 180, null).copy(targetHrZone = 4)
+        val run = SyntheticRun(route = SyntheticRun.blockLoop(laps = 1), speedMps = mps(5, 0), hrAt = { 175 })
+        val result = SessionReplay.run(
+            run,
+            gpsOnly.copy(segments = listOf(segment), zones = HrZones(190)),
+            listOf(ReplayEvent.Stop(atSec = 200))
+        )
+
+        val verdicts = result.interval.associate { (t, live) -> t / 1_000L to live?.target?.verdict }
+        assertEquals(TargetVerdict.PENDING, verdicts[44])
+        assertEquals(TargetVerdict.ABOVE_ZONE, verdicts[45])
+        assertEquals(
+            listOf(60L, 90L, 120L, 150L) to VoiceLine.TargetHint(TargetVerdict.ABOVE_ZONE, pace = null, bpm = 175),
+            result.hints().map { it.first / 1_000L } to result.hints().first().second
+        )
     }
 
     private companion object {
