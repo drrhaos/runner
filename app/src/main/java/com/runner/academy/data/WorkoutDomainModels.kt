@@ -28,6 +28,13 @@ data class WorkoutSession(
      * checkpointed. [currentPace] stays for the adaptive GPS interval and the checkpoint.
      */
     val livePace: LivePace? = null,
+    /**
+     * The current segment and its target's verdict from the service's interval engine (the only
+     * one of a running workout), refreshed on the 1 s tick; null: a free run, or no tick yet
+     * since the start or a restore. Kept over a manual pause (the timer stops). Not checkpointed:
+     * the cursor is.
+     */
+    val interval: IntervalLive? = null,
     val calories: Int = 0,
     val gpsStatus: GpsStatus = GpsStatus.SEARCHING,
     val trackPoints: List<GeoPoint> = emptyList(), // для отображения на карте

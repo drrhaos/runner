@@ -69,6 +69,60 @@ class LivePaceTrackerTest {
     }
 
     @Test
+    fun `the verdict window of 60 s - its own span, the tile's stays 30 s`() {
+        // 60 s at 6:00, then 60 s at 4:00: the last 60 s are 4:00, the last 90 s would not be
+        val atSixty = run(0, 60, mps = SIX_MIN_MPS)
+        val atNinety = run(60, 90, mps = FOUR_MIN_MPS, startM = atSixty)
+        // At 90 s the 60 s window is half 6:00, half 4:00: 1 min over 83.3 + 125 m, 4:48
+        assertPace(4.8f, tracker.pace(windowMs = 60_000L), approximate = false)
+        assertPace(4f, tracker.pace(), approximate = false)
+        run(90, 120, mps = FOUR_MIN_MPS, startM = atNinety)
+        assertPace(4f, tracker.pace(windowMs = 60_000L), approximate = false)
+    }
+
+    @Test
+    fun `the verdict window is cut at the segment start like the tile's`() {
+        val atSixty = run(0, 60, mps = SIX_MIN_MPS)
+        run(60, 74, mps = FOUR_MIN_MPS, startM = atSixty)
+        assertNull(tracker.pace(sinceMovingMs = 60_000L, windowMs = 60_000L))
+        run(75, 80, mps = FOUR_MIN_MPS, startM = atSixty + 15 * FOUR_MIN_MPS)
+        assertPace(4f, tracker.pace(sinceMovingMs = 60_000L, windowMs = 60_000L), approximate = false)
+    }
+
+    @Test
+    fun `a stale tick 45 s ago - the 60 s window goes by steps, the 30 s one by GPS`() {
+        run(0, 70, fresh = { it != 25 })
+        assertPace(5f, tracker.pace(windowMs = 60_000L), approximate = true, toleranceSec = STEPS_TOLERANCE_SEC)
+        assertPace(5f, tracker.pace(), approximate = false)
+    }
+
+    @Test
+    fun `after the GPS is back the verdict window stays by steps for 60 s, the tile's for 30 s`() {
+        // GPS stale from 20 to 40 s, fresh again from 41
+        run(0, 70, fresh = { it !in 20..40 })
+        assertEquals(true, tracker.pace()?.approximate)
+        run(70, 71, startM = 70 * FIVE_MIN_MPS)
+        assertEquals(false, tracker.pace()?.approximate)
+        assertEquals(true, tracker.pace(windowMs = 60_000L)?.approximate)
+
+        run(71, 100, startM = 71 * FIVE_MIN_MPS)
+        assertEquals(true, tracker.pace(windowMs = 60_000L)?.approximate)
+        run(100, 101, startM = 100 * FIVE_MIN_MPS)
+        assertPace(5f, tracker.pace(windowMs = 60_000L), approximate = false)
+    }
+
+    @Test
+    fun `the time since the last restart`() {
+        assertEquals(0L, tracker.sinceRestartMs)
+        run(0, 40)
+        assertEquals(40_000L, tracker.sinceRestartMs)
+        tracker.restart(atMovingMs = 40_000L)
+        assertEquals(0L, tracker.sinceRestartMs)
+        tick(43, 200f)
+        assertEquals(3_000L, tracker.sinceRestartMs)
+    }
+
+    @Test
     fun `the ring keeps the window after a long run`() {
         run(0, 1_000)
         assertPace(5f, tracker.pace(), approximate = false)

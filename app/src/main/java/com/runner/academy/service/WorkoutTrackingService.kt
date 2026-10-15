@@ -629,6 +629,9 @@ class WorkoutTrackingService : Service() {
         isCurrentlyTracking = false
         stepTracker?.pause()
         strideLearner?.reset()
+        // The bar stays over the pause, a hint already given does not: a screen made again
+        // during the pause would announce it once more
+        sessionManager.getSession().interval?.let { sessionManager.setInterval(it.copy(hintDue = false, hintVoiced = false)) }
         sessionManager.pause(sessionClockMs())
         stopLocationUpdates()
         stopPeriodicLocationRequest()
@@ -760,6 +763,12 @@ class WorkoutTrackingService : Service() {
         autoPause.reset(autoPaused = restoredSession.autoPaused, restored = true)
         rebuildIntervalEngineFromMetadata()
         prepareVoiceForWorkout(restored = sessionManager.getSession())
+        // Not checkpointed, and a paused restore has no tick until the resume: the bar's segment
+        // now, from the restored cursor and position
+        serviceIntervalEngine?.let { engine ->
+            val session = sessionManager.getSession()
+            sessionManager.setInterval(VoiceCoach.intervalAt(engine, session.currentTime, session.distance * 1000f))
+        }
         if (!resumeTrackingAfterRestore(restoredSession)) return false
         // Only once the restore holds (a refused one never starts it). Afresh: no calibration
         // to carry, the pressure altitudes go on from the same scale
@@ -1155,7 +1164,8 @@ class WorkoutTrackingService : Service() {
      * On the 1 s workout timer, after the clock ticked: the segments advance and the summaries
      * come due without waiting for a fix (a silent GPS does not delay them). The settings are
      * read live: a change mid-run applies at once. A manual pause stops the timer, so the voice
-     * and the segments stand still.
+     * and the segments stand still. The segment and its target's verdict go to
+     * [WorkoutSession.interval] for the screen: this engine is the only one of a running workout.
      *
      * Status lines are not in the coach's list: they are events said where they happen. They
      * still come in the spec's order (beep → status → warning → summary): the beep is outside the
@@ -1170,6 +1180,8 @@ class WorkoutTrackingService : Service() {
             rebuildIntervalEngineFromMetadata()
             serviceIntervalEngine
         }
+        // Made (or released) before the coach decides: it needs to know whether speech can play
+        val output = voiceOutputFor(settings)
         val result = voiceCoach.onTick(
             CoachInput(
                 elapsedMs = session.currentTime,
@@ -1179,9 +1191,16 @@ class WorkoutTrackingService : Service() {
                 avgPace = session.avgPace,
                 settings = settings,
                 heartRate = session.heartRateDisplay,
-                engine = engine
+                engine = engine,
+                livePace = livePaceTracker,
+                // Live: HRmax changed mid-run applies on the next tick
+                zones = if (engine != null) userPreferences.hrZones() else null,
+                speechBusy = output?.busy == true,
+                canSpeak = output?.canSpeak == true
             )
         )
+        // The segment bar and the target indicator draw from this, not from an engine of their own
+        sessionManager.setInterval(result.interval)
         if (engine != null) {
             val cursor = engine.snapshot()
             val changed = cursor != intervalCursor
@@ -1190,7 +1209,7 @@ class WorkoutTrackingService : Service() {
             // silent GPS may bring none), so a restore neither repeats them nor goes back
             if (changed) maybeSaveCheckpoint(session, force = true)
         }
-        val output = voiceOutputFor(settings) ?: return
+        output ?: return
         result.lines.forEach(output::say)
     }
 

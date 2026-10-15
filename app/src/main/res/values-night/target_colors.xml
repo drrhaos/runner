@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="target_in">#FF30D158</color>
+    <color name="target_off">#FFFF9F0A</color>
+    <color name="target_glyph_on_fill">#FF000000</color>
+</resources>

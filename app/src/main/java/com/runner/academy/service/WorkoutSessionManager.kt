@@ -1,6 +1,7 @@
 package com.runner.academy.service
 
 import com.runner.academy.data.GpsStatus
+import com.runner.academy.data.IntervalLive
 import com.runner.academy.data.LivePace
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.sensor.HeartRateDisplay
@@ -171,12 +172,14 @@ class WorkoutSessionManager {
         return true
     }
 
-    /**
-     * See [WorkoutSession.livePace]; no listeners: the timer's tick pushes the session itself.
-     * The target check (release 4, branch 6) adds the segment's live state here as `interval`.
-     */
+    /** See [WorkoutSession.livePace]; no listeners: the timer's tick pushes the session itself. */
     fun setLivePace(livePace: LivePace?) {
         if (session.livePace != livePace) session = session.copy(livePace = livePace)
+    }
+
+    /** See [WorkoutSession.interval]; no listeners: the timer's tick pushes the session itself. */
+    fun setInterval(interval: IntervalLive?) {
+        if (session.interval != interval) session = session.copy(interval = interval)
     }
 
     /** See [WorkoutSession.openStepMeters]; no listeners (the next update carries it). */

@@ -71,6 +71,18 @@ class AndroidVoiceOutputTest {
     }
 
     @Test
+    fun `busy until the engine is ready, cannot speak once it failed`() {
+        assertFalse(output.busy)
+        assertTrue(output.canSpeak)
+
+        val (early, engine) = notReady()
+        assertTrue("not ready yet", early.busy)
+        assertTrue(early.canSpeak)
+        engine.onInitListener.onInit(TextToSpeech.ERROR)
+        assertFalse(early.canSpeak)
+    }
+
+    @Test
     fun `an engine that fails to start drops the waiting lines`() {
         val (early, engine) = notReady()
         early.say(VoiceLine.Status(StatusKind.GPS_LOST))

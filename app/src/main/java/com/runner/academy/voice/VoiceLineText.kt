@@ -21,7 +21,29 @@ object VoiceLineText {
         is VoiceLine.Summary -> line.parts.map { part(it, context) }
         is VoiceLine.SegmentUpcoming -> upcoming(line.segment, context)
         is VoiceLine.Status -> listOf(context.getString(statusText(line.kind)))
+        is VoiceLine.TargetHint -> listOfNotNull(hint(line, context))
         VoiceLine.SegmentStart -> emptyList()
+    }
+
+    /**
+     * One part, never split by a pause. The pace in words without "per kilometre": "4:52" in
+     * digits may be read as a time of day.
+     */
+    private fun hint(line: VoiceLine.TargetHint, context: Context): String? {
+        val pace = line.pace?.takeIf { it.isFinite() && it > 0f }
+            ?.let { FormatUtils.formatPaceForTTS(it, context, perUnit = false) }
+        val bpm = line.bpm?.takeIf { it > 0 }
+        return when (line.verdict) {
+            TargetVerdict.TOO_SLOW -> pace?.let { context.getString(R.string.voice_target_faster, it) }
+                ?: context.getString(R.string.voice_target_faster_short)
+            TargetVerdict.TOO_FAST -> pace?.let { context.getString(R.string.voice_target_slower, it) }
+                ?: context.getString(R.string.voice_target_slower_short)
+            TargetVerdict.ABOVE_ZONE -> bpm?.let { context.getString(R.string.voice_target_above_zone, it) }
+                ?: context.getString(R.string.voice_target_above_zone_short)
+            TargetVerdict.BELOW_ZONE -> bpm?.let { context.getString(R.string.voice_target_below_zone, it) }
+                ?: context.getString(R.string.voice_target_below_zone_short)
+            else -> null
+        }
     }
 
     private fun part(part: SummaryPart, context: Context): String = when (part) {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The segment target's verdict (circle on the bar, text of the verdict line). Off the
+         target is orange, not the error red: red already means "work" on the bar. -->
+    <color name="target_in">#FF1E7B34</color>
+    <color name="target_off">#FFC93400</color>
+    <!-- The glyph inside a filled circle -->
+    <color name="target_glyph_on_fill">#FFFFFFFF</color>
+</resources>

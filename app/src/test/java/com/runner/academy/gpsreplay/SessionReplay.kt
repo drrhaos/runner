@@ -2,6 +2,7 @@ package com.runner.academy.gpsreplay
 
 import com.google.gson.GsonBuilder
 import com.runner.academy.data.GpsStatus
+import com.runner.academy.data.IntervalLive
 import com.runner.academy.data.LivePace
 import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.TrackPoint
@@ -21,6 +22,7 @@ import kotlinx.coroutines.cancel
 import com.runner.academy.service.WorkoutSessionManager
 import com.runner.academy.ui.tracking.LiveWorkoutBuilder
 import com.runner.academy.data.WorkoutTemplateSegment
+import com.runner.academy.util.HrZones
 import com.runner.academy.util.IntervalEngine
 import com.runner.academy.util.IntervalSegmentsJson
 import com.runner.academy.util.StepDistanceEstimator
@@ -47,7 +49,9 @@ data class ReplaySettings(
     /** The workout's segments, as the service gets them; an interval workout (no auto-pause). */
     val segments: List<WorkoutTemplateSegment>? = null,
     /** The voice settings the service reads on each tick; on by default on the bench. */
-    val voice: VoiceSettings = VoiceSettings.DEFAULT.copy(enabled = true)
+    val voice: VoiceSettings = VoiceSettings.DEFAULT.copy(enabled = true),
+    /** `userPreferences.hrZones()` for the target check; null: the zones are off. */
+    val zones: HrZones? = null
 ) {
     val hasSegments: Boolean get() = intervals || !segments.isNullOrEmpty()
 }
@@ -84,7 +88,9 @@ data class SessionReplayResult(
     /** What the voice coach said on the timer: (ms since the start, line). */
     val voice: List<Pair<Long, VoiceLine>> = emptyList(),
     /** The current-pace tile on each tick of the timer: (ms since the start, pace). */
-    val livePace: List<Pair<Long, LivePace?>> = emptyList()
+    val livePace: List<Pair<Long, LivePace?>> = emptyList(),
+    /** What the segment bar and the target indicator show on each tick: (ms since the start, state). */
+    val interval: List<Pair<Long, IntervalLive?>> = emptyList()
 )
 
 /**
@@ -106,8 +112,9 @@ data class SessionReplayResult(
  * The voice: `tickVoice()` after the clock tick feeds the service's [VoiceCoach] (segments from
  * [ReplaySettings.segments]; a kill restores their cursor as the service last saved it, on the
  * tick that changed it; a restore resumes a new coach) and
- * collects its lines in [SessionReplayResult.voice]. Status lines (GPS, sensor, auto-pause) and
- * the speech engine are not modelled.
+ * collects its lines in [SessionReplayResult.voice] and the segment's state (the target check
+ * included) in [SessionReplayResult.interval]. The speech engine is modelled only as busy: each
+ * line said speaks 3 s. Status lines (GPS, sensor, auto-pause) are not modelled.
  *
  * The live pace: `tickLivePace()` before the voice feeds a [LivePaceTracker] on the run's stride
  * ([ReplaySettings.stepDistance]) with the fix age of the watchdog's clock and collects the
@@ -128,6 +135,8 @@ object SessionReplay {
     /** The location request's interval: fixes come once a second on the bench. */
     private const val REQUEST_INTERVAL_MS = 1_000L
     private const val NANOS_PER_MS = 1_000_000L
+    /** How long one voice line "speaks" on the bench (architecture §01). */
+    private const val SPEECH_MS = 3_000L
     private val gson = GsonBuilder().create()
 
     fun run(
@@ -222,6 +231,9 @@ object SessionReplay {
         /** `livePaceTracker`: one per run (and per restore) on the run's stride. */
         private var livePaceTracker = LivePaceTracker(settings.stepDistance)
         val paces = mutableListOf<Pair<Long, LivePace?>>()
+        val intervals = mutableListOf<Pair<Long, IntervalLive?>>()
+        /** The speech engine: each line said "speaks" [SPEECH_MS]; the beep is outside it. */
+        private var speechUntilMs = 0L
 
         /** Sensor steps the step tracker never counted (pauses, a dead process). */
         private var droppedSteps = 0
@@ -325,10 +337,18 @@ object SessionReplay {
                     avgPace = session.avgPace,
                     settings = settings.voice,
                     heartRate = heartRate?.display(now * NANOS_PER_MS),
-                    engine = engine
+                    engine = engine,
+                    livePace = livePaceTracker,
+                    zones = settings.zones.takeIf { engine != null },
+                    speechBusy = now < speechUntilMs
                 )
             )
-            result.lines.forEach { voice += (now - run.startTimeMs) to it }
+            manager.setInterval(result.interval)
+            intervals += (now - run.startTimeMs) to result.interval
+            result.lines.forEach { line ->
+                voice += (now - run.startTimeMs) to line
+                if (line != VoiceLine.SegmentStart) speechUntilMs = maxOf(speechUntilMs, now) + SPEECH_MS
+            }
             // `maybeSaveCheckpoint(force = true)` on a changed cursor
             engine?.snapshot()?.takeIf { it != savedCursor }?.let { savedCursor = it }
         }
@@ -523,7 +543,8 @@ object SessionReplay {
                 livePoints = stopped.trackDataPoints,
                 savedWorkout = workout,
                 voice = voice.toList(),
-                livePace = paces.toList()
+                livePace = paces.toList(),
+                interval = intervals.toList()
             )
         }
     }
