@@ -42,6 +42,7 @@ Current release: **`v.0.1.5`**.
 - A segment target is a pace or a heart rate zone: "None / Pace / Zone" in the template editor, "Zone 4" in the 30-s warning
 - Target cues in intervals: "Speed up, pace …" / "Slow down…" / "Above zone, heart rate …" at most every 30 s, and an indicator under the current segment; pace tolerance in settings (±10 s/km by default). The cue pace is averaged over 60 s, so a noisy GPS gives no false cues; no voice cues on a step-based pace
 - Heart rate and cadence charts no longer start at zero
+- Calories by formula: without heart rate the ACSM equation (distance, elevation gain, moving time); with heart rate and a birth date the Keytel formula (sex, age, weight). Live they leave out the climb, the save adds it; the edit form counts the same way. Older workouts are not recomputed
 
 ## 0.1.5a1 — `v.0.1.5a1`
 
