@@ -188,6 +188,11 @@ class SettingsFragment : Fragment() {
         binding.buttonResetSettings.setOnClickListener {
             showResetConfirmationDialog()
         }
+
+        // Лицензии открытого ПО
+        binding.rowOssLicenses.setOnClickListener {
+            OpenSourceLicensesDialog.show(requireContext())
+        }
     }
 
     private fun observeViewModel() {

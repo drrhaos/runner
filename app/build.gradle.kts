@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.androidx.room)
     alias(libs.plugins.androidx.navigation.safeargs)
+    alias(libs.plugins.aboutlibraries)
     id("jacoco")
 }
 
@@ -133,6 +134,16 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
+// Open-source licenses screen (Settings). Offline: no network at build time (F-Droid).
+// config/aboutlibraries adds what has no POM (Material Icons, OSM data) or a POM without
+// a license (MPAndroidChart from JitPack).
+aboutLibraries {
+    configPath = "config/aboutlibraries"
+    offlineMode = true
+    // A build timestamp would make the APK differ on every build (reproducible builds)
+    excludeFields = arrayOf("generated")
+}
+
 dependencies {
 
     implementation(libs.androidx.core.ktx)
@@ -176,6 +187,9 @@ dependencies {
 
     // Charts
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+
+    // Open-source licenses screen: reads the list the aboutlibraries plugin generates
+    implementation(libs.aboutlibraries.core)
 
     // Unit testing
     testImplementation(libs.junit)

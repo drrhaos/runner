@@ -59,12 +59,12 @@ class MapManager(
         private const val TIP_FRAME_MS = 33L
         /**
          * Anchor for [R.drawable.ic_location_no_arrow]: circle center in the 1024 viewport
-         * (≈511.9, 574.4) — not the default osmdroid person feet hotspot.
+         * (512, 574) — not the default osmdroid person feet hotspot.
          */
         private const val ICON_ANCHOR_X = 0.5f
-        private const val ICON_ANCHOR_Y = 574.368272f / 1024f
-        /** Blue disc radius in the same viewport (path radius ≈261.22). */
-        private const val ICON_DISC_RADIUS_FRAC = 261.22153f / 1024f
+        private const val ICON_ANCHOR_Y = 574f / 1024f
+        /** Disc radius (white rim included) in the same viewport. */
+        private const val ICON_DISC_RADIUS_FRAC = 261f / 1024f
         /** Slightly inside the disc rim so the stroke meets the visible edge. */
         private const val ICON_EDGE_INSET_FACTOR = 0.92f
     }

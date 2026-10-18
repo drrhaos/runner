@@ -447,6 +447,12 @@ Run tests:
 
 This project is licensed under the [MIT License](LICENSE).
 
+Third-party components:
+- libraries (AndroidX, Material Components, osmdroid, MPAndroidChart, Gson and others) — Apache 2.0; the full list with license texts is in **Settings → About → Open-source licenses** (generated at build time by the AboutLibraries plugin, additions in `config/aboutlibraries`);
+- UI icons — [Material Icons](https://github.com/google/material-design-icons) (Apache 2.0), the source is noted in each `res/drawable` file;
+- map data — © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors, ODbL 1.0;
+- the app icon was made by the project authors with AI tools.
+
 See also [Privacy Policy](PRIVACY.md) and [Contributing Guide](CONTRIBUTING.md).
 
 ## 👥 Authors

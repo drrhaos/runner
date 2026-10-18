@@ -1,0 +1,15 @@
+{
+  "uniqueId": "com.google:material-design-icons",
+  "developers": [
+    {
+      "name": "Google"
+    }
+  ],
+  "artifactVersion": "",
+  "description": "Icons copied into res/drawable as vector drawables",
+  "name": "Material Icons",
+  "website": "https://github.com/google/material-design-icons",
+  "licenses": [
+    "Apache-2.0"
+  ]
+}
