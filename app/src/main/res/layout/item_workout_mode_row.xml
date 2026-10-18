@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A mode in the workout mode sheet: white icon in a colored square, name, subtitle; the chosen
+     one is tinted and ticked (selected for TalkBack, set from code). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="56dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    android:paddingHorizontal="18dp"
+    android:paddingVertical="9dp">
+
+    <ImageView
+        android:id="@+id/image_mode_icon"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="@drawable/bg_mode_icon_square"
+        android:padding="7.5dp"
+        android:importantForAccessibility="no"
+        app:tint="@android:color/white"
+        tools:backgroundTint="@color/intensity_interval"
+        tools:src="@drawable/ic_intensity_interval" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="12dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/text_mode_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="15.5sp"
+            android:textColor="?attr/colorOnSurface"
+            tools:text="Intervals 6×400" />
+
+        <TextView
+            android:id="@+id/text_mode_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="12.5sp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            tools:text="6 × 400 m · ≈ 38 min" />
+
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/image_mode_tick"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_marginStart="12dp"
+        android:src="@drawable/ic_check"
+        android:importantForAccessibility="no"
+        android:visibility="gone"
+        app:tint="@color/ios_blue"
+        tools:visibility="visible" />
+
+</LinearLayout>

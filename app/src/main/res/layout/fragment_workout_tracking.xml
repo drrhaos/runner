@@ -160,13 +160,57 @@
             android:orientation="vertical"
             android:paddingHorizontal="12dp">
 
-            <Spinner
-                android:id="@+id/spinner_workout_type"
-                android:layout_width="match_parent"
-                android:layout_height="48dp"
-                android:spinnerMode="dropdown"
-                android:backgroundTint="?attr/colorPrimary"
-                android:paddingHorizontal="8dp" />
+            <!-- Кнопка режима: «таблетка» по центру, по нажатию — нижняя панель (TrackingModeController) -->
+            <LinearLayout
+                android:id="@+id/button_workout_mode"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/bg_mode_button"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingStart="5dp"
+                android:paddingEnd="12dp"
+                android:paddingVertical="5dp">
+
+                <ImageView
+                    android:id="@+id/image_workout_mode_icon"
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:background="@drawable/bg_mode_icon_circle"
+                    android:padding="6.5dp"
+                    android:importantForAccessibility="no"
+                    app:tint="@android:color/white"
+                    tools:backgroundTint="@color/intensity_easy"
+                    tools:src="@drawable/ic_intensity_easy" />
+
+                <!-- wrap_content with a weight: the pill hugs a short name, a long one shrinks
+                     to an ellipsis and keeps the unfold mark in view -->
+                <TextView
+                    android:id="@+id/text_workout_mode_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    tools:ignore="InefficientWeight"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="6dp"
+                    android:maxLines="1"
+                    android:ellipsize="end"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface"
+                    tools:text="@string/workout_type_easy_run" />
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:src="@drawable/ic_unfold_more"
+                    android:importantForAccessibility="no"
+                    app:tint="?attr/colorOnSurfaceVariant" />
+
+            </LinearLayout>
 
             <!-- Автопауза включена, а выбран режим с отрезками (только до старта) -->
             <TextView

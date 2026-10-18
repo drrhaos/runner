@@ -4,7 +4,6 @@ import android.content.res.ColorStateList
 import android.view.View
 import android.widget.ImageButton
 import android.widget.ImageView
-import android.widget.Spinner
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.core.content.withStyledAttributes
@@ -66,7 +65,7 @@ class MetricsDisplayManager(
         /** The current-pace tile: one TalkBack stop with its own description. */
         val layoutCurrentPaceTile: View,
         val textViewCaloriesBurned: TextView,
-        val spinnerWorkoutType: Spinner,
+        val workoutModeButton: View,
         val buttonStart: ImageButton,
         val buttonPause: ImageButton,
         val buttonStop: ImageButton,
@@ -287,14 +286,14 @@ class MetricsDisplayManager(
     fun updateButtonStates(state: WorkoutState) {
         when (state) {
             WorkoutState.NOT_STARTED -> {
-                views.spinnerWorkoutType.visibility = View.VISIBLE
+                views.workoutModeButton.visibility = View.VISIBLE
                 views.buttonStart.visibility = View.VISIBLE
                 views.buttonPause.visibility = View.GONE
                 views.buttonStop.visibility = View.GONE
                 onIdleControlsVisible?.invoke(true)
             }
             WorkoutState.RUNNING -> {
-                views.spinnerWorkoutType.visibility = View.GONE
+                views.workoutModeButton.visibility = View.GONE
                 views.buttonStart.visibility = View.GONE
                 views.buttonPause.visibility = View.VISIBLE
                 views.buttonStop.visibility = View.VISIBLE
@@ -305,7 +304,7 @@ class MetricsDisplayManager(
                 onIdleControlsVisible?.invoke(false)
             }
             WorkoutState.PAUSED -> {
-                views.spinnerWorkoutType.visibility = View.GONE
+                views.workoutModeButton.visibility = View.GONE
                 views.buttonStart.visibility = View.GONE
                 views.buttonPause.visibility = View.VISIBLE
                 views.buttonStop.visibility = View.VISIBLE
@@ -315,7 +314,7 @@ class MetricsDisplayManager(
                 onIdleControlsVisible?.invoke(false)
             }
             WorkoutState.STOPPED -> {
-                views.spinnerWorkoutType.visibility = View.VISIBLE
+                views.workoutModeButton.visibility = View.VISIBLE
                 views.buttonStart.visibility = View.VISIBLE
                 views.buttonPause.visibility = View.GONE
                 views.buttonStop.visibility = View.GONE

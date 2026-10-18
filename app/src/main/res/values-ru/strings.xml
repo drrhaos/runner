@@ -715,6 +715,15 @@
     <string name="tracking_interval_progress">Интервал %1$d / %2$d</string>
     <string name="tracking_interval_status">%1$d/%2$d · %3$s · %4$d%%</string>
     <string name="tracking_mode_plan">По плану: %1$s</string>
+    <string name="tracking_mode_sheet_title">Режим тренировки</string>
+    <string name="tracking_mode_group_plan">Сегодня по плану</string>
+    <string name="tracking_mode_group_templates">Шаблоны</string>
+    <string name="tracking_mode_easy_subtitle">Без отрезков</string>
+    <string name="tracking_mode_plan_subtitle">План «%1$s» · день %2$d</string>
+    <string name="tracking_mode_repeats">%1$d × %2$s</string>
+    <string name="tracking_mode_minutes">%1$d мин</string>
+    <string name="tracking_mode_about">≈ %1$s</string>
+    <string name="tracking_mode_button_a11y">Режим тренировки: %1$s, изменить</string>
     <string name="tracking_free_run">Свободный бег</string>
     <string name="voice_interval_upcoming_in_30s">Через 30 секунд начнётся интервал: %1$s</string>
     <string name="voice_interval_goal_duration">Время %1$s</string>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A group title of the workout mode sheet; a heading for TalkBack (set from code) -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="18dp"
+    android:layout_marginTop="14dp"
+    android:layout_marginBottom="4dp"
+    android:textAllCaps="true"
+    android:letterSpacing="0.05"
+    android:textSize="12sp"
+    android:textColor="?attr/colorOnSurfaceVariant"
+    tools:text="@string/tracking_mode_group_templates" />

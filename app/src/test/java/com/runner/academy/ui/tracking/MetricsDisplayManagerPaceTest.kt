@@ -6,7 +6,6 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
-import android.widget.Spinner
 import android.widget.TextView
 import androidx.core.view.ViewCompat
 import com.runner.academy.R
@@ -59,7 +58,7 @@ class MetricsDisplayManagerPaceTest {
             textViewCurrentPace = pace,
             layoutCurrentPaceTile = tile,
             textViewCaloriesBurned = text(),
-            spinnerWorkoutType = Spinner(context),
+            workoutModeButton = View(context),
             buttonStart = ImageButton(context),
             buttonPause = ImageButton(context),
             buttonStop = ImageButton(context),
