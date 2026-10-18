@@ -494,8 +494,9 @@
 
                 </LinearLayout>
 
-                <!-- Диагностика GPS -->
+                <!-- Диагностика GPS: только в отладочной сборке -->
                 <LinearLayout
+                    android:id="@+id/row_gps_diagnostics"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"

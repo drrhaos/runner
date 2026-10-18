@@ -31,9 +31,15 @@ class RunnerApplication : Application() {
         // Rows migrated or imported without derived metrics; continues an interrupted pass
         container.metricsBackfill.start()
 
-        // Unsaved GPS diagnostics recordings (workout discarded) are dropped after a day
+        // Debug: unsaved GPS diagnostics recordings (workout discarded) are dropped after a week.
+        // Release records nothing, so whatever an older version left behind goes on every start.
         Thread {
-            container.gpsDiagnosticsStore.cleanupOrphans(System.currentTimeMillis())
+            if (BuildConfig.DEBUG) {
+                container.gpsDiagnosticsStore.cleanupOrphans(System.currentTimeMillis())
+            } else {
+                container.gpsDiagnosticsStore.purgeAll()
+                userPreferences.forgetGpsDiagnostics()
+            }
         }.start()
     }
 }

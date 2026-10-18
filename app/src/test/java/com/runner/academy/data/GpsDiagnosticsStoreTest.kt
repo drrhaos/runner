@@ -90,4 +90,25 @@ class GpsDiagnosticsStoreTest {
     fun cleanupOrphans_onMissingDirectoryIsSafe() {
         store().cleanupOrphans(nowMs = dayMs)
     }
+
+    @Test
+    fun purgeAll_removesRecordingsAndShareCopies() {
+        val store = store()
+        store.sessionFile(1000L).apply { parentFile!!.mkdirs(); writeText("saved") }
+        store.attachToWorkout(1000L, 5L)
+        store.sessionFile(2000L).writeText("unsaved")
+        val copy = store.copyForSharing(5L)!!
+
+        store.purgeAll()
+
+        assertFalse(tmp.root.resolve("gps-diagnostics").exists())
+        assertFalse(copy.parentFile!!.exists())
+        assertNull(store.workoutFile(5L))
+    }
+
+    @Test
+    fun purgeAll_onMissingDirectoriesIsSafe() {
+        store().purgeAll()
+        store().purgeAll()
+    }
 }

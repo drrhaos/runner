@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.runner.academy.BuildConfig
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.google.android.material.color.MaterialColors
@@ -327,7 +328,8 @@ class WorkoutDetailFragment : Fragment() {
 
                     currentWorkout = workout
                     updateFavoriteButton(workout.isFavorite)
-                    val hasDiagnostics = viewModel.hasGpsDiagnostics(workoutId)
+                    // GPS diagnostics are a debug-build tool; release purges them on start
+                    val hasDiagnostics = BuildConfig.DEBUG && viewModel.hasGpsDiagnostics(workoutId)
                     _binding?.buttonShareDiagnostics?.visibility =
                         if (hasDiagnostics) View.VISIBLE else View.GONE
                     statsDisplay?.displayWorkout(workout)
