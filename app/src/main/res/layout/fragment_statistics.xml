@@ -75,7 +75,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:layout_marginBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_menu_workouts"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -96,7 +102,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:layout_marginBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_straighten"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -119,9 +131,15 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:layout_marginBottom="8dp"
                     android:visibility="gone"
                     tools:visibility="visible">
+
+                    <ImageView
+                        android:src="@drawable/ic_menu_run"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -142,7 +160,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:layout_marginBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_schedule"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -165,9 +189,15 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:layout_marginBottom="8dp"
                     android:visibility="gone"
                     tools:visibility="visible">
+
+                    <ImageView
+                        android:src="@drawable/ic_terrain"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -187,7 +217,13 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:src="@drawable/ic_local_fire_department"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -241,7 +277,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:layout_marginBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_speed"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -262,7 +304,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:layout_marginBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_record_route"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -282,7 +330,13 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:src="@drawable/ic_hourglass_bottom"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -337,7 +391,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:layout_marginBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_speed"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -358,7 +418,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:layout_marginBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_straighten"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -378,7 +444,13 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:src="@drawable/ic_schedule"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -401,9 +473,15 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:layout_marginTop="8dp"
                     android:visibility="gone"
                     tools:visibility="visible">
+
+                    <ImageView
+                        android:src="@drawable/ic_directions_walk"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -445,7 +523,13 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:gravity="center_vertical"
                     android:layout_marginBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_date_range"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -465,7 +549,13 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <ImageView
+                        android:src="@drawable/ic_calendar_month"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerStatisticsIcon" />
 
                     <TextView
                         android:layout_width="0dp"

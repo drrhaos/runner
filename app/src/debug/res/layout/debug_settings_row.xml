@@ -9,6 +9,11 @@
     android:gravity="center_vertical"
     android:orientation="horizontal">
 
+    <ImageView
+        android:src="@drawable/ic_bug_report"
+        android:importantForAccessibility="no"
+        style="@style/RunnerRowIcon" />
+
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"

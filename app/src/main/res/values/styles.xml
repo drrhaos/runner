@@ -76,6 +76,21 @@
         <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
+    <!-- Leading icon of a settings row; decorative (importantForAccessibility="no" in the layout) -->
+    <style name="RunnerRowIcon">
+        <item name="android:layout_width">24dp</item>
+        <item name="android:layout_height">24dp</item>
+        <item name="android:layout_marginEnd">16dp</item>
+        <item name="tint">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <!-- Leading icon of a statistics row, a size down to match the Subhead label -->
+    <style name="RunnerStatisticsIcon" parent="RunnerRowIcon">
+        <item name="android:layout_width">20dp</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:layout_marginEnd">12dp</item>
+    </style>
+
     <style name="RunnerStatisticsLabel">
         <item name="android:textAppearance">@style/TextAppearance.Runner.Subhead</item>
         <item name="android:textColor">?attr/colorOnSurfaceVariant</item>

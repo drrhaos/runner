@@ -56,6 +56,11 @@
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
 
+                    <ImageView
+                        android:src="@drawable/ic_monitor_weight"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
+
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -89,6 +94,11 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_height"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -124,6 +134,11 @@
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
 
+                    <ImageView
+                        android:src="@drawable/ic_cake"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
+
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -158,6 +173,11 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_sensor_heart_rate"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -209,6 +229,11 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_person"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -275,6 +300,11 @@
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
 
+                    <ImageView
+                        android:src="@drawable/ic_straighten"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
+
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -308,6 +338,11 @@
                     android:paddingEnd="8dp"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_brightness_6"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -343,6 +378,11 @@
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
 
+                    <ImageView
+                        android:src="@drawable/ic_language"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
+
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -377,6 +417,11 @@
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
 
+                    <ImageView
+                        android:src="@drawable/ic_timer"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
+
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -408,6 +453,11 @@
                     android:background="?attr/selectableItemBackground"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_record_voice_over"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -452,6 +502,11 @@
                     android:focusable="true"
                     android:background="?attr/selectableItemBackground">
 
+                    <ImageView
+                        android:src="@drawable/ic_pause_circle_outline"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
+
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -477,6 +532,11 @@
                     android:gravity="center_vertical"
                     android:focusable="true"
                     android:background="?attr/selectableItemBackground">
+
+                    <ImageView
+                        android:src="@drawable/ic_directions_walk"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
 
                     <TextView
                         android:layout_width="0dp"
@@ -529,6 +589,11 @@
                     android:background="?attr/selectableItemBackground"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_bluetooth"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -599,6 +664,11 @@
                     android:focusable="true"
                     android:background="?attr/selectableItemBackground">
 
+                    <ImageView
+                        android:src="@drawable/ic_gps_fixed"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
+
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
@@ -668,6 +738,11 @@
                     android:background="?attr/selectableItemBackground"
                     android:paddingTop="8dp"
                     android:paddingBottom="8dp">
+
+                    <ImageView
+                        android:src="@drawable/ic_description"
+                        android:importantForAccessibility="no"
+                        style="@style/RunnerRowIcon" />
 
                     <TextView
                         android:layout_width="0dp"
