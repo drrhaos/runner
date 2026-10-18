@@ -6,9 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Switch
 import androidx.appcompat.app.AlertDialog
-import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
-import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.doOnLayout
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -36,6 +34,8 @@ class VoiceSettingsFragment : Fragment() {
     private var _binding: FragmentVoiceSettingsBinding? = null
     private val binding get() = _binding!!
 
+    private var holdHints: HoldHints? = null
+
     private val viewModel: SettingsViewModel by viewModels {
         val app = requireContext().appContainer()
         SettingsViewModelFactory(requireContext(), app.userPreferences, app.pairedSensors, app.heartRateSensor.status)
@@ -52,6 +52,7 @@ class VoiceSettingsFragment : Fragment() {
             ViewCompat.setAccessibilityHeading(heading, true)
         }
         setUpRows()
+        HoldHints.sayOnce(view, requireContext().appContainer().userPreferences)
         viewLifecycleOwner.lifecycleScope.launch {
             combine(viewModel.settingsState, viewModel.hasHeartRateSensor) { state, hasSensor ->
                 VoiceScreen.of(state.voice, hasSensor, state.unitSystem)
@@ -60,9 +61,11 @@ class VoiceSettingsFragment : Fragment() {
     }
 
     private fun setUpRows() = with(binding) {
-        rowVoiceEnabled.setTexts(R.string.voice_enabled_label, R.string.voice_enabled_hint)
-        rowIntervalsSegmentChange.setTexts(R.string.voice_segment_change_label, R.string.voice_segment_change_hint)
-        rowIntervalsTargetCheck.setTexts(R.string.voice_target_check_label, R.string.voice_target_check_hint)
+        val hints = HoldHints(root).also { holdHints = it }
+        rowVoiceEnabled.setTexts(hints, R.string.voice_enabled_label, R.string.voice_enabled_hint)
+        rowIntervalsSegmentChange.setTexts(hints, R.string.voice_segment_change_label, R.string.voice_segment_change_hint)
+        rowIntervalsTargetCheck.setTexts(hints, R.string.voice_target_check_label, R.string.voice_target_check_hint)
+        hints.attach(rowPaceTolerance.root) { getString(R.string.voice_pace_tolerance_hint) }
         for (row in listOf(rowFreeSummary, rowIntervalsSummary)) {
             row.textViewChoiceLabel.setText(R.string.voice_summary_label)
         }
@@ -122,18 +125,17 @@ class VoiceSettingsFragment : Fragment() {
         root.contentDescription = textViewChoiceLabel.text.toString() + ", " + value
     }
 
-    /** The switch only shows the state; TalkBack hears it from the row, a checkable group. */
-    private fun LayoutVoiceSwitchRowBinding.setTexts(label: Int, hint: Int) {
+    /**
+     * The switch only shows the state; TalkBack hears it from the row, a checkable group.
+     * [hint] is shown on touch and hold.
+     */
+    private fun LayoutVoiceSwitchRowBinding.setTexts(hints: HoldHints, label: Int, hint: Int) {
         textViewSwitchLabel.setText(label)
-        textViewSwitchHint.setText(hint)
-        ViewCompat.setAccessibilityDelegate(root, object : AccessibilityDelegateCompat() {
-            override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
-                super.onInitializeAccessibilityNodeInfo(host, info)
-                info.className = Switch::class.java.name
-                info.isCheckable = true
-                info.isChecked = switchValue.isChecked
-            }
-        })
+        hints.attach(root, a11y = { info ->
+            info.className = Switch::class.java.name
+            info.isCheckable = true
+            info.isChecked = switchValue.isChecked
+        }) { getString(hint) }
     }
 
     /**
@@ -148,14 +150,18 @@ class VoiceSettingsFragment : Fragment() {
         root.setRowEnabled(enabled)
     }
 
-    /** Greyed out but still focusable: TalkBack says "disabled"; the value stays readable. */
+    /**
+     * Greyed out but still focusable: TalkBack says "disabled"; the value stays readable.
+     * A row with a hold hint stays an enabled view so it can still be held (see [HoldHints.setRowEnabled]).
+     */
     private fun View.setRowEnabled(enabled: Boolean) {
-        isEnabled = enabled
+        if (isLongClickable) holdHints?.setRowEnabled(this, enabled) else isEnabled = enabled
         alpha = if (enabled) 1f else DISABLED_ALPHA
     }
 
     /** performClick reaches the listener of a disabled view too: it must not act then. */
-    private fun View.onClickIfEnabled(action: () -> Unit) = setOnClickListener { if (it.isEnabled) action() }
+    private fun View.onClickIfEnabled(action: () -> Unit) =
+        setOnClickListener { if (HoldHints.isRowEnabled(it)) action() }
 
     private fun showSummaryDialog(kind: VoiceProfileKind) {
         val profile = if (kind == VoiceProfileKind.FREE) current.free else current.intervals
@@ -214,6 +220,8 @@ class VoiceSettingsFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        holdHints?.dismiss()
+        holdHints = null
         _binding = null
     }
 

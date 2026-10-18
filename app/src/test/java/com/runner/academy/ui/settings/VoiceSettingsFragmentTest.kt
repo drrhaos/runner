@@ -72,6 +72,9 @@ class VoiceSettingsFragmentTest {
 
     private fun stored() = prefs.voiceSettings()
 
+    /** A row with a hold hint stays an enabled view when greyed out (Robolectric nodes are never enabled). */
+    private fun enabled(view: View): Boolean = HoldHints.isRowEnabled(view)
+
     private fun checked(view: View): Boolean {
         val info = AccessibilityNodeInfo.obtain()
         view.onInitializeAccessibilityNodeInfo(info)
@@ -90,10 +93,10 @@ class VoiceSettingsFragmentTest {
             R.id.row_free_summary, R.id.row_free_metrics, R.id.row_intervals_summary,
             R.id.row_intervals_metrics, R.id.row_intervals_segment_change, R.id.row_intervals_target_check
         )) {
-            assertFalse("row $id", view.row(id).isEnabled)
+            assertFalse("row $id", enabled(view.row(id)))
             assertEquals("row $id", 0.38f, view.row(id).alpha, 0.001f)
         }
-        assertTrue(view.row(R.id.row_pace_tolerance).isEnabled)
+        assertTrue(enabled(view.row(R.id.row_pace_tolerance)))
         assertEquals(1f, view.row(R.id.row_pace_tolerance).alpha, 0.001f)
         assertEquals(context.getString(R.string.voice_pace_tolerance_value, 10), view.value(R.id.row_pace_tolerance))
         assertEquals(View.GONE, view.findViewById<View>(R.id.textView_units_note).visibility)
@@ -107,11 +110,11 @@ class VoiceSettingsFragmentTest {
 
         assertTrue(stored().enabled)
         assertTrue(checked(view.row(R.id.row_voice_enabled)))
-        assertTrue(view.row(R.id.row_free_summary).isEnabled)
-        assertTrue(view.row(R.id.row_free_metrics).isEnabled)
-        assertTrue(view.row(R.id.row_intervals_segment_change).isEnabled)
+        assertTrue(enabled(view.row(R.id.row_free_summary)))
+        assertTrue(enabled(view.row(R.id.row_free_metrics)))
+        assertTrue(enabled(view.row(R.id.row_intervals_segment_change)))
         // The interval summary is off: what it would say stays greyed out
-        assertFalse(view.row(R.id.row_intervals_metrics).isEnabled)
+        assertFalse(enabled(view.row(R.id.row_intervals_metrics)))
     }
 
     @Test
@@ -237,10 +240,73 @@ class VoiceSettingsFragmentTest {
     @Test
     @Config(qualifiers = "en")
     fun `the target cue hint keeps the quotes around the cues`() {
-        val hint = launch().row(R.id.row_intervals_target_check)
-            .findViewById<TextView>(R.id.textView_switch_hint).text.toString()
+        val hint = launch().row(R.id.row_intervals_target_check).holdHint()
 
         assertTrue(hint, hint.startsWith("“Speed up”, “Slow down”, “Above zone”, “Below zone”"))
+    }
+
+    private fun View.holdHint(): String {
+        assertTrue(performLongClick())
+        idle()
+        val popup = shadowOf(ApplicationProvider.getApplicationContext<android.app.Application>()).latestPopupWindow
+        assertTrue(popup.isShowing)
+        return popup.contentView.findViewById<TextView>(R.id.text_hold_hint).text.toString()
+    }
+
+    private fun a11yHint(view: View): String? {
+        val info = AccessibilityNodeInfo.obtain()
+        view.onInitializeAccessibilityNodeInfo(info)
+        return info.hintText?.toString()
+    }
+
+    @Test
+    fun `explanations sit in a touch-and-hold popup and in the TalkBack hint, not under the rows`() {
+        prefs.setVoiceSettings(on)
+        val view = launch()
+        val hints = mapOf(
+            R.id.row_voice_enabled to R.string.voice_enabled_hint,
+            R.id.row_intervals_segment_change to R.string.voice_segment_change_hint,
+            R.id.row_intervals_target_check to R.string.voice_target_check_hint,
+            R.id.row_pace_tolerance to R.string.voice_pace_tolerance_hint
+        )
+
+        for ((rowId, text) in hints) {
+            assertEquals(context.getString(text), view.row(rowId).holdHint())
+            assertEquals(context.getString(text), a11yHint(view.row(rowId)))
+        }
+        val shown = view.allTexts()
+        for (text in hints.values) assertFalse(context.getString(text) in shown)
+        // The switch rows stay checkable groups
+        assertTrue(checked(view.row(R.id.row_intervals_target_check)))
+    }
+
+    private fun View.allTexts(): List<String> = when (this) {
+        is TextView -> listOf(text.toString())
+        is android.view.ViewGroup -> (0 until childCount).flatMap { getChildAt(it).allTexts() }
+        else -> emptyList()
+    }
+
+    @Test
+    fun `a greyed out row is still explained on hold, and a tap does nothing`() {
+        val view = launch() // voice off: the interval switches are greyed out
+
+        assertEquals(
+            context.getString(R.string.voice_segment_change_hint),
+            view.row(R.id.row_intervals_segment_change).holdHint()
+        )
+        view.click(R.id.row_intervals_segment_change)
+
+        assertTrue(stored().intervals.segmentChange)
+        assertFalse(enabled(view.row(R.id.row_intervals_segment_change)))
+    }
+
+    @Test
+    fun `the first visit says once that rows can be held`() {
+        assertFalse(prefs.settingsHoldHintShown)
+
+        launch()
+
+        assertTrue(prefs.settingsHoldHintShown)
     }
 
     @Test

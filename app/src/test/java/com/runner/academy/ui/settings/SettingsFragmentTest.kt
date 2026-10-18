@@ -189,6 +189,77 @@ class SettingsFragmentTest {
         )
     }
 
+    // --- Touch-and-hold hints ---
+
+    private fun View.holdHint(): String {
+        assertTrue(performLongClick())
+        shadowOf(Looper.getMainLooper()).idle()
+        val popup = shadowOf(ApplicationProvider.getApplicationContext<android.app.Application>()).latestPopupWindow
+        assertTrue(popup.isShowing)
+        return popup.contentView.findViewById<TextView>(R.id.text_hold_hint).text.toString()
+    }
+
+    private fun a11yHint(view: View): String? {
+        val info = android.view.accessibility.AccessibilityNodeInfo.obtain()
+        view.onInitializeAccessibilityNodeInfo(info)
+        return info.hintText?.toString()
+    }
+
+    @Test
+    fun `holding the auto-pause row explains it, the state warning included`() {
+        val row = launch().first.requireView().findViewById<View>(R.id.row_auto_pause)
+
+        val hint = row.holdHint()
+
+        assertTrue(hint, hint.startsWith(context.getString(R.string.settings_hint_auto_pause)))
+        // No step sensor under Robolectric: the GPS-only warning follows
+        assertTrue(hint, hint.endsWith(context.getString(R.string.settings_hint_auto_pause_no_sensor)))
+        assertEquals(hint, a11yHint(row))
+    }
+
+    @Test
+    fun `holding the steps row says the phone has no step sensor instead of the hint`() {
+        val row = launch().first.requireView().findViewById<View>(R.id.row_steps_for_distance)
+
+        assertEquals(context.getString(R.string.settings_hint_steps_no_sensor), row.holdHint())
+        assertEquals(context.getString(R.string.settings_hint_steps_no_sensor), a11yHint(row))
+    }
+
+    @Test
+    fun `the debug build keeps the GPS diagnostics row, explained on hold`() {
+        val row = launch().first.requireView().findViewById<View>(R.id.row_gps_diagnostics)
+
+        assertEquals(View.VISIBLE, row.visibility)
+        assertEquals(context.getString(R.string.settings_hint_gps_diagnostics), row.holdHint())
+    }
+
+    @Test
+    fun `no explanation sits under the rows any more`() {
+        val shown = launch().first.requireView().allTexts()
+
+        for (id in listOf(
+            R.string.settings_hint_auto_pause, R.string.settings_hint_steps_for_distance,
+            R.string.settings_hint_steps_no_sensor, R.string.settings_hint_gps_diagnostics
+        )) {
+            assertFalse(shown.any { it.startsWith(context.getString(id)) })
+        }
+    }
+
+    private fun View.allTexts(): List<String> = when (this) {
+        is TextView -> listOf(text.toString())
+        is android.view.ViewGroup -> (0 until childCount).flatMap { getChildAt(it).allTexts() }
+        else -> emptyList()
+    }
+
+    @Test
+    fun `the first visit says once that rows can be held`() {
+        assertFalse(prefs.settingsHoldHintShown)
+
+        launch()
+
+        assertTrue(prefs.settingsHoldHintShown)
+    }
+
     // --- Maximum heart rate ---
 
     private val prefs get() = context.appContainer().userPreferences

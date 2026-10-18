@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- HoldHints: a greyed-out row with a hint stays an enabled view; its state lives here -->
+    <item name="tag_hold_hint_row_enabled" type="id" />
+</resources>

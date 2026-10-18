@@ -140,6 +140,7 @@
     <string name="settings_theme_system">Как в системе</string>
     <string name="settings_theme_light">Светлая</string>
     <string name="settings_theme_dark">Темная</string>
+    <string name="settings_hold_hint">Удерживайте пункт, чтобы узнать подробнее</string>
     <string name="settings_label_gps_diagnostics">Записывать диагностику GPS</string>
     <string name="settings_hint_gps_diagnostics">Сырые точки GPS и спутники для каждой новой тренировки, хранятся только на телефоне. Помогает разбирать проблемы с GPS; отправить можно из деталей тренировки.</string>
     <string name="settings_label_steps_for_distance">Шаги для дистанции при потере GPS</string>
