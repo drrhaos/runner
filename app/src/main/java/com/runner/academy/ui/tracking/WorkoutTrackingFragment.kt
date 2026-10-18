@@ -168,7 +168,7 @@ class WorkoutTrackingFragment : Fragment() {
         }
 
         initializeManagers()
-        modeController?.setupSpinner()
+        modeController?.setupButton()
         modeController?.loadModes()
         setupClickListeners()
         observeViewModel()
@@ -288,7 +288,7 @@ class WorkoutTrackingFragment : Fragment() {
                 textViewCurrentPace = binding.textViewCurrentPace,
                 layoutCurrentPaceTile = binding.layoutCurrentPaceTile,
                 textViewCaloriesBurned = binding.textViewCaloriesBurned,
-                spinnerWorkoutType = binding.spinnerWorkoutType,
+                workoutModeButton = binding.buttonWorkoutMode,
                 buttonStart = binding.buttonStart,
                 buttonPause = binding.buttonPause,
                 buttonStop = binding.buttonStop,
@@ -731,7 +731,7 @@ class WorkoutTrackingFragment : Fragment() {
             beginWorkout()
             return
         }
-        binding.spinnerWorkoutType.visibility = View.GONE
+        binding.buttonWorkoutMode.visibility = View.GONE
         binding.buttonStart.visibility = View.GONE
         binding.textViewCountdown.visibility = View.VISIBLE
         binding.textViewCountdown.text = countdownSeconds.toString()
@@ -996,6 +996,7 @@ class WorkoutTrackingFragment : Fragment() {
         gpsStatusUpdater = null
         panelStateManager = null
         metricsDisplayManager = null
+        modeController?.release()
         modeController = null
         intervalController = null
         _binding = null

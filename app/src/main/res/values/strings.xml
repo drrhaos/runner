@@ -704,6 +704,15 @@
     <string name="tracking_interval_progress">Interval %1$d / %2$d</string>
     <string name="tracking_interval_status">%1$d/%2$d · %3$s · %4$d%%</string>
     <string name="tracking_mode_plan">Plan: %1$s</string>
+    <string name="tracking_mode_sheet_title">Workout mode</string>
+    <string name="tracking_mode_group_plan">Today\'s plan</string>
+    <string name="tracking_mode_group_templates">Templates</string>
+    <string name="tracking_mode_easy_subtitle">No segments</string>
+    <string name="tracking_mode_plan_subtitle">Plan “%1$s” · day %2$d</string>
+    <string name="tracking_mode_repeats">%1$d × %2$s</string>
+    <string name="tracking_mode_minutes">%1$d min</string>
+    <string name="tracking_mode_about">≈ %1$s</string>
+    <string name="tracking_mode_button_a11y">Workout mode: %1$s, change</string>
     <string name="tracking_free_run">Free run</string>
     <string name="voice_interval_upcoming_in_30s">In 30 seconds: %1$s</string>
     <string name="voice_interval_goal_duration">Duration %1$s</string>

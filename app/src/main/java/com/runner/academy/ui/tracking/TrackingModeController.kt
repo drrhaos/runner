@@ -1,10 +1,6 @@
 package com.runner.academy.ui.tracking
 
 import android.content.Context
-import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
-import com.runner.academy.R
 import com.runner.academy.data.ScheduledWorkoutStatus
 import com.runner.academy.data.ScheduledWorkoutWithTemplate
 import com.runner.academy.data.TrainingPlanRepository
@@ -15,10 +11,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
- * Owns tracking-mode spinner options, today's plan pick, and selection sync with the ViewModel.
+ * Owns the tracking modes (easy run, today's plan, templates), today's plan pick, and selection
+ * sync with the ViewModel; the button and its sheet are drawn by [WorkoutModePicker].
  */
 class TrackingModeController(
-    private val context: Context,
+    context: Context,
     private val binding: FragmentWorkoutTrackingBinding,
     private val viewModel: WorkoutTrackingViewModel,
     private val planRepository: TrainingPlanRepository,
@@ -32,30 +29,21 @@ class TrackingModeController(
     var todaysScheduled: ScheduledWorkoutWithTemplate? = null
         private set
 
+    private val picker = WorkoutModePicker(context, binding)
     private var modeOptions: List<TrackingWorkoutMode> = listOf(TrackingWorkoutMode.EasyRun)
-    private var suppressModeSelectionCallback = false
+    private var activePlanName: String? = null
 
-    fun setupSpinner() {
-        binding.spinnerWorkoutType.onItemSelectedListener =
-            object : AdapterView.OnItemSelectedListener {
-                override fun onItemSelected(
-                    parent: AdapterView<*>?,
-                    view: View?,
-                    position: Int,
-                    id: Long
-                ) {
-                    if (suppressModeSelectionCallback) return
-                    val mode = modeOptions.getOrNull(position) ?: return
-                    applySelectedMode(mode)
-                }
-
-                override fun onNothingSelected(parent: AdapterView<*>?) {}
-            }
+    fun setupButton() {
+        picker.showSelected(selectedMode)
+        binding.buttonWorkoutMode.setOnClickListener {
+            picker.open(modeOptions, selectedMode, activePlanName) { applySelectedMode(it) }
+        }
     }
 
     fun loadModes() {
         scope.launch {
             todaysScheduled = planRepository.getTodaysScheduledWorkout()
+            activePlanName = planRepository.getActivePlan()?.name
             val templates = planRepository.getAllTemplatesWithSegments()
             rebuildModeOptions(templates)
             onModeApplied()
@@ -64,13 +52,9 @@ class TrackingModeController(
 
     fun syncFromViewModel() {
         if (modeOptions.isEmpty()) return
-        val preferred = resolvePreferredModeIndex(modeOptions)
-        val current = binding.spinnerWorkoutType.selectedItemPosition
-        if (preferred == current && selectedMode == modeOptions.getOrNull(preferred)) return
-        suppressModeSelectionCallback = true
-        binding.spinnerWorkoutType.setSelection(preferred, false)
-        suppressModeSelectionCallback = false
-        applySelectedMode(modeOptions[preferred], persistSelection = false)
+        val preferred = modeOptions[resolvePreferredModeIndex(modeOptions)]
+        if (preferred == selectedMode) return
+        applySelectedMode(preferred, persistSelection = false)
     }
 
     fun refreshTodaysScheduled() {
@@ -78,6 +62,9 @@ class TrackingModeController(
             todaysScheduled = planRepository.getTodaysScheduledWorkout()
         }
     }
+
+    /** The view is going away: an open sheet must not outlive it. */
+    fun release() = picker.dismiss()
 
     private fun hasFollowablePlan(): Boolean {
         val today = todaysScheduled ?: return false
@@ -93,33 +80,7 @@ class TrackingModeController(
         }
         templates.forEach { options.add(TrackingWorkoutMode.Template(it)) }
         modeOptions = options
-
-        val labels = options.map { mode ->
-            when (mode) {
-                TrackingWorkoutMode.EasyRun ->
-                    context.getString(R.string.workout_type_easy_run)
-                is TrackingWorkoutMode.PlanToday ->
-                    context.getString(
-                        R.string.tracking_mode_plan,
-                        mode.scheduled.template?.name.orEmpty()
-                    )
-                is TrackingWorkoutMode.Template ->
-                    mode.data.template.name
-            }
-        }
-        val adapter = ArrayAdapter(
-            context,
-            android.R.layout.simple_spinner_item,
-            labels
-        )
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-
-        val preferred = resolvePreferredModeIndex(options)
-        suppressModeSelectionCallback = true
-        binding.spinnerWorkoutType.adapter = adapter
-        binding.spinnerWorkoutType.setSelection(preferred, false)
-        suppressModeSelectionCallback = false
-        applySelectedMode(options[preferred], persistSelection = false)
+        applySelectedMode(options[resolvePreferredModeIndex(options)], persistSelection = false)
     }
 
     private fun resolvePreferredModeIndex(options: List<TrackingWorkoutMode>): Int {
@@ -155,6 +116,7 @@ class TrackingModeController(
     private fun applySelectedMode(mode: TrackingWorkoutMode, persistSelection: Boolean = true) {
         selectedMode = mode
         selectedWorkoutType = mode.workoutType()
+        picker.showSelected(mode)
         if (persistSelection) {
             viewModel.setModeSelection(mode.toSelectionKey())
         } else if (viewModel.modeSelection.value == null) {
