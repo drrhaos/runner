@@ -54,12 +54,22 @@ class HoldHints(private val scroll: View) {
             override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
                 super.onInitializeAccessibilityNodeInfo(host, info)
                 a11y(info)
+                if (!isRowEnabled(host)) info.isEnabled = false
                 // Read after the name and the state; the popup itself is no extra action
                 info.hintText = text()
                 info.removeAction(AccessibilityActionCompat.ACTION_LONG_CLICK)
                 info.isLongClickable = false
             }
         })
+    }
+
+    /**
+     * Greys out a row with a hint. A disabled view gets no long click, and a greyed-out row is
+     * where the explanation matters most: the view stays enabled, TalkBack hears it disabled,
+     * and taps check [isRowEnabled].
+     */
+    fun setRowEnabled(row: View, enabled: Boolean) {
+        row.setTag(R.id.tag_hold_hint_row_enabled, enabled)
     }
 
     fun dismiss() {
@@ -96,6 +106,11 @@ class HoldHints(private val scroll: View) {
     }
 
     companion object {
+        /** False for a row greyed out by [setRowEnabled] or disabled as a view. */
+        fun isRowEnabled(row: View): Boolean =
+            row.isEnabled && row.getTag(R.id.tag_hold_hint_row_enabled) != false
+
+
         /** On the first visit to either settings screen: rows can be held. Not brought back by a reset. */
         fun sayOnce(root: View, prefs: UserPreferences) {
             if (prefs.settingsHoldHintShown) return

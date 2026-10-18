@@ -150,14 +150,18 @@ class VoiceSettingsFragment : Fragment() {
         root.setRowEnabled(enabled)
     }
 
-    /** Greyed out but still focusable: TalkBack says "disabled"; the value stays readable. */
+    /**
+     * Greyed out but still focusable: TalkBack says "disabled"; the value stays readable.
+     * A row with a hold hint stays an enabled view so it can still be held (see [HoldHints.setRowEnabled]).
+     */
     private fun View.setRowEnabled(enabled: Boolean) {
-        isEnabled = enabled
+        if (isLongClickable) holdHints?.setRowEnabled(this, enabled) else isEnabled = enabled
         alpha = if (enabled) 1f else DISABLED_ALPHA
     }
 
     /** performClick reaches the listener of a disabled view too: it must not act then. */
-    private fun View.onClickIfEnabled(action: () -> Unit) = setOnClickListener { if (it.isEnabled) action() }
+    private fun View.onClickIfEnabled(action: () -> Unit) =
+        setOnClickListener { if (HoldHints.isRowEnabled(it)) action() }
 
     private fun showSummaryDialog(kind: VoiceProfileKind) {
         val profile = if (kind == VoiceProfileKind.FREE) current.free else current.intervals

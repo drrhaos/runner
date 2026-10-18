@@ -72,6 +72,9 @@ class VoiceSettingsFragmentTest {
 
     private fun stored() = prefs.voiceSettings()
 
+    /** A row with a hold hint stays an enabled view when greyed out (Robolectric nodes are never enabled). */
+    private fun enabled(view: View): Boolean = HoldHints.isRowEnabled(view)
+
     private fun checked(view: View): Boolean {
         val info = AccessibilityNodeInfo.obtain()
         view.onInitializeAccessibilityNodeInfo(info)
@@ -90,10 +93,10 @@ class VoiceSettingsFragmentTest {
             R.id.row_free_summary, R.id.row_free_metrics, R.id.row_intervals_summary,
             R.id.row_intervals_metrics, R.id.row_intervals_segment_change, R.id.row_intervals_target_check
         )) {
-            assertFalse("row $id", view.row(id).isEnabled)
+            assertFalse("row $id", enabled(view.row(id)))
             assertEquals("row $id", 0.38f, view.row(id).alpha, 0.001f)
         }
-        assertTrue(view.row(R.id.row_pace_tolerance).isEnabled)
+        assertTrue(enabled(view.row(R.id.row_pace_tolerance)))
         assertEquals(1f, view.row(R.id.row_pace_tolerance).alpha, 0.001f)
         assertEquals(context.getString(R.string.voice_pace_tolerance_value, 10), view.value(R.id.row_pace_tolerance))
         assertEquals(View.GONE, view.findViewById<View>(R.id.textView_units_note).visibility)
@@ -107,11 +110,11 @@ class VoiceSettingsFragmentTest {
 
         assertTrue(stored().enabled)
         assertTrue(checked(view.row(R.id.row_voice_enabled)))
-        assertTrue(view.row(R.id.row_free_summary).isEnabled)
-        assertTrue(view.row(R.id.row_free_metrics).isEnabled)
-        assertTrue(view.row(R.id.row_intervals_segment_change).isEnabled)
+        assertTrue(enabled(view.row(R.id.row_free_summary)))
+        assertTrue(enabled(view.row(R.id.row_free_metrics)))
+        assertTrue(enabled(view.row(R.id.row_intervals_segment_change)))
         // The interval summary is off: what it would say stays greyed out
-        assertFalse(view.row(R.id.row_intervals_metrics).isEnabled)
+        assertFalse(enabled(view.row(R.id.row_intervals_metrics)))
     }
 
     @Test
@@ -281,6 +284,20 @@ class VoiceSettingsFragmentTest {
         is TextView -> listOf(text.toString())
         is android.view.ViewGroup -> (0 until childCount).flatMap { getChildAt(it).allTexts() }
         else -> emptyList()
+    }
+
+    @Test
+    fun `a greyed out row is still explained on hold, and a tap does nothing`() {
+        val view = launch() // voice off: the interval switches are greyed out
+
+        assertEquals(
+            context.getString(R.string.voice_segment_change_hint),
+            view.row(R.id.row_intervals_segment_change).holdHint()
+        )
+        view.click(R.id.row_intervals_segment_change)
+
+        assertTrue(stored().intervals.segmentChange)
+        assertFalse(enabled(view.row(R.id.row_intervals_segment_change)))
     }
 
     @Test
