@@ -1,5 +1,6 @@
 package com.runner.academy.ui.settings
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -65,7 +66,11 @@ class HoldHints(private val scroll: View) {
         popup?.dismiss()
     }
 
-    /** Below the row, or above it when there is no room below (PopupWindow flips it). */
+    /**
+     * Below the row, or above it when there is no room below (PopupWindow flips it).
+     * The card is the popup's own window: there is no parent to inflate it into.
+     */
+    @SuppressLint("InflateParams")
     private fun show(anchor: View, text: CharSequence) {
         dismiss()
         val content = LayoutInflater.from(anchor.context).inflate(R.layout.popup_hold_hint, null)
