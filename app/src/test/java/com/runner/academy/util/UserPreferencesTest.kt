@@ -323,5 +323,32 @@ class UserPreferencesTest {
 
         assertEquals(0, userPreferences.hrMaxManual)
     }
+
+    // --- GPS diagnostics: debug builds only ---
+
+    @Test
+    fun `GPS diagnostics record only in a debug build with the switch on`() {
+        assertTrue(UserPreferences.gpsDiagnosticsEnabled(debug = true, stored = true))
+        assertFalse(UserPreferences.gpsDiagnosticsEnabled(debug = true, stored = false))
+        assertFalse(UserPreferences.gpsDiagnosticsEnabled(debug = false, stored = true))
+        assertFalse(UserPreferences.gpsDiagnosticsEnabled(debug = false, stored = false))
+    }
+
+    @Test
+    fun `a release build ignores the stored GPS diagnostics switch`() {
+        userPreferences.gpsDiagnostics = true
+
+        assertFalse(UserPreferences(context, debugBuild = false).gpsDiagnostics)
+        assertTrue(UserPreferences(context, debugBuild = true).gpsDiagnostics)
+    }
+
+    @Test
+    fun `forgetting GPS diagnostics removes the stored switch`() {
+        userPreferences.gpsDiagnostics = true
+
+        UserPreferences(context, debugBuild = false).forgetGpsDiagnostics()
+
+        assertFalse(userPreferences.gpsDiagnostics)
+    }
 }
 

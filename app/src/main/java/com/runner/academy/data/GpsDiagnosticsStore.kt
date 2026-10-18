@@ -49,6 +49,12 @@ class GpsDiagnosticsStore(
             ?.forEach { it.delete() }
     }
 
+    /** Release builds record nothing: drops every recording and share copy left by an older version. */
+    fun purgeAll() {
+        if (dir.exists()) dir.deleteRecursively()
+        if (shareDir.exists()) shareDir.deleteRecursively()
+    }
+
     private fun workoutPath(workoutId: Long) = File(dir, "workout-$workoutId.jsonl")
 
     private fun sharePath(workoutId: Long) = File(shareDir, "runner_gps_diagnostics_$workoutId.jsonl")

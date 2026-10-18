@@ -3,6 +3,7 @@ package com.runner.academy.util
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.runner.academy.BuildConfig
 import com.runner.academy.voice.VoiceSettings
 import com.runner.academy.voice.VoiceSettingsCodec
 import java.time.LocalDate
@@ -11,11 +12,18 @@ import java.time.ZoneId
 /**
  * Управление настройками пользователя
  */
-class UserPreferences(context: Context) {
-    
+class UserPreferences(
+    context: Context,
+    private val debugBuild: Boolean = BuildConfig.DEBUG
+) {
+
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    
+
     companion object {
+        /** GPS diagnostics are a debug-build tool: a release build never records, whatever is stored. */
+        fun gpsDiagnosticsEnabled(debug: Boolean, stored: Boolean): Boolean = debug && stored
+
+
         private const val PREFS_NAME = "runner_preferences"
         
         // Ключи настроек
@@ -162,11 +170,18 @@ class UserPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_APP_LANGUAGE, value).apply()
 
     /**
-     * Записывать диагностику GPS (сырые точки, спутники) в файл тренировки. По умолчанию выключено.
+     * Записывать диагностику GPS (сырые точки, спутники) в файл тренировки. По умолчанию выключено;
+     * в релизной сборке всегда false — см. [gpsDiagnosticsEnabled].
      */
     var gpsDiagnostics: Boolean
-        get() = prefs.getBoolean(KEY_GPS_DIAGNOSTICS, DEFAULT_GPS_DIAGNOSTICS)
+        get() = gpsDiagnosticsEnabled(
+            debug = debugBuild,
+            stored = prefs.getBoolean(KEY_GPS_DIAGNOSTICS, DEFAULT_GPS_DIAGNOSTICS)
+        )
         set(value) = prefs.edit().putBoolean(KEY_GPS_DIAGNOSTICS, value).apply()
+
+    /** Удаляет сохранённый переключатель диагностики GPS (релиз, см. [com.runner.academy.data.GpsDiagnosticsStore.purgeAll]). */
+    fun forgetGpsDiagnostics() = prefs.edit().remove(KEY_GPS_DIAGNOSTICS).apply()
 
     /**
      * Количество секунд обратного отсчета перед стартом тренировки

@@ -9,10 +9,12 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.runner.academy.BuildConfig
 import com.runner.academy.NavDestinations
 import com.runner.academy.R
 import com.runner.academy.appContainer
@@ -146,7 +148,8 @@ class SettingsFragment : Fragment() {
             viewModel.updateAutoPause(isChecked)
         }
 
-        // Диагностика GPS
+        // Диагностика GPS: только в отладочной сборке
+        binding.rowGpsDiagnostics.isVisible = BuildConfig.DEBUG
         binding.switchGpsDiagnostics.setOnCheckedChangeListener { _, isChecked ->
             viewModel.updateGpsDiagnostics(isChecked)
         }

@@ -89,6 +89,8 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        // BuildConfig.DEBUG: GPS diagnostics exist in debug builds only
+        buildConfig = true
     }
 
     // AGP embeds a dependency list encrypted with a Google key into APK/AAB; it is only
