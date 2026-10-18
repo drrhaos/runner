@@ -26,7 +26,7 @@
             android:id="@+id/textView_title"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textAppearance="@style/TextAppearance.Runner.Headline"
             tools:text="Intervals ×4" />
 
         <TextView
@@ -34,7 +34,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textAppearance="@style/TextAppearance.Runner.Caption"
             android:textColor="?attr/colorOnSurfaceVariant"
             tools:text="Interval training" />
 

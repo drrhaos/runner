@@ -19,7 +19,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             tools:text="По возрасту: 220 − 40 = 180. Если знаете свой максимум по тесту, задайте его здесь."
-            android:textSize="14sp"
+            android:textAppearance="@style/TextAppearance.Runner.Subhead"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <NumberPicker
@@ -35,7 +35,7 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
             android:text="@string/settings_hr_max_unit"
-            android:textSize="14sp"
+            android:textAppearance="@style/TextAppearance.Runner.Subhead"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <TextView
@@ -44,7 +44,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             tools:text="Z5 171–190\nZ4 152–170\nZ3 133–151\nZ2 114–132\nZ1 95–113"
-            android:textSize="13sp"
+            android:textAppearance="@style/TextAppearance.Runner.Footnote"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
     </LinearLayout>

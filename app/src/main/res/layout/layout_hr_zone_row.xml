@@ -30,7 +30,7 @@
             android:paddingBottom="1dp"
             android:background="@drawable/bg_hr_zone_badge"
             android:includeFontPadding="false"
-            android:textSize="12sp"
+            android:textAppearance="@style/TextAppearance.Runner.Caption"
             android:textStyle="bold"
             tools:text="Z4" />
 
@@ -41,7 +41,7 @@
             android:layout_height="wrap_content"
             android:minWidth="32dp"
             android:text="@string/workout_details_hr_zone_below"
-            android:textSize="12sp"
+            android:textAppearance="@style/TextAppearance.Runner.Caption"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:visibility="gone" />
 
@@ -52,7 +52,7 @@
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             tools:text="152–170"
-            android:textSize="13sp"
+            android:textAppearance="@style/TextAppearance.Runner.Footnote"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <TextView
@@ -61,7 +61,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             tools:text="12:34"
-            android:textSize="14sp"
+            android:textAppearance="@style/TextAppearance.Runner.Subhead"
             android:textColor="?attr/colorOnSurface" />
 
         <TextView
@@ -72,7 +72,7 @@
             android:minEms="3"
             android:gravity="end"
             tools:text="34 %"
-            android:textSize="14sp"
+            android:textAppearance="@style/TextAppearance.Runner.Subhead"
             android:textStyle="bold"
             android:textColor="?attr/colorOnSurface" />
     </LinearLayout>

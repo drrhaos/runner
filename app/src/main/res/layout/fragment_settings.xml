@@ -17,11 +17,7 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:background="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="?attr/colorSurface">
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -33,16 +29,14 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/settings_profile_title"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurface"
+                    style="@style/RunnerCardTitle"
                     android:layout_marginBottom="4dp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/settings_profile_subtitle"
-                    android:textSize="13sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Footnote"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:layout_marginBottom="16dp" />
 
@@ -67,7 +61,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/settings_label_weight"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
@@ -75,7 +69,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         tools:text="70 кг"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorPrimary" />
 
                 </LinearLayout>
@@ -101,7 +95,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/settings_label_growth"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
@@ -109,7 +103,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         tools:text="175 см"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorPrimary" />
 
                 </LinearLayout>
@@ -135,7 +129,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/settings_label_age"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
@@ -143,7 +137,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         tools:text="25 лет"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorPrimary" />
 
                 </LinearLayout>
@@ -176,7 +170,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_label_hr_max"
-                            android:textSize="16sp"
+                            android:textAppearance="@style/TextAppearance.Runner.Body"
                             android:textColor="?attr/colorOnSurface" />
 
                         <TextView
@@ -184,7 +178,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             tools:text="по возрасту: 220 − 40"
-                            android:textSize="13sp"
+                            android:textAppearance="@style/TextAppearance.Runner.Footnote"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
                     </LinearLayout>
@@ -196,7 +190,7 @@
                         android:layout_marginStart="8dp"
                         android:importantForAccessibility="no"
                         tools:text="180"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorPrimary" />
 
                 </LinearLayout>
@@ -221,7 +215,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/settings_label_gender"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
@@ -229,7 +223,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         tools:text="@string/settings_profile_gender_male"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorPrimary" />
 
                 </LinearLayout>
@@ -242,11 +236,7 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:background="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="?attr/colorSurface">
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -258,16 +248,14 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/settings_app_settings_title"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurface"
+                    style="@style/RunnerCardTitle"
                     android:layout_marginBottom="4dp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/settings_app_subtitle"
-                    android:textSize="13sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Footnote"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:layout_marginBottom="16dp" />
 
@@ -292,7 +280,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/settings_label_units_type"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
@@ -300,7 +288,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         tools:text="@string/settings_units_metric"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorPrimary" />
 
                 </LinearLayout>
@@ -326,7 +314,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/settings_label_theme"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
@@ -334,7 +322,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/settings_theme_system"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorPrimary" />
 
                 </LinearLayout>
@@ -360,7 +348,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/settings_label_language"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
@@ -368,7 +356,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/settings_language_en"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorPrimary" />
 
                 </LinearLayout>
@@ -394,7 +382,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/settings_label_start_countdown"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
@@ -402,7 +390,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         tools:text="5 s"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorPrimary" />
 
                 </LinearLayout>
@@ -431,7 +419,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_label_voice"
-                            android:textSize="16sp"
+                            android:textAppearance="@style/TextAppearance.Runner.Body"
                             android:textColor="?attr/colorOnSurface" />
 
                         <TextView
@@ -439,7 +427,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_voice_summary_off"
-                            android:textSize="13sp"
+                            android:textAppearance="@style/TextAppearance.Runner.Footnote"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
                     </LinearLayout>
@@ -469,10 +457,10 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/settings_label_auto_pause"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorOnSurface" />
 
-                    <com.google.android.material.switchmaterial.SwitchMaterial
+                    <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_auto_pause"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -495,10 +483,10 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/settings_label_gps_diagnostics"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorOnSurface" />
 
-                    <com.google.android.material.switchmaterial.SwitchMaterial
+                    <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_gps_diagnostics"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -528,10 +516,10 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:text="@string/settings_label_steps_for_distance"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorOnSurface" />
 
-                    <com.google.android.material.switchmaterial.SwitchMaterial
+                    <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_steps_for_distance"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -547,11 +535,7 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:background="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp"
-            app:cardBackgroundColor="?attr/colorSurface">
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -563,9 +547,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/settings_devices_title"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:textColor="?attr/colorOnSurface"
+                    style="@style/RunnerCardTitle"
                     android:layout_marginBottom="12dp" />
 
                 <!-- Устройства: строка читается одной группой, нажатие открывает экран -->
@@ -591,7 +573,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_label_devices"
-                            android:textSize="16sp"
+                            android:textAppearance="@style/TextAppearance.Runner.Body"
                             android:textColor="?attr/colorOnSurface" />
 
                         <TextView
@@ -599,7 +581,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_devices_none"
-                            android:textSize="13sp"
+                            android:textAppearance="@style/TextAppearance.Runner.Footnote"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
                     </LinearLayout>
@@ -624,10 +606,9 @@
             android:layout_height="wrap_content"
             android:text="@string/settings_btn_reset"
             android:textColor="?attr/colorError"
-            android:background="?attr/colorSurface"
+            app:backgroundTint="?attr/colorSurface"
             app:strokeColor="?attr/colorError"
-            app:strokeWidth="2dp"
-            style="@style/Widget.Material3.Button.OutlinedButton" />
+            style="@style/Widget.Runner.Button.Outlined" />
 
     </LinearLayout>
 

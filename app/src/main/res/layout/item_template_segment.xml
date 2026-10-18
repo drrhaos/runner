@@ -3,9 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="0dp">
+    android:layout_marginBottom="8dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -16,7 +14,7 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            style="@style/Widget.Runner.TextInput">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editText_segment_title"
@@ -36,7 +34,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginEnd="4dp"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+                style="@style/Widget.Runner.TextInput.ExposedDropdown">
 
                 <AutoCompleteTextView
                     android:id="@+id/autoComplete_segment_kind"
@@ -51,7 +49,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="4dp"
-                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+                style="@style/Widget.Runner.TextInput.ExposedDropdown">
 
                 <AutoCompleteTextView
                     android:id="@+id/autoComplete_segment_goal"
@@ -67,7 +65,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            style="@style/Widget.Runner.TextInput">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editText_duration"
@@ -86,7 +84,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:visibility="gone"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            style="@style/Widget.Runner.TextInput">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editText_distance"
@@ -106,7 +104,7 @@
             android:layout_marginTop="8dp"
             android:text="@string/segment_target_label"
             android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="12sp" />
+            android:textAppearance="@style/TextAppearance.Runner.Caption" />
 
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/toggle_segment_target"
@@ -118,7 +116,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_target_none"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.Runner.Button.Outlined"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -126,7 +124,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_target_pace"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.Runner.Button.Outlined"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -134,7 +132,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_target_zone"
-                style="@style/Widget.Material3.Button.OutlinedButton"
+                style="@style/Widget.Runner.Button.Outlined"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -147,7 +145,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:visibility="gone"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            style="@style/Widget.Runner.TextInput">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editText_pace"
@@ -166,7 +164,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:visibility="gone"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            style="@style/Widget.Runner.TextInput">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editText_hr_zone"
@@ -181,7 +179,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_remove_segment"
-            style="@style/Widget.Material3.Button.TextButton"
+            style="@style/Widget.Runner.Button.Text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="end"

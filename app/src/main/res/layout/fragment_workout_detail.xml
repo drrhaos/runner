@@ -19,13 +19,14 @@
             android:clickable="true" />
 
         <!-- Индикатор загрузки маршрута -->
-        <ProgressBar
+        <com.google.android.material.progressindicator.CircularProgressIndicator
             android:id="@+id/progressBar_map_loading"
+            android:indeterminate="true"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:visibility="visible"
-            style="?android:attr/progressBarStyleLarge" />
+            app:indicatorSize="48dp" />
 
     </FrameLayout>
 
@@ -34,9 +35,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp">
+        android:layout_marginTop="8dp">
 
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/toggleGroup_analysis"
@@ -51,7 +50,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/workout_details_basic_params"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                style="@style/Widget.Runner.Button.Outlined" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_charts"
@@ -59,7 +58,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/workout_details_charts"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                style="@style/Widget.Runner.Button.Outlined" />
 
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
@@ -92,8 +91,6 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp"
         app:cardBackgroundColor="?attr/colorTertiaryContainer"
         android:visibility="gone"
         tools:visibility="visible">
@@ -127,7 +124,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="8dp"
-                    android:textSize="17sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnTertiaryContainer"
                     tools:text="@string/records_congrats_title" />
@@ -146,7 +143,7 @@
                     android:layout_marginTop="4dp"
                     android:layout_marginEnd="8dp"
                     android:text="@string/records_steps_note"
-                    android:textSize="12sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Caption"
                     android:textColor="?attr/colorOnTertiaryContainer"
                     android:visibility="gone"
                     tools:visibility="visible" />
@@ -170,9 +167,7 @@
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp">
+        android:layout_margin="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -200,7 +195,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         tools:text="01.01.2024"
-                        android:textSize="20sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Title3"
                         android:textStyle="bold"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -209,7 +204,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         tools:text="14:30"
-                        android:textSize="14sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Subhead"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:layout_marginTop="2dp" />
                 </LinearLayout>
@@ -230,7 +225,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     tools:text="@string/workout_type_easy_run"
-                    android:textSize="14sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Subhead"
                     android:textColor="?attr/colorOnPrimary"
                     android:background="@drawable/type_chip_background"
                     android:paddingStart="12dp"
@@ -495,7 +490,7 @@
             <!-- Пометка источника высоты (GPS, файл): открывает пояснение -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_elevation_source_note"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+                style="@style/Widget.Runner.Button.Text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:minHeight="48dp"
@@ -506,7 +501,7 @@
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:textAllCaps="false"
-                android:textSize="12sp"
+                android:textAppearance="@style/TextAppearance.Runner.Caption"
                 android:letterSpacing="0"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 app:icon="@drawable/ic_info_outline"
@@ -538,10 +533,10 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/records_exclude_label"
-                    android:textSize="16sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
                     android:textColor="?attr/colorOnSurface" />
 
-                <com.google.android.material.switchmaterial.SwitchMaterial
+                <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/switch_exclude_records"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -561,7 +556,7 @@
                 android:paddingEnd="8dp"
                 android:drawablePadding="6dp"
                 android:text="@string/records_auto_excluded"
-                android:textSize="12sp"
+                android:textAppearance="@style/TextAppearance.Runner.Caption"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 app:drawableStartCompat="@drawable/ic_info_outline_small"
                 app:drawableTint="?attr/colorOnSurfaceVariant"
@@ -588,8 +583,8 @@
                         android:layout_marginEnd="8dp"
                         android:padding="2dp"
                         android:text="@string/workout_details_btn_share"
-                        android:drawableStart="@android:drawable/ic_menu_share"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                        app:icon="@drawable/ic_share"
+                        style="@style/Widget.Runner.Button.Outlined" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/button_export_gpx"
@@ -598,8 +593,8 @@
                         android:layout_weight="1"
                         android:padding="2dp"
                         android:text="@string/workout_details_btn_export_gpx"
-                        android:drawableStart="@android:drawable/ic_menu_upload"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                        app:icon="@drawable/ic_menu_export"
+                        style="@style/Widget.Runner.Button.Outlined" />
                 </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
@@ -608,10 +603,10 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
                     android:text="@string/workout_details_btn_share_diagnostics"
-                    android:drawableStart="@android:drawable/ic_menu_share"
+                    app:icon="@drawable/ic_share"
                     android:visibility="gone"
                     tools:visibility="visible"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                    style="@style/Widget.Runner.Button.Outlined" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_edit"
@@ -619,17 +614,18 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
                     android:text="@string/edit"
-                    android:drawableStart="@android:drawable/ic_menu_edit"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                    app:icon="@drawable/ic_edit"
+                    style="@style/Widget.Runner.Button.Outlined" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_delete"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/workout_details_btn_delete"
-                    android:drawableStart="@android:drawable/ic_menu_delete"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    app:icon="@drawable/ic_delete"
+                    style="@style/Widget.Runner.Button"
                     android:textColor="?attr/colorOnError"
+                    app:iconTint="?attr/colorOnError"
                     app:backgroundTint="?attr/colorError" />
 
             </LinearLayout>
@@ -652,9 +648,7 @@
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp">
+        android:layout_margin="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -666,7 +660,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/workout_details_pace_speed_pulse_title"
-                android:textSize="16sp"
+                android:textAppearance="@style/TextAppearance.Runner.Body"
                 android:textStyle="bold"
                 android:textColor="?attr/colorOnSurface"
                 android:layout_marginBottom="8dp" />
@@ -688,7 +682,7 @@
                     android:layout_gravity="top|end"
                     android:layout_margin="8dp"
                     android:text=""
-                    android:textSize="12sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Caption"
                     android:textColor="@color/chart_values_text"
                     android:background="@color/chart_values_background"
                     android:padding="8dp"
@@ -708,9 +702,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:visibility="gone"
-        tools:visibility="visible"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp">
+        tools:visibility="visible">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -731,7 +723,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/workout_details_cadence_title"
-                    android:textSize="16sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
 
@@ -740,7 +732,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     tools:text="ср. 172 шаг/мин"
-                    android:textSize="14sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Subhead"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
             </LinearLayout>
@@ -761,7 +753,7 @@
                     android:layout_gravity="top|end"
                     android:layout_margin="8dp"
                     android:text=""
-                    android:textSize="12sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Caption"
                     android:textColor="@color/chart_values_text"
                     android:background="@color/chart_values_background"
                     android:padding="8dp"
@@ -781,9 +773,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:visibility="gone"
-        tools:visibility="visible"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp">
+        tools:visibility="visible">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -804,7 +794,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/workout_details_heart_rate_title"
-                    android:textSize="16sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
 
@@ -813,7 +803,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     tools:text="средний 152 · макс 178"
-                    android:textSize="14sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Subhead"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
             </LinearLayout>
@@ -834,7 +824,7 @@
                     android:layout_gravity="top|end"
                     android:layout_margin="8dp"
                     android:text=""
-                    android:textSize="12sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Caption"
                     android:textColor="@color/chart_values_text"
                     android:background="@color/chart_values_background"
                     android:padding="8dp"
@@ -855,9 +845,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:visibility="gone"
-        tools:visibility="visible"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp">
+        tools:visibility="visible">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -870,7 +858,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/workout_details_hr_zones_title"
-                android:textSize="16sp"
+                android:textAppearance="@style/TextAppearance.Runner.Body"
                 android:textStyle="bold"
                 android:textColor="?attr/colorOnSurface" />
 
@@ -879,7 +867,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 tools:text="По максимальному пульсу 185 (по возрасту)"
-                android:textSize="12sp"
+                android:textAppearance="@style/TextAppearance.Runner.Caption"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <LinearLayout
@@ -900,9 +888,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:visibility="gone"
-        tools:visibility="visible"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp">
+        tools:visibility="visible">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -922,7 +908,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/workout_details_height_title"
-                    android:textSize="16sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
 
@@ -931,7 +917,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     tools:text="↑ 124 м  ↓ 118 м"
-                    android:textSize="14sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Subhead"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
             </LinearLayout>
@@ -941,7 +927,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 tools:text="@string/workout_elevation_source_gps_short"
-                android:textSize="12sp"
+                android:textAppearance="@style/TextAppearance.Runner.Caption"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:visibility="gone"
                 tools:visibility="visible" />
@@ -966,7 +952,7 @@
                     android:layout_gravity="top|end"
                     android:layout_margin="8dp"
                     android:text=""
-                    android:textSize="12sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Caption"
                     android:textColor="@color/chart_values_text"
                     android:background="@color/chart_values_background"
                     android:padding="8dp"
@@ -983,9 +969,7 @@
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp">
+        android:layout_margin="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -1005,7 +989,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/workout_details_pace_speed_title"
-                    android:textSize="16sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
 
@@ -1022,14 +1006,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/workout_details_pace"
-                        style="@style/Widget.MaterialComponents.Chip.Choice" />
+                        style="@style/Widget.Runner.Chip.Filter" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chip_speed"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/workout_details_speed"
-                        style="@style/Widget.MaterialComponents.Chip.Choice" />
+                        style="@style/Widget.Runner.Chip.Filter" />
 
                 </com.google.android.material.chip.ChipGroup>
 
@@ -1051,7 +1035,7 @@
                     android:layout_gravity="top|end"
                     android:layout_margin="8dp"
                     android:text=""
-                    android:textSize="12sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Caption"
                     android:textColor="@color/chart_values_text"
                     android:background="@color/chart_values_background"
                     android:padding="8dp"

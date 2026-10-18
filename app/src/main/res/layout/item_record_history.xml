@@ -17,7 +17,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textSize="14sp"
+        android:textAppearance="@style/TextAppearance.Runner.Subhead"
         android:textColor="?attr/colorOnSurface"
         tools:text="03.10.2026" />
 
@@ -27,7 +27,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:maxLines="1"
-        android:textSize="14sp"
+        android:textAppearance="@style/TextAppearance.Runner.Subhead"
         android:textStyle="bold"
         android:textColor="?attr/colorOnSurface"
         tools:text="24:31" />
@@ -40,7 +40,7 @@
         android:minWidth="56dp"
         android:gravity="end"
         android:maxLines="1"
-        android:textSize="14sp"
+        android:textAppearance="@style/TextAppearance.Runner.Subhead"
         android:textColor="?attr/colorOnSurfaceVariant"
         tools:text="−0:42" />
 

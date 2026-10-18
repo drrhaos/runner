@@ -15,7 +15,7 @@
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+            style="@style/Widget.Runner.TextInput">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/editText_template_name"
@@ -28,7 +28,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+            style="@style/Widget.Runner.TextInput.ExposedDropdown">
 
             <AutoCompleteTextView
                 android:id="@+id/autoComplete_workout_type"
@@ -58,7 +58,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textAppearance="@style/TextAppearance.Runner.Caption"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <TextView
@@ -76,12 +76,12 @@
             android:layout_marginTop="4dp"
             android:text="@string/segment_target_zone_disabled"
             android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="13sp"
+            android:textAppearance="@style/TextAppearance.Runner.Footnote"
             android:visibility="gone" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_open_settings"
-            style="@style/Widget.Material3.Button.TextButton"
+            style="@style/Widget.Runner.Button.Text"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/segment_target_open_settings"
@@ -96,7 +96,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_add_segment"
-            style="@style/Widget.Material3.Button.TonalButton"
+            style="@style/Widget.Runner.Button.Tonal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
@@ -111,7 +111,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_delete_template"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Runner.Button.Outlined"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"

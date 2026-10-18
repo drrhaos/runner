@@ -5,6 +5,6 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:paddingTop="2dp"
-    android:textSize="15sp"
+    android:textAppearance="@style/TextAppearance.Runner.Subhead"
     android:textColor="?attr/colorOnTertiaryContainer"
     tools:text="@string/records_congrats_line" />

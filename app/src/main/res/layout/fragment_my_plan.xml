@@ -16,16 +16,14 @@
             android:id="@+id/textView_active_plan"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textAppearance="@style/TextAppearance.Runner.Headline"
             android:text="@string/plan_no_active" />
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/card_day_detail"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp">
+            android:layout_marginTop="12dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -57,14 +55,14 @@
                             android:id="@+id/textView_day_date"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:textAppearance="?attr/textAppearanceTitleSmall" />
+                            android:textAppearance="@style/TextAppearance.Runner.Subhead.Medium" />
 
                         <TextView
                             android:id="@+id/textView_day_title"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:textAppearance="?attr/textAppearanceBodyLarge" />
+                            android:textAppearance="@style/TextAppearance.Runner.Body" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -73,7 +71,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:textAppearance="?attr/textAppearanceBodySmall"
+                    android:textAppearance="@style/TextAppearance.Runner.Caption"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <com.runner.academy.ui.tracking.SegmentProgressView
@@ -107,7 +105,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:gravity="center"
-                android:textAppearance="?attr/textAppearanceTitleMedium" />
+                android:textAppearance="@style/TextAppearance.Runner.Headline" />
 
             <ImageButton
                 android:id="@+id/button_next_month"
@@ -131,7 +129,7 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:text="@string/plan_weekday_1"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textAppearance="@style/TextAppearance.Runner.Caption2"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
@@ -140,7 +138,7 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:text="@string/plan_weekday_2"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textAppearance="@style/TextAppearance.Runner.Caption2"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
@@ -149,7 +147,7 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:text="@string/plan_weekday_3"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textAppearance="@style/TextAppearance.Runner.Caption2"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
@@ -158,7 +156,7 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:text="@string/plan_weekday_4"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textAppearance="@style/TextAppearance.Runner.Caption2"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
@@ -167,7 +165,7 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:text="@string/plan_weekday_5"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textAppearance="@style/TextAppearance.Runner.Caption2"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
@@ -176,7 +174,7 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:text="@string/plan_weekday_6"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textAppearance="@style/TextAppearance.Runner.Caption2"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
@@ -185,7 +183,7 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:text="@string/plan_weekday_7"
-                android:textAppearance="?attr/textAppearanceLabelSmall"
+                android:textAppearance="@style/TextAppearance.Runner.Caption2"
                 android:textColor="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 
@@ -201,7 +199,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textAppearance="@style/TextAppearance.Runner.Caption"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <LinearLayout
@@ -222,7 +220,7 @@
                 android:layout_marginStart="6dp"
                 android:layout_marginEnd="16dp"
                 android:text="@string/plan_legend_training"
-                android:textAppearance="?attr/textAppearanceLabelSmall" />
+                android:textAppearance="@style/TextAppearance.Runner.Caption2" />
 
             <View
                 android:layout_width="12dp"
@@ -234,7 +232,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="6dp"
                 android:text="@string/plan_legend_done"
-                android:textAppearance="?attr/textAppearanceLabelSmall" />
+                android:textAppearance="@style/TextAppearance.Runner.Caption2" />
         </LinearLayout>
 
         <com.google.android.material.button.MaterialButton
@@ -246,7 +244,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/button_deactivate_plan"
-            style="@style/Widget.Material3.Button.OutlinedButton"
+            style="@style/Widget.Runner.Button.Outlined"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"

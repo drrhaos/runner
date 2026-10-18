@@ -18,7 +18,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textSize="16sp"
+        android:textAppearance="@style/TextAppearance.Runner.Body"
         android:textColor="?attr/colorOnSurface"
         tools:text="@string/voice_summary_label" />
 
@@ -28,7 +28,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:gravity="end"
-        android:textSize="16sp"
+        android:textAppearance="@style/TextAppearance.Runner.Body"
         android:textColor="?attr/colorPrimary"
         tools:text="@string/voice_every_km_1" />
 

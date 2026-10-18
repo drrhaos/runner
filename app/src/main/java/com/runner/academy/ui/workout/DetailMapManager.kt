@@ -1,6 +1,8 @@
 package com.runner.academy.ui.workout
 
 import android.graphics.Color
+import androidx.core.content.ContextCompat
+import com.runner.academy.R
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.util.OsmMapConfig
@@ -59,7 +61,7 @@ class DetailMapManager(
         mapView.overlays.add(trackPolyline)
 
         positionMarker = Marker(mapView).apply {
-            icon = createDefaultMarkerIcon(Color.BLUE)
+            icon = createDefaultMarkerIcon(ContextCompat.getColor(context, R.color.ios_blue))
             setVisible(false)
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
             setInfoWindowAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_TOP)
@@ -67,7 +69,7 @@ class DetailMapManager(
         mapView.overlays.add(positionMarker)
 
         positionMarkerEnd = Marker(mapView).apply {
-            icon = createDefaultMarkerIcon(Color.BLUE)
+            icon = createDefaultMarkerIcon(ContextCompat.getColor(context, R.color.ios_blue))
             setVisible(false)
             setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
             setInfoWindowAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_TOP)
@@ -220,7 +222,7 @@ class DetailMapManager(
         mapView.onDetach()
     }
 
-    private fun createDefaultMarkerIcon(color: Int = Color.BLUE): android.graphics.drawable.Drawable {
+    private fun createDefaultMarkerIcon(color: Int): android.graphics.drawable.Drawable {
         val size = (32 * context.resources.displayMetrics.density / 3f).toInt().coerceAtLeast(8)
         val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
         val canvas = android.graphics.Canvas(bitmap)

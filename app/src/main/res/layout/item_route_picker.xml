@@ -7,9 +7,7 @@
     android:layout_marginBottom="8dp"
     android:clickable="true"
     android:focusable="true"
-    android:foreground="?attr/selectableItemBackground"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="0dp">
+    android:foreground="?attr/selectableItemBackground">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -45,7 +43,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textColor="?attr/colorOnSurface"
-                    android:textSize="15sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Subhead"
                     android:textStyle="bold"
                     tools:text="Easy run" />
 
@@ -65,7 +63,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="13sp"
+                android:textAppearance="@style/TextAppearance.Runner.Footnote"
                 tools:text="5.2 km · 01.01.2024" />
 
             <TextView
@@ -74,7 +72,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:textColor="?attr/colorOnSurfaceVariant"
-                android:textSize="12sp"
+                android:textAppearance="@style/TextAppearance.Runner.Caption"
                 tools:text="128 points" />
         </LinearLayout>
     </LinearLayout>

@@ -91,7 +91,7 @@
             android:gravity="center"
             android:paddingHorizontal="12dp"
             android:paddingVertical="8dp"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textAppearance="@style/TextAppearance.Runner.Subhead"
             android:textColor="?attr/colorOnSurface"
             android:visibility="gone"
             tools:text="@string/gps_lost_banner"
@@ -198,7 +198,7 @@
                     android:layout_marginEnd="6dp"
                     android:maxLines="1"
                     android:ellipsize="end"
-                    android:textSize="15sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Subhead"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface"
                     tools:text="@string/workout_type_easy_run" />
@@ -220,7 +220,7 @@
                 android:layout_marginTop="4dp"
                 android:gravity="center"
                 android:text="@string/track_info_auto_pause_unavailable"
-                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textAppearance="@style/TextAppearance.Runner.Caption"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:visibility="gone" />
         </LinearLayout>
@@ -239,7 +239,7 @@
                 android:id="@+id/textView_interval_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textAppearance="?attr/textAppearanceTitleSmall"
+                android:textAppearance="@style/TextAppearance.Runner.Subhead.Medium"
                 android:gravity="center_horizontal" />
 
             <TextView
@@ -247,7 +247,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_horizontal"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textAppearance="@style/TextAppearance.Runner.Subhead"
                 android:textColor="?attr/colorOnSurface"
                 android:visibility="gone" />
 
@@ -260,7 +260,7 @@
                 android:gravity="center"
                 android:drawablePadding="4dp"
                 android:importantForAccessibility="no"
-                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textAppearance="@style/TextAppearance.Runner.Subhead"
                 android:visibility="gone" />
 
             <TextView
@@ -268,7 +268,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_horizontal"
-                android:textAppearance="?attr/textAppearanceBodySmall"
+                android:textAppearance="@style/TextAppearance.Runner.Caption"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <com.runner.academy.ui.tracking.SegmentProgressView
@@ -339,7 +339,7 @@
                         android:layout_gravity="center"
                         android:importantForAccessibility="no"
                         android:text="@string/track_info_time_label"
-                        android:textSize="16sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textColor="?attr/colorOnSurface"
                         android:alpha="0.72" />
 
@@ -367,7 +367,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:textSize="14sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Subhead"
                     android:textColor="?attr/colorOnSurface"
                     android:alpha="0.72"
                     android:visibility="gone"
@@ -388,7 +388,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/track_info_distance_label_km"
-                    android:textSize="16sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
                     android:textColor="?attr/colorOnSurface"
                     android:alpha="0.72"
                     android:layout_marginTop="4dp" />
@@ -415,14 +415,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         tools:text="0.00"
-                        android:textSize="24sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Metric"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/track_info_average_speed_label_km"
-                        android:textSize="14sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Subhead"
                         android:textColor="?attr/colorOnSurface"
                         android:alpha="0.72" />
                 </LinearLayout>
@@ -443,7 +443,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/track_info_time_placeholder"
-                        android:textSize="24sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Metric"
                         android:textColor="?attr/colorOnSurface"
                         android:importantForAccessibility="no" />
 
@@ -451,7 +451,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/track_info_current_pace_label_km"
-                        android:textSize="14sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Subhead"
                         android:textColor="?attr/colorOnSurface"
                         android:alpha="0.72"
                         android:importantForAccessibility="no" />
@@ -470,14 +470,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/track_info_time_placeholder"
-                        android:textSize="24sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Metric"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/track_info_average_pace_label_km"
-                        android:textSize="14sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Subhead"
                         android:textColor="?attr/colorOnSurface"
                         android:alpha="0.72" />
                 </LinearLayout>
@@ -495,14 +495,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         tools:text="0"
-                        android:textSize="24sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Metric"
                         android:textColor="?attr/colorOnSurface" />
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/track_info_calories_label"
-                        android:textSize="14sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Subhead"
                         android:textColor="?attr/colorOnSurface"
                         android:alpha="0.72" />
                 </LinearLayout>
@@ -530,7 +530,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/track_info_pulse_placeholder"
-                            android:textSize="24sp"
+                            android:textAppearance="@style/TextAppearance.Runner.Metric"
                             android:textColor="?attr/colorOnSurface" />
 
                         <!-- Ширина постоянная (minWidth вмещает «<Z1»): смена зоны не двигает число -->
@@ -547,7 +547,7 @@
                             android:paddingBottom="1dp"
                             android:background="@drawable/bg_hr_zone_badge"
                             android:includeFontPadding="false"
-                            android:textSize="12sp"
+                            android:textAppearance="@style/TextAppearance.Runner.Caption"
                             android:textStyle="bold"
                             android:importantForAccessibility="no"
                             android:visibility="gone"
@@ -578,7 +578,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="@string/track_info_pulse_label"
-                            android:textSize="14sp"
+                            android:textAppearance="@style/TextAppearance.Runner.Subhead"
                             android:textColor="?attr/colorOnSurface"
                             android:alpha="0.72" />
                     </LinearLayout>
@@ -607,7 +607,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     tools:text="00:00:00"
-                    android:textSize="20sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Title3"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
 
@@ -712,7 +712,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     tools:text="0.00"
-                    android:textSize="20sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Title3"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
 
@@ -732,7 +732,7 @@
         android:id="@+id/stop_hold_background"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#CC000000"
+        android:background="@color/scrim_strong"
         android:elevation="12dp"
         android:visibility="gone"
         tools:visibility="visible"
@@ -763,9 +763,9 @@
             android:textSize="@dimen/stop_hold_countdown_text"
             tools:text="3" />
 
-        <ProgressBar
+        <com.google.android.material.progressindicator.LinearProgressIndicator
             android:id="@+id/progressBar_stop_hold"
-            style="?android:attr/progressBarStyleHorizontal"
+            app:trackCornerRadius="2dp"
             android:layout_width="200dp"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
@@ -780,7 +780,7 @@
             android:text="@string/stop_hold_hint_initial"
             android:textColor="?attr/colorOnSurface"
             android:textStyle="bold"
-            android:textSize="16sp"
+            android:textAppearance="@style/TextAppearance.Runner.Body"
             />
 
     </LinearLayout>
@@ -797,7 +797,7 @@
         android:padding="8dp"
             android:text="@string/gps_accuracy_searching"
         android:textColor="?attr/colorOnSurface"
-        android:textSize="14sp"
+        android:textAppearance="@style/TextAppearance.Runner.Subhead"
         android:visibility="gone" />
 
 </RelativeLayout>

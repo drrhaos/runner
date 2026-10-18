@@ -20,7 +20,7 @@
             android:id="@+id/label_1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textAppearance="@style/TextAppearance.Runner.Subhead"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <NumberPicker
@@ -42,7 +42,7 @@
             android:id="@+id/label_2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textAppearance="@style/TextAppearance.Runner.Subhead"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <NumberPicker
@@ -65,7 +65,7 @@
             android:id="@+id/label_3"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textAppearance="@style/TextAppearance.Runner.Subhead"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <NumberPicker

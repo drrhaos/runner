@@ -16,14 +16,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/voice_metrics_label"
-        android:textSize="16sp"
+        android:textAppearance="@style/TextAppearance.Runner.Body"
         android:textColor="?attr/colorOnSurface" />
 
     <TextView
         android:id="@+id/textView_metrics_value"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="13sp"
+        android:textAppearance="@style/TextAppearance.Runner.Footnote"
         android:textColor="?attr/colorOnSurfaceVariant"
         tools:text="distance, time, average pace" />
 
@@ -32,7 +32,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/voice_metrics_hr_no_sensor"
-        android:textSize="13sp"
+        android:textAppearance="@style/TextAppearance.Runner.Footnote"
         android:textColor="?attr/colorOnSurfaceVariant"
         android:visibility="gone"
         tools:visibility="visible" />

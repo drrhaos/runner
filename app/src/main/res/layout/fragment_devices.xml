@@ -21,15 +21,11 @@
             android:layout_marginStart="4dp"
             android:layout_marginBottom="8dp"
             android:text="@string/devices_section_heart_rate"
-            android:textAppearance="?attr/textAppearanceTitleSmall"
-            android:textColor="?attr/colorOnSurfaceVariant" />
+            style="@style/RunnerSectionHeader" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp">
+            android:layout_height="wrap_content">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -67,7 +63,7 @@
                             android:layout_height="wrap_content"
                             android:ellipsize="end"
                             android:maxLines="2"
-                            android:textAppearance="?attr/textAppearanceTitleMedium"
+                            android:textAppearance="@style/TextAppearance.Runner.Headline"
                             android:textColor="?attr/colorOnSurface"
                             tools:text="HR Strap 10 1234ABCD" />
 
@@ -83,7 +79,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:accessibilityLiveRegion="polite"
-                                android:textAppearance="?attr/textAppearanceBodyMedium"
+                                android:textAppearance="@style/TextAppearance.Runner.Subhead"
                                 tools:text="@string/devices_status_connected" />
 
                             <TextView
@@ -92,7 +88,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="4dp"
                                 android:layout_weight="1"
-                                android:textAppearance="?attr/textAppearanceBodyMedium"
+                                android:textAppearance="@style/TextAppearance.Runner.Subhead"
                                 android:visibility="gone"
                                 tools:text="· 142 bpm"
                                 tools:visibility="visible" />
@@ -103,13 +99,13 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:textAppearance="?attr/textAppearanceBodySmall"
+                            android:textAppearance="@style/TextAppearance.Runner.Caption"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             tools:text="battery 80%" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/button_device_action"
-                            style="@style/Widget.Material3.Button.TonalButton"
+                            style="@style/Widget.Runner.Button.Tonal"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="8dp"
@@ -154,7 +150,7 @@
                         android:gravity="center_horizontal"
                         android:text="@string/devices_empty_title"
                         android:textColor="?attr/colorOnSurface"
-                        android:textSize="18sp" />
+                        android:textAppearance="@style/TextAppearance.Runner.Title3" />
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -163,11 +159,11 @@
                         android:gravity="center_horizontal"
                         android:text="@string/devices_empty_message"
                         android:textColor="?attr/colorOnSurfaceVariant"
-                        android:textSize="14sp" />
+                        android:textAppearance="@style/TextAppearance.Runner.Subhead" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/button_devices_add"
-                        style="@style/Widget.Material3.Button.TonalButton"
+                        style="@style/Widget.Runner.Button.Tonal"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="20dp"
@@ -181,7 +177,7 @@
                         android:gravity="center_horizontal"
                         android:text="@string/devices_ble_unsupported"
                         android:textColor="?attr/colorError"
-                        android:textSize="14sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Subhead"
                         android:visibility="gone" />
                 </LinearLayout>
             </LinearLayout>
