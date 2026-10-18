@@ -186,11 +186,14 @@
                     tools:backgroundTint="@color/intensity_easy"
                     tools:src="@drawable/ic_intensity_easy" />
 
+                <!-- wrap_content with a weight: the pill hugs a short name, a long one shrinks
+                     to an ellipsis and keeps the unfold mark in view -->
                 <TextView
                     android:id="@+id/text_workout_mode_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    tools:ignore="InefficientWeight"
                     android:layout_marginStart="8dp"
                     android:layout_marginEnd="6dp"
                     android:maxLines="1"
