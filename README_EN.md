@@ -23,7 +23,7 @@ Runner is a full-featured running app that allows you to:
 - Follow **training plans** and base interval workouts
 - Analyze workout statistics
 - Save history of all workouts
-- Export and import data (JSON, GPX, CSV)
+- Export and import data (JSON, GPX, TCX, CSV)
 
 ## ✨ Key Features
 
@@ -86,7 +86,9 @@ On **My Workouts**, the **+** FAB opens a speed dial:
 
 **Import**
 - **JSON backup** — including older `com.example.runner` / `export-all-workouts-example` builds (no `isFavorite`, no `after_gap` on points)
-- **Folder of GPX files** — recursive import of `.gpx`
+- **GPX or TCX files** — one or more workouts from the picked files
+- **Folder of GPX or TCX files** — recursive import of `.gpx` and `.tcx`. A TCX without GPS (treadmill) or with a frozen GPS is imported from its lap totals: distance, time, calories, no track
+- Workouts overlapping saved ones (or each other) in time are put aside and reviewed on the **Import conflicts** screen (a banner in My Workouts): skip, replace or keep both. Importing the same files again creates no duplicates
 
 ### 🎨 Interface
 - Material 3 with an iOS-inspired look (system blue, grouped backgrounds, flat cards)
@@ -371,7 +373,7 @@ cd runner
 ### Migrating from old `com.example.runner`
 1. In the old build, export a JSON backup (or GPX files)
 2. Install `com.runner.academy`
-3. **My Workouts → + → Import** and pick the JSON file or a GPX folder
+3. **My Workouts → + → Import** and pick the JSON file, GPX / TCX files or a folder of them
 
 ### Settings
 1. Open **"Settings"** section from the side menu
@@ -400,6 +402,8 @@ app/src/main/
 │   └── util/                    # Utilities
 │       ├── GpxExporter.kt           # GPX export (single workout)
 │       ├── GpxImporter.kt           # GPX import
+│       ├── TcxImporter.kt           # TCX import
+│       ├── TrackFileImport.kt       # GPX / TCX by content
 │       ├── WorkoutGpxBulkExporter.kt # ZIP of all GPX
 │       ├── WorkoutBackupFormat.kt   # JSON backup import/export
 │       ├── TrainingPlanBackupFormat.kt # Plans + templates JSON

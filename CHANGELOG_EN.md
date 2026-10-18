@@ -43,6 +43,8 @@ Current release: **`v.0.1.5`**.
 - Target cues in intervals: "Speed up, pace …" / "Slow down…" / "Above zone, heart rate …" at most every 30 s, and an indicator under the current segment; pace tolerance in settings (±10 s/km by default). The cue pace is averaged over 60 s, so a noisy GPS gives no false cues; no voice cues on a step-based pace
 - Heart rate and cadence charts no longer start at zero
 - Calories by formula: without heart rate the ACSM equation (distance, elevation gain, moving time); with heart rate and a birth date the Keytel formula (sex, age, weight). Live they leave out the climb, the save adds it; the edit form counts the same way. Older workouts are not recomputed
+- TCX import (watches and running services): from picked files (several at once) or from a folder together with GPX. The track keeps heart rate and altitude; pauses the device left out are not counted in the time. A TCX without GPS (treadmill) or with a frozen GPS comes from its lap totals: distance, time, calories, no track
+- Imports run in batches and survive the screen being recreated; an interrupted import can simply be run again — workouts already saved are recognised and skipped. Workouts overlapping saved ones or each other in time (say, a GPX and a TCX of one run) stay out of the list, statistics and records and wait on the "Import conflicts" screen (a banner in My Workouts): skip, replace or keep both — one by one or all at once
 
 ## 0.1.5a1 — `v.0.1.5a1`
 

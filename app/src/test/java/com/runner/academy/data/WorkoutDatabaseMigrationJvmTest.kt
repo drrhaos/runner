@@ -60,7 +60,7 @@ class WorkoutDatabaseMigrationJvmTest {
             )
         }
 
-        openWithRoom(WorkoutDatabase.MIGRATION_6_7, WorkoutDatabase.MIGRATION_7_8).apply {
+        openWithRoom(WorkoutDatabase.MIGRATION_6_7, WorkoutDatabase.MIGRATION_7_8, WorkoutDatabase.MIGRATION_8_9).apply {
             query(
                 """
                 SELECT duration, movingDuration, elevationGain, elevationLoss, elevationSource,
@@ -94,7 +94,7 @@ class WorkoutDatabaseMigrationJvmTest {
                 """.trimIndent()
             )
         }
-        openWithRoom(WorkoutDatabase.MIGRATION_6_7, WorkoutDatabase.MIGRATION_7_8)
+        openWithRoom(WorkoutDatabase.MIGRATION_6_7, WorkoutDatabase.MIGRATION_7_8, WorkoutDatabase.MIGRATION_8_9)
 
         val rows = requireNotNull(room).workoutDao().getStatsRows()
 
@@ -120,7 +120,7 @@ class WorkoutDatabaseMigrationJvmTest {
             )
         }
 
-        openWithRoom(WorkoutDatabase.MIGRATION_7_8).apply {
+        openWithRoom(WorkoutDatabase.MIGRATION_7_8, WorkoutDatabase.MIGRATION_8_9).apply {
             query("SELECT targetPaceMinPerKm, targetHrZone, distanceMeters FROM workout_template_segments").use { cursor ->
                 assertTrue(cursor.moveToFirst())
                 assertEquals(4.5, cursor.getDouble(0), 0.0001)
@@ -132,6 +132,35 @@ class WorkoutDatabaseMigrationJvmTest {
         assertEquals(1, segments.size)
         assertEquals(null, segments[0].targetHrZone)
         assertEquals(SegmentTarget.Pace(4.5f), segments[0].target)
+    }
+
+    @Test
+    fun migrate8To9_addsAnEmptyWaitingList_keepsWorkouts() {
+        createDatabase(8) {
+            execSQL(
+                """
+                INSERT INTO workouts (date, distance, duration, movingDuration, avgPace, calories, notes, type, isFavorite, excludeFromRecords, metricsVersion)
+                VALUES (1700000000000, 5.0, 1800000, 1800000, 6.0, NULL, NULL, 'EASY_RUN', 0, 0, 7)
+                """.trimIndent()
+            )
+        }
+
+        openWithRoom(WorkoutDatabase.MIGRATION_8_9).apply {
+            query("SELECT COUNT(*) FROM pending_imports").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(0, cursor.getInt(0))
+            }
+            query("SELECT COUNT(*) FROM workouts").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(1, cursor.getInt(0))
+            }
+        }
+        val id = runBlocking {
+            requireNotNull(room).pendingImportDao().insert(
+                PendingImport(startMs = 1L, durationMs = 2L, distanceKm = 3f, hasTrack = false, source = null, workoutJson = "{}")
+            )
+        }
+        assertEquals(1L, id)
     }
 
     @Test

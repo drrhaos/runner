@@ -82,27 +82,7 @@ object WorkoutBackupFormat {
 
     fun toBackupJson(workouts: List<Workout>, packageName: String): String {
         val workoutsArray = JsonArray()
-        workouts.forEach { workout ->
-            workoutsArray.add(
-                JsonObject().apply {
-                    addProperty("id", workout.id)
-                    addProperty("dateMillis", workout.date.time)
-                    addProperty("distanceKm", workout.distance)
-                    addProperty("durationMs", workout.duration)
-                    addProperty("movingDurationMs", workout.movingDuration)
-                    addProperty("avgPace", workout.avgPace)
-                    workout.calories?.let { addProperty("calories", it) }
-                    workout.notes?.let { addProperty("notes", it) }
-                    addProperty("type", workout.type.name)
-                    workout.trackData?.let { addProperty("trackData", it) }
-                    addProperty("isFavorite", workout.isFavorite)
-                    workout.intervalSegmentsJson?.let { addProperty("intervalSegmentsJson", it) }
-                    addProperty("excludeFromRecords", workout.excludeFromRecords)
-                    workout.avgHeartRate?.let { addProperty("avgHeartRate", it) }
-                    workout.maxHeartRate?.let { addProperty("maxHeartRate", it) }
-                }
-            )
-        }
+        workouts.forEach { workoutsArray.add(it.toJsonObject()) }
         return JsonObject().apply {
             addProperty("formatVersion", FORMAT_VERSION)
             addProperty("exportedAt", java.time.Instant.now().toString())
@@ -110,6 +90,30 @@ object WorkoutBackupFormat {
             addProperty("workoutCount", workouts.size)
             add("workouts", workoutsArray)
         }.toString()
+    }
+
+    /** One workout as a backup row holds it: [parseWorkoutJson] reads it back. */
+    fun toWorkoutJson(workout: Workout): String = workout.toJsonObject().toString()
+
+    /** A workout written by [toWorkoutJson], read as a backup row is (metrics to be derived again). */
+    fun parseWorkoutJson(json: String): Workout = JsonParser.parseString(json).asJsonObject.toDto().toWorkout()
+
+    private fun Workout.toJsonObject() = JsonObject().apply {
+        addProperty("id", id)
+        addProperty("dateMillis", date.time)
+        addProperty("distanceKm", distance)
+        addProperty("durationMs", duration)
+        addProperty("movingDurationMs", movingDuration)
+        addProperty("avgPace", avgPace)
+        calories?.let { addProperty("calories", it) }
+        notes?.let { addProperty("notes", it) }
+        addProperty("type", type.name)
+        trackData?.let { addProperty("trackData", it) }
+        addProperty("isFavorite", isFavorite)
+        intervalSegmentsJson?.let { addProperty("intervalSegmentsJson", it) }
+        addProperty("excludeFromRecords", excludeFromRecords)
+        avgHeartRate?.let { addProperty("avgHeartRate", it) }
+        maxHeartRate?.let { addProperty("maxHeartRate", it) }
     }
 
     fun getBackupJsonFileName(): String {

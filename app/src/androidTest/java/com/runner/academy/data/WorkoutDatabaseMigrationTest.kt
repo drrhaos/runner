@@ -286,6 +286,37 @@ class WorkoutDatabaseMigrationTest {
         }
     }
 
+    @Test
+    @Throws(IOException::class)
+    fun migrate8To9_addsAnEmptyWaitingList() {
+        helper.createDatabase(testDb, 8).apply {
+            execSQL(
+                """
+                INSERT INTO workouts (date, distance, duration, movingDuration, avgPace, calories, notes, type, isFavorite, excludeFromRecords, metricsVersion)
+                VALUES (1700000000000, 5.0, 1800000, 1800000, 6.0, NULL, NULL, 'EASY_RUN', 0, 0, 7)
+                """.trimIndent()
+            )
+            close()
+        }
+
+        helper.runMigrationsAndValidate(
+            testDb,
+            9,
+            true,
+            WorkoutDatabase.MIGRATION_8_9
+        ).apply {
+            query("SELECT COUNT(*) FROM pending_imports").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(0, cursor.getInt(0))
+            }
+            query("SELECT COUNT(*) FROM workouts").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertEquals(1, cursor.getInt(0))
+            }
+            close()
+        }
+    }
+
     /** Oldest schema → current: the whole chain must land exactly on the latest schema. */
     @Test
     @Throws(IOException::class)

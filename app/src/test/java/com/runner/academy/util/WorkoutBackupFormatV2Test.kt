@@ -72,6 +72,27 @@ class WorkoutBackupFormatV2Test {
     )
 
     @Test
+    fun oneWorkoutJson_readsBackAsABackupRow() {
+        val read = WorkoutBackupFormat.parseWorkoutJson(WorkoutBackupFormat.toWorkoutJson(full))
+
+        // What a backup carries comes back; ids and derived columns are new / recomputed
+        assertEquals(
+            full.copy(
+                id = 0,
+                trackData = TrackDataJson.normalizeStored(full.trackData),
+                avgPace = PaceMath.avgPace(full.distance, full.movingDuration),
+                elevationGain = null,
+                elevationLoss = null,
+                elevationSource = null,
+                avgCadence = null,
+                routePreview = null,
+                metricsVersion = 0
+            ),
+            read
+        )
+    }
+
+    @Test
     fun everyWorkoutField_isExportedOrListedAsDerived() {
         val fields = Workout::class.java.declaredFields
             .filter { !Modifier.isStatic(it.modifiers) && !it.isSynthetic }

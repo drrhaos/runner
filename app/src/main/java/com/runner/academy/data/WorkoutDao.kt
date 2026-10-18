@@ -70,6 +70,27 @@ abstract class WorkoutDao {
     @Delete
     abstract suspend fun deleteWorkout(workout: Workout)
 
+    /**
+     * Emits on every write to `workouts` (Room re-runs it on each invalidation): what follows
+     * the saved workouts without loading them.
+     */
+    @Query("SELECT COUNT(*) FROM workouts")
+    abstract fun observeChanges(): Flow<Int>
+
+    /** Deletes by id; their best efforts go with them (cascade). */
+    @Query("DELETE FROM workouts WHERE id IN (:ids)")
+    abstract suspend fun deleteWorkouts(ids: List<Long>)
+
+    /**
+     * The workouts whose time (date for duration, at least 1 s, as
+     * [ImportConflicts.spanOf]) touches [fromMs]..[toMs], inclusive.
+     */
+    @Query(
+        "SELECT $LIST_ITEM_COLUMNS FROM workouts " +
+            "WHERE date <= :toMs AND date + MAX(duration, 1000) - 1 >= :fromMs ORDER BY date"
+    )
+    abstract suspend fun listItemsOverlapping(fromMs: Long, toMs: Long): List<WorkoutListItem>
+
     /** Rows whose derived columns are older than [version], newest first (they head the list). */
     @Query("SELECT id FROM workouts WHERE metricsVersion < :version ORDER BY date DESC LIMIT :limit")
     abstract suspend fun idsWithMetricsBelow(version: Int, limit: Int): List<Long>

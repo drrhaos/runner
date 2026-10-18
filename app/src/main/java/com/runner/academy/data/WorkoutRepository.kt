@@ -2,12 +2,14 @@ package com.runner.academy.data
 
 import androidx.paging.PagingSource
 import com.runner.academy.util.WorkoutDerivation
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.withContext
 
 /** New rows of a GPX import and the record distances they hold now ("Records updated: N"). */
@@ -26,6 +28,7 @@ class WorkoutRepository(
 ) {
     private val workoutDao: WorkoutDao = database.workoutDao()
     private val bestEffortDao: BestEffortDao = database.bestEffortDao()
+    private val pendingImportDao: PendingImportDao = database.pendingImportDao()
 
     /** Every whole-row write goes through it, with the derived metrics. */
     private val store = WorkoutStore(database, onDeferredSaved = onDeferredSaved)
@@ -66,25 +69,68 @@ class WorkoutRepository(
     }
 
     /**
-     * Imports a backup as new rows (new ids). Hundreds of rows at once: they are saved
-     * uncomputed and derived by the background pass ([WorkoutStore.Mode.DEFERRED]).
+     * Imports a backup in one batch ([importBatch]); returns the new ids. Hundreds of rows at
+     * once: they are saved uncomputed and derived by the background pass.
      */
-    suspend fun importBackup(workouts: List<Workout>): List<Long> = importAsNew(workouts, WorkoutStore.Mode.DEFERRED)
+    suspend fun importBackup(workouts: List<Workout>): List<Long> =
+        importBatch(workouts.map { ImportCandidate(it) }, fromBackup = true).insertedIds
 
     /**
-     * Imports GPX workouts as new rows (new ids), with their metrics computed before saving.
-     * The records change silently: the result tells on how many distances one of the imported
-     * workouts holds the record now (whatever else is saved meanwhile is not counted).
+     * Imports GPX / TCX workouts in one batch ([importBatch]), with their metrics computed before
+     * saving. The records change silently: the result tells on how many distances one of the
+     * imported workouts holds the record now (whatever else is saved meanwhile is not counted).
      */
     suspend fun importGpx(workouts: List<Workout>): GpxImport {
-        val ids = importAsNew(workouts, WorkoutStore.Mode.INLINE)
-        return GpxImport(ids, recordBook().distancesHeldBy(ids.toSet()))
+        val ids = importBatch(workouts.map { ImportCandidate(it) }, fromBackup = false).insertedIds
+        return GpxImport(ids, recordDistancesHeldBy(ids))
     }
 
-    private suspend fun importAsNew(workouts: List<Workout>, mode: WorkoutStore.Mode): List<Long> =
+    /**
+     * Writes one batch of an import ([WorkoutStore.importBatch]): new rows, copies dropped, the
+     * workouts overlapping others put aside for [resolvePendingImport]. A backup's rows
+     * ([fromBackup]) are derived by the background pass, files' rows before saving.
+     */
+    suspend fun importBatch(candidates: List<ImportCandidate>, fromBackup: Boolean): ImportBatch =
         withContext(Dispatchers.IO) {
-            store.insertAll(workouts.map { it.copy(id = 0) }, mode)
+            val mode = if (fromBackup) WorkoutStore.Mode.DEFERRED else WorkoutStore.Mode.INLINE
+            store.importBatch(candidates, mode)
         }
+
+    /** On how many record distances one of [ids] holds the record now ("Records updated: N"). */
+    suspend fun recordDistancesHeldBy(ids: List<Long>): Int = recordBook().distancesHeldBy(ids.toSet())
+
+    /** How many imported workouts wait for a decision; follows every import and decision. */
+    fun observePendingImportCount(): Flow<Int> = pendingImportDao.observeCount().distinctUntilChanged()
+
+    /**
+     * The waiting workouts in start order, each with what it overlaps now: saved workouts and
+     * other waiting ones. Follows the waiting list and every change of the saved workouts.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun observePendingConflicts(): Flow<List<PendingConflict>> =
+        combine(pendingImportDao.observeAll(), workoutDao.observeChanges()) { pending, _ -> pending }
+            .mapLatest { pending -> pending.map { conflictOf(it) } }
+            .flowOn(Dispatchers.IO)
+
+    private suspend fun conflictOf(pending: PendingImportSummary): PendingConflict {
+        val span = ImportConflicts.spanOf(pending.startMs, pending.durationMs)
+        val saved = workoutDao.listItemsOverlapping(span.first, span.last).map(ImportConflicts::side)
+        val waiting = pendingImportDao.overlapping(span.first, span.last)
+            .filter { it.id != pending.id }
+            .map(ImportConflicts::side)
+        return PendingConflict(ImportConflicts.side(pending), (saved + waiting).sortedBy { it.startMs })
+    }
+
+    /** Applies the user's decision to one waiting workout ([WorkoutStore.resolvePending]). */
+    suspend fun resolvePendingImport(pendingId: Long, resolution: ConflictResolution) = withContext(Dispatchers.IO) {
+        store.resolvePending(pendingId, resolution)?.forEach { diagnosticsStore?.delete(it) }
+        Unit
+    }
+
+    /** The same decision for every waiting workout, one by one in start order. */
+    suspend fun resolveAllPendingImports(resolution: ConflictResolution) = withContext(Dispatchers.IO) {
+        pendingImportDao.all().forEach { resolvePendingImport(it.id, resolution) }
+    }
 
     /** Saves an edited workout as a whole row with fresh metrics; see [WorkoutDao.saveEdited]. */
     suspend fun saveEdited(workout: Workout) = withContext(Dispatchers.IO) {

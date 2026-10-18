@@ -11,6 +11,13 @@
         android:label="@string/menu_workouts"
         tools:layout="@layout/fragment_workout_list" />
 
+    <!-- Imported workouts that overlap others, from the list's banner -->
+    <fragment
+        android:id="@+id/nav_import_conflicts"
+        android:name="com.runner.academy.ui.workout.ImportConflictsFragment"
+        android:label="@string/import_conflicts_label"
+        tools:layout="@layout/fragment_import_conflicts" />
+
     <fragment
         android:id="@+id/nav_add_workout"
         android:name="com.runner.academy.ui.workout.AddWorkoutFragment"

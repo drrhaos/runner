@@ -17,9 +17,10 @@ import android.content.Context
         TrainingPlanDay::class,
         PlanSchedule::class,
         ScheduledWorkout::class,
-        BestEffort::class
+        BestEffort::class,
+        PendingImport::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -29,6 +30,7 @@ abstract class WorkoutDatabase : RoomDatabase() {
     abstract fun trainingPlanDao(): TrainingPlanDao
     abstract fun planScheduleDao(): PlanScheduleDao
     abstract fun bestEffortDao(): BestEffortDao
+    abstract fun pendingImportDao(): PendingImportDao
 
     companion object {
         @Volatile
@@ -229,6 +231,18 @@ abstract class WorkoutDatabase : RoomDatabase() {
             }
         }
 
+        /** Imported workouts that overlap others wait here for the user's decision. */
+        internal val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `pending_imports` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`startMs` INTEGER NOT NULL, `durationMs` INTEGER NOT NULL, `distanceKm` REAL NOT NULL, " +
+                        "`hasTrack` INTEGER NOT NULL, `source` TEXT, `workoutJson` TEXT NOT NULL)"
+                )
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_pending_imports_startMs` ON `pending_imports` (`startMs`)")
+            }
+        }
+
         /** Every migration, oldest first — shared with the migration tests. Append new ones here. */
         internal val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2,
@@ -237,7 +251,8 @@ abstract class WorkoutDatabase : RoomDatabase() {
             MIGRATION_4_5,
             MIGRATION_5_6,
             MIGRATION_6_7,
-            MIGRATION_7_8
+            MIGRATION_7_8,
+            MIGRATION_8_9
         )
 
         fun getDatabase(context: Context): WorkoutDatabase {
