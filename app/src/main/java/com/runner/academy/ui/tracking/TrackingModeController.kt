@@ -60,6 +60,7 @@ class TrackingModeController(
     fun refreshTodaysScheduled() {
         scope.launch {
             todaysScheduled = planRepository.getTodaysScheduledWorkout()
+            activePlanName = planRepository.getActivePlan()?.name
         }
     }
 
