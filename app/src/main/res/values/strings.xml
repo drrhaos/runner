@@ -161,6 +161,8 @@
     <string name="settings_hint_auto_pause_gps_only">Without step access it relies on GPS alone and reacts a few seconds later.</string>
     <string name="settings_hint_auto_pause_no_sensor">This device has no step sensor, so it relies on GPS alone and reacts a few seconds later.</string>
     <string name="settings_btn_reset">Reset settings</string>
+    <string name="settings_about_title">About</string>
+    <string name="settings_oss_licenses_title">Open-source licenses</string>
     <string name="settings_weight_saved">Weight saved</string>
     <string name="settings_height_saved">Height saved</string>
     <string name="settings_birthdate_saved">Date of birth saved</string>

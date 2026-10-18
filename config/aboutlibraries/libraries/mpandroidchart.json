@@ -1,0 +1,15 @@
+{
+  "uniqueId": "com.github.PhilJay:MPAndroidChart",
+  "developers": [
+    {
+      "name": "Philipp Jahoda"
+    }
+  ],
+  "artifactVersion": "v3.1.0",
+  "description": "A powerful Android chart view / graph view library",
+  "name": "MPAndroidChart",
+  "website": "https://github.com/PhilJay/MPAndroidChart",
+  "licenses": [
+    "Apache-2.0"
+  ]
+}

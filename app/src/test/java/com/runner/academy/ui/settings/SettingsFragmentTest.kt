@@ -420,4 +420,16 @@ class SettingsFragmentTest {
 
         assertEquals("190", fragment.requireView().text(R.id.textView_hr_max_value))
     }
+
+    @Test
+    fun `tapping the licenses row lists the libraries`() {
+        val (fragment, _) = launch()
+
+        fragment.requireView().findViewById<View>(R.id.row_oss_licenses).performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        val list = latestDialog().listView
+        assertTrue(list.adapter.count > 0)
+        assertTrue((0 until list.adapter.count).any { list.adapter.getItem(it).toString().startsWith("osmdroid") })
+    }
 }

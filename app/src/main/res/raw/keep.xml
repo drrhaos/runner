@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Read by name (Resources.getIdentifier) in aboutlibraries-core: the release resource shrinker
+     cannot see that use -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/aboutlibraries" />

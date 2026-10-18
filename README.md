@@ -447,6 +447,12 @@ app/src/main/
 
 Проект распространяется под лицензией [MIT](LICENSE).
 
+Сторонние компоненты:
+- библиотеки (AndroidX, Material Components, osmdroid, MPAndroidChart, Gson и др.) — Apache 2.0; полный список с текстами лицензий: **Настройки → О приложении → Лицензии открытого ПО** (собирается при сборке плагином AboutLibraries, дополнения — в `config/aboutlibraries`);
+- иконки интерфейса — [Material Icons](https://github.com/google/material-design-icons) (Apache 2.0), источник указан в каждом файле `res/drawable`;
+- картографические данные — © участники [OpenStreetMap](https://www.openstreetmap.org/copyright), ODbL 1.0;
+- иконка приложения создана авторами проекта с помощью ИИ.
+
 Дополнительно см. [Политику конфиденциальности](PRIVACY.md) и [руководство для контрибьюторов](CONTRIBUTING.md).
 
 ## 👥 Авторы

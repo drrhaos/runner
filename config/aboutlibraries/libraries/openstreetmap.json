@@ -1,0 +1,15 @@
+{
+  "uniqueId": "org.openstreetmap:map-data",
+  "developers": [
+    {
+      "name": "OpenStreetMap contributors"
+    }
+  ],
+  "artifactVersion": "",
+  "description": "Map data and tiles © OpenStreetMap contributors",
+  "name": "OpenStreetMap",
+  "website": "https://www.openstreetmap.org/copyright",
+  "licenses": [
+    "ODbL-1.0"
+  ]
+}
