@@ -19,7 +19,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:text="@string/records_title"
-            style="@style/RunnerStatisticsScreenTitle" />
+            style="@style/RunnerScreenTitle" />
 
         <TextView
             android:id="@+id/textView_records_subtitle"
@@ -29,7 +29,7 @@
             android:layout_marginTop="4dp"
             android:layout_marginBottom="16dp"
             android:text="@string/records_subtitle"
-            android:textSize="13sp"
+            android:textAppearance="@style/TextAppearance.Runner.Footnote"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <!-- Пересчёт рекордов: полоса и текст -->
@@ -46,7 +46,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:layout_marginBottom="16dp"
-            android:textSize="13sp"
+            android:textAppearance="@style/TextAppearance.Runner.Footnote"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:visibility="gone"
             tools:text="@string/records_recalc_indeterminate"
@@ -85,7 +85,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:text="@string/records_empty_title"
-                android:textSize="18sp"
+                android:textAppearance="@style/TextAppearance.Runner.Title3"
                 android:textColor="?attr/colorOnSurface" />
 
             <TextView
@@ -94,7 +94,7 @@
                 android:layout_marginTop="8dp"
                 android:gravity="center_horizontal"
                 android:text="@string/records_empty_message"
-                android:textSize="14sp"
+                android:textAppearance="@style/TextAppearance.Runner.Subhead"
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <TextView
@@ -104,14 +104,14 @@
                 android:layout_marginTop="8dp"
                 android:gravity="center_horizontal"
                 android:text="@string/records_empty_manual_only"
-                android:textSize="14sp"
+                android:textAppearance="@style/TextAppearance.Runner.Subhead"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:visibility="gone"
                 tools:visibility="visible" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_records_empty_start"
-                style="@style/Widget.Material3.Button.TonalButton"
+                style="@style/Widget.Runner.Button.Tonal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"

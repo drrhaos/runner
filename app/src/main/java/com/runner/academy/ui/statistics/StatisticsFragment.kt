@@ -8,6 +8,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.widget.TextViewCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -211,7 +212,7 @@ class StatisticsFragment : Fragment() {
         if (workoutsByType.isEmpty()) {
             val emptyText = TextView(requireContext()).apply {
                 text = getString(R.string.no_data_text)
-                textSize = 14f
+                TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Runner_Subhead)
                 setTextColor(
                     MaterialColors.getColor(
                         requireContext(),
@@ -238,7 +239,7 @@ class StatisticsFragment : Fragment() {
 
             val typeText = TextView(requireContext()).apply {
                 text = "${type.displayName(requireContext())}:"
-                textSize = 14f
+                TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Runner_Subhead)
                 setTextColor(
                     MaterialColors.getColor(
                         requireContext(),
@@ -255,7 +256,7 @@ class StatisticsFragment : Fragment() {
 
             val countText = TextView(requireContext()).apply {
                 text = "$count ${getString(R.string.workout_list_num_workouts)} (${String.format("%.2f %s", distance, getString(R.string.unit_km))})"
-                textSize = 14f
+                TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Runner_Subhead)
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(
                     MaterialColors.getColor(

@@ -4,10 +4,11 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.util.LruCache
+import androidx.core.content.ContextCompat
+import com.runner.academy.R
 import com.runner.academy.util.OsmMapConfig
 import com.runner.academy.util.OsmMapTiles
 import com.runner.academy.util.TrackRun
@@ -132,10 +133,7 @@ object RouteMapBitmapRenderer {
 
         val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        canvas.drawColor(
-            if (OsmMapTiles.isNightMode(context)) Color.parseColor("#1C1C1E")
-            else Color.parseColor("#E8EEF4")
-        )
+        canvas.drawColor(ContextCompat.getColor(context, R.color.route_preview_map_background))
 
         val tileMinX = floor(x0 / TILE_SIZE).toInt().coerceIn(0, n - 1)
         val tileMaxX = floor((x1 - 1e-6) / TILE_SIZE).toInt().coerceIn(0, n - 1)
@@ -184,15 +182,15 @@ object RouteMapBitmapRenderer {
             strokeCap = Paint.Cap.ROUND
             strokeJoin = Paint.Join.ROUND
             strokeWidth = max(3f, widthPx / 32f)
-            color = Color.RED
+            color = ContextCompat.getColor(context, R.color.route_preview_track)
         }
         val startPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
-            color = Color.parseColor("#34C759")
+            color = ContextCompat.getColor(context, R.color.route_preview_start)
         }
         val endPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.FILL
-            color = Color.parseColor("#007AFF")
+            color = ContextCompat.getColor(context, R.color.route_preview_end)
         }
 
         val path = Path()

@@ -26,7 +26,7 @@
         android:paddingTop="@dimen/nav_header_vertical_spacing"
         android:text="@string/nav_header_title"
         android:textColor="@color/white"
-        android:textSize="22sp"
+        android:textAppearance="@style/TextAppearance.Runner.Title"
         android:textStyle="bold"
         android:letterSpacing="-0.02" />
 
@@ -37,5 +37,5 @@
         android:alpha="0.85"
         android:text="@string/nav_header_subtitle"
         android:textColor="@color/white"
-        android:textSize="15sp" />
+        android:textAppearance="@style/TextAppearance.Runner.Subhead" />
 </LinearLayout>

@@ -76,4 +76,5 @@
     <color name="route_preview_track">#FFFF453A</color>
     <color name="route_preview_start">#FF30D158</color>
     <color name="route_preview_end">#FF0A84FF</color>
+    <color name="route_preview_map_background">#FF1C1C1E</color>
 </resources>

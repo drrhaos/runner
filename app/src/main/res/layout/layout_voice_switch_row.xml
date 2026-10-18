@@ -20,7 +20,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:textSize="16sp"
+        android:textAppearance="@style/TextAppearance.Runner.Body"
         android:textColor="?attr/colorOnSurface"
         tools:text="@string/voice_segment_change_label" />
 

@@ -49,6 +49,9 @@
         <item name="toolbarStyle">@style/Widget.Runner.Toolbar</item>
         <item name="textInputStyle">@style/Widget.Runner.TextInput</item>
         <item name="switchStyle">@style/Widget.Runner.Switch</item>
+        <item name="materialSwitchStyle">@style/Widget.Runner.Switch</item>
+        <item name="chipStyle">@style/Widget.Runner.Chip.Filter</item>
+        <item name="checkboxStyle">@style/Widget.Runner.CheckBox</item>
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.Runner.MaterialAlertDialog</item>
         <item name="snackbarStyle">@style/Widget.Runner.Snackbar</item>
         <item name="snackbarButtonStyle">@style/Widget.Runner.Snackbar.Button</item>

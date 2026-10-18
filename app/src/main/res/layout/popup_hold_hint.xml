@@ -15,7 +15,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
-        app:cardCornerRadius="12dp"
         app:cardElevation="4dp"
         app:strokeWidth="0dp">
 
@@ -24,7 +23,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="16dp"
-            android:textSize="14sp"
+            android:textAppearance="@style/TextAppearance.Runner.Subhead"
             android:lineSpacingExtra="2dp"
             android:textColor="?attr/colorOnSurface"
             tools:text="@string/settings_hint_auto_pause" />

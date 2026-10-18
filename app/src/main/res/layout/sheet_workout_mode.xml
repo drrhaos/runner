@@ -21,7 +21,7 @@
             android:layout_marginHorizontal="18dp"
             android:layout_marginBottom="4dp"
             android:text="@string/tracking_mode_sheet_title"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textAppearance="@style/TextAppearance.Runner.Headline"
             android:textColor="?attr/colorOnSurface" />
 
         <LinearLayout

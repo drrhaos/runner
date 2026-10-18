@@ -37,7 +37,7 @@
             android:id="@+id/text_mode_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="15.5sp"
+            android:textAppearance="@style/TextAppearance.Runner.Body"
             android:textColor="?attr/colorOnSurface"
             tools:text="Intervals 6×400" />
 
@@ -45,7 +45,7 @@
             android:id="@+id/text_mode_subtitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="12.5sp"
+            android:textAppearance="@style/TextAppearance.Runner.Footnote"
             android:textColor="?attr/colorOnSurfaceVariant"
             tools:text="6 × 400 m · ≈ 38 min" />
 

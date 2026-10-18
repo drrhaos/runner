@@ -41,7 +41,7 @@
         android:id="@+id/fab_speed_dial_scrim"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:background="#66000000"
+        android:background="@color/scrim"
         android:clickable="true"
         android:focusable="true"
         android:visibility="gone"
@@ -79,7 +79,7 @@
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="6dp"
                 android:text="@string/plans_export"
-                android:textAppearance="?attr/textAppearanceLabelLarge"
+                android:textAppearance="@style/TextAppearance.Runner.Subhead.Medium"
                 android:textColor="?attr/colorOnSurface" />
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -110,7 +110,7 @@
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="6dp"
                 android:text="@string/plans_import"
-                android:textAppearance="?attr/textAppearanceLabelLarge"
+                android:textAppearance="@style/TextAppearance.Runner.Subhead.Medium"
                 android:textColor="?attr/colorOnSurface" />
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -140,7 +140,7 @@
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="6dp"
                 android:text="@string/plans_add"
-                android:textAppearance="?attr/textAppearanceLabelLarge"
+                android:textAppearance="@style/TextAppearance.Runner.Subhead.Medium"
                 android:textColor="?attr/colorOnSurface" />
 
             <com.google.android.material.floatingactionbutton.FloatingActionButton

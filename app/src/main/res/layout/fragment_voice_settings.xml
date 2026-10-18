@@ -18,10 +18,7 @@
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp">
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -41,7 +38,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/voice_status_note"
-                    android:textSize="13sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Footnote"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
             </LinearLayout>
@@ -56,16 +53,12 @@
             android:layout_marginStart="4dp"
             android:layout_marginBottom="8dp"
             android:text="@string/voice_profile_free"
-            android:textAppearance="?attr/textAppearanceTitleSmall"
-            android:textColor="?attr/colorOnSurfaceVariant" />
+            style="@style/RunnerSectionHeader" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp">
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -95,8 +88,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
             android:text="@string/voice_profile_intervals"
-            android:textAppearance="?attr/textAppearanceTitleSmall"
-            android:textColor="?attr/colorOnSurfaceVariant" />
+            style="@style/RunnerSectionHeader" />
 
         <TextView
             android:layout_width="match_parent"
@@ -104,16 +96,13 @@
             android:layout_marginStart="4dp"
             android:layout_marginBottom="8dp"
             android:text="@string/voice_profile_intervals_hint"
-            android:textSize="13sp"
+            android:textAppearance="@style/TextAppearance.Runner.Footnote"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp">
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -152,16 +141,12 @@
             android:layout_marginStart="4dp"
             android:layout_marginBottom="8dp"
             android:text="@string/voice_target_section"
-            android:textAppearance="?attr/textAppearanceTitleSmall"
-            android:textColor="?attr/colorOnSurfaceVariant" />
+            style="@style/RunnerSectionHeader" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            app:cardBackgroundColor="?attr/colorSurface"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp">
+            android:layout_marginBottom="16dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -187,7 +172,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
             android:text="@string/voice_metric_units_note"
-            android:textSize="13sp"
+            android:textAppearance="@style/TextAppearance.Runner.Footnote"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:visibility="gone"
             tools:visibility="visible" />

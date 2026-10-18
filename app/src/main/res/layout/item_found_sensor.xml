@@ -33,7 +33,7 @@
             android:id="@+id/textView_found_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textAppearance="@style/TextAppearance.Runner.Headline"
             android:textColor="?attr/colorOnSurface"
             tools:text="HR Strap 10 1234ABCD" />
 
@@ -41,7 +41,7 @@
             android:id="@+id/textView_found_signal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textAppearance="@style/TextAppearance.Runner.Caption"
             android:textColor="?attr/colorOnSurfaceVariant"
             tools:text="@string/add_sensor_signal_good" />
 
@@ -50,7 +50,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/add_sensor_already_paired"
-            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textAppearance="@style/TextAppearance.Runner.Caption"
             android:textColor="?attr/colorPrimary"
             android:visibility="gone"
             tools:visibility="visible" />
