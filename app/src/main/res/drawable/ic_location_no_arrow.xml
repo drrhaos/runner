@@ -1,16 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Current location: a disc with a white rim and a pointer above it. Drawn in-house;
+     MapManager anchors at the disc center (512, 574) and reads its radius (261). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="32dp"
     android:height="32dp"
     android:viewportWidth="1024"
     android:viewportHeight="1024">
+    <!-- Pointer -->
     <path
         android:fillColor="#2B67ED"
-        android:pathData="M347.884419 381.606799L511.927479 0l164.188102 381.606799" />
-    <path
-        android:fillColor="#4381EF"
-        android:pathData="M511.927479 574.368272m-261.22153 0a261.22153 261.22153 0 1 0 522.443059 0 261.22153 261.22153 0 1 0-522.443059 0Z" />
+        android:pathData="M348,382L512,0L676,382Z" />
+    <!-- White rim: disc r=261 at (512, 574) -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M511.927479 835.734844a261.076487 261.076487 0 1 1 261.076487-261.076487 261.076487 261.076487 0 0 1-261.076487 261.076487z m0-493.144476a232.067989 232.067989 0 1 0 232.067988 232.067989 232.067989 232.067989 0 0 0-232.067988-232.648159z" />
+        android:pathData="M251,574a261,261 0,1 0,522 0a261,261 0,1 0,-522 0Z" />
+    <!-- Blue disc: r=232 at (512, 574) -->
+    <path
+        android:fillColor="#4381EF"
+        android:pathData="M280,574a232,232 0,1 0,464 0a232,232 0,1 0,-464 0Z" />
 </vector>
