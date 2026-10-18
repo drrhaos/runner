@@ -733,14 +733,12 @@
     <string name="records_distance_1k_a11y">1 kilometer</string>
     <string name="records_distance_5k_a11y">5 kilometers</string>
     <string name="records_distance_10k_a11y">10 kilometers</string>
-    <string name="records_meta_format">%1$s · %2$s · %3$s</string>
     <string name="records_steps_note">≈ part of the distance was counted from steps</string>
     <string name="records_history_toggle">Improvement history (%1$d)</string>
     <string name="records_history_first">first</string>
     <string name="records_history_delta">−%1$s</string>
     <string name="records_history_expanded">expanded</string>
     <string name="records_history_collapsed">collapsed</string>
-    <string name="records_not_reached_value">—</string>
     <string name="records_not_reached_hint">Run %1$s in one workout</string>
     <string name="records_distance_km">%1$s km</string>
     <string name="records_empty_title">No records yet</string>

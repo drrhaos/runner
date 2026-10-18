@@ -1,16 +1,19 @@
 package com.runner.academy.ui.records
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Build
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.color.MaterialColors
 import com.runner.academy.R
 import com.runner.academy.data.RecordDistance
-import com.runner.academy.data.displayName
 import com.runner.academy.databinding.ItemRecordBinding
 import com.runner.academy.databinding.ItemRecordHistoryBinding
 import com.runner.academy.util.FormatUtils
@@ -40,11 +43,13 @@ class RecordsAdapter(
             val name = RecordsText.name(context, row.distance)
             val spokenName = RecordsText.spokenName(context, row.distance)
             binding.textViewRecordDistance.text = name
+            bindBadge(row)
 
             val record = row.record
+            binding.layoutRecordResult.visibility = if (record != null) View.VISIBLE else View.GONE
+            binding.textViewRecordHint.visibility = if (record == null) View.VISIBLE else View.GONE
             if (record == null) {
-                binding.textViewRecordTime.text = context.getString(R.string.records_not_reached_value)
-                binding.textViewRecordMeta.text =
+                binding.textViewRecordHint.text =
                     context.getString(R.string.records_not_reached_hint, RecordsText.distanceToRun(context, row.distance))
                 binding.imageViewRecordChevron.visibility = View.GONE
                 binding.rowRecordMain.setOnClickListener(null)
@@ -54,12 +59,8 @@ class RecordsAdapter(
                     context.getString(R.string.records_item_not_reached_a11y, spokenName)
             } else {
                 binding.textViewRecordTime.text = FormatUtils.formatRecordTime(record.effort.elapsedMs)
-                binding.textViewRecordMeta.text = context.getString(
-                    R.string.records_meta_format,
-                    RecordsText.pace(context, record.effort),
-                    FormatUtils.formatDate(record.date),
-                    record.type.displayName(context)
-                )
+                binding.textViewRecordPace.text = RecordsText.pace(context, record.effort)
+                binding.textViewRecordDate.text = FormatUtils.formatDate(record.date)
                 binding.imageViewRecordChevron.visibility = View.VISIBLE
                 binding.rowRecordMain.setOnClickListener { onWorkoutClick(record.effort.workoutId) }
                 binding.rowRecordMain.contentDescription = context.getString(
@@ -72,6 +73,25 @@ class RecordsAdapter(
             binding.textViewRecordStepsNote.visibility = if (row.approximate) View.VISIBLE else View.GONE
 
             bindHistory(item)
+        }
+
+        /** The distance's icon in its color; grey with a muted name until the record is reached. */
+        private fun bindBadge(row: RecordsRow) {
+            val context = binding.root.context
+            binding.imageViewRecordIcon.setImageResource(RecordsLook.icon(row.distance))
+            val badge = if (row.reached) RecordsLook.color(row.distance) else RecordsLook.notReachedColor
+            binding.viewRecordBadge.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(context, badge))
+            binding.imageViewRecordIcon.imageTintList = ColorStateList.valueOf(
+                if (row.reached) Color.WHITE
+                else MaterialColors.getColor(binding.root, com.google.android.material.R.attr.colorOnSurfaceVariant)
+            )
+            binding.textViewRecordDistance.setTextColor(
+                MaterialColors.getColor(
+                    binding.root,
+                    if (row.reached) com.google.android.material.R.attr.colorOnSurface
+                    else com.google.android.material.R.attr.colorOnSurfaceVariant
+                )
+            )
         }
 
         private fun bindHistory(item: Item) {
