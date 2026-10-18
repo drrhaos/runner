@@ -51,6 +51,8 @@ class SettingsFragment : Fragment() {
     /** Set while the UI writes switch states, so programmatic changes do not act as taps. */
     private var bindingState = false
 
+    private var holdHints: HoldHints? = null
+
     private val stepPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -80,7 +82,22 @@ class SettingsFragment : Fragment() {
         // Debug builds only: the simulated heart-rate sensor switch (release inflates a Space)
         DebugSensors.bind(binding.stubDebugSettings.inflate())
         setupClickListeners()
+        setupHoldHints()
         observeViewModel()
+    }
+
+    /** Explanations on touch and hold; the state warnings are read from the current state. */
+    private fun setupHoldHints() {
+        val hints = HoldHints(binding.root).also { holdHints = it }
+        val state = { viewModel.settingsState.value }
+        hints.attach(binding.rowAutoPause) {
+            SettingsHintTexts.join(requireContext(), SettingsHintTexts.autoPause(state().hasStepSensor, state().stepsForDistance))
+        }
+        hints.attach(binding.rowStepsForDistance) {
+            SettingsHintTexts.join(requireContext(), SettingsHintTexts.steps(state().hasStepSensor))
+        }
+        hints.attach(binding.rowGpsDiagnostics) { getString(R.string.settings_hint_gps_diagnostics) }
+        HoldHints.sayOnce(binding.root, requireContext().appContainer().userPreferences)
     }
 
     private fun setupClickListeners() {
@@ -207,14 +224,9 @@ class SettingsFragment : Fragment() {
         binding.switchStepsForDistance.isChecked = settings.stepsForDistance && settings.hasStepSensor
         bindingState = false
         binding.switchStepsForDistance.isEnabled = settings.hasStepSensor
-        binding.textViewStepsForDistanceHint.setText(
-            if (settings.hasStepSensor) R.string.settings_hint_steps_for_distance
-            else R.string.settings_hint_steps_no_sensor
-        )
         bindingState = true
         binding.switchAutoPause.isChecked = settings.autoPause
         bindingState = false
-        binding.textViewAutoPauseHint.text = autoPauseHint(settings)
     }
 
     /** "On · summary every 1 km"; TalkBack reads the label and the subtitle as one row. */
@@ -223,15 +235,6 @@ class SettingsFragment : Fragment() {
         val text = summary.every?.let { getString(summary.text, getString(it)) } ?: getString(summary.text)
         binding.textViewVoiceSummary.text = text
         binding.rowVoiceSettings.contentDescription = getString(R.string.settings_label_voice) + ", " + text
-    }
-
-    /** Without steps the detector relies on GPS alone: say so under the setting. */
-    private fun autoPauseHint(settings: SettingsState): String = buildString {
-        append(getString(R.string.settings_hint_auto_pause))
-        when {
-            !settings.hasStepSensor -> append('\n').append(getString(R.string.settings_hint_auto_pause_no_sensor))
-            !settings.stepsForDistance -> append('\n').append(getString(R.string.settings_hint_auto_pause_gps_only))
-        }
     }
 
     override fun onResume() {
@@ -527,6 +530,8 @@ class SettingsFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        holdHints?.dismiss()
+        holdHints = null
         _binding = null
     }
 }

@@ -237,10 +237,59 @@ class VoiceSettingsFragmentTest {
     @Test
     @Config(qualifiers = "en")
     fun `the target cue hint keeps the quotes around the cues`() {
-        val hint = launch().row(R.id.row_intervals_target_check)
-            .findViewById<TextView>(R.id.textView_switch_hint).text.toString()
+        val hint = launch().row(R.id.row_intervals_target_check).holdHint()
 
         assertTrue(hint, hint.startsWith("“Speed up”, “Slow down”, “Above zone”, “Below zone”"))
+    }
+
+    private fun View.holdHint(): String {
+        assertTrue(performLongClick())
+        idle()
+        val popup = shadowOf(ApplicationProvider.getApplicationContext<android.app.Application>()).latestPopupWindow
+        assertTrue(popup.isShowing)
+        return popup.contentView.findViewById<TextView>(R.id.text_hold_hint).text.toString()
+    }
+
+    private fun a11yHint(view: View): String? {
+        val info = AccessibilityNodeInfo.obtain()
+        view.onInitializeAccessibilityNodeInfo(info)
+        return info.hintText?.toString()
+    }
+
+    @Test
+    fun `explanations sit in a touch-and-hold popup and in the TalkBack hint, not under the rows`() {
+        prefs.setVoiceSettings(on)
+        val view = launch()
+        val hints = mapOf(
+            R.id.row_voice_enabled to R.string.voice_enabled_hint,
+            R.id.row_intervals_segment_change to R.string.voice_segment_change_hint,
+            R.id.row_intervals_target_check to R.string.voice_target_check_hint,
+            R.id.row_pace_tolerance to R.string.voice_pace_tolerance_hint
+        )
+
+        for ((rowId, text) in hints) {
+            assertEquals(context.getString(text), view.row(rowId).holdHint())
+            assertEquals(context.getString(text), a11yHint(view.row(rowId)))
+        }
+        val shown = view.allTexts()
+        for (text in hints.values) assertFalse(context.getString(text) in shown)
+        // The switch rows stay checkable groups
+        assertTrue(checked(view.row(R.id.row_intervals_target_check)))
+    }
+
+    private fun View.allTexts(): List<String> = when (this) {
+        is TextView -> listOf(text.toString())
+        is android.view.ViewGroup -> (0 until childCount).flatMap { getChildAt(it).allTexts() }
+        else -> emptyList()
+    }
+
+    @Test
+    fun `the first visit says once that rows can be held`() {
+        assertFalse(prefs.settingsHoldHintShown)
+
+        launch()
+
+        assertTrue(prefs.settingsHoldHintShown)
     }
 
     @Test

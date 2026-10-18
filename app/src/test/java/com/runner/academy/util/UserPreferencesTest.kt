@@ -324,6 +324,16 @@ class UserPreferencesTest {
         assertEquals(0, userPreferences.hrMaxManual)
     }
 
+    @Test
+    fun `the touch-and-hold hint is shown once, even across a reset`() {
+        assertFalse(userPreferences.settingsHoldHintShown)
+
+        userPreferences.settingsHoldHintShown = true
+        userPreferences.resetToDefaults()
+
+        assertTrue(userPreferences.settingsHoldHintShown)
+    }
+
     // --- GPS diagnostics: debug builds only ---
 
     @Test

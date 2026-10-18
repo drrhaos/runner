@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A switch row of the voice screen, like row_auto_pause: one group, a tap anywhere toggles.
-     The switch only shows the state; TalkBack hears it from the row (checkable, set from code).
+<!-- A switch row of the voice screen, like row_auto_pause: one group, a tap anywhere toggles,
+     touch and hold explains it (HoldHints). The switch only shows the state; TalkBack hears it
+     from the row (checkable, set from code).
      Its state is not saved: three rows share the id, and the state always comes from the view model. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
@@ -14,29 +15,14 @@
     android:paddingTop="12dp"
     android:paddingBottom="12dp">
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/textView_switch_label"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:orientation="vertical">
-
-        <TextView
-            android:id="@+id/textView_switch_label"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:textColor="?attr/colorOnSurface"
-            tools:text="@string/voice_segment_change_label" />
-
-        <TextView
-            android:id="@+id/textView_switch_hint"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="13sp"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            tools:text="@string/voice_segment_change_hint" />
-
-    </LinearLayout>
+        android:textSize="16sp"
+        android:textColor="?attr/colorOnSurface"
+        tools:text="@string/voice_segment_change_label" />
 
     <com.google.android.material.materialswitch.MaterialSwitch
         android:id="@+id/switch_value"

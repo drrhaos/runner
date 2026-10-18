@@ -170,18 +170,11 @@
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:paddingTop="4dp"
-                android:paddingBottom="16dp">
+                android:paddingBottom="4dp">
 
                 <include
                     android:id="@+id/row_pace_tolerance"
                     layout="@layout/layout_voice_choice_row" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/voice_pace_tolerance_hint"
-                    android:textSize="13sp"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
 
             </LinearLayout>
 

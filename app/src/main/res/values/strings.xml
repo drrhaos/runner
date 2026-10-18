@@ -150,6 +150,7 @@
     <string name="settings_theme_system">As in the system</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
+    <string name="settings_hold_hint">Touch and hold a setting to learn more</string>
     <string name="settings_label_gps_diagnostics">Record GPS diagnostics</string>
     <string name="settings_hint_gps_diagnostics">Raw GPS points and satellites for each new workout, kept on this phone. Helps fix GPS problems; share from the workout details.</string>
     <string name="settings_label_steps_for_distance">Steps for distance when GPS is lost</string>

@@ -41,6 +41,7 @@ class UserPreferences(
         private const val KEY_GPS_DIAGNOSTICS = "gps_diagnostics"
         private const val KEY_STEPS_FOR_DISTANCE = "steps_for_distance"
         private const val KEY_STEP_PERMISSION_ASKED = "step_permission_asked"
+        private const val KEY_SETTINGS_HOLD_HINT_SHOWN = "settings_hold_hint_shown"
         private const val KEY_STRIDE_MODEL = "stride_model"
         private const val KEY_AUTO_PAUSE = "auto_pause"
         private const val KEY_HR_MAX_MANUAL = "hr_max_manual"
@@ -237,16 +238,24 @@ class UserPreferences(
         prefs.edit().putString(KEY_STRIDE_MODEL, model.serialize()).apply()
     }
 
+    /** Намёк «Удерживайте пункт, чтобы узнать подробнее» на экранах настроек уже показан. */
+    var settingsHoldHintShown: Boolean
+        get() = prefs.getBoolean(KEY_SETTINGS_HOLD_HINT_SHOWN, false)
+        set(value) = prefs.edit().putBoolean(KEY_SETTINGS_HOLD_HINT_SHOWN, value).apply()
+
     /**
-     * Сбрасывает все настройки к значениям по умолчанию. Обученная модель шага и отметка
-     * «разрешение на шаги уже спрашивали» — не настройки, а накопленное состояние: сохраняются.
+     * Сбрасывает все настройки к значениям по умолчанию. Обученная модель шага, отметка
+     * «разрешение на шаги уже спрашивали» и показанный намёк про удержание пункта — не настройки,
+     * а накопленное состояние: сохраняются.
      */
     fun resetToDefaults() {
         val stepPermissionAsked = stepPermissionAsked
+        val holdHintShown = settingsHoldHintShown
         val strideModel = prefs.getString(KEY_STRIDE_MODEL, null)
         // Editor.clear() is applied before the puts of the same edit.
         val editor = prefs.edit().clear()
         if (stepPermissionAsked) editor.putBoolean(KEY_STEP_PERMISSION_ASKED, true)
+        if (holdHintShown) editor.putBoolean(KEY_SETTINGS_HOLD_HINT_SHOWN, true)
         if (strideModel != null) editor.putString(KEY_STRIDE_MODEL, strideModel)
         editor.apply()
     }
