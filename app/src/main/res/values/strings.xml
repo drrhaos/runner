@@ -847,6 +847,7 @@
     <string name="add_sensor_back_to_list">Back to list</string>
 
     <string name="settings_devices_title">Sensors</string>
+    <string name="settings_debug_title">Debug</string>
     <string name="settings_label_devices">Devices</string>
     <string name="settings_devices_none">No heart rate monitor</string>
     <string name="settings_devices_summary">Heart rate monitor: %1$s</string>

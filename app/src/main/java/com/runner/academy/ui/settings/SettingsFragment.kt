@@ -79,7 +79,8 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Debug builds only: the simulated heart-rate sensor switch (release inflates a Space)
+        // Debug card: debug builds only; the simulated heart-rate switch (release inflates a Space)
+        binding.cardDebug.isVisible = BuildConfig.DEBUG
         DebugSensors.bind(binding.stubDebugSettings.inflate())
         setupClickListeners()
         setupHoldHints()
@@ -165,8 +166,7 @@ class SettingsFragment : Fragment() {
             viewModel.updateAutoPause(isChecked)
         }
 
-        // Диагностика GPS: только в отладочной сборке
-        binding.rowGpsDiagnostics.isVisible = BuildConfig.DEBUG
+        // Диагностика GPS: в карточке «Отладка»
         binding.switchGpsDiagnostics.setOnCheckedChangeListener { _, isChecked ->
             viewModel.updateGpsDiagnostics(isChecked)
         }

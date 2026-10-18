@@ -468,39 +468,6 @@
 
                 </LinearLayout>
 
-                <!-- Диагностика GPS: только в отладочной сборке; удержание — подсказка -->
-                <LinearLayout
-                    android:id="@+id/row_gps_diagnostics"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:focusable="true"
-                    android:background="?attr/selectableItemBackground">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/settings_label_gps_diagnostics"
-                        android:textAppearance="@style/TextAppearance.Runner.Body"
-                        android:textColor="?attr/colorOnSurface" />
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switch_gps_diagnostics"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:checked="false" />
-
-                </LinearLayout>
-
-                <!-- Debug only (src/debug); an empty Space in release -->
-                <ViewStub
-                    android:id="@+id/stub_debug_settings"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout="@layout/debug_settings_row" />
-
                 <!-- Шаги для дистанции при потере GPS; удержание — подсказка -->
                 <LinearLayout
                     android:id="@+id/row_steps_for_distance"
@@ -594,6 +561,66 @@
                         app:tint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Отладка: карточка видна только в отладочной сборке (BuildConfig.DEBUG) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_debug"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_debug_title"
+                    style="@style/RunnerCardTitle"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- Диагностика GPS; удержание — подсказка -->
+                <LinearLayout
+                    android:id="@+id/row_gps_diagnostics"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="12dp"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/settings_label_gps_diagnostics"
+                        android:textAppearance="@style/TextAppearance.Runner.Body"
+                        android:textColor="?attr/colorOnSurface" />
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_gps_diagnostics"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        tools:checked="false" />
+
+                </LinearLayout>
+
+                <!-- Debug only (src/debug); an empty Space in release -->
+                <ViewStub
+                    android:id="@+id/stub_debug_settings"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout="@layout/debug_settings_row" />
 
             </LinearLayout>
 

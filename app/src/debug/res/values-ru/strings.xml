@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="debug_simulated_hr">Имитировать пульсометр (отладка)</string>
+    <string name="debug_simulated_hr">Имитировать пульсометр</string>
     <string name="debug_simulated_hr_hint">Вместо Bluetooth — синус 120–170 уд/мин с обрывами каждые 4 минуты. Сработает после перезапуска приложения.</string>
     <string name="debug_simulated_hr_name">Имитация пульсометра</string>
 </resources>

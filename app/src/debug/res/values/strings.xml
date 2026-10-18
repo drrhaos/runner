@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="debug_simulated_hr">Simulate heart rate monitor (debug)</string>
+    <string name="debug_simulated_hr">Simulate heart rate monitor</string>
     <string name="debug_simulated_hr_hint">Instead of Bluetooth: a 120–170 bpm sine with dropouts every 4 minutes. Takes effect after restarting the app.</string>
     <string name="debug_simulated_hr_name">Simulated HR monitor</string>
 </resources>

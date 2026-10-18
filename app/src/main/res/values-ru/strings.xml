@@ -864,6 +864,7 @@
     <string name="add_sensor_back_to_list">К списку</string>
 
     <string name="settings_devices_title">Датчики</string>
+    <string name="settings_debug_title">Отладка</string>
     <string name="settings_label_devices">Устройства</string>
     <string name="settings_devices_none">Пульсометр не добавлен</string>
     <string name="settings_devices_summary">Пульсометр: %1$s</string>
