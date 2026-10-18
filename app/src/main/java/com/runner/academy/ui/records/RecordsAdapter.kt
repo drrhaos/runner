@@ -8,10 +8,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
-import com.google.android.material.color.MaterialColors
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.color.MaterialColors
 import com.runner.academy.R
 import com.runner.academy.data.RecordDistance
 import com.runner.academy.databinding.ItemRecordBinding

@@ -6,8 +6,8 @@ import com.runner.academy.R
 import com.runner.academy.data.RecordDistance
 
 /**
- * The badge of a record card: a white icon in a square of the distance's own color, the same in
- * both themes. A record not reached keeps its icon in a grey square.
+ * The badge of a record card: a white icon in a square of the distance's own color (the palette's
+ * light and dark shades). A record not reached keeps its icon in a grey square.
  */
 object RecordsLook {
 
