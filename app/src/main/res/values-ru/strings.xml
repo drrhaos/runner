@@ -733,14 +733,12 @@
     <string name="records_distance_1k_a11y">1 километр</string>
     <string name="records_distance_5k_a11y">5 километров</string>
     <string name="records_distance_10k_a11y">10 километров</string>
-    <string name="records_meta_format">%1$s · %2$s · %3$s</string>
     <string name="records_steps_note">≈ часть дистанции посчитана по шагам</string>
     <string name="records_history_toggle">История улучшений (%1$d)</string>
     <string name="records_history_first">первый</string>
     <string name="records_history_delta">−%1$s</string>
     <string name="records_history_expanded">развёрнуто</string>
     <string name="records_history_collapsed">свёрнуто</string>
-    <string name="records_not_reached_value">—</string>
     <string name="records_not_reached_hint">Пробегите %1$s за одну тренировку</string>
     <string name="records_distance_km">%1$s км</string>
     <string name="records_empty_title">Пока нет рекордов</string>
