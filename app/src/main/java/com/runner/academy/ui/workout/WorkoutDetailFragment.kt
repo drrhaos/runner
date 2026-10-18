@@ -266,8 +266,6 @@ class WorkoutDetailFragment : Fragment() {
             }
         }
 
-        binding.buttonBasicInfo.isChecked = true
-
         binding.toggleGroupAnalysis.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (isChecked) {
                 when (checkedId) {
@@ -282,6 +280,9 @@ class WorkoutDetailFragment : Fragment() {
                 }
             }
         }
+
+        // After the listener, so the first tab also sets which container is shown
+        binding.buttonBasicInfo.isChecked = true
 
         binding.chipGroupSegmentDisplay.setOnCheckedStateChangeListener { group, checkedIds ->
             when {

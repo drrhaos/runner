@@ -205,8 +205,8 @@
                         android:layout_height="wrap_content"
                         tools:text="14:30"
                         android:textAppearance="@style/TextAppearance.Runner.Subhead"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:layout_marginTop="2dp" />
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:layout_marginTop="2dp" />
                 </LinearLayout>
 
                 <ImageButton
@@ -309,7 +309,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginBottom="16dp">
+                android:layout_marginBottom="16dp"
+                android:weightSum="3"
+                android:baselineAligned="false">
 
                 <!-- Средняя скорость -->
                 <LinearLayout
@@ -642,13 +644,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:visibility="visible">
+        android:paddingBottom="16dp"
+        android:visibility="gone">
 
     <!-- График темпа/скорости/пульса -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp">
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -700,7 +704,8 @@
         android:id="@+id/card_chart_cadence"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
         android:visibility="gone"
         tools:visibility="visible">
 
@@ -771,7 +776,8 @@
         android:id="@+id/card_chart_heart_rate"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
         android:visibility="gone"
         tools:visibility="visible">
 
@@ -843,7 +849,8 @@
         android:id="@+id/card_hr_zones"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
         android:visibility="gone"
         tools:visibility="visible">
 
@@ -886,7 +893,8 @@
         android:id="@+id/card_chart_elevation"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
         android:visibility="gone"
         tools:visibility="visible">
 
@@ -969,7 +977,8 @@
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp">
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
