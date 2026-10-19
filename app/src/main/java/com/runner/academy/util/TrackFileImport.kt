@@ -21,6 +21,12 @@ object TrackFileImport {
 
     private val EXTENSIONS = listOf(".gpx", ".tcx")
 
+    /**
+     * A track shorter than this share of the distance the device counted: the GPS froze (one
+     * place repeated) and the device measured on its own, from steps or a treadmill.
+     */
+    private const val MIN_TRACK_SHARE = 0.8
+
     /** The TCX root element, with or without a namespace prefix (`<ns2:TrainingCenterDatabase`). */
     private val TCX_ROOT = Regex("""<(\w+:)?TrainingCenterDatabase[\s>]""")
 
@@ -38,12 +44,6 @@ object TrackFileImport {
         } else {
             GpxImporter.parseGpx(xml, fileName)
         }
-
-    /**
-     * A track shorter than this share of the distance the device counted: the GPS froze (one
-     * place repeated) and the device measured on its own, from steps or a treadmill.
-     */
-    private const val MIN_TRACK_SHARE = 0.8
 
     /**
      * The workout of an [activity] read from [fileName]. With a track (two points or more) its
