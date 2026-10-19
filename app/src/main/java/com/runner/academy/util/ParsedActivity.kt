@@ -5,7 +5,7 @@ import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.TrackPoint
 
 /**
- * What a track file (GPX, TCX) says about one activity, before it becomes a workout: every
+ * What a track file (GPX, TCX, FIT) says about one activity, before it becomes a workout: every
  * format gives this, and [TrackFileImport.workoutOf] alone turns it into a
  * [com.runner.academy.data.Workout] (the sport, the totals, laps and device in one place).
  */
@@ -21,7 +21,7 @@ data class ParsedActivity(
     val description: String? = null,
     val device: String? = null,
     val laps: List<Lap> = emptyList(),
-    /** What the device counted (TCX laps); null — the points tell. */
+    /** What the device counted (TCX laps, FIT sessions); null — the points tell. */
     val totals: ActivityTotals? = null
 )
 
@@ -63,6 +63,13 @@ enum class ActivitySport {
             "running" -> RUNNING
             "biking" -> OTHER
             else -> UNKNOWN
+        }
+
+        /** FIT `sport`: 1 running (any sub-sport), 0 generic or none unknown, the rest another sport. */
+        fun ofFitSport(raw: Int?): ActivitySport = when (raw) {
+            1 -> RUNNING
+            0, null -> UNKNOWN
+            else -> OTHER
         }
 
         /** Activities of one file: any other sport makes it no run (a multisport file). */

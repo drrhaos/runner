@@ -326,14 +326,14 @@
     <string name="workout_list_fab_close">Закрыть действия</string>
     <string name="workout_list_import_choose_source">Выберите источник импорта</string>
     <string name="workout_list_import_json">Бэкап JSON</string>
-    <string name="workout_list_import_track_files">Файлы GPX или TCX</string>
-    <string name="workout_list_import_track_folder">Папка с файлами GPX или TCX</string>
+    <string name="workout_list_import_track_files">Файлы GPX, TCX или FIT</string>
+    <string name="workout_list_import_track_folder">Папка с файлами GPX, TCX или FIT</string>
     <string name="workout_list_import_progress">Импорт…</string>
     <string name="workout_list_import_success">Импортировано тренировок: %1$d</string>
     <string name="workout_list_import_partial">Импортировано %1$d (ошибок: %2$d)</string>
     <string name="workout_list_import_empty">Нечего импортировать</string>
     <string name="workout_list_import_error">Ошибка импорта: %1$s</string>
-    <string name="workout_list_import_no_track_files">В папке нет файлов GPX или TCX</string>
+    <string name="workout_list_import_no_track_files">В папке нет файлов GPX, TCX или FIT</string>
     <string name="workout_import_conflict_incoming">Импортируемая</string>
     <string name="workout_import_conflict_others">Пересекается с</string>
     <string name="workout_import_conflict_saved">уже в приложении</string>

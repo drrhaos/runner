@@ -8,18 +8,24 @@ import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.hasAltitude
+import com.runner.academy.util.fit.FitDecoder
+import com.runner.academy.util.fit.FitImporter
+import java.io.BufferedInputStream
 import java.io.InputStream
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.util.Date
 
 /**
- * Imports one workout from a track file: GPX ([GpxImporter]) or TCX ([TcxImporter]), told
- * apart by the content, so a file with an unusual extension still reads.
+ * Imports one workout from a track file: GPX ([GpxImporter]), TCX ([TcxImporter]) or FIT
+ * ([FitImporter]), told apart by the content, so a file with an unusual extension still reads.
  */
 object TrackFileImport {
 
-    private val EXTENSIONS = listOf(".gpx", ".tcx")
+    private val EXTENSIONS = listOf(".gpx", ".tcx", ".fit")
+
+    /** Bytes a FIT header needs to be told ([FitDecoder.isFit]). */
+    private const val FIT_HEAD = 12
 
     /**
      * A track shorter than this share of the distance the device counted: the GPS froze (one
@@ -34,8 +40,21 @@ object TrackFileImport {
     fun isTrackFileName(name: String?): Boolean =
         name != null && EXTENSIONS.any { name.endsWith(it, ignoreCase = true) }
 
-    fun parse(input: InputStream, fileName: String? = null): Workout =
-        parse(input.bufferedReader().use { it.readText() }, fileName)
+    /** A FIT file by its header, else a GPX or TCX text; throws like [parse] of a text. */
+    fun parse(input: InputStream, fileName: String? = null): Workout {
+        val buffered = BufferedInputStream(input)
+        buffered.mark(FIT_HEAD)
+        val head = ByteArray(FIT_HEAD)
+        var read = 0
+        while (read < FIT_HEAD) {
+            val n = buffered.read(head, read, FIT_HEAD - read)
+            if (n < 0) break
+            read += n
+        }
+        buffered.reset()
+        if (FitDecoder.isFit(head)) return FitImporter.parseFit(buffered, fileName)
+        return parse(buffered.bufferedReader().use { it.readText() }, fileName)
+    }
 
     /** Throws [NotRunningException] for another sport, IllegalArgumentException for no workout. */
     fun parse(xml: String, fileName: String? = null): Workout =

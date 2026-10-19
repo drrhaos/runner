@@ -341,14 +341,14 @@
     <string name="workout_list_fab_close">Close actions</string>
     <string name="workout_list_import_choose_source">Choose import source</string>
     <string name="workout_list_import_json">JSON backup</string>
-    <string name="workout_list_import_track_files">GPX or TCX files</string>
-    <string name="workout_list_import_track_folder">Folder with GPX or TCX files</string>
+    <string name="workout_list_import_track_files">GPX, TCX or FIT files</string>
+    <string name="workout_list_import_track_folder">Folder with GPX, TCX or FIT files</string>
     <string name="workout_list_import_progress">Importing…</string>
     <string name="workout_list_import_success">Imported %1$d workouts</string>
     <string name="workout_list_import_partial">Imported %1$d workouts (%2$d files failed)</string>
     <string name="workout_list_import_empty">Nothing to import</string>
     <string name="workout_list_import_error">Import error: %1$s</string>
-    <string name="workout_list_import_no_track_files">No GPX or TCX files found in the folder</string>
+    <string name="workout_list_import_no_track_files">No GPX, TCX or FIT files found in the folder</string>
     <string name="workout_import_conflict_incoming">Imported</string>
     <string name="workout_import_conflict_others">Overlaps with</string>
     <string name="workout_import_conflict_saved">already in the app</string>
