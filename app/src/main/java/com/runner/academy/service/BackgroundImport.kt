@@ -52,6 +52,7 @@ object BackgroundImport {
     private const val KEY_IMPORTED = "imported"
     private const val KEY_PENDING = "pending"
     private const val KEY_DUPLICATES = "duplicates"
+    private const val KEY_NOT_RUNNING = "notRunning"
     private const val KEY_FAILED = "failed"
     private const val KEY_INACCESSIBLE = "inaccessible"
     private const val KEY_HAS_RECORDS = "has_records"
@@ -111,6 +112,7 @@ object BackgroundImport {
         KEY_IMPORTED to result.imported,
         KEY_PENDING to result.pending,
         KEY_DUPLICATES to result.duplicates,
+        KEY_NOT_RUNNING to result.notRunning,
         KEY_FAILED to result.failed,
         KEY_INACCESSIBLE to result.inaccessible,
         // Data holds no null
@@ -122,6 +124,7 @@ object BackgroundImport {
         imported = data.getInt(KEY_IMPORTED, 0),
         pending = data.getInt(KEY_PENDING, 0),
         duplicates = data.getInt(KEY_DUPLICATES, 0),
+        notRunning = data.getInt(KEY_NOT_RUNNING, 0),
         failed = data.getInt(KEY_FAILED, 0),
         inaccessible = data.getInt(KEY_INACCESSIBLE, 0),
         changedRecordDistances = if (data.getBoolean(KEY_HAS_RECORDS, false)) data.getInt(KEY_RECORDS, 0) else null

@@ -122,7 +122,7 @@ class ImportWorkerTest {
 
     @Test
     fun result_survivesWorkData() {
-        val result = ImportResult(imported = 3, pending = 2, duplicates = 1, failed = 4, inaccessible = 5, changedRecordDistances = null)
+        val result = ImportResult(imported = 3, pending = 2, duplicates = 1, notRunning = 6, failed = 4, inaccessible = 5, changedRecordDistances = null)
 
         assertEquals(result, BackgroundImport.resultOf(BackgroundImport.dataOf(result)))
         assertEquals(result.copy(changedRecordDistances = 0), BackgroundImport.resultOf(BackgroundImport.dataOf(result.copy(changedRecordDistances = 0))))

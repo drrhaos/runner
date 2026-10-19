@@ -345,6 +345,7 @@
     <string name="workout_list_import_progress_count">Импорт… %1$d из %2$d</string>
     <string name="workout_list_import_pending_summary">Ждут решения: %1$d</string>
     <string name="workout_list_import_duplicates_summary">Уже были, пропущено: %1$d</string>
+    <string name="workout_list_import_not_running_summary">Пропущено, не бег: %1$d</string>
     <string name="workout_list_pending_imports">Импортированные тренировки ждут решения: %1$d</string>
     <string name="workout_list_pending_imports_review">Разобрать</string>
     <string name="workout_import_conflict_none">Больше ни с чем не пересекается</string>

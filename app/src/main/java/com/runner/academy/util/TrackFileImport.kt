@@ -31,12 +31,87 @@ object TrackFileImport {
     fun parse(input: InputStream, fileName: String? = null): Workout =
         parse(input.bufferedReader().use { it.readText() }, fileName)
 
+    /** Throws [NotRunningException] for another sport, IllegalArgumentException for no workout. */
     fun parse(xml: String, fileName: String? = null): Workout =
         if (TCX_ROOT.containsMatchIn(xml)) {
             TcxImporter.parseTcx(xml, fileName)
         } else {
             GpxImporter.parseGpx(xml, fileName)
         }
+
+    /**
+     * A track shorter than this share of the distance the device counted: the GPS froze (one
+     * place repeated) and the device measured on its own, from steps or a treadmill.
+     */
+    private const val MIN_TRACK_SHARE = 0.8
+
+    /**
+     * The workout of an [activity] read from [fileName]. With a track (two points or more) its
+     * distance and time are the device's totals when it has them, else the track's; without one,
+     * or when the track misses much of the counted distance, the totals alone (no track), with
+     * the heart rate and cadence of the device. Throws [NotRunningException] for another sport,
+     * IllegalArgumentException when there is neither a track nor a distance and time.
+     */
+    fun workoutOf(activity: ParsedActivity, fileName: String?): Workout {
+        if (activity.sport == ActivitySport.OTHER) throw NotRunningException(fileName)
+        val workout = trackedWorkout(activity, fileName) ?: totalsWorkout(activity, fileName)
+        return workout.copy(
+            notes = activity.description?.trim()?.takeIf { it.isNotEmpty() } ?: importNote(fileName),
+            title = activity.title?.trim()?.takeIf { it.isNotEmpty() },
+            device = activity.device?.trim()?.takeIf { it.isNotEmpty() },
+            lapsJson = LapsJson.toJson(activity.laps)
+        )
+    }
+
+    private fun trackedWorkout(activity: ParsedActivity, fileName: String?): Workout? {
+        if (activity.points.size < 2) return null
+        val totals = activity.totals
+        val tracked = workoutFromPoints(
+            activity.points, activity.timeMissing, fileName, totals?.calories, activity.pauses
+        )
+        val countedM = totals?.distanceM
+        if (countedM != null && tracked.distance * 1000.0 < MIN_TRACK_SHARE * countedM) return null
+        // The track still draws the map, charts and records; the totals are what the device said
+        val distanceKm = countedM?.let { SpeedPaceCalculator.metersToKm(it.toFloat()) } ?: tracked.distance
+        val durationMs = totals?.timerMs ?: tracked.duration
+        return tracked.copy(
+            distance = distanceKm,
+            duration = durationMs,
+            movingDuration = durationMs,
+            avgPace = PaceMath.avgPace(distanceKm, durationMs)
+        )
+    }
+
+    private fun totalsWorkout(activity: ParsedActivity, fileName: String?): Workout {
+        val totals = activity.totals
+        val start = activity.startTime ?: activity.points.firstOrNull()?.timestamp
+        val distanceM = totals?.distanceM
+        val durationMs = totals?.timerMs
+        if (start == null || distanceM == null || durationMs == null) {
+            throw IllegalArgumentException(
+                "Neither a track nor a distance and time${fileName?.let { " ($it)" } ?: ""}"
+            )
+        }
+        val distanceKm = SpeedPaceCalculator.metersToKm(distanceM.toFloat())
+        return Workout(
+            id = 0,
+            date = Date(start),
+            distance = distanceKm,
+            duration = durationMs,
+            // The device's time: its own pauses are already left out
+            movingDuration = durationMs,
+            avgPace = PaceMath.avgPace(distanceKm, durationMs),
+            calories = totals.calories,
+            notes = importNote(fileName),
+            type = WorkoutType.EASY_RUN,
+            trackData = null,
+            isFavorite = false,
+            // No track to derive them from: the device's values stay
+            avgHeartRate = totals.avgHeartRate,
+            maxHeartRate = totals.maxHeartRate,
+            avgCadence = totals.avgCadence
+        )
+    }
 
     /**
      * The workout of a file track: distance and speeds from the [points], the time from the

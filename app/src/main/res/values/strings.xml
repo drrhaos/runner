@@ -360,6 +360,7 @@
     <string name="workout_list_import_progress_count">Importing… %1$d of %2$d</string>
     <string name="workout_list_import_pending_summary">Waiting for a decision: %1$d</string>
     <string name="workout_list_import_duplicates_summary">Already there, skipped: %1$d</string>
+    <string name="workout_list_import_not_running_summary">Skipped, not a run: %1$d</string>
     <string name="workout_list_pending_imports">Imported workouts waiting for a decision: %1$d</string>
     <string name="workout_list_pending_imports_review">Review</string>
     <string name="workout_import_conflict_none">Overlaps nothing any more</string>

@@ -75,6 +75,18 @@ class WorkoutImporterTest {
     }
 
     @Test
+    fun anotherSport_isCountedApartFromErrors() = runBlocking {
+        val ride = gpx(2).replace("<trk>", "<trk><type>Ride</type>")
+
+        val result = importer.importFiles(listOf(file("a.gpx", gpx(1)), file("ride.gpx", ride)))
+
+        assertEquals(1, result.imported)
+        assertEquals(1, result.notRunning)
+        assertEquals(0, result.failed)
+        assertEquals(1, savedCount())
+    }
+
+    @Test
     fun aFileWithoutAccess_isCountedApart() = runBlocking {
         val result = importer.importFiles(
             listOf(file("a.gpx", gpx(1)), ImportFile("lost.gpx") { throw SecurityException("no grant") })
