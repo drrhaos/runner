@@ -194,9 +194,13 @@ object TcxImporter {
                         // A point without a Position (a treadmill, a pause in GPS) carries no place
                         if (latitude != null && longitude != null) {
                             if (timeMs == null) timeMissing = true
+                            // A made-up time follows the previous point, or the start the file names:
+                            // never "now", so the same file read again is the same workout
                             val timestamp = timeMs
-                                ?: (points.lastOrNull()?.timestamp?.plus(1000L)
-                                    ?: System.currentTimeMillis())
+                                ?: points.lastOrNull()?.timestamp?.plus(1000L)
+                                ?: lapStart
+                                ?: activityId
+                                ?: throw IllegalArgumentException("TCX track point has no time and the activity no start")
                             points.add(
                                 TrackPoint(
                                     latitude = latitude,

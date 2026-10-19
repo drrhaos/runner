@@ -374,6 +374,15 @@
     <string name="import_conflicts_all_replace">Replace all</string>
     <string name="import_conflicts_all_keep_both">Keep all</string>
     <string name="import_conflicts_replace_all_message">Each waiting workout replaces the saved workouts it overlaps. Their notes and edits are lost.</string>
+    <string name="import_notification_channel">Workout import</string>
+    <string name="import_notification_title">Importing workouts</string>
+    <string name="import_notification_stop">Stop</string>
+    <string name="import_notification_done">Import finished</string>
+    <string name="workout_list_import_inaccessible">Files no longer accessible: %1$d. Pick them again</string>
+    <string name="workout_list_import_running">An import is already running</string>
+    <string name="workout_import_conflict_source">%1$s — %2$s</string>
+    <string name="workout_import_conflict_line">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="workout_import_conflict_where">%1$s (%2$s)</string>
 
     <string name="gps_label">GPS</string>
     <string name="gps_status_a11y">GPS signal: %1$s</string>

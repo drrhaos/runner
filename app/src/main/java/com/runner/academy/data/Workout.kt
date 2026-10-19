@@ -3,11 +3,13 @@ package com.runner.academy.data
 import android.content.Context
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.runner.academy.R
 import java.util.Date
 
-@Entity(tableName = "workouts")
+/** Indexed by [date]: the list's order and the import's look-up of workouts at the same time. */
+@Entity(tableName = "workouts", indices = [Index(value = ["date"])])
 data class Workout(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

@@ -359,6 +359,15 @@
     <string name="import_conflicts_all_replace">Заменить все</string>
     <string name="import_conflicts_all_keep_both">Оставить все</string>
     <string name="import_conflicts_replace_all_message">Каждая ожидающая тренировка заменит сохранённые, с которыми пересекается. Их заметки и правки будут потеряны.</string>
+    <string name="import_notification_channel">Импорт тренировок</string>
+    <string name="import_notification_title">Импорт тренировок</string>
+    <string name="import_notification_stop">Остановить</string>
+    <string name="import_notification_done">Импорт завершён</string>
+    <string name="workout_list_import_inaccessible">Нет доступа к файлам: %1$d — выберите их снова</string>
+    <string name="workout_list_import_running">Импорт уже идёт</string>
+    <string name="workout_import_conflict_source">%1$s — %2$s</string>
+    <string name="workout_import_conflict_line">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="workout_import_conflict_where">%1$s (%2$s)</string>
     <string name="gps_label">GPS</string>
     <string name="gps_status_a11y">Сигнал GPS: %1$s</string>
     <string name="workout_fragment_label">Тренировка</string>

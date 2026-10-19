@@ -193,6 +193,45 @@ class TcxImporterTest {
     }
 
     @Test
+    fun pointsWithoutTime_startAtTheLap_soTheSameFileIsTheSameWorkout() {
+        val xml = tcx(
+            lap(
+                "2018-01-23T07:00:00+00:00", 2.0, 260.0, 0.0,
+                "<Trackpoint><Position><LatitudeDegrees>55.7558</LatitudeDegrees><LongitudeDegrees>37.6176</LongitudeDegrees></Position></Trackpoint>" +
+                    "<Trackpoint><Position><LatitudeDegrees>55.7578</LatitudeDegrees><LongitudeDegrees>37.6196</LongitudeDegrees></Position></Trackpoint>"
+            )
+        )
+
+        val first = TcxImporter.parseTcx(xml)
+        val again = TcxImporter.parseTcx(xml)
+
+        assertEquals(Instant.parse("2018-01-23T07:00:00Z").toEpochMilli(), first.date.time)
+        assertEquals(first.date, again.date)
+        assertEquals(true, TrackDataJson.parse(first.trackData)!!.timeSynthetic)
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun pointsWithoutAnyTime_areRejected() {
+        val xml = """
+            <TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2">
+              <Activities><Activity Sport="Running"><Lap><Track>
+                <Trackpoint><Position><LatitudeDegrees>55.7558</LatitudeDegrees><LongitudeDegrees>37.6176</LongitudeDegrees></Position></Trackpoint>
+              </Track></Lap></Activity></Activities>
+            </TrainingCenterDatabase>
+        """.trim()
+        TcxImporter.parseTcx(xml)
+    }
+
+    @Test
+    fun trackFileImport_readsAPrefixedTcxRoot() {
+        val xml = tcx(lap("2018-02-13T07:00:00+00:00", 60.0, 200.0, 0.0))
+            .replace("<TrainingCenterDatabase xmlns=", "<ns2:TrainingCenterDatabase xmlns:ns2=")
+            .replace("</TrainingCenterDatabase>", "</ns2:TrainingCenterDatabase>")
+
+        assertEquals(0.2f, TrackFileImport.parse(xml, "x.xml").distance, 0.0001f)
+    }
+
+    @Test
     fun trackFileImport_tellsTheFormatByTheContent() {
         val tcxXml = tcx(lap("2018-02-13T07:00:00+00:00", 60.0, 200.0, 0.0))
         val gpxXml = """

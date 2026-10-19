@@ -8,27 +8,14 @@ import androidx.core.view.ViewCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.lifecycle.viewModelScope
-import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.ListAdapter
-import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.data.ConflictResolution
-import com.runner.academy.data.PendingConflict
-import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.databinding.FragmentImportConflictsBinding
-import com.runner.academy.databinding.ItemImportConflictBinding
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -115,90 +102,5 @@ class ImportConflictsFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
-    }
-}
-
-class ImportConflictsViewModel(private val repository: WorkoutRepository) : ViewModel() {
-
-    val conflicts: Flow<List<PendingConflict>> = repository.observePendingConflicts()
-
-    private val _busy = MutableStateFlow(false)
-
-    /** A decision is being saved: the buttons wait (a second tap would decide twice). */
-    val busy: StateFlow<Boolean> = _busy.asStateFlow()
-
-    fun resolve(pendingId: Long, resolution: ConflictResolution) = decide {
-        repository.resolvePendingImport(pendingId, resolution)
-    }
-
-    fun resolveAll(resolution: ConflictResolution) = decide {
-        repository.resolveAllPendingImports(resolution)
-    }
-
-    private fun decide(block: suspend () -> Unit) {
-        if (_busy.value) return
-        _busy.value = true
-        viewModelScope.launch {
-            try {
-                block()
-            } finally {
-                _busy.value = false
-            }
-        }
-    }
-}
-
-class ImportConflictsViewModelFactory(private val repository: WorkoutRepository) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(ImportConflictsViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return ImportConflictsViewModel(repository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
-
-/** A card per waiting workout: what it overlaps and the three decisions. */
-class ImportConflictsAdapter(
-    private val onResolve: (pendingId: Long, ConflictResolution) -> Unit
-) : ListAdapter<PendingConflict, ImportConflictsAdapter.Holder>(Diff) {
-
-    /** False while a decision is saved. */
-    var enabled: Boolean = true
-        set(value) {
-            if (field == value) return
-            field = value
-            notifyItemRangeChanged(0, itemCount)
-        }
-
-    class Holder(val binding: ItemImportConflictBinding) : RecyclerView.ViewHolder(binding.root)
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-        Holder(ItemImportConflictBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-
-    override fun onBindViewHolder(holder: Holder, position: Int) {
-        val conflict = getItem(position)
-        val binding = holder.binding
-        val context = binding.root.context
-        binding.textViewImportConflict.text = ImportConflictText.message(context, conflict)
-        // Nothing overlaps any more (deleted meanwhile): only import it or not
-        val overlaps = conflict.others.isNotEmpty()
-        binding.buttonImportConflictReplace.visibility = if (overlaps) View.VISIBLE else View.GONE
-        binding.buttonImportConflictKeepBoth.setText(
-            if (overlaps) R.string.workout_import_conflict_keep_both else R.string.workout_import_conflict_import
-        )
-        listOf(
-            binding.buttonImportConflictSkip to ConflictResolution.KEEP_EXISTING,
-            binding.buttonImportConflictReplace to ConflictResolution.REPLACE,
-            binding.buttonImportConflictKeepBoth to ConflictResolution.KEEP_BOTH
-        ).forEach { (button, resolution) ->
-            button.isEnabled = enabled
-            button.setOnClickListener { onResolve(conflict.pendingId, resolution) }
-        }
-    }
-
-    private object Diff : DiffUtil.ItemCallback<PendingConflict>() {
-        override fun areItemsTheSame(oldItem: PendingConflict, newItem: PendingConflict) = oldItem.pendingId == newItem.pendingId
-        override fun areContentsTheSame(oldItem: PendingConflict, newItem: PendingConflict) = oldItem == newItem
     }
 }

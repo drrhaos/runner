@@ -44,7 +44,7 @@ Current release: **`v.0.1.5`**.
 - Heart rate and cadence charts no longer start at zero
 - Calories by formula: without heart rate the ACSM equation (distance, elevation gain, moving time); with heart rate and a birth date the Keytel formula (sex, age, weight). Live they leave out the climb, the save adds it; the edit form counts the same way. Older workouts are not recomputed
 - TCX import (watches and running services): from picked files (several at once) or from a folder together with GPX. The track keeps heart rate and altitude; pauses the device left out are not counted in the time. A TCX without GPS (treadmill) or with a frozen GPS comes from its lap totals: distance, time, calories, no track
-- Imports run in batches and survive the screen being recreated; an interrupted import can simply be run again — workouts already saved are recognised and skipped. Workouts overlapping saved ones or each other in time (say, a GPX and a TCX of one run) stay out of the list, statistics and records and wait on the "Import conflicts" screen (a banner in My Workouts): skip, replace or keep both — one by one or all at once
+- Imports run in the background (WorkManager) in batches: they go on when the screen is left or the app hidden, with progress in a list card and a notification with Stop; after the process is killed the system runs them again, and workouts already saved are recognised and skipped. Workouts overlapping saved ones or each other in time (say, a GPX and a TCX of one run) stay out of the list, statistics and records and wait on the "Import conflicts" screen (a banner in My Workouts): skip, replace or keep both — one by one or all at once
 
 ## 0.1.5a1 — `v.0.1.5a1`
 

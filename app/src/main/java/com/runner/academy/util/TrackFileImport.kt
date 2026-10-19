@@ -21,6 +21,9 @@ object TrackFileImport {
 
     private val EXTENSIONS = listOf(".gpx", ".tcx")
 
+    /** The TCX root element, with or without a namespace prefix (`<ns2:TrainingCenterDatabase`). */
+    private val TCX_ROOT = Regex("""<(\w+:)?TrainingCenterDatabase[\s>]""")
+
     /** The file name has an extension [parse] reads: what a folder import picks up. */
     fun isTrackFileName(name: String?): Boolean =
         name != null && EXTENSIONS.any { name.endsWith(it, ignoreCase = true) }
@@ -29,7 +32,7 @@ object TrackFileImport {
         parse(input.bufferedReader().use { it.readText() }, fileName)
 
     fun parse(xml: String, fileName: String? = null): Workout =
-        if (xml.contains("<TrainingCenterDatabase")) {
+        if (TCX_ROOT.containsMatchIn(xml)) {
             TcxImporter.parseTcx(xml, fileName)
         } else {
             GpxImporter.parseGpx(xml, fileName)

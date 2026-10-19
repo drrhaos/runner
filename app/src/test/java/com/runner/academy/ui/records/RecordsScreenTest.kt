@@ -143,8 +143,8 @@ class RecordsScreenTest {
 
     @Test
     fun `records updated is announced after a GPX import that changed some`() {
-        assertEquals(3, RecordsAnnouncement.afterGpxImport(3))
-        assertNull(RecordsAnnouncement.afterGpxImport(0))
+        assertEquals(3, RecordsAnnouncement.afterFileImport(3))
+        assertNull(RecordsAnnouncement.afterFileImport(0))
     }
 
     @Test

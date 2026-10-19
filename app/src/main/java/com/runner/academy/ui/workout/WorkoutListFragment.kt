@@ -1,15 +1,11 @@
 package com.runner.academy.ui.workout
 
-import android.content.Context
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
-import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -21,21 +17,20 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
 import com.runner.academy.appContainer
+import com.runner.academy.data.ImportResult
 import com.runner.academy.databinding.FragmentWorkoutListBinding
+import com.runner.academy.service.ImportState
 import com.runner.academy.ui.records.RecordsAnnouncement
 import com.runner.academy.ui.records.RecordsUpdatedSnackbar
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.ShareExports
-import com.runner.academy.util.TrackFileImport
 import com.runner.academy.util.WorkoutBackupFormat
 import com.runner.academy.util.WorkoutGpxBulkExporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.BufferedReader
 import java.io.File
-import java.io.InputStreamReader
 
 class WorkoutListFragment : Fragment() {
 
@@ -47,7 +42,7 @@ class WorkoutListFragment : Fragment() {
     }
 
     private val importViewModel: WorkoutImportViewModel by viewModels {
-        WorkoutImportViewModelFactory(requireContext().appContainer().workoutRepository)
+        WorkoutImportViewModelFactory(requireContext(), requireContext().appContainer().workoutRepository)
     }
 
     private lateinit var workoutAdapter: WorkoutAdapter
@@ -55,19 +50,19 @@ class WorkoutListFragment : Fragment() {
     private val openJsonLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
-        if (uri != null) importFromJsonUri(uri)
+        if (uri != null) importViewModel.importBackup(uri)
     }
 
     private val openTrackFilesLauncher = registerForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
-        if (uris.isNotEmpty()) importTrackFiles { trackDocuments(it, uris) }
+        if (uris.isNotEmpty()) importViewModel.importFiles(uris)
     }
 
     private val openTrackFolderLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
-        if (uri != null) importTrackFiles { folderTrackDocuments(it, uri) }
+        if (uri != null) importViewModel.importFolder(uri)
     }
 
     override fun onCreateView(
@@ -162,6 +157,7 @@ class WorkoutListFragment : Fragment() {
         binding.buttonEmptyStartWorkout.setOnClickListener {
             findNavController().navigate(R.id.nav_tracking)
         }
+        binding.buttonImportStop.setOnClickListener { importViewModel.stop() }
         binding.buttonPendingImports.setOnClickListener {
             findNavController().navigate(R.id.nav_import_conflicts)
         }
@@ -320,56 +316,19 @@ class WorkoutListFragment : Fragment() {
         )
     }
 
-    private fun importFromJsonUri(uri: Uri) {
-        val resolver = requireContext().applicationContext.contentResolver
-        importViewModel.importBackup {
-            resolver.openInputStream(uri)?.use { stream ->
-                BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).readText()
-            } ?: throw IllegalStateException("Cannot open JSON file")
-        }
-    }
-
-    /** Imports the GPX and TCX files [documents] lists (it runs off the main thread, maybe after the view). */
-    private fun importTrackFiles(documents: (Context) -> List<DocumentFile>) {
-        val context = requireContext().applicationContext
-        importViewModel.importFiles {
-            documents(context).map { document ->
-                ImportFile(document.name) { context.contentResolver.openInputStream(document.uri) }
-            }
-        }
-    }
-
-    /** The files the user picked one by one: taken whatever their extension. */
-    private fun trackDocuments(context: Context, uris: List<Uri>): List<DocumentFile> =
-        uris.mapNotNull { DocumentFile.fromSingleUri(context, it) }
-
-    private fun folderTrackDocuments(context: Context, treeUri: Uri): List<DocumentFile> {
-        val root = DocumentFile.fromTreeUri(context, treeUri)
-            ?: throw IllegalStateException("Cannot open folder")
-        return collectTrackFiles(root)
-    }
-
-    private fun collectTrackFiles(dir: DocumentFile): List<DocumentFile> {
-        val result = mutableListOf<DocumentFile>()
-        dir.listFiles().forEach { child ->
-            when {
-                child.isDirectory -> result.addAll(collectTrackFiles(child))
-                child.isFile && TrackFileImport.isTrackFileName(child.name) -> {
-                    result.add(child)
-                }
-            }
-        }
-        return result
-    }
-
     private fun observeImport() {
         viewLifecycleOwner.lifecycleScope.launch {
-            importViewModel.progress.collect(::showImportProgress)
+            importViewModel.running.collect(::showImportProgress)
         }
         viewLifecycleOwner.lifecycleScope.launch {
             // Only while shown: an import that ends meanwhile is reported when the user is back
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                importViewModel.events.collect(::onImportEvent)
+                launch { importViewModel.ended.collect(::onImportEnded) }
+                launch {
+                    importViewModel.rejected.collect {
+                        Toast.makeText(requireContext(), R.string.workout_list_import_running, Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
         viewLifecycleOwner.lifecycleScope.launch {
@@ -377,51 +336,47 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
-    private var importProgressDialog: AlertDialog? = null
-
-    private fun showImportProgress(progress: ImportProgress?) {
-        if (progress == null) {
-            dismissProgressSafely(importProgressDialog)
-            importProgressDialog = null
-            return
+    /** The running import, in a card: it goes on in the background (with its notification). */
+    private fun showImportProgress(progress: ImportState.Running?) {
+        val binding = _binding ?: return
+        binding.cardViewImportProgress.visibility = if (progress != null) View.VISIBLE else View.GONE
+        if (progress == null) return
+        val indicator = binding.progressImport
+        val determinate = progress.total > 0
+        if (indicator.isIndeterminate == determinate) {
+            // An indicator switches mode only while hidden
+            indicator.visibility = View.INVISIBLE
+            indicator.isIndeterminate = !determinate
+            indicator.visibility = View.VISIBLE
         }
-        val message = if (progress.total == 0) {
-            getString(R.string.workout_list_import_progress)
-        } else {
+        if (determinate) {
+            indicator.max = progress.total
+            indicator.setProgressCompat(progress.done, true)
+        }
+        binding.textViewImportProgress.text = if (determinate) {
             getString(R.string.workout_list_import_progress_count, progress.done, progress.total)
+        } else {
+            getString(R.string.workout_list_import_progress)
         }
-        val dialog = importProgressDialog ?: MaterialAlertDialogBuilder(requireContext())
-            .setMessage(message)
-            .setCancelable(false)
-            .create()
-            .also {
-                importProgressDialog = it
-                it.show()
-            }
-        dialog.setMessage(message)
     }
 
-    private fun onImportEvent(event: ImportEvent) {
+    private fun onImportEnded(ended: ImportState.Ended) {
         viewModel.refreshStatistics()
-        when (event) {
-            ImportEvent.NoFiles -> Toast.makeText(
+        when (ended) {
+            is ImportState.NoFiles -> Toast.makeText(
                 requireContext(),
                 getString(R.string.workout_list_import_no_track_files),
                 Toast.LENGTH_LONG
             ).show()
-            is ImportEvent.Failed -> Toast.makeText(
+            is ImportState.Failed -> Toast.makeText(
                 requireContext(),
-                getString(R.string.workout_list_import_error, event.message),
+                getString(R.string.workout_list_import_error, ended.message),
                 Toast.LENGTH_LONG
             ).show()
-            is ImportEvent.Finished -> showImportResult(
-                event.imported,
-                event.failed,
-                recordsUpdated = event.changedRecordDistances?.let(RecordsAnnouncement::afterGpxImport),
-                pending = event.pending,
-                duplicates = event.duplicates
-            )
+            is ImportState.Finished -> showImportResult(ended.result)
         }
+        // After it was shown: a screen stopped meanwhile shows it when back
+        importViewModel.markShown(ended)
     }
 
     private fun updatePendingBanner(count: Int) {
@@ -430,7 +385,7 @@ class WorkoutListFragment : Fragment() {
         binding.textViewPendingImports.text = getString(R.string.workout_list_pending_imports, count)
     }
 
-    private fun showProgressDialog(messageRes: Int = R.string.workout_list_import_progress) =
+    private fun showProgressDialog(messageRes: Int) =
         MaterialAlertDialogBuilder(requireContext())
             .setMessage(messageRes)
             .setCancelable(false)
@@ -447,21 +402,10 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
-    /**
-     * The import result; with [recordsUpdated] a snackbar that also offers the records. Adds how
-     * many wait for a decision ([pending], the banner leads there) and were there already.
-     */
-    private fun showImportResult(imported: Int, failed: Int, recordsUpdated: Int? = null, pending: Int = 0, duplicates: Int = 0) {
-        val counts = when {
-            imported == 0 && failed == 0 && pending == 0 && duplicates == 0 -> getString(R.string.workout_list_import_empty)
-            failed > 0 -> getString(R.string.workout_list_import_partial, imported, failed)
-            else -> getString(R.string.workout_list_import_success, imported)
-        }
-        val message = buildString {
-            append(counts)
-            if (pending > 0) append('\n').append(getString(R.string.workout_list_import_pending_summary, pending))
-            if (duplicates > 0) append('\n').append(getString(R.string.workout_list_import_duplicates_summary, duplicates))
-        }
+    /** The import result; when it changed records, a snackbar that also offers them. */
+    private fun showImportResult(result: ImportResult) {
+        val message = ImportResultText.lines(requireContext(), result).joinToString("\n")
+        val recordsUpdated = result.changedRecordDistances?.let(RecordsAnnouncement::afterFileImport)
         val binding = _binding
         if (recordsUpdated != null && binding != null) {
             val navController = findNavController()
@@ -570,14 +514,11 @@ class WorkoutListFragment : Fragment() {
 
     override fun onDestroyView() {
         isSpeedDialOpen = false
-        // The import runs on; the next view shows its progress again
-        importProgressDialog?.dismiss()
-        importProgressDialog = null
         super.onDestroyView()
         _binding = null
     }
 
     companion object {
-        private const val TAG = "WorkoutListImport"
+        private const val TAG = "WorkoutListExport"
     }
 }

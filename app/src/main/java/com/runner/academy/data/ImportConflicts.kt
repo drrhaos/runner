@@ -52,6 +52,12 @@ enum class ConflictResolution {
  */
 object ImportConflicts {
 
+    /**
+     * No workout lasts longer (a week): the look-up of overlapping ones searches from this far
+     * before, on the indexed start, instead of the whole history.
+     */
+    const val MAX_SPAN_MS = 7 * 24 * 60 * 60 * 1000L
+
     private const val MIN_SPAN_MS = 1000L
     private const val SAME_START_MS = 1000L
     private const val SAME_SHARE = 0.01

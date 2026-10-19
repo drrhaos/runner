@@ -51,7 +51,7 @@ class WorkoutRepositoryImportTest {
 
     @Test
     fun backupImport_savesNewRowsForTheBackgroundPass() = runBlocking {
-        val ids = repository.importBackup(listOf(imported(1), imported(2)))
+        val ids = repository.importBackupRows(listOf(imported(1), imported(2)))
 
         assertEquals(2, ids.size)
         assertEquals(listOf(0, 0), storedVersions())
@@ -59,8 +59,8 @@ class WorkoutRepositoryImportTest {
     }
 
     @Test
-    fun gpxImport_computesMetricsBeforeSaving() = runBlocking {
-        val ids = repository.importGpx(listOf(imported(1))).ids
+    fun fileImport_computesMetricsBeforeSaving() = runBlocking {
+        val ids = repository.importFiles(listOf(imported(1))).ids
 
         assertEquals(1, ids.size)
         assertEquals(listOf(WorkoutDerivation.CURRENT_METRICS_VERSION), storedVersions())
@@ -71,8 +71,8 @@ class WorkoutRepositoryImportTest {
     private fun at(startMin: Long, durationMin: Long, km: Float = 5f) =
         imported(0).copy(date = Date(DAY + startMin * MINUTE), duration = durationMin * MINUTE, movingDuration = durationMin * MINUTE, distance = km)
 
-    private suspend fun batch(vararg workouts: Workout, fromBackup: Boolean = false) =
-        repository.importBatch(workouts.mapIndexed { i, w -> ImportCandidate(w, "file$i.gpx") }, fromBackup)
+    private suspend fun batch(vararg workouts: Workout, mode: WorkoutStore.Mode = WorkoutStore.Mode.INLINE) =
+        repository.importBatch(workouts.mapIndexed { i, w -> ImportCandidate(w, "file$i.gpx") }, mode)
 
     private suspend fun savedStarts() = repository.getAllWorkouts().first().map { (it.date.time - DAY) / MINUTE }.sorted()
 
@@ -80,7 +80,7 @@ class WorkoutRepositoryImportTest {
 
     @Test
     fun batch_savesNewOnes_dropsCopies_andPutsOverlapsAside() = runBlocking {
-        repository.importGpx(listOf(at(0, 30)))
+        repository.importFiles(listOf(at(0, 30)))
 
         val result = batch(at(0, 30), at(10, 30, km = 4f), at(100, 30))
 
@@ -104,7 +104,7 @@ class WorkoutRepositoryImportTest {
 
     @Test
     fun aWaitingOne_isNotInTheListOrTotals() = runBlocking {
-        repository.importGpx(listOf(at(0, 30)))
+        repository.importFiles(listOf(at(0, 30)))
         batch(at(10, 30, km = 4f))
 
         assertEquals(1, repository.getAllWorkouts().first().size)
@@ -127,7 +127,7 @@ class WorkoutRepositoryImportTest {
 
     @Test
     fun keepExisting_dropsTheWaitingOne() = runBlocking {
-        repository.importGpx(listOf(at(0, 30)))
+        repository.importFiles(listOf(at(0, 30)))
         batch(at(10, 30, km = 4f))
 
         repository.resolvePendingImport(pending().single().pendingId, ConflictResolution.KEEP_EXISTING)
@@ -138,8 +138,8 @@ class WorkoutRepositoryImportTest {
 
     @Test
     fun keepBoth_savesItWithItsMetrics() = runBlocking {
-        repository.importGpx(listOf(at(0, 30)))
-        batch(at(10, 30, km = 4f), fromBackup = true)
+        repository.importFiles(listOf(at(0, 30)))
+        batch(at(10, 30, km = 4f), mode = WorkoutStore.Mode.DEFERRED)
 
         repository.resolvePendingImport(pending().single().pendingId, ConflictResolution.KEEP_BOTH)
 
@@ -150,7 +150,7 @@ class WorkoutRepositoryImportTest {
 
     @Test
     fun replace_deletesEverySavedOneItOverlaps() = runBlocking {
-        repository.importGpx(listOf(at(0, 20), at(50, 30), at(200, 30)))
+        repository.importFiles(listOf(at(0, 20), at(50, 30), at(200, 30)))
         batch(at(10, 60, km = 9f))
 
         repository.resolvePendingImport(pending().single().pendingId, ConflictResolution.REPLACE)
@@ -161,7 +161,7 @@ class WorkoutRepositoryImportTest {
 
     @Test
     fun aWaitingOne_seesTheOtherWaitingOnes_andWhatWasDeletedMeanwhile() = runBlocking {
-        val saved = repository.importGpx(listOf(at(0, 30))).ids.single()
+        val saved = repository.importFiles(listOf(at(0, 30))).ids.single()
         batch(at(5, 30, km = 4f), at(10, 30, km = 3f))
         assertEquals(listOf(listOf(saved, null), listOf(saved, null)), pending().map { c -> c.others.map { it.existingId } })
 
@@ -172,7 +172,7 @@ class WorkoutRepositoryImportTest {
 
     @Test
     fun resolveAll_decidesEachInStartOrder() = runBlocking {
-        repository.importGpx(listOf(at(0, 30), at(100, 30)))
+        repository.importFiles(listOf(at(0, 30), at(100, 30)))
         batch(at(110, 30, km = 4f), at(10, 30, km = 4f))
 
         repository.resolveAllPendingImports(ConflictResolution.REPLACE)
@@ -182,8 +182,29 @@ class WorkoutRepositoryImportTest {
     }
 
     @Test
+    fun replaceAll_neverDeletesOneItSavedItself() = runBlocking {
+        // A GPX and a TCX of one run, both overlapping the saved recording of it
+        repository.importFiles(listOf(at(0, 30)))
+        batch(at(1, 30, km = 4.9f), at(2, 30, km = 5.2f))
+
+        repository.resolveAllPendingImports(ConflictResolution.REPLACE)
+
+        assertEquals("the saved one is replaced, the two imported stay", listOf(1L, 2L), savedStarts())
+    }
+
+    @Test
+    fun aLongWorkout_isFoundFromDaysBefore() = runBlocking {
+        // Two days long: starts long before the one imported, still overlaps it
+        repository.importFiles(listOf(at(0, 48 * 60)))
+
+        val result = batch(at(47 * 60, 30))
+
+        assertEquals(1, result.pending)
+    }
+
+    @Test
     fun aResolvedOne_isGone_soASecondDecisionDoesNothing() = runBlocking {
-        repository.importGpx(listOf(at(0, 30)))
+        repository.importFiles(listOf(at(0, 30)))
         batch(at(10, 30, km = 4f))
         val id = pending().single().pendingId
 

@@ -83,11 +83,13 @@ abstract class WorkoutDao {
 
     /**
      * The workouts whose time (date for duration, at least 1 s, as
-     * [ImportConflicts.spanOf]) touches [fromMs]..[toMs], inclusive.
+     * [ImportConflicts.spanOf]) touches [fromMs]..[toMs], inclusive. The lower bound on the
+     * indexed date keeps it to the workouts around, not the whole history before.
      */
     @Query(
         "SELECT $LIST_ITEM_COLUMNS FROM workouts " +
-            "WHERE date <= :toMs AND date + MAX(duration, 1000) - 1 >= :fromMs ORDER BY date"
+            "WHERE date <= :toMs AND date >= :fromMs - ${ImportConflicts.MAX_SPAN_MS} " +
+            "AND date + MAX(duration, 1000) - 1 >= :fromMs ORDER BY date"
     )
     abstract suspend fun listItemsOverlapping(fromMs: Long, toMs: Long): List<WorkoutListItem>
 

@@ -20,7 +20,7 @@ import android.content.Context
         BestEffort::class,
         PendingImport::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -243,6 +243,13 @@ abstract class WorkoutDatabase : RoomDatabase() {
             }
         }
 
+        /** Workouts indexed by date: the list's order and the import's overlap look-up. */
+        internal val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_workouts_date` ON `workouts` (`date`)")
+            }
+        }
+
         /** Every migration, oldest first — shared with the migration tests. Append new ones here. */
         internal val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2,
@@ -252,7 +259,8 @@ abstract class WorkoutDatabase : RoomDatabase() {
             MIGRATION_5_6,
             MIGRATION_6_7,
             MIGRATION_7_8,
-            MIGRATION_8_9
+            MIGRATION_8_9,
+            MIGRATION_9_10
         )
 
         fun getDatabase(context: Context): WorkoutDatabase {

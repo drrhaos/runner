@@ -4,9 +4,13 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonToken
 import com.runner.academy.data.PauseKind
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
+import java.io.Reader
+import java.io.StringReader
 import java.util.Date
 
 /**
@@ -31,6 +35,9 @@ import java.util.Date
 object WorkoutBackupFormat {
 
     const val FORMAT_VERSION = 2
+
+    /** The workouts array: `workouts`, or `d` in obfuscated older builds. */
+    private val WORKOUTS_KEYS = setOf("workouts", "d")
 
     data class WorkoutBackupDto(
         val id: Long = 0,
@@ -59,24 +66,60 @@ object WorkoutBackupFormat {
         val workouts: List<WorkoutBackupDto> = emptyList()
     )
 
-    fun parseBackupJson(json: String): List<Workout> {
-        val root = try {
-            JsonParser.parseString(json).asJsonObject
-        } catch (e: Exception) {
-            throw IllegalArgumentException("Invalid workout backup JSON", e)
-        }
+    fun parseBackupJson(json: String): List<Workout> =
+        backupBatches(StringReader(json), batchSize = Int.MAX_VALUE).flatten().toList()
 
-        val workoutsEl = root.workoutsArrayOrNull()
-            ?: throw IllegalArgumentException("Backup missing workouts array")
-        if (workoutsEl.isEmpty) {
-            throw IllegalArgumentException("Backup contains no workouts")
-        }
-
-        return workoutsEl.mapIndexed { index, element ->
-            if (!element.isJsonObject) {
-                throw IllegalArgumentException("Workout at index $index is not an object")
+    /**
+     * The workouts of a backup [batchSize] at a time, read as they are consumed: the file is
+     * never held whole. The first [skip] rows (imported before) are passed over unconverted.
+     * [onCount] gets the declared `workoutCount` when the file has one before its rows. Throws
+     * [IllegalArgumentException] on a broken file or one without workouts, when reached.
+     */
+    fun backupBatches(
+        reader: Reader,
+        batchSize: Int,
+        skip: Int = 0,
+        onCount: (Int) -> Unit = {}
+    ): Sequence<List<Workout>> = sequence {
+        JsonReader(reader).use { json ->
+            var found = false
+            var rows = 0
+            try {
+                json.beginObject()
+                while (json.hasNext()) {
+                    val name = json.nextName()
+                    when {
+                        name in WORKOUTS_KEYS && !found && json.peek() == JsonToken.BEGIN_ARRAY -> {
+                            found = true
+                            json.beginArray()
+                            val batch = mutableListOf<Workout>()
+                            while (json.hasNext()) {
+                                val element = JsonParser.parseReader(json)
+                                if (!element.isJsonObject) {
+                                    throw IllegalArgumentException("Workout at index $rows is not an object")
+                                }
+                                if (rows >= skip) batch += element.asJsonObject.toDto().toWorkout()
+                                rows++
+                                if (batch.size == batchSize) {
+                                    yield(batch.toList())
+                                    batch.clear()
+                                }
+                            }
+                            json.endArray()
+                            if (batch.isNotEmpty()) yield(batch.toList())
+                        }
+                        name == "workoutCount" && json.peek() == JsonToken.NUMBER -> onCount(json.nextInt())
+                        else -> json.skipValue()
+                    }
+                }
+                json.endObject()
+            } catch (e: IllegalArgumentException) {
+                throw e
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Invalid workout backup JSON", e)
             }
-            element.asJsonObject.toDto().toWorkout()
+            if (!found) throw IllegalArgumentException("Backup missing workouts array")
+            if (rows == 0) throw IllegalArgumentException("Backup contains no workouts")
         }
     }
 
@@ -128,14 +171,6 @@ object WorkoutBackupFormat {
      * older release builds: exportedAt/packageName/workoutCount/workouts → a/b/c/d
      * (formatVersion was absent in that DTO layout).
      */
-    private fun JsonObject.workoutsArrayOrNull(): JsonArray? {
-        val named = get("workouts")
-        if (named != null && named.isJsonArray) return named.asJsonArray
-        val obfuscated = get("d")
-        if (obfuscated != null && obfuscated.isJsonArray) return obfuscated.asJsonArray
-        return null
-    }
-
     private fun JsonObject.toDto(): WorkoutBackupDto {
         // Field order in the obfuscated Gson DTO:
         // id, dateMillis, distanceKm, durationMs, avgPace, calories, notes,

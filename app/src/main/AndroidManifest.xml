@@ -9,6 +9,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Import of workouts (WorkManager in the foreground) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Датчик шагов (API 29+ — runtime): дистанция при потере GPS, каденс. Спрашивается один раз. -->
@@ -76,6 +78,12 @@
             android:exported="false"
             android:foregroundServiceType="location|connectedDevice"
             android:stopWithTask="false" />
+
+        <!-- WorkManager's foreground service: the import of workouts is a data sync -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
 
         <!-- FileProvider для экспорта GPX файлов -->
         <provider
