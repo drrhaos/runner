@@ -107,6 +107,28 @@ class FitImporterTest {
     }
 
     @Test
+    fun `points and laps follow time, not the order in the file`() {
+        val writer = FitTestWriter()
+            .fileId()
+            // Summary first: the laps before the points, the second lap first
+            .lap(start = start + 30_000, timerS = 30.0, distanceM = 100.0)
+            .lap(start = start, timerS = 30.0, distanceM = 100.0)
+            .record(start + 2000, 55.0002, 37.0)
+            .record(start, 55.0, 37.0)
+            .record(start + 1000, 55.0001, 37.0)
+
+        val parsed = activity(writer.bytes())
+
+        assertEquals(listOf(start, start + 1000, start + 2000), parsed.points.map { it.timestamp })
+        assertEquals(listOf(start, start + 30_000), parsed.laps.map { it.start })
+    }
+
+    @Test
+    fun `a service is no device`() {
+        assertNull(activity(FitTestWriter().fileId(manufacturer = 265).track(points = 2).bytes()).device)
+    }
+
+    @Test
     fun `timer events become pauses, automatic or by hand`() {
         val writer = FitTestWriter()
             .fileId()

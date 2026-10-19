@@ -42,13 +42,53 @@ object FitDecoder {
     /** The common field every message may carry: seconds since 1989-12-31T00:00:00Z. */
     const val TIMESTAMP = 253
 
+    /** The shortest header, and the bytes [isFit] needs. */
     private const val MIN_HEADER = 12
+
+    // Base type numbers (the low 5 bits of the base type byte) and their sizes
+    private const val ENUM = 0x00
+    private const val SINT8 = 0x01
+    private const val UINT8 = 0x02
+    private const val SINT16 = 0x03
+    private const val UINT16 = 0x04
+    private const val SINT32 = 0x05
+    private const val UINT32 = 0x06
+    private const val STRING = 0x07
+    private const val FLOAT32 = 0x08
+    private const val FLOAT64 = 0x09
+    private const val UINT8Z = 0x0A
+    private const val UINT16Z = 0x0B
+    private const val UINT32Z = 0x0C
+    private const val BYTE = 0x0D
+    private const val SINT64 = 0x0E
+    private const val UINT64 = 0x0F
+    private const val UINT64Z = 0x10
+    private val SIZES = listOf(1, 1, 1, 2, 2, 4, 4, 1, 4, 8, 1, 2, 4, 1, 8, 8, 8)
+
+    private val CRC_TABLE = intArrayOf(
+        0x0000, 0xCC01, 0xD801, 0x1400, 0xF001, 0x3C00, 0x2800, 0xE401,
+        0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400
+    )
 
     /** [head] (the first bytes of a file) starts a FIT file: a header size and `.FIT`. */
     fun isFit(head: ByteArray): Boolean =
         head.size >= MIN_HEADER && (head[0].toInt() and 0xFF) >= MIN_HEADER &&
             head[8] == '.'.code.toByte() && head[9] == 'F'.code.toByte() &&
             head[10] == 'I'.code.toByte() && head[11] == 'T'.code.toByte()
+
+    /** [input] starts a FIT file; it is left where it was (mark and reset). */
+    fun isFit(input: BufferedInputStream): Boolean {
+        input.mark(MIN_HEADER)
+        val head = ByteArray(MIN_HEADER)
+        var read = 0
+        while (read < MIN_HEADER) {
+            val n = input.read(head, read, MIN_HEADER - read)
+            if (n < 0) break
+            read += n
+        }
+        input.reset()
+        return isFit(head)
+    }
 
     /**
      * The data messages of [input], only those of [globals] when given. Throws
@@ -238,31 +278,6 @@ object FitDecoder {
             else -> null
         }
     }
-
-    // Base type numbers (the low 5 bits of the base type byte) and their sizes
-    private const val ENUM = 0x00
-    private const val SINT8 = 0x01
-    private const val UINT8 = 0x02
-    private const val SINT16 = 0x03
-    private const val UINT16 = 0x04
-    private const val SINT32 = 0x05
-    private const val UINT32 = 0x06
-    private const val STRING = 0x07
-    private const val FLOAT32 = 0x08
-    private const val FLOAT64 = 0x09
-    private const val UINT8Z = 0x0A
-    private const val UINT16Z = 0x0B
-    private const val UINT32Z = 0x0C
-    private const val BYTE = 0x0D
-    private const val SINT64 = 0x0E
-    private const val UINT64 = 0x0F
-    private const val UINT64Z = 0x10
-    private val SIZES = listOf(1, 1, 1, 2, 2, 4, 4, 1, 4, 8, 1, 2, 4, 1, 8, 8, 8)
-
-    private val CRC_TABLE = intArrayOf(
-        0x0000, 0xCC01, 0xD801, 0x1400, 0xF001, 0x3C00, 0x2800, 0xE401,
-        0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400
-    )
 
     /** Reads bytes one file at a time, counting them and their CRC-16 from the file start. */
     private class Reader(private val input: InputStream) {

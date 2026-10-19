@@ -24,9 +24,6 @@ object TrackFileImport {
 
     private val EXTENSIONS = listOf(".gpx", ".tcx", ".fit")
 
-    /** Bytes a FIT header needs to be told ([FitDecoder.isFit]). */
-    private const val FIT_HEAD = 12
-
     /**
      * A track shorter than this share of the distance the device counted: the GPS froze (one
      * place repeated) and the device measured on its own, from steps or a treadmill.
@@ -43,16 +40,7 @@ object TrackFileImport {
     /** A FIT file by its header, else a GPX or TCX text; throws like [parse] of a text. */
     fun parse(input: InputStream, fileName: String? = null): Workout {
         val buffered = BufferedInputStream(input)
-        buffered.mark(FIT_HEAD)
-        val head = ByteArray(FIT_HEAD)
-        var read = 0
-        while (read < FIT_HEAD) {
-            val n = buffered.read(head, read, FIT_HEAD - read)
-            if (n < 0) break
-            read += n
-        }
-        buffered.reset()
-        if (FitDecoder.isFit(head)) return FitImporter.parseFit(buffered, fileName)
+        if (FitDecoder.isFit(buffered)) return FitImporter.parseFit(buffered, fileName)
         return parse(buffered.bufferedReader().use { it.readText() }, fileName)
     }
 
