@@ -186,6 +186,28 @@ class WorkoutDatabaseMigrationJvmTest {
     }
 
     @Test
+    fun migrate9To10_addsTitleDeviceAndLapsEmpty() {
+        createDatabase(9) {
+            execSQL(
+                """
+                INSERT INTO workouts (date, distance, duration, movingDuration, avgPace, calories, notes, type, isFavorite, excludeFromRecords, metricsVersion)
+                VALUES (1700000000000, 5.0, 1800000, 1800000, 6.0, NULL, 'morning', 'EASY_RUN', 0, 0, 7)
+                """.trimIndent()
+            )
+        }
+
+        openWithRoom(WorkoutDatabase.MIGRATION_9_10).apply {
+            query("SELECT title, device, lapsJson, notes FROM workouts").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertTrue(cursor.isNull(0))
+                assertTrue(cursor.isNull(1))
+                assertTrue(cursor.isNull(2))
+                assertEquals("morning", cursor.getString(3))
+            }
+        }
+    }
+
+    @Test
     fun migrate4ToLatest_keepsTemplateSegmentPace() {
         // Templates exist from schema 4 on; a segment added there must survive 4 → latest.
         createDatabase(4) {

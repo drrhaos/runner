@@ -34,7 +34,10 @@ class WorkoutBackupFormatV2Test {
         "intervalSegmentsJson" to "intervalSegmentsJson",
         "excludeFromRecords" to "excludeFromRecords",
         "avgHeartRate" to "avgHeartRate",
-        "maxHeartRate" to "maxHeartRate"
+        "maxHeartRate" to "maxHeartRate",
+        "title" to "title",
+        "device" to "device",
+        "lapsJson" to "lapsJson"
     )
 
     /** Recomputed from the track after import instead of trusting the file. */
@@ -68,7 +71,10 @@ class WorkoutBackupFormatV2Test {
         excludeFromRecords = true,
         avgHeartRate = 150,
         maxHeartRate = 182,
-        metricsVersion = 3
+        metricsVersion = 3,
+        title = "Morning Run",
+        device = "Run Watch 255",
+        lapsJson = "[{\"start\":1790000000000,\"timerMs\":300000}]"
     )
 
     @Test
@@ -133,6 +139,18 @@ class WorkoutBackupFormatV2Test {
             ),
             restored.copy(trackData = full.trackData)
         )
+    }
+
+    @Test
+    fun workoutWithoutTrack_keepsItsCadence() {
+        // Nothing to derive it from again: the file's value is what the row has
+        val treadmill = full.copy(trackData = null)
+
+        val restored = WorkoutBackupFormat.parseBackupJson(WorkoutBackupFormat.toBackupJson(listOf(treadmill), "p"))
+            .single()
+
+        assertEquals(170f, restored.avgCadence)
+        assertEquals(150, restored.avgHeartRate)
     }
 
     @Test

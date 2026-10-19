@@ -229,6 +229,22 @@ class MetricsBackfillTest {
     }
 
     @Test
+    fun workoutWithoutTrack_keepsTheHeartRateAndCadenceOfItsFile() = runBlocking {
+        // A treadmill run imported from its file: the columns hold the device's totals
+        val id = workouts.insertWorkout(
+            row(insert(1, track = null)).copy(id = 0, avgHeartRate = 141, maxHeartRate = 172, avgCadence = 168f)
+        )
+
+        backfill(derive = WorkoutDerivation::derive).runOnce()
+
+        val row = row(id)
+        assertEquals(WorkoutDerivation.CURRENT_METRICS_VERSION, row.metricsVersion)
+        assertEquals(141, row.avgHeartRate)
+        assertEquals(172, row.maxHeartRate)
+        assertEquals(168f, row.avgCadence)
+    }
+
+    @Test
     fun outOfMemory_marksTheRowComputedWithoutMetrics() = runBlocking {
         val huge = insert(1, track = "huge")
         val normal = insert(2)

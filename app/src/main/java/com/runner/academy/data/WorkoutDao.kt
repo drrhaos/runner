@@ -124,12 +124,15 @@ abstract class WorkoutDao {
     /**
      * Writes derived columns unless the row was saved meanwhile with [version] or newer (an
      * edit computes its own). Returns the number of rows updated: 0 = leave its efforts alone.
+     * A row without a track keeps its heart rate and cadence, like [com.runner.academy.util.Derived.applyTo].
      */
     @Query(
         """
         UPDATE workouts SET elevationGain = :elevationGain, elevationLoss = :elevationLoss,
-            elevationSource = :elevationSource, avgCadence = :avgCadence,
-            avgHeartRate = :avgHeartRate, maxHeartRate = :maxHeartRate,
+            elevationSource = :elevationSource,
+            avgCadence = CASE WHEN trackData IS NULL THEN avgCadence ELSE :avgCadence END,
+            avgHeartRate = CASE WHEN trackData IS NULL THEN avgHeartRate ELSE :avgHeartRate END,
+            maxHeartRate = CASE WHEN trackData IS NULL THEN maxHeartRate ELSE :maxHeartRate END,
             routePreview = :routePreview, metricsVersion = :version
         WHERE id = :id AND metricsVersion < :version
         """

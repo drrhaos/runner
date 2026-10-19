@@ -31,6 +31,9 @@ import java.util.Date
  * imported rows get metricsVersion 0 and are recomputed from the track. Older builds read
  * format 2 too — they ignore unknown keys. The heart rate is derived from the track too since
  * metrics version 7; its keys stay in the format and the recompute overwrites them.
+ * Without a track nothing is recomputed: such a row keeps the heart rate and the cadence
+ * (`avgCadence`, written only then) an imported file gave it. Schema 10 adds `title`,
+ * `device` and `lapsJson`, all optional, with no new format version.
  */
 object WorkoutBackupFormat {
 
@@ -55,7 +58,12 @@ object WorkoutBackupFormat {
         val intervalSegmentsJson: String? = null,
         val excludeFromRecords: Boolean = false,
         val avgHeartRate: Int? = null,
-        val maxHeartRate: Int? = null
+        val maxHeartRate: Int? = null,
+        /** Written for a workout without a track only: nothing to derive it from again. */
+        val avgCadence: Float? = null,
+        val title: String? = null,
+        val device: String? = null,
+        val lapsJson: String? = null
     )
 
     data class WorkoutsBackupFile(
@@ -157,6 +165,10 @@ object WorkoutBackupFormat {
         addProperty("excludeFromRecords", excludeFromRecords)
         avgHeartRate?.let { addProperty("avgHeartRate", it) }
         maxHeartRate?.let { addProperty("maxHeartRate", it) }
+        if (trackData == null) avgCadence?.let { addProperty("avgCadence", it) }
+        title?.let { addProperty("title", it) }
+        device?.let { addProperty("device", it) }
+        lapsJson?.let { addProperty("lapsJson", it) }
     }
 
     fun getBackupJsonFileName(): String {
@@ -192,7 +204,11 @@ object WorkoutBackupFormat {
             intervalSegmentsJson = stringOrNull(listOf("intervalSegmentsJson", "k")),
             excludeFromRecords = booleanOr(listOf("excludeFromRecords"), false),
             avgHeartRate = intOrNull(listOf("avgHeartRate")),
-            maxHeartRate = intOrNull(listOf("maxHeartRate"))
+            maxHeartRate = intOrNull(listOf("maxHeartRate")),
+            avgCadence = floatOrNull(listOf("avgCadence")),
+            title = stringOrNull(listOf("title")),
+            device = stringOrNull(listOf("device")),
+            lapsJson = stringOrNull(listOf("lapsJson"))
         )
     }
 
@@ -244,6 +260,9 @@ object WorkoutBackupFormat {
             default
         }
     }
+
+    private fun JsonObject.floatOrNull(keys: List<String>): Float? =
+        floatOr(keys, Float.NaN).takeIf { it.isFinite() }
 
     private fun JsonObject.intOrNull(keys: List<String>): Int? {
         val el = firstPresent(keys) ?: return null
@@ -315,7 +334,12 @@ object WorkoutBackupFormat {
             excludeFromRecords = excludeFromRecords,
             avgHeartRate = avgHeartRate,
             maxHeartRate = maxHeartRate,
-            metricsVersion = 0
+            // A track derives its own cadence; without one the file's value stays
+            avgCadence = if (trackData == null) avgCadence else null,
+            metricsVersion = 0,
+            title = title,
+            device = device,
+            lapsJson = lapsJson
         )
     }
 

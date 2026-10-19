@@ -48,7 +48,13 @@ data class Workout(
      * (tells "not computed" apart from "no data" and reruns the pass when an algorithm changes).
      */
     @ColumnInfo(defaultValue = "0")
-    val metricsVersion: Int = 0
+    val metricsVersion: Int = 0,
+    /** The name an imported file gives the run (GPX `trk/name`); null — none. */
+    val title: String? = null,
+    /** The device that recorded an imported file (TCX `Creator/Name`); null for own records. */
+    val device: String? = null,
+    /** JSON of the laps an imported file has ([LapsJson]); independent of the track. */
+    val lapsJson: String? = null
 )
 
 /** Where [Workout.elevationGain] comes from; stored by name. */

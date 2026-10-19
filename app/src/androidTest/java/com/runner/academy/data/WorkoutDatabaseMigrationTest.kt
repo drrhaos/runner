@@ -340,6 +340,10 @@ class WorkoutDatabaseMigrationTest {
                 assertTrue(cursor.moveToFirst())
                 assertEquals(1, cursor.getInt(0))
             }
+            query("SELECT title, device, lapsJson FROM workouts").use { cursor ->
+                assertTrue(cursor.moveToFirst())
+                assertTrue(cursor.isNull(0) && cursor.isNull(1) && cursor.isNull(2))
+            }
             close()
         }
     }

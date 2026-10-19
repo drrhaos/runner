@@ -39,14 +39,18 @@ data class Derived(
     val efforts: List<Effort> = emptyList(),
     val metricsVersion: Int = WorkoutDerivation.CURRENT_METRICS_VERSION
 ) {
-    /** [workout] with every derived column overwritten: a stale value never survives. */
+    /**
+     * [workout] with every derived column overwritten: a stale value never survives. A workout
+     * without a track keeps its heart rate and cadence: an imported file's totals, nothing
+     * here derives them.
+     */
     fun applyTo(workout: Workout): Workout = workout.copy(
         elevationGain = elevationGain,
         elevationLoss = elevationLoss,
         elevationSource = elevationSource,
-        avgCadence = avgCadence,
-        avgHeartRate = avgHeartRate,
-        maxHeartRate = maxHeartRate,
+        avgCadence = if (workout.trackData == null) workout.avgCadence else avgCadence,
+        avgHeartRate = if (workout.trackData == null) workout.avgHeartRate else avgHeartRate,
+        maxHeartRate = if (workout.trackData == null) workout.maxHeartRate else maxHeartRate,
         routePreview = routePreview,
         metricsVersion = metricsVersion
     )

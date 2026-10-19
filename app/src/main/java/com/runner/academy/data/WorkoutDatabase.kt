@@ -243,10 +243,16 @@ abstract class WorkoutDatabase : RoomDatabase() {
             }
         }
 
-        /** Workouts indexed by date: the list's order and the import's overlap look-up. */
+        /**
+         * Workouts indexed by date (the list's order and the import's overlap look-up); the
+         * title, device and laps an imported file has.
+         */
         internal val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("CREATE INDEX IF NOT EXISTS `index_workouts_date` ON `workouts` (`date`)")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN title TEXT")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN device TEXT")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN lapsJson TEXT")
             }
         }
 

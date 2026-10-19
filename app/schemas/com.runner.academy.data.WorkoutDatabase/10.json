@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 10,
-    "identityHash": "d03ba0501ebf9ef46b32b837821cd8ca",
+    "identityHash": "d7f9045d5250c85761bea53200865445",
     "entities": [
       {
         "tableName": "workouts",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` INTEGER NOT NULL, `distance` REAL NOT NULL, `duration` INTEGER NOT NULL, `movingDuration` INTEGER NOT NULL DEFAULT 0, `avgPace` REAL NOT NULL, `calories` INTEGER, `notes` TEXT, `type` TEXT NOT NULL, `trackData` TEXT, `isFavorite` INTEGER NOT NULL, `intervalSegmentsJson` TEXT, `elevationGain` REAL, `elevationLoss` REAL, `elevationSource` TEXT, `avgCadence` REAL, `routePreview` TEXT, `excludeFromRecords` INTEGER NOT NULL DEFAULT 0, `avgHeartRate` INTEGER, `maxHeartRate` INTEGER, `metricsVersion` INTEGER NOT NULL DEFAULT 0)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` INTEGER NOT NULL, `distance` REAL NOT NULL, `duration` INTEGER NOT NULL, `movingDuration` INTEGER NOT NULL DEFAULT 0, `avgPace` REAL NOT NULL, `calories` INTEGER, `notes` TEXT, `type` TEXT NOT NULL, `trackData` TEXT, `isFavorite` INTEGER NOT NULL, `intervalSegmentsJson` TEXT, `elevationGain` REAL, `elevationLoss` REAL, `elevationSource` TEXT, `avgCadence` REAL, `routePreview` TEXT, `excludeFromRecords` INTEGER NOT NULL DEFAULT 0, `avgHeartRate` INTEGER, `maxHeartRate` INTEGER, `metricsVersion` INTEGER NOT NULL DEFAULT 0, `title` TEXT, `device` TEXT, `lapsJson` TEXT)",
         "fields": [
           {
             "fieldPath": "id",
@@ -125,6 +125,21 @@
             "affinity": "INTEGER",
             "notNull": true,
             "defaultValue": "0"
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "device",
+            "columnName": "device",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "lapsJson",
+            "columnName": "lapsJson",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -753,7 +768,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd03ba0501ebf9ef46b32b837821cd8ca')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'd7f9045d5250c85761bea53200865445')"
     ]
   }
 }
