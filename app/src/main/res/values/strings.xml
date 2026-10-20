@@ -236,9 +236,12 @@
 
     <string name="workout_details_basic_params">Basic parameters</string>
     <string name="workout_details_charts">Charts</string>
-    <string name="workout_details_average_speed">Average speed</string>
+    <string name="workout_details_average_speed">Avg speed, km/h</string>
     <string name="workout_details_calories">Calories</string>
     <string name="workout_details_calories_value">%1$d kcal</string>
+    <string name="workout_details_tile_calories">Calories, kcal</string>
+    <string name="workout_details_tile_distance">Distance, km</string>
+    <string name="workout_details_tile_pace">Pace, min/km</string>
     <string name="workout_details_btn_share">Share</string>
     <string name="workout_details_btn_export_gpx">GPX export</string>
     <string name="workout_details_btn_share_diagnostics">Share GPS diagnostics</string>
@@ -520,7 +523,7 @@
     </plurals>
 
     <!-- Cadence -->
-    <string name="workout_details_cadence_value">%1$d spm</string>
+    <string name="workout_details_tile_cadence">Cadence, spm</string>
     <string name="workout_details_cadence_title">Cadence</string>
     <string name="workout_details_cadence_a11y">Average cadence %1$s</string>
     <string name="workout_details_cadence_pending_a11y">Cadence is still being calculated</string>
@@ -538,7 +541,7 @@
         <item quantity="one">%d beat per minute</item>
         <item quantity="other">%d beats per minute</item>
     </plurals>
-    <string name="workout_details_heart_rate_value">%1$d bpm</string>
+    <string name="workout_details_tile_heart_rate">Heart rate, bpm</string>
     <string name="workout_details_heart_rate_title">Heart rate</string>
     <string name="workout_details_heart_rate_a11y">Average heart rate %1$s</string>
     <string name="workout_details_heart_rate_pending_a11y">Heart rate is still being calculated</string>
@@ -552,10 +555,8 @@
     <string name="chart_heart_rate_range_a11y">Heart rate chart, beats per minute: from %1$d to %2$d</string>
 
     <!-- Elevation gain and loss -->
-    <string name="workout_elevation_gain_label">Elevation gain</string>
-    <string name="workout_elevation_loss_label">Elevation loss</string>
-    <string name="workout_elevation_gain_value">↑ %1$d m</string>
-    <string name="workout_elevation_loss_value">↓ %1$d m</string>
+    <string name="workout_elevation_gain_label">Elevation gain, m</string>
+    <string name="workout_elevation_loss_label">Elevation loss, m</string>
     <string name="workout_elevation_source_gps">Elevation from GPS — approximate</string>
     <string name="workout_elevation_source_gps_short">from GPS, approximate</string>
     <string name="workout_elevation_source_file">Elevation from the file</string>

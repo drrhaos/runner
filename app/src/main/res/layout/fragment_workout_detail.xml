@@ -285,11 +285,11 @@
                     <TextView
                         android:id="@+id/textView_detail_distance"
                         style="@style/RunnerDetailMetricValue"
-                        tools:text="5.00 км" />
+                        tools:text="5.00" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
-                        android:text="@string/workout_distance_label" />
+                        android:text="@string/workout_details_tile_distance" />
                 </LinearLayout>
 
                 <!-- Время -->
@@ -327,11 +327,11 @@
                     <TextView
                         android:id="@+id/textView_detail_pace"
                         style="@style/RunnerDetailMetricValue"
-                        tools:text="5:06 /км" />
+                        tools:text="5:06" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
-                        android:text="@string/workout_details_pace" />
+                        android:text="@string/workout_details_tile_pace" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -355,7 +355,7 @@
                     <TextView
                         android:id="@+id/textView_detail_avg_speed"
                         style="@style/RunnerDetailMetricValue.Secondary"
-                        tools:text="11.8 км/ч" />
+                        tools:text="11.8" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
@@ -376,11 +376,11 @@
                     <TextView
                         android:id="@+id/textView_detail_heart_rate"
                         style="@style/RunnerDetailMetricValue.Secondary"
-                        tools:text="152 уд/мин" />
+                        tools:text="152" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
-                        android:text="@string/workout_details_heart_rate_title" />
+                        android:text="@string/workout_details_tile_heart_rate" />
                 </LinearLayout>
 
                 <!-- Каденс: скрыт, когда шагов нет -->
@@ -397,11 +397,11 @@
                     <TextView
                         android:id="@+id/textView_detail_cadence"
                         style="@style/RunnerDetailMetricValue.Secondary"
-                        tools:text="172 шаг/мин" />
+                        tools:text="172" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
-                        android:text="@string/workout_details_cadence_title" />
+                        android:text="@string/workout_details_tile_cadence" />
                 </LinearLayout>
 
                 <!-- Калории -->
@@ -416,11 +416,11 @@
                     <TextView
                         android:id="@+id/textView_detail_calories"
                         style="@style/RunnerDetailMetricValue.Secondary"
-                        tools:text="300 ккал" />
+                        tools:text="300" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
-                        android:text="@string/workout_details_calories" />
+                        android:text="@string/workout_details_tile_calories" />
                 </LinearLayout>
 
                 <!-- Общее время: когда отличается от времени в движении -->
@@ -458,7 +458,7 @@
                     <TextView
                         android:id="@+id/textView_detail_elevation_gain"
                         style="@style/RunnerDetailMetricValue.Secondary"
-                        tools:text="↑ 124 м" />
+                        tools:text="124" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
@@ -479,7 +479,7 @@
                     <TextView
                         android:id="@+id/textView_detail_elevation_loss"
                         style="@style/RunnerDetailMetricValue.Secondary"
-                        tools:text="↓ 118 м" />
+                        tools:text="118" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
