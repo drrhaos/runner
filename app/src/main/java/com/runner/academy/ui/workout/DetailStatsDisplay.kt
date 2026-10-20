@@ -3,6 +3,8 @@ package com.runner.academy.ui.workout
 import android.graphics.Typeface
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
+import android.widget.LinearLayout
 import androidx.core.view.ViewCompat
 import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.isVisible
@@ -47,7 +49,7 @@ class DetailStatsDisplay(
                 if (showsElapsed) R.string.workout_moving_time_label else R.string.workout_time_label
             )
             layoutDetailElapsed.visibility = if (showsElapsed) View.VISIBLE else View.GONE
-            updateThirdRow()
+            arrangeTiles()
             textViewDetailElapsed.text = viewModel.formatDuration(workout.duration)
 
             val avgSpeed = com.runner.academy.util.FormatUtils.calculateAverageSpeed(workout.distance, workout.movingDuration)
@@ -188,16 +190,16 @@ class DetailStatsDisplay(
                 CadenceDisplay.None -> Unit
             }
         }
+        arrangeTiles()
     }
 
     /**
-     * The heart rate tile (its own row): the stored average, "—" while the background pass has
-     * not reached a track with heart rate, hidden when there is none (no sensor, an older or
-     * manual workout).
+     * The heart rate tile: the stored average, "—" while the background pass has not reached a
+     * track with heart rate, hidden when there is none (no sensor, an older or manual workout).
      */
     fun displayHeartRate(display: HeartRateSummaryDisplay) {
         binding.apply {
-            layoutDetailHeartRateRow.visibility = if (display == HeartRateSummaryDisplay.None) View.GONE else View.VISIBLE
+            layoutDetailHeartRate.visibility = if (display == HeartRateSummaryDisplay.None) View.GONE else View.VISIBLE
             when (display) {
                 is HeartRateSummaryDisplay.Value -> {
                     textViewDetailHeartRate.text = context.getString(R.string.workout_details_heart_rate_value, display.avgBpm)
@@ -211,6 +213,7 @@ class DetailStatsDisplay(
                 HeartRateSummaryDisplay.None -> Unit
             }
         }
+        arrangeTiles()
     }
 
     /**
@@ -247,19 +250,51 @@ class DetailStatsDisplay(
                 ElevationDisplay.None -> Unit
             }
         }
-        updateThirdRow()
+        arrangeTiles()
     }
 
+    /** The view of each secondary tile. */
+    private val tileViews: Map<DetailTile, View> = with(binding) {
+        mapOf(
+            DetailTile.AVG_SPEED to layoutDetailAvgSpeed,
+            DetailTile.HEART_RATE to layoutDetailHeartRate,
+            DetailTile.CADENCE to layoutDetailCadence,
+            DetailTile.CALORIES to layoutDetailCalories,
+            DetailTile.ELAPSED to layoutDetailElapsed,
+            DetailTile.ELEVATION_GAIN to layoutDetailElevationGain,
+            DetailTile.ELEVATION_LOSS to layoutDetailElevationLoss
+        )
+    }
+
+    /** The rows last laid out; null before the first. */
+    private var tileRows: List<List<DetailTile>>? = null
+
     /**
-     * The third row shows when any of its tiles does. Its tiles keep the columns of the rows
-     * above: the elapsed time alone sits under the third column, the elevation tiles start left.
+     * Lays the shown secondary tiles out in rows of three ([DetailTileRows]); hidden tiles are
+     * left out of the hierarchy until they show. Rebuilt only when the rows change.
      */
-    private fun updateThirdRow() {
-        binding.apply {
-            val elevationShown = layoutDetailElevationGain.isVisible
-            val elapsedShown = layoutDetailElapsed.isVisible
-            layoutDetailThirdRow.visibility = if (elevationShown || elapsedShown) View.VISIBLE else View.GONE
-            layoutDetailThirdRow.gravity = if (elevationShown) android.view.Gravity.START else android.view.Gravity.END
+    private fun arrangeTiles() {
+        val rows = DetailTileRows.of(tileViews.filterValues { it.isVisible }.keys)
+        if (rows == tileRows) return
+        tileRows = rows
+        tileViews.values.forEach { (it.parent as? ViewGroup)?.removeView(it) }
+        val container = binding.layoutDetailSecondaryTiles
+        container.removeAllViews()
+        val spacing = context.resources.getDimensionPixelSize(R.dimen.workout_detail_tile_row_spacing)
+        for (row in rows) {
+            val line = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                weightSum = DetailTileRows.COLUMNS.toFloat()
+                isBaselineAligned = false
+            }
+            row.forEach { tile ->
+                line.addView(tileViews.getValue(tile), LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+            }
+            container.addView(
+                line,
+                LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { bottomMargin = spacing }
+            )
         }
     }
 

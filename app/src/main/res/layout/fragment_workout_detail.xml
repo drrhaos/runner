@@ -335,21 +335,19 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Дополнительная статистика -->
+            <!-- Дополнительная статистика: плитки раскладываются из кода по три в ряд, скрытые
+                 пропускаются (DetailTileRows) — без пустых ячеек посреди ряда -->
             <LinearLayout
+                android:id="@+id/layout_detail_secondary_tiles"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="16dp"
-                android:weightSum="3"
-                android:baselineAligned="false">
+                android:orientation="vertical">
 
                 <!-- Средняя скорость -->
                 <LinearLayout
                     android:id="@+id/layout_detail_avg_speed"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:orientation="vertical"
                     android:gravity="center"
                     android:focusable="true">
@@ -364,32 +362,32 @@
                         android:text="@string/workout_details_average_speed" />
                 </LinearLayout>
 
-                <!-- Калории -->
+                <!-- Пульс: скрыт, когда пульса нет -->
                 <LinearLayout
-                    android:id="@+id/layout_detail_calories"
-                    android:layout_width="0dp"
+                    android:id="@+id/layout_detail_heart_rate"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:orientation="vertical"
                     android:gravity="center"
-                    android:focusable="true">
+                    android:focusable="true"
+                    android:visibility="gone"
+                    tools:visibility="visible">
 
                     <TextView
-                        android:id="@+id/textView_detail_calories"
+                        android:id="@+id/textView_detail_heart_rate"
                         style="@style/RunnerDetailMetricValue.Secondary"
-                        tools:text="300 ккал" />
+                        tools:text="152 уд/мин" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
-                        android:text="@string/workout_details_calories" />
+                        android:text="@string/workout_details_heart_rate_title" />
                 </LinearLayout>
 
                 <!-- Каденс: скрыт, когда шагов нет -->
                 <LinearLayout
                     android:id="@+id/layout_detail_cadence"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:orientation="vertical"
                     android:gravity="center"
                     android:focusable="true"
@@ -405,62 +403,52 @@
                         style="@style/RunnerDetailMetricCaption"
                         android:text="@string/workout_details_cadence_title" />
                 </LinearLayout>
-            </LinearLayout>
 
-            <!-- Пульс: свой ряд под первой колонкой, скрыт, когда пульса нет (ряд держит ширину
-                 колонки через weightSum, поэтому не лишний) -->
-            <LinearLayout
-                android:id="@+id/layout_detail_heart_rate_row"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="3"
-                android:baselineAligned="false"
-                android:layout_marginBottom="16dp"
-                android:visibility="gone"
-                tools:visibility="visible"
-                tools:ignore="UselessParent">
-
+                <!-- Калории -->
                 <LinearLayout
-                    android:id="@+id/layout_detail_heart_rate"
-                    android:layout_width="0dp"
+                    android:id="@+id/layout_detail_calories"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:orientation="vertical"
                     android:gravity="center"
                     android:focusable="true">
 
                     <TextView
-                        android:id="@+id/textView_detail_heart_rate"
+                        android:id="@+id/textView_detail_calories"
                         style="@style/RunnerDetailMetricValue.Secondary"
-                        tools:text="152 уд/мин" />
+                        tools:text="300 ккал" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
-                        android:text="@string/workout_details_heart_rate_title" />
+                        android:text="@string/workout_details_calories" />
                 </LinearLayout>
-            </LinearLayout>
 
-            <!-- Третий ряд: набор и сброс высоты (когда в треке есть высоты) и общее время
-                 (когда оно отличается от времени в движении) -->
-            <LinearLayout
-                android:id="@+id/layout_detail_third_row"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="end"
-                android:weightSum="3"
-                android:baselineAligned="false"
-                android:layout_marginBottom="16dp"
-                android:visibility="gone"
-                tools:visibility="visible">
+                <!-- Общее время: когда отличается от времени в движении -->
+                <LinearLayout
+                    android:id="@+id/layout_detail_elapsed"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    tools:visibility="visible">
 
-                <!-- Набор высоты -->
+                    <TextView
+                        android:id="@+id/textView_detail_elapsed"
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="28:40" />
+
+                    <TextView
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_elapsed_time_label" />
+                </LinearLayout>
+
+                <!-- Набор высоты: с набором и сбросом в своём ряду, когда в треке есть высоты -->
                 <LinearLayout
                     android:id="@+id/layout_detail_elevation_gain"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:orientation="vertical"
                     android:gravity="center"
                     android:focusable="true"
@@ -480,9 +468,8 @@
                 <!-- Сброс высоты -->
                 <LinearLayout
                     android:id="@+id/layout_detail_elevation_loss"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:orientation="vertical"
                     android:gravity="center"
                     android:focusable="true"
@@ -497,26 +484,6 @@
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
                         android:text="@string/workout_elevation_loss_label" />
-                </LinearLayout>
-
-                <!-- Общее время -->
-                <LinearLayout
-                    android:id="@+id/layout_detail_elapsed"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center"
-                    android:focusable="true">
-
-                    <TextView
-                        android:id="@+id/textView_detail_elapsed"
-                        style="@style/RunnerDetailMetricValue.Secondary"
-                        tools:text="28:40" />
-
-                    <TextView
-                        style="@style/RunnerDetailMetricCaption"
-                        android:text="@string/workout_elapsed_time_label" />
                 </LinearLayout>
             </LinearLayout>
 

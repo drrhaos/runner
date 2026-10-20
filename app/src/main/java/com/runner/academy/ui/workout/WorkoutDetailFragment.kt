@@ -517,6 +517,7 @@ class WorkoutDetailFragment : Fragment() {
         boundTrackRenderKey = null
         currentTrackData = null
         currentTrackHasSteps = false
+        currentTrackHasHeartRate = false
         currentTrackHasAltitude = false
         excludeRow = ExcludeFromRecordsRow.Hidden
         congratulation = null

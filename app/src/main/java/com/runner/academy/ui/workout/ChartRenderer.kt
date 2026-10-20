@@ -739,7 +739,7 @@ class ChartRenderer(
                     valueTextSize = 10f
                     valueFormatter = object : ValueFormatter() {
                         override fun getFormattedValue(value: Float): String {
-                            return String.format("%.1f", value)
+                            return String.format(java.util.Locale.getDefault(), "%.1f", value)
                         }
                     }
                 }
