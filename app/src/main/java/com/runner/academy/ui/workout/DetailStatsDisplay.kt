@@ -1,8 +1,12 @@
 package com.runner.academy.ui.workout
 
+import android.graphics.Typeface
 import android.view.LayoutInflater
 import android.view.View
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
 import androidx.core.view.isVisible
+import com.google.android.material.color.MaterialColors
 import com.runner.academy.R
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
@@ -71,66 +75,99 @@ class DetailStatsDisplay(
      */
     private fun displayIdentity(workout: Workout) {
         binding.apply {
-            val title = workout.title?.trim()?.takeIf { it.isNotEmpty() }
+            val title = WorkoutTitle.clean(workout.title)
             textViewDetailTitle.isVisible = title != null
             textViewDetailTitle.text = title
+            // Under a name the date is a second line; without one it heads the card as before
+            textViewDetailDate.setTextAppearance(
+                if (title != null) R.style.TextAppearance_Runner_Subhead else R.style.TextAppearance_Runner_Title3
+            )
+            textViewDetailDate.setTypeface(null, if (title != null) Typeface.NORMAL else Typeface.BOLD)
+            textViewDetailDate.setTextColor(
+                MaterialColors.getColor(
+                    textViewDetailDate,
+                    if (title != null) {
+                        com.google.android.material.R.attr.colorOnSurfaceVariant
+                    } else {
+                        com.google.android.material.R.attr.colorOnSurface
+                    }
+                )
+            )
 
-            val device = workout.device?.trim()?.takeIf { it.isNotEmpty() }
+            val device = WorkoutTitle.clean(workout.device)
             textViewDetailDevice.isVisible = device != null
             textViewDetailDevice.text = device
             textViewDetailDevice.contentDescription = device?.let { context.getString(R.string.workout_device_a11y, it) }
 
-            val notes = workout.notes?.trim()?.takeIf { it.isNotEmpty() }
+            val notes = WorkoutTitle.clean(workout.notes)
             textViewDetailNotes.isVisible = notes != null
             textViewDetailNotes.text = notes
-            textViewDetailNotes.maxLines = NOTES_LINES
+            showNotesWhole(false)
             textViewDetailNotes.setOnClickListener {
-                textViewDetailNotes.maxLines =
-                    if (textViewDetailNotes.maxLines == NOTES_LINES) Int.MAX_VALUE else NOTES_LINES
+                showNotesWhole(textViewDetailNotes.maxLines == NOTES_LINES)
             }
         }
     }
 
-    /** The "Laps" card: a row per lap of the file, under a header; gone below two laps. */
+    /** The note whole, or its first [NOTES_LINES] lines; TalkBack names what a tap will do. */
+    private fun showNotesWhole(whole: Boolean) {
+        val notes = binding.textViewDetailNotes
+        notes.maxLines = if (whole) Int.MAX_VALUE else NOTES_LINES
+        ViewCompat.replaceAccessibilityAction(
+            notes,
+            AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK,
+            context.getString(if (whole) R.string.workout_notes_collapse else R.string.workout_notes_expand),
+            null
+        )
+    }
+
+    /**
+     * The "Laps" card: a header and a row per lap of the file; gone below two laps. TalkBack
+     * reads a row as one phrase, the header not at all (the phrase names each value).
+     */
     private fun displayLaps(workout: Workout) {
         val table = LapTable.of(LapsJson.parse(workout.lapsJson))
         binding.cardLaps.isVisible = table != null
+        ViewCompat.setAccessibilityHeading(binding.textViewLapsTitle, true)
         val rows = binding.layoutLapRows
         rows.removeAllViews()
         if (table == null) return
         val inflater = LayoutInflater.from(context)
-        fun addRow(row: LapTable.Row, header: Boolean) {
-            val line = ItemLapRowBinding.inflate(inflater, rows, true)
-            // The number column's muted colour, also the headers'
-            val muted = line.textViewLapNumber.currentTextColor
-            val cells = listOf(
-                line.textViewLapNumber to row.number,
-                line.textViewLapKm to row.km,
-                line.textViewLapTime to row.time,
-                line.textViewLapPace to row.pace,
-                line.textViewLapHeartRate to row.heartRate
+
+        val header = ItemLapRowBinding.inflate(inflater, rows, true)
+        val muted = header.textViewLapNumber.currentTextColor
+        lapCells(header).zip(
+            listOf(
+                R.string.workout_laps_col_number, R.string.workout_laps_col_km, R.string.workout_laps_col_time,
+                R.string.workout_laps_col_pace, R.string.workout_laps_col_heart_rate
             )
-            cells.forEach { (view, text) ->
-                view.text = text
-                if (header) {
-                    view.setTextAppearance(R.style.TextAppearance_Runner_Caption)
-                    view.setTextColor(muted)
-                }
-            }
-            line.textViewLapHeartRate.isVisible = table.showsHeartRate
+        ).forEach { (view, label) ->
+            view.setText(label)
+            view.setTextAppearance(R.style.TextAppearance_Runner_Caption)
+            view.setTextColor(muted)
         }
-        addRow(
-            LapTable.Row(
-                number = context.getString(R.string.workout_laps_col_number),
-                km = context.getString(R.string.workout_laps_col_km),
-                time = context.getString(R.string.workout_laps_col_time),
-                pace = context.getString(R.string.workout_laps_col_pace),
-                heartRate = context.getString(R.string.workout_laps_col_heart_rate)
-            ),
-            header = true
-        )
-        table.rows.forEach { addRow(it, header = false) }
+        header.textViewLapHeartRate.isVisible = table.showsHeartRate
+        header.root.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+
+        for (row in table.rows) {
+            val line = ItemLapRowBinding.inflate(inflater, rows, true)
+            lapCells(line).zip(listOf(row.number, row.km, row.time, row.pace, row.heartRate))
+                .forEach { (view, text) -> view.text = text }
+            line.textViewLapHeartRate.isVisible = table.showsHeartRate
+            line.root.contentDescription = if (table.showsHeartRate) {
+                context.getString(R.string.workout_lap_row_hr_a11y, row.number, row.km, row.time, row.pace, row.heartRate)
+            } else {
+                context.getString(R.string.workout_lap_row_a11y, row.number, row.km, row.time, row.pace)
+            }
+            line.root.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+            ViewCompat.setScreenReaderFocusable(line.root, true)
+            lapCells(line).forEach { it.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO }
+        }
     }
+
+    private fun lapCells(line: ItemLapRowBinding) = listOf(
+        line.textViewLapNumber, line.textViewLapKm, line.textViewLapTime, line.textViewLapPace, line.textViewLapHeartRate
+    )
 
     /**
      * The cadence tile: the stored value, "—" while the background pass has not reached a

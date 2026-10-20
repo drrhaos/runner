@@ -91,6 +91,10 @@
     <string name="workout_laps_col_pace">Pace</string>
     <string name="workout_laps_col_heart_rate">HR</string>
     <string name="workout_device_a11y">Recorded with %1$s</string>
+    <string name="workout_lap_row_a11y">Lap %1$s: %2$s km, time %3$s, pace %4$s</string>
+    <string name="workout_lap_row_hr_a11y">Lap %1$s: %2$s km, time %3$s, pace %4$s, heart rate %5$s</string>
+    <string name="workout_notes_expand">Show the whole note</string>
+    <string name="workout_notes_collapse">Shorten the note</string>
     <string name="workout_pace_label_km">Pace min/km</string>
     <string name="workout_pace_label_miles">Pace min/mi</string>
     <string name="workout_summary_good">Good workout…</string>

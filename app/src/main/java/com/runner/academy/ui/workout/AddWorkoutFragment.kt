@@ -499,6 +499,7 @@ class AddWorkoutFragment : Fragment() {
         val secondsText = binding.editTextSeconds.text.toString()
         val caloriesText = binding.editTextCalories.text.toString()
         val notesText = binding.editTextNotes.text.toString()
+        val titleText = binding.editTextName.text.toString()
 
         if (distanceText.isBlank() || hoursText.isBlank() || minutesText.isBlank() || secondsText.isBlank()) {
             Toast.makeText(context, getString(R.string.fill_required_fields), Toast.LENGTH_SHORT).show()
@@ -553,7 +554,7 @@ class AddWorkoutFragment : Fragment() {
                     calories = calories,
                     notes = notesText.ifBlank { null },
                     trackDataJson = form.selectedTrackDataJson,
-                    title = binding.editTextName.text.toString()
+                    title = titleText
                 ),
                 original
             )

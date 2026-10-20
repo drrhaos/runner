@@ -529,7 +529,6 @@
                 android:paddingStart="8dp"
                 android:paddingEnd="8dp"
                 android:ellipsize="end"
-                android:maxLines="4"
                 android:background="?attr/selectableItemBackground"
                 android:textAppearance="@style/TextAppearance.Runner.Body"
                 android:textColor="?attr/colorOnSurface"
@@ -702,6 +701,7 @@
             android:padding="16dp">
 
             <TextView
+                android:id="@+id/textView_laps_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"

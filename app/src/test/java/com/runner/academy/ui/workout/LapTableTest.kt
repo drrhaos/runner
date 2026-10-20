@@ -29,7 +29,7 @@ class LapTableTest {
         val row = table.rows[1]
         assertEquals("2", row.number)
         assertEquals("1.05", row.km)
-        assertEquals("05:30", row.time)
+        assertEquals("5:30", row.time)
         // 330.5 s over 1.05 km: 314.8 s a km, whole seconds as everywhere
         assertEquals("5:14", row.pace)
         assertEquals("155", row.heartRate)
@@ -52,12 +52,5 @@ class LapTableTest {
         assertEquals("—", row[1].km)
         assertEquals("—", row[1].pace)
         assertEquals("—", row[1].heartRate)
-    }
-
-    @Test
-    fun `the list shows the title, else the type`() {
-        assertEquals("Morning Run", WorkoutTitle.label("Morning Run", "Easy run"))
-        assertEquals("Easy run", WorkoutTitle.label(null, "Easy run"))
-        assertEquals("Easy run", WorkoutTitle.label("  ", "Easy run"))
     }
 }

@@ -41,7 +41,7 @@ object WorkoutFormMapper {
                 notes = form.notes,
                 type = form.type,
                 trackData = form.trackDataJson,
-                title = form.title?.trim()?.takeIf { it.isNotEmpty() }
+                title = WorkoutTitle.clean(form.title)
             )
         }
         val timeChanged = timeChanged(form.durationMs, original)
@@ -57,7 +57,7 @@ object WorkoutFormMapper {
             notes = form.notes,
             type = form.type,
             trackData = form.trackDataJson,
-            title = form.title?.trim()?.takeIf { it.isNotEmpty() }
+            title = WorkoutTitle.clean(form.title)
         )
     }
 

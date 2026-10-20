@@ -28,7 +28,7 @@ data class LapTable(val rows: List<Row>, val showsHeartRate: Boolean) {
                 Row(
                     number = (index + 1).toString(),
                     km = km?.let { String.format(locale, "%.2f", it) } ?: NONE,
-                    time = timerMs?.let(FormatUtils::formatTime) ?: NONE,
+                    time = timerMs?.let(FormatUtils::formatRecordTime) ?: NONE,
                     pace = if (km != null && timerMs != null) {
                         SpeedPaceCalculator.formatPaceMmSs(PaceMath.avgPace(km, timerMs))
                     } else {
@@ -42,9 +42,3 @@ data class LapTable(val rows: List<Row>, val showsHeartRate: Boolean) {
     }
 }
 
-/** The name a workout goes by in the list and on its card. */
-object WorkoutTitle {
-
-    /** The workout's [title] (from its file or the form), else the name of its type. */
-    fun label(title: String?, typeName: String): String = title?.trim()?.takeIf { it.isNotEmpty() } ?: typeName
-}

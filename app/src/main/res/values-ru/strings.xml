@@ -81,6 +81,10 @@
     <string name="workout_laps_col_pace">Темп</string>
     <string name="workout_laps_col_heart_rate">Пульс</string>
     <string name="workout_device_a11y">Записано на %1$s</string>
+    <string name="workout_lap_row_a11y">Круг %1$s: %2$s км, время %3$s, темп %4$s</string>
+    <string name="workout_lap_row_hr_a11y">Круг %1$s: %2$s км, время %3$s, темп %4$s, пульс %5$s</string>
+    <string name="workout_notes_expand">Показать заметку целиком</string>
+    <string name="workout_notes_collapse">Свернуть заметку</string>
     <string name="workout_pace_label_km">Темп мин/км</string>
     <string name="workout_pace_label_miles">Темп мин/милю</string>
     <string name="workout_summary_good">Хорошая тренировка…</string>
