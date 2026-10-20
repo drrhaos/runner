@@ -1,6 +1,5 @@
 package com.runner.academy.ui.workout
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -197,10 +196,6 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
 
     fun formatDuration(durationMs: Long): String {
         return com.runner.academy.util.FormatUtils.formatTime(durationMs)
-    }
-
-    fun formatPace(paceMinutes: Float, context: Context? = null): String {
-        return com.runner.academy.util.FormatUtils.formatPace(paceMinutes, context)
     }
 
     fun getWorkoutTypes(): List<WorkoutType> {

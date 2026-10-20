@@ -22,7 +22,6 @@ import com.runner.academy.databinding.FragmentWorkoutListBinding
 import com.runner.academy.service.ImportState
 import com.runner.academy.ui.records.RecordsAnnouncement
 import com.runner.academy.ui.records.RecordsUpdatedSnackbar
-import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.ShareExports
 import com.runner.academy.util.WorkoutBackupFormat
 import com.runner.academy.util.WorkoutGpxBulkExporter
@@ -460,7 +459,7 @@ class WorkoutListFragment : Fragment() {
             try {
                 viewModel.totalDistance.collect { distance ->
                     if (_binding != null && isAdded && !isDetached) {
-                        binding.textViewTotalDistance.text = FormatUtils.formatDistance(distance, requireContext())
+                        binding.textViewTotalDistance.text = MetricValue.distance(distance)
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -472,7 +471,7 @@ class WorkoutListFragment : Fragment() {
             try {
                 viewModel.averagePace.collect { avgPace ->
                     if (_binding != null && isAdded && !isDetached) {
-                        binding.textViewAvgPace.text = viewModel.formatPace(avgPace, requireContext())
+                        binding.textViewAvgPace.text = MetricValue.pace(avgPace)
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {

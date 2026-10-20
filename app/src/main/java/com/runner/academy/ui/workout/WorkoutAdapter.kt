@@ -12,7 +12,6 @@ import com.runner.academy.data.WorkoutListItem
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.ItemWorkoutBinding
 import com.runner.academy.util.FormatUtils
-import com.runner.academy.util.SpeedPaceCalculator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -70,28 +69,22 @@ class WorkoutAdapter(
             binding.apply {
                 textViewWorkoutDate.text = dateFormat.format(workout.date)
                 textViewWorkoutType.text = WorkoutTitle.label(workout.title, workout.type.displayName(context))
-                textViewDistance.text = String.format(
-                    "%.1f %s",
-                    workout.distance,
-                    context.getString(R.string.unit_km)
-                )
+                // Bare numbers as in the details: the units are in the captions
+                textViewDistance.text = MetricValue.distance(workout.distance)
                 // Moving time: distance / time = pace adds up on the card
                 textViewDuration.text = FormatUtils.formatTime(workout.movingDuration)
-                textViewPace.text = formatPace(workout.avgPace)
+                textViewPace.text = MetricValue.pace(workout.avgPace)
                 updateFavoriteButton(workout)
                 bindRoutePreview(workout)
 
-                if (workout.calories != null || !workout.notes.isNullOrEmpty()) {
-                    layoutCalories.visibility = View.VISIBLE
-                    textViewCalories.text = if (workout.calories != null) {
-                        "${workout.calories} ${context.getString(R.string.workout_details_calories)}"
-                    } else {
-                        ""
-                    }
-                    textViewNotesPreview.text = workout.notes.orEmpty()
-                } else {
-                    layoutCalories.visibility = View.GONE
-                }
+                // Calories and the note share a line; one alone takes it whole, no empty third
+                val calories = workout.calories
+                val notes = workout.notes.orEmpty()
+                layoutCalories.visibility = if (calories != null || notes.isNotEmpty()) View.VISIBLE else View.GONE
+                textViewCalories.visibility = if (calories != null) View.VISIBLE else View.GONE
+                textViewCalories.text = calories?.let { FormatUtils.formatCalories(it, context) }
+                textViewNotesPreview.visibility = if (notes.isNotEmpty()) View.VISIBLE else View.GONE
+                textViewNotesPreview.text = notes
 
                 root.setOnClickListener { onItemClick(workout) }
                 buttonFavorite.setOnClickListener { onFavoriteClick(workout) }
@@ -165,10 +158,6 @@ class WorkoutAdapter(
                 binding.buttonFavorite.contentDescription =
                     context.getString(R.string.workout_favorite_add)
             }
-        }
-
-        private fun formatPace(paceMinutes: Float): String {
-            return SpeedPaceCalculator.formatPaceMmSs(paceMinutes)
         }
     }
 
