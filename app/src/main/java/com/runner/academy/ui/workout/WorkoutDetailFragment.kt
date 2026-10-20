@@ -117,7 +117,6 @@ class WorkoutDetailFragment : Fragment() {
                 summary = binding.textViewChartHeartRateSummary
             ),
             context = requireContext(),
-            userPreferences = userPreferences,
             onPositionSelected = { point -> mapManager?.showPositionOnMap(point) },
             onSegmentSelected = { start, end -> mapManager?.showSegmentOnMap(start, end) },
             onNothingSelected = { mapManager?.hidePositionMarkers() }

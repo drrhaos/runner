@@ -66,7 +66,6 @@ class ChartRenderer(
     private val cadence: CadenceChartViews,
     private val heartRate: HeartRateChartViews,
     private val context: android.content.Context,
-    private val userPreferences: com.runner.academy.util.UserPreferences?,
     private val onPositionSelected: (TrackPoint) -> Unit,
     private val onSegmentSelected: (startPoint: TrackPoint, endPoint: TrackPoint) -> Unit,
     private val onNothingSelected: () -> Unit
@@ -152,9 +151,9 @@ class ChartRenderer(
         }
     }
 
-    /** The km or mile splits of the track, built on first use. */
+    /** The km splits of the track, built on first use. */
     private fun distanceSegments(trackData: TrackData): Lazy<List<SegmentStats>> = lazy {
-        SpeedPaceCalculator.buildSegments(trackData.points, userPreferences?.isMetricSystem() ?: true)
+        SpeedPaceCalculator.buildSegments(trackData.points, METRIC)
     }
 
     private fun updatePaceSpeedHeartChart(trackData: TrackData, distanceSegments: Lazy<List<SegmentStats>>) {
@@ -174,29 +173,20 @@ class ChartRenderer(
         val paceColor = color(R.color.chart_series_pace)
         val speedColor = color(R.color.chart_series_speed)
 
-        val isMetric = userPreferences?.isMetricSystem() ?: true
-        val paceSpeedSeries = SpeedPaceCalculator.buildPaceSpeedSeries(points, isMetric)
+        val paceSpeedSeries = SpeedPaceCalculator.buildPaceSpeedSeries(points, METRIC)
         if (paceSpeedSeries.isEmpty()) {
             chart.visibility = android.view.View.GONE
             return
         }
 
         // Broken at stops and near-stops: a pace of 0 would dive to the axis, a crawl stretch it
-        val paceRuns = TrackChartBuilder.paceRuns(paceSpeedSeries, isMetric)
+        val paceRuns = TrackChartBuilder.paceRuns(paceSpeedSeries, METRIC)
         val entriesSpeed = paceSpeedSeries.map {
             Entry(it.timeMinutes, it.speedDisplay.takeIf { v -> v.isFinite() } ?: 0f)
         }
 
-        val paceLabel = if (isMetric) {
-            context.getString(R.string.chart_pace_label)
-        } else {
-            context.getString(R.string.chart_pace_label_miles)
-        }
-        val speedLabel = if (isMetric) {
-            context.getString(R.string.chart_speed_label)
-        } else {
-            context.getString(R.string.chart_speed_label_miles)
-        }
+        val paceLabel = context.getString(R.string.chart_pace_label)
+        val speedLabel = context.getString(R.string.chart_speed_label)
 
         // One data set per run: MPAndroidChart joins every entry of a set
         val dataSetsPace = paceRuns.map { run ->
@@ -254,7 +244,7 @@ class ChartRenderer(
         chart.notifyDataSetChanged()
         chart.setDrawMarkers(false)
         // The splits, not the per-step line: one GPS jump would be the "best" pace
-        chart.contentDescription = ChartSummaryText.paceA11y(context, distanceSegments.value, isMetric)
+        chart.contentDescription = ChartSummaryText.paceA11y(context, distanceSegments.value, METRIC)
             ?: context.getString(R.string.workout_details_pace_speed_chart_title)
 
         selectByTime(chart, points, textViewPaceSpeedValues) { e ->
@@ -262,23 +252,14 @@ class ChartRenderer(
             val nearestEntry = paceSpeedSeries.minByOrNull { kotlin.math.abs(it.timeMinutes - e.x) }
 
             // At a stop there is no pace, not "0:00"
-            val pace = nearestEntry?.paceMinPerUnit?.takeIf { TrackChartBuilder.isChartPace(it, isMetric) }
+            val pace = nearestEntry?.paceMinPerUnit?.takeIf { TrackChartBuilder.isChartPace(it, METRIC) }
             val paceStr = if (pace == null) {
                 context.getString(R.string.chart_value_missing)
             } else {
                 val (paceMinutes, paceSeconds) = SpeedPaceCalculator.paceToMinutesSeconds(pace)
-                context.getString(
-                    if (isMetric) R.string.chart_pace_value_km else R.string.chart_pace_value_miles,
-                    paceMinutes,
-                    paceSeconds
-                )
+                context.getString(R.string.chart_pace_value_km, paceMinutes, paceSeconds)
             }
-            val speedDisplay = nearestEntry?.speedDisplay ?: 0f
-            val speedStr = if (isMetric) {
-                context.getString(R.string.chart_speed_value_kmh, speedDisplay)
-            } else {
-                context.getString(R.string.chart_speed_value_mph, speedDisplay)
-            }
+            val speedStr = context.getString(R.string.chart_speed_value_kmh, nearestEntry?.speedDisplay ?: 0f)
 
             context.getString(R.string.chart_time_format, e.x.toInt()) + "\n" +
                 "${context.getString(R.string.workout_details_speed)}: $speedStr\n" +
@@ -685,11 +666,10 @@ class ChartRenderer(
         val paceColor = color(R.color.chart_series_pace)
         val speedColor = color(R.color.chart_series_speed)
 
-        val isMetric = userPreferences?.isMetricSystem() ?: true
         val useIntervalPlan = intervalPlanSegments.isNotEmpty()
 
         val segments = if (useIntervalPlan) {
-            SpeedPaceCalculator.buildSegmentsFromPlan(points, intervalPlanSegments, isMetric)
+            SpeedPaceCalculator.buildSegmentsFromPlan(points, intervalPlanSegments, METRIC)
         } else {
             distanceSegments.value
         }
@@ -705,8 +685,7 @@ class ChartRenderer(
                 }
             }
         } else {
-            val label = if (isMetric) R.string.chart_segment_km else R.string.chart_segment_mile
-            segments.indices.map { index -> context.getString(label, index + 1) }
+            segments.indices.map { index -> context.getString(R.string.chart_segment_km, index + 1) }
         }
 
         val dataSet: BarDataSet = when (segmentsDisplayMode) {
@@ -714,7 +693,7 @@ class ChartRenderer(
                 val entriesPace = segments.mapIndexed { index, seg ->
                     BarEntry(index.toFloat(), seg.paceMinPerUnit.takeIf { it.isFinite() } ?: 0f)
                 }
-                val paceLabel = context.getString(if (isMetric) R.string.chart_pace_label else R.string.chart_pace_label_miles)
+                val paceLabel = context.getString(R.string.chart_pace_label)
                 BarDataSet(entriesPace, paceLabel).apply {
                     color = paceColor
                     setDrawValues(true)
@@ -731,7 +710,7 @@ class ChartRenderer(
                 val entriesSpeed = segments.mapIndexed { index, seg ->
                     BarEntry(index.toFloat(), seg.speedDisplay.takeIf { it.isFinite() } ?: 0f)
                 }
-                val speedLabel = context.getString(if (isMetric) R.string.chart_speed_label else R.string.chart_speed_label_miles)
+                val speedLabel = context.getString(R.string.chart_speed_label)
                 BarDataSet(entriesSpeed, speedLabel).apply {
                     color = speedColor
                     setDrawValues(true)
@@ -781,7 +760,7 @@ class ChartRenderer(
         chart.contentDescription = ChartSummaryText.segmentsA11y(
             context,
             segments,
-            isMetric,
+            METRIC,
             speed = segmentsDisplayMode == SegmentsDisplayMode.SPEED,
             plan = if (useIntervalPlan) intervalPlanSegments else emptyList()
         ) ?: context.getString(R.string.workout_details_pace_speed_title)
@@ -889,6 +868,12 @@ class ChartRenderer(
     }
 
     internal companion object {
+        /**
+         * Kilometres, as the tiles, the list, records and the voice: the unit setting is not
+         * applied anywhere yet, so charts alone in miles would disagree with the rest.
+         */
+        private const val METRIC = true
+
         /** Characters of an interval title that fit under a bar. */
         private const val AXIS_LABEL_MAX = 8
 
