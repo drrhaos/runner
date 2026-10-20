@@ -69,7 +69,7 @@ class WorkoutAdapter(
             boundWorkoutId = workout.id
             binding.apply {
                 textViewWorkoutDate.text = dateFormat.format(workout.date)
-                textViewWorkoutType.text = workout.type.displayName(context)
+                textViewWorkoutType.text = WorkoutTitle.label(workout.title, workout.type.displayName(context))
                 textViewDistance.text = String.format(
                     "%.1f %s",
                     workout.distance,

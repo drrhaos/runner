@@ -173,7 +173,7 @@ abstract class WorkoutDao {
         /** The [WorkoutListItem] columns; `IS NOT NULL` reads only the record header of the track. */
         private const val LIST_ITEM_COLUMNS =
             "id, date, distance, duration, movingDuration, avgPace, calories, notes, type, isFavorite, " +
-                "(trackData IS NOT NULL) AS hasTrack, routePreview, metricsVersion"
+                "(trackData IS NOT NULL) AS hasTrack, routePreview, metricsVersion, title"
 
         /** A workout usable as a route: it has a track and is not the one being edited. */
         private const val HAS_TRACK = "trackData IS NOT NULL AND TRIM(trackData) != ''"

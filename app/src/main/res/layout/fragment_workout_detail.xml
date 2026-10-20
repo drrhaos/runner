@@ -190,6 +190,19 @@
                     android:layout_weight="1"
                     android:orientation="vertical">
 
+                    <!-- Название из файла или формы: заголовком над датой -->
+                    <TextView
+                        android:id="@+id/textView_detail_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="2dp"
+                        android:textAppearance="@style/TextAppearance.Runner.Title3"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnSurface"
+                        android:visibility="gone"
+                        tools:text="Morning Run"
+                        tools:visibility="visible" />
+
                     <TextView
                         android:id="@+id/textView_detail_date"
                         android:layout_width="wrap_content"
@@ -233,6 +246,24 @@
                     android:paddingTop="6dp"
                     android:paddingBottom="6dp" />
             </LinearLayout>
+
+            <!-- Устройство, записавшее тренировку (из файла) -->
+            <TextView
+                android:id="@+id/textView_detail_device"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginTop="-8dp"
+                android:layout_marginBottom="12dp"
+                android:drawablePadding="4dp"
+                android:gravity="center_vertical"
+                android:textAppearance="@style/TextAppearance.Runner.Caption"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                app:drawableStartCompat="@drawable/ic_watch"
+                app:drawableTint="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                tools:text="Run Watch 265"
+                tools:visibility="visible" />
 
             <!-- Основная статистика -->
             <LinearLayout
@@ -489,6 +520,23 @@
                 </LinearLayout>
             </LinearLayout>
 
+            <!-- Заметка (в том числе описание из файла): до 4 строк, нажатие раскрывает -->
+            <TextView
+                android:id="@+id/textView_detail_notes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:ellipsize="end"
+                android:maxLines="4"
+                android:background="?attr/selectableItemBackground"
+                android:textAppearance="@style/TextAppearance.Runner.Body"
+                android:textColor="?attr/colorOnSurface"
+                android:visibility="gone"
+                tools:text="Easy loop around the park"
+                tools:visibility="visible" />
+
             <!-- Пометка источника высоты (GPS, файл): открывает пояснение -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_elevation_source_note"
@@ -634,6 +682,39 @@
 
         </LinearLayout>
 
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Круги из файла (FIT, TCX): при двух и более -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_laps"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/workout_laps_title"
+                android:textAppearance="@style/TextAppearance.Runner.Headline"
+                android:textColor="?attr/colorOnSurface" />
+
+            <LinearLayout
+                android:id="@+id/layout_lap_rows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>

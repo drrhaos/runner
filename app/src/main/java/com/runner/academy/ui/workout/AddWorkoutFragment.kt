@@ -87,7 +87,8 @@ class AddWorkoutFragment : Fragment() {
         val minutes: String,
         val seconds: String,
         val calories: String,
-        val notes: String
+        val notes: String,
+        val title: String
     )
 
     override fun onCreateView(
@@ -290,6 +291,7 @@ class AddWorkoutFragment : Fragment() {
             binding.editTextSeconds.setText((totalSeconds % 60).toString())
 
             binding.editTextNotes.setText(workout.notes.orEmpty())
+            binding.editTextName.setText(workout.title.orEmpty())
         } finally {
             isBindingFields = false
         }
@@ -466,7 +468,8 @@ class AddWorkoutFragment : Fragment() {
         minutes = binding.editTextMinutes.text.toString(),
         seconds = binding.editTextSeconds.text.toString(),
         calories = binding.editTextCalories.text.toString(),
-        notes = binding.editTextNotes.text.toString()
+        notes = binding.editTextNotes.text.toString(),
+        title = binding.editTextName.text.toString()
     )
 
     private fun hasUnsavedChanges(): Boolean {
@@ -549,7 +552,8 @@ class AddWorkoutFragment : Fragment() {
                     durationMs = duration,
                     calories = calories,
                     notes = notesText.ifBlank { null },
-                    trackDataJson = form.selectedTrackDataJson
+                    trackDataJson = form.selectedTrackDataJson,
+                    title = binding.editTextName.text.toString()
                 ),
                 original
             )

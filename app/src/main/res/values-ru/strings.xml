@@ -74,6 +74,13 @@
     <string name="workout_time_label">Время</string>
     <string name="workout_moving_time_label">В движении</string>
     <string name="workout_elapsed_time_label">Общее время</string>
+    <string name="workout_laps_title">Круги</string>
+    <string name="workout_laps_col_number">№</string>
+    <string name="workout_laps_col_km">км</string>
+    <string name="workout_laps_col_time">Время</string>
+    <string name="workout_laps_col_pace">Темп</string>
+    <string name="workout_laps_col_heart_rate">Пульс</string>
+    <string name="workout_device_a11y">Записано на %1$s</string>
     <string name="workout_pace_label_km">Темп мин/км</string>
     <string name="workout_pace_label_miles">Темп мин/милю</string>
     <string name="workout_summary_good">Хорошая тренировка…</string>
@@ -87,6 +94,8 @@
     <string name="add_workout_label_distance">Дистанция (км):</string>
     <string name="add_workout_label_time">Время (часы:минуты:секунды):</string>
     <string name="add_workout_label_calories">Калории (опционально):</string>
+    <string name="add_workout_label_name">Название:</string>
+    <string name="add_workout_hint_name">Например, «Утренний бег»</string>
     <string name="add_workout_label_notes">Заметки:</string>
     <string name="add_workout_hint_date">Выберите дату</string>
     <string name="add_workout_hint_type">Выберите тип тренировки</string>

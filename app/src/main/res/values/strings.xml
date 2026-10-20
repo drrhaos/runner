@@ -84,6 +84,13 @@
     <string name="workout_time_label">Time</string>
     <string name="workout_moving_time_label">Moving time</string>
     <string name="workout_elapsed_time_label">Elapsed time</string>
+    <string name="workout_laps_title">Laps</string>
+    <string name="workout_laps_col_number">#</string>
+    <string name="workout_laps_col_km">km</string>
+    <string name="workout_laps_col_time">Time</string>
+    <string name="workout_laps_col_pace">Pace</string>
+    <string name="workout_laps_col_heart_rate">HR</string>
+    <string name="workout_device_a11y">Recorded with %1$s</string>
     <string name="workout_pace_label_km">Pace min/km</string>
     <string name="workout_pace_label_miles">Pace min/mi</string>
     <string name="workout_summary_good">Good workout…</string>
@@ -97,6 +104,8 @@
     <string name="add_workout_label_distance">Distance (km):</string>
     <string name="add_workout_label_time">Time (hours:minutes:seconds):</string>
     <string name="add_workout_label_calories">Calories (optional):</string>
+    <string name="add_workout_label_name">Name:</string>
+    <string name="add_workout_hint_name">Say, “Morning run”</string>
     <string name="add_workout_label_notes">Notes:</string>
     <string name="add_workout_hint_date">Select date</string>
     <string name="add_workout_hint_type">Select workout type</string>

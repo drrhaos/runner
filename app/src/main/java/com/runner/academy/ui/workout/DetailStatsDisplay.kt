@@ -1,10 +1,13 @@
 package com.runner.academy.ui.workout
 
+import android.view.LayoutInflater
 import android.view.View
 import androidx.core.view.isVisible
 import com.runner.academy.R
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.databinding.ItemLapRowBinding
+import com.runner.academy.util.LapsJson
 import com.runner.academy.util.MovingTimeDisplay
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -28,6 +31,8 @@ class DetailStatsDisplay(
             textViewDetailTime.text = timeFormat.format(workout.date)
 
             textViewDetailType.text = getWorkoutTypeDisplayName(workout.type)
+            displayIdentity(workout)
+            displayLaps(workout)
 
             textViewDetailDistance.text = com.runner.academy.util.FormatUtils.formatDistance(workout.distance, context)
             // The time next to the pace is the moving one; the elapsed time gets its own tile
@@ -57,6 +62,74 @@ class DetailStatsDisplay(
             layoutDetailAvgSpeed.contentDescription = DetailTileText.speedA11y(context, avgSpeed)
             layoutDetailCalories.contentDescription = DetailTileText.caloriesA11y(context, calories)
         }
+    }
+
+    /**
+     * What a workout from a file tells about itself: its name above the date, the device
+     * under the type, the note (the file's description among them) under the tiles — up to
+     * four lines, a tap shows it whole. Each is gone when the workout has none.
+     */
+    private fun displayIdentity(workout: Workout) {
+        binding.apply {
+            val title = workout.title?.trim()?.takeIf { it.isNotEmpty() }
+            textViewDetailTitle.isVisible = title != null
+            textViewDetailTitle.text = title
+
+            val device = workout.device?.trim()?.takeIf { it.isNotEmpty() }
+            textViewDetailDevice.isVisible = device != null
+            textViewDetailDevice.text = device
+            textViewDetailDevice.contentDescription = device?.let { context.getString(R.string.workout_device_a11y, it) }
+
+            val notes = workout.notes?.trim()?.takeIf { it.isNotEmpty() }
+            textViewDetailNotes.isVisible = notes != null
+            textViewDetailNotes.text = notes
+            textViewDetailNotes.maxLines = NOTES_LINES
+            textViewDetailNotes.setOnClickListener {
+                textViewDetailNotes.maxLines =
+                    if (textViewDetailNotes.maxLines == NOTES_LINES) Int.MAX_VALUE else NOTES_LINES
+            }
+        }
+    }
+
+    /** The "Laps" card: a row per lap of the file, under a header; gone below two laps. */
+    private fun displayLaps(workout: Workout) {
+        val table = LapTable.of(LapsJson.parse(workout.lapsJson))
+        binding.cardLaps.isVisible = table != null
+        val rows = binding.layoutLapRows
+        rows.removeAllViews()
+        if (table == null) return
+        val inflater = LayoutInflater.from(context)
+        fun addRow(row: LapTable.Row, header: Boolean) {
+            val line = ItemLapRowBinding.inflate(inflater, rows, true)
+            // The number column's muted colour, also the headers'
+            val muted = line.textViewLapNumber.currentTextColor
+            val cells = listOf(
+                line.textViewLapNumber to row.number,
+                line.textViewLapKm to row.km,
+                line.textViewLapTime to row.time,
+                line.textViewLapPace to row.pace,
+                line.textViewLapHeartRate to row.heartRate
+            )
+            cells.forEach { (view, text) ->
+                view.text = text
+                if (header) {
+                    view.setTextAppearance(R.style.TextAppearance_Runner_Caption)
+                    view.setTextColor(muted)
+                }
+            }
+            line.textViewLapHeartRate.isVisible = table.showsHeartRate
+        }
+        addRow(
+            LapTable.Row(
+                number = context.getString(R.string.workout_laps_col_number),
+                km = context.getString(R.string.workout_laps_col_km),
+                time = context.getString(R.string.workout_laps_col_time),
+                pace = context.getString(R.string.workout_laps_col_pace),
+                heartRate = context.getString(R.string.workout_laps_col_heart_rate)
+            ),
+            header = true
+        )
+        table.rows.forEach { addRow(it, header = false) }
     }
 
     /**
@@ -163,5 +236,10 @@ class DetailStatsDisplay(
             WorkoutType.RECOVERY_RUN -> context.getString(R.string.workout_type_recovery_run)
             WorkoutType.RACE -> context.getString(R.string.workout_type_competition)
         }
+    }
+
+    private companion object {
+        /** Lines of a note shown before a tap opens it whole. */
+        const val NOTES_LINES = 4
     }
 }
