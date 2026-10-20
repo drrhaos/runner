@@ -4,21 +4,27 @@ package com.runner.academy.ui.workout
 enum class DetailTile { AVG_SPEED, HEART_RATE, CADENCE, CALORIES, ELAPSED, ELEVATION_GAIN, ELEVATION_LOSS }
 
 /**
- * How the shown secondary tiles fill rows of [COLUMNS], the columns of the first row: in
- * [DetailTile] order with the hidden ones skipped, so no row has a hole in the middle. Gain and
- * loss are never split: they end the last row when both fit in it, else take a row of their own.
+ * How the shown secondary tiles fill rows of at most [COLUMNS], the columns of the first row: in
+ * [DetailTile] order with the hidden ones skipped, in as few rows as fit, balanced — four tiles
+ * are two and two, not three and a lone one (a short row is centred on screen). Gain and loss
+ * come last, so they are never split: balanced, the last row always holds at least two.
  */
 object DetailTileRows {
 
     const val COLUMNS = 3
 
-    private val elevation = setOf(DetailTile.ELEVATION_GAIN, DetailTile.ELEVATION_LOSS)
+    fun of(shown: Set<DetailTile>): List<List<DetailTile>> = balanced(DetailTile.entries.filter { it in shown })
 
-    fun of(shown: Set<DetailTile>): List<List<DetailTile>> {
-        val (pair, rest) = DetailTile.entries.filter { it in shown }.partition { it in elevation }
-        val rows = rest.chunked(COLUMNS)
-        if (pair.isEmpty()) return rows
-        val last = rows.lastOrNull()
-        return if (last != null && last.size + pair.size <= COLUMNS) rows.dropLast(1) + listOf(last + pair) else rows + listOf(pair)
+    /** [tiles] in the fewest rows of at most [COLUMNS], the longer rows first: 4 is 2+2, 7 is 3+2+2. */
+    private fun balanced(tiles: List<DetailTile>): List<List<DetailTile>> {
+        if (tiles.isEmpty()) return emptyList()
+        val count = (tiles.size + COLUMNS - 1) / COLUMNS
+        val base = tiles.size / count
+        val longer = tiles.size % count
+        var from = 0
+        return List(count) { row ->
+            val size = base + if (row < longer) 1 else 0
+            tiles.subList(from, from + size).also { from += size }
+        }
     }
 }

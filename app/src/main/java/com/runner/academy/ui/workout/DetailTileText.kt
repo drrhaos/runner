@@ -3,7 +3,31 @@ package com.runner.academy.ui.workout
 import android.content.Context
 import com.runner.academy.R
 import com.runner.academy.util.FormatUtils
+import com.runner.academy.util.SpeedPaceCalculator
+import java.util.Locale
 import kotlin.math.roundToInt
+
+/**
+ * The value of a detail tile as a bare number — the unit is in the tile's caption ("Pace,
+ * min/km"), so the values line up and read the same in every tile.
+ */
+object DetailTileValue {
+
+    /** "5.02", to the 10 m. */
+    fun distance(distanceKm: Float, locale: Locale = Locale.getDefault()): String =
+        String.format(locale, "%.2f", distanceKm)
+
+    /** "5:06"; "--:--" without a pace. */
+    fun pace(paceMinPerKm: Float): String =
+        SpeedPaceCalculator.formatPaceMmSs(paceMinPerKm.takeIf { it.isFinite() } ?: 0f)
+
+    /** "11.8". */
+    fun speed(speedKmh: Float, locale: Locale = Locale.getDefault()): String =
+        String.format(locale, "%.1f", speedKmh)
+
+    /** Calories, cadence, heart rate, metres. */
+    fun whole(value: Int): String = value.toString()
+}
 
 /** Metrics as TalkBack should read them: "5:30" would be "five colon thirty", "km/h" letter by letter. */
 internal object MetricSpeech {

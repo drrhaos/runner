@@ -39,11 +39,12 @@ class DetailStatsDisplay(
             displayIdentity(workout)
             displayLaps(workout)
 
-            textViewDetailDistance.text = com.runner.academy.util.FormatUtils.formatDistance(workout.distance, context)
+            // Values are bare numbers: the unit is in each tile's caption
+            textViewDetailDistance.text = DetailTileValue.distance(workout.distance)
             // The time next to the pace is the moving one; the elapsed time gets its own tile
             // only when it differs (otherwise one "Time", as before)
             textViewDetailDuration.text = viewModel.formatDuration(workout.movingDuration)
-            textViewDetailPace.text = viewModel.formatPace(workout.avgPace, context)
+            textViewDetailPace.text = DetailTileValue.pace(workout.avgPace)
             val showsElapsed = MovingTimeDisplay.detailShowsElapsed(workout.duration, workout.movingDuration)
             textViewDetailDurationLabel.setText(
                 if (showsElapsed) R.string.workout_moving_time_label else R.string.workout_time_label
@@ -53,10 +54,10 @@ class DetailStatsDisplay(
             textViewDetailElapsed.text = viewModel.formatDuration(workout.duration)
 
             val avgSpeed = com.runner.academy.util.FormatUtils.calculateAverageSpeed(workout.distance, workout.movingDuration)
-            textViewDetailAvgSpeed.text = com.runner.academy.util.FormatUtils.formatSpeed(avgSpeed, true, context)
+            textViewDetailAvgSpeed.text = DetailTileValue.speed(avgSpeed)
 
             val calories = workout.calories ?: 0
-            textViewDetailCalories.text = com.runner.academy.util.FormatUtils.formatCalories(calories, context)
+            textViewDetailCalories.text = DetailTileValue.whole(calories)
 
             // Each tile is one TalkBack group: "25:30" alone would be read as "twenty-five colon thirty"
             layoutDetailDistance.contentDescription = DetailTileText.distanceA11y(context, workout.distance)
@@ -180,7 +181,7 @@ class DetailStatsDisplay(
             layoutDetailCadence.visibility = if (display == CadenceDisplay.None) View.GONE else View.VISIBLE
             when (display) {
                 is CadenceDisplay.Value -> {
-                    textViewDetailCadence.text = context.getString(R.string.workout_details_cadence_value, display.spm)
+                    textViewDetailCadence.text = DetailTileValue.whole(display.spm)
                     layoutDetailCadence.contentDescription = CadenceText.averageA11y(context, display.spm)
                 }
                 CadenceDisplay.Pending -> {
@@ -202,7 +203,7 @@ class DetailStatsDisplay(
             layoutDetailHeartRate.visibility = if (display == HeartRateSummaryDisplay.None) View.GONE else View.VISIBLE
             when (display) {
                 is HeartRateSummaryDisplay.Value -> {
-                    textViewDetailHeartRate.text = context.getString(R.string.workout_details_heart_rate_value, display.avgBpm)
+                    textViewDetailHeartRate.text = DetailTileValue.whole(display.avgBpm)
                     layoutDetailHeartRate.contentDescription = HeartRateText.averageA11y(context, display.avgBpm)
                 }
                 HeartRateSummaryDisplay.Pending -> {
@@ -229,8 +230,8 @@ class DetailStatsDisplay(
             buttonElevationSourceNote.visibility = View.GONE
             when (display) {
                 is ElevationDisplay.Value -> {
-                    textViewDetailElevationGain.text = context.getString(R.string.workout_elevation_gain_value, display.gainM)
-                    textViewDetailElevationLoss.text = context.getString(R.string.workout_elevation_loss_value, display.lossM)
+                    textViewDetailElevationGain.text = DetailTileValue.whole(display.gainM)
+                    textViewDetailElevationLoss.text = DetailTileValue.whole(display.lossM)
                     layoutDetailElevationGain.contentDescription = ElevationText.gainA11y(context, display.gainM)
                     layoutDetailElevationLoss.contentDescription = ElevationText.lossA11y(context, display.lossM)
                     ElevationText.sourceTexts(display.source)?.let { texts ->
@@ -284,7 +285,9 @@ class DetailStatsDisplay(
         for (row in rows) {
             val line = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
+                // Tiles keep the column width of the first row; a short row is centred
                 weightSum = DetailTileRows.COLUMNS.toFloat()
+                gravity = android.view.Gravity.CENTER_HORIZONTAL
                 isBaselineAligned = false
             }
             row.forEach { tile ->

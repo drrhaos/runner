@@ -222,9 +222,12 @@
 
     <string name="workout_details_basic_params">Основные параметры</string>
     <string name="workout_details_charts">Графики</string>
-    <string name="workout_details_average_speed">Средняя скорость</string>
+    <string name="workout_details_average_speed">Ср. скорость, км/ч</string>
     <string name="workout_details_calories">Калории</string>
     <string name="workout_details_calories_value">%1$d ккал</string>
+    <string name="workout_details_tile_calories">Калории, ккал</string>
+    <string name="workout_details_tile_distance">Дистанция, км</string>
+    <string name="workout_details_tile_pace">Темп, мин/км</string>
     <string name="workout_details_btn_share">Поделиться</string>
     <string name="workout_details_btn_export_gpx">Экспорт GPX</string>
     <string name="workout_details_btn_share_diagnostics">Отправить диагностику GPS</string>
@@ -523,7 +526,7 @@
     </plurals>
 
     <!-- Каденс -->
-    <string name="workout_details_cadence_value">%1$d шаг/мин</string>
+    <string name="workout_details_tile_cadence">Каденс, шаг/мин</string>
     <string name="workout_details_cadence_title">Каденс</string>
     <string name="workout_details_cadence_a11y">Средний каденс %1$s</string>
     <string name="workout_details_cadence_pending_a11y">Каденс ещё считается</string>
@@ -542,7 +545,7 @@
         <item quantity="many">%d ударов в минуту</item>
         <item quantity="other">%d удара в минуту</item>
     </plurals>
-    <string name="workout_details_heart_rate_value">%1$d уд/мин</string>
+    <string name="workout_details_tile_heart_rate">Пульс, уд/мин</string>
     <string name="workout_details_heart_rate_title">Пульс</string>
     <string name="workout_details_heart_rate_a11y">Средний пульс %1$s</string>
     <string name="workout_details_heart_rate_pending_a11y">Пульс ещё считается</string>
@@ -556,10 +559,8 @@
     <string name="chart_heart_rate_range_a11y">График пульса, ударов в минуту: от %1$d до %2$d</string>
 
     <!-- Набор и сброс высоты -->
-    <string name="workout_elevation_gain_label">Набор высоты</string>
-    <string name="workout_elevation_loss_label">Сброс высоты</string>
-    <string name="workout_elevation_gain_value">↑ %1$d м</string>
-    <string name="workout_elevation_loss_value">↓ %1$d м</string>
+    <string name="workout_elevation_gain_label">Набор высоты, м</string>
+    <string name="workout_elevation_loss_label">Сброс высоты, м</string>
     <string name="workout_elevation_source_gps">Высота по GPS — приблизительно</string>
     <string name="workout_elevation_source_gps_short">по GPS, приблизительно</string>
     <string name="workout_elevation_source_file">Высота из файла</string>
