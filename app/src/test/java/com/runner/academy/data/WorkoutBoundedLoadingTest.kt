@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.sqlite.db.SimpleSQLiteQuery
 import androidx.test.core.app.ApplicationProvider
 import com.runner.academy.ui.workout.WorkoutViewModel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -210,9 +211,39 @@ class WorkoutBoundedLoadingTest {
 
     @Test
     fun pagingConfig_dropsPagesScrolledPast() {
-        val config = WorkoutViewModel.PAGING_CONFIG
-        assertNotEquals(androidx.paging.PagingConfig.MAX_SIZE_UNBOUNDED, config.maxSize)
-        // Paging requires room for the visible page plus prefetch on both sides
-        assertTrue(config.maxSize >= config.pageSize + 2 * config.prefetchDistance)
+        for (config in listOf(WorkoutViewModel.PAGING_CONFIG, WorkoutViewModel.LIST_PAGING_CONFIG)) {
+            assertNotEquals(androidx.paging.PagingConfig.MAX_SIZE_UNBOUNDED, config.maxSize)
+            // Paging requires room for the visible page plus prefetch on both sides
+            assertTrue(config.maxSize >= config.pageSize + 2 * config.prefetchDistance)
+        }
+    }
+
+    @Test
+    fun listPagingConfig_hasTheFullLengthForTheFastScroller() {
+        assertTrue(WorkoutViewModel.LIST_PAGING_CONFIG.enablePlaceholders)
+    }
+
+    /** Noon mid-month in the phone's zone: the month is the same whatever the offset. */
+    private fun midMonth(year: Int, month: Int, day: Int = 15): Long =
+        java.util.Calendar.getInstance().apply {
+            clear()
+            set(year, month - 1, day, 12, 0)
+        }.timeInMillis
+
+    @Test
+    fun months_followTheListOrderWithTheirCounts() = runBlocking {
+        dao.insertWorkout(workout(midMonth(2025, 12)))
+        dao.insertWorkout(workout(midMonth(2026, 10, 3), favorite = true))
+        dao.insertWorkout(workout(midMonth(2026, 10, 20)))
+        dao.insertWorkout(workout(midMonth(2026, 9), favorite = true))
+
+        assertEquals(
+            listOf(WorkoutMonth(2026, 10, 2), WorkoutMonth(2026, 9, 1), WorkoutMonth(2025, 12, 1)),
+            dao.monthsAll().first()
+        )
+        assertEquals(
+            listOf(WorkoutMonth(2026, 10, 1), WorkoutMonth(2026, 9, 1)),
+            dao.monthsFavorites().first()
+        )
     }
 }

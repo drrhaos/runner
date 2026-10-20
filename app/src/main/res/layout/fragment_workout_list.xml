@@ -246,6 +246,16 @@
             app:layout_constraintBottom_toBottomOf="parent"
             tools:listitem="@layout/item_workout" />
 
+        <!-- Быстрая прокрутка: ползунок у правого края, при перетаскивании — месяц и год -->
+        <com.runner.academy.ui.workout.HistoryFastScroller
+            android:id="@+id/fastScroller_workouts"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintTop_toTopOf="@id/recyclerView_workouts"
+            app:layout_constraintStart_toStartOf="@id/recyclerView_workouts"
+            app:layout_constraintEnd_toEndOf="@id/recyclerView_workouts"
+            app:layout_constraintBottom_toBottomOf="@id/recyclerView_workouts" />
+
         <!-- Пустое состояние -->
         <LinearLayout
             android:id="@+id/layout_empty_state"

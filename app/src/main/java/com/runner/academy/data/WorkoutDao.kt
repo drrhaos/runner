@@ -18,6 +18,17 @@ abstract class WorkoutDao {
     abstract fun pagingSourceFavorites(): PagingSource<Int, WorkoutListItem>
 
     /**
+     * The months of [pagingSourceAll], newest first, as the list runs: the first `count` rows
+     * are the first month and so on — the fast scroller names any position without loading it.
+     */
+    @Query("SELECT $MONTH_COLUMNS FROM workouts GROUP BY year, month ORDER BY year DESC, month DESC")
+    abstract fun monthsAll(): Flow<List<WorkoutMonth>>
+
+    /** The months of [pagingSourceFavorites], as [monthsAll]. */
+    @Query("SELECT $MONTH_COLUMNS FROM workouts WHERE isFavorite = 1 GROUP BY year, month ORDER BY year DESC, month DESC")
+    abstract fun monthsFavorites(): Flow<List<WorkoutMonth>>
+
+    /**
      * Route picker: workouts with a track, favorites first; excludes the one being edited.
      * The filter reads the track in SQLite only; the chosen one is loaded by [getTrackData].
      */
@@ -174,6 +185,12 @@ abstract class WorkoutDao {
         private const val LIST_ITEM_COLUMNS =
             "id, date, distance, duration, movingDuration, avgPace, calories, notes, type, isFavorite, " +
                 "(trackData IS NOT NULL) AS hasTrack, routePreview, metricsVersion, title"
+
+        /** Year, month and count of a calendar month in the phone's time zone (`date` is ms). */
+        private const val MONTH_COLUMNS =
+            "CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS year, " +
+                "CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS month, " +
+                "COUNT(*) AS count"
 
         /** A workout usable as a route: it has a track and is not the one being edited. */
         private const val HAS_TRACK = "trackData IS NOT NULL AND TRIM(trackData) != ''"

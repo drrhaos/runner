@@ -39,6 +39,11 @@ class WorkoutRepository(
 
     fun pagingSourceFavorites(): PagingSource<Int, WorkoutListItem> = workoutDao.pagingSourceFavorites()
 
+    /** The months of [pagingSourceAll] / [pagingSourceFavorites] in list order, kept up to date. */
+    fun monthsAll(): Flow<List<WorkoutMonth>> = workoutDao.monthsAll()
+
+    fun monthsFavorites(): Flow<List<WorkoutMonth>> = workoutDao.monthsFavorites()
+
     fun pagingSourceRoutes(excludeId: Long): PagingSource<Int, WorkoutListItem> =
         workoutDao.pagingSourceRoutes(excludeId)
 

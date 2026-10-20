@@ -110,6 +110,7 @@ class WorkoutListFragment : Fragment() {
             layoutManager = LinearLayoutManager(context)
             setHasFixedSize(true)
         }
+        binding.fastScrollerWorkouts.attach(binding.recyclerViewWorkouts)
 
         workoutAdapter.addLoadStateListener { loadStates ->
             if (_binding == null || !isAdded || isDetached) return@addLoadStateListener
@@ -428,6 +429,12 @@ class WorkoutListFragment : Fragment() {
                 android.util.Log.d("WorkoutList", "Paging cancelled: ${e.message}")
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutList", "Error loading workouts: ${e.message}", e)
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.historyIndex.collect { index ->
+                _binding?.fastScrollerWorkouts?.index = index
             }
         }
 
