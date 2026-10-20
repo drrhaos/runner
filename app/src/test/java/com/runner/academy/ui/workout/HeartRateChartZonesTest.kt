@@ -44,7 +44,6 @@ class HeartRateChartZonesTest {
             cadence = CadenceChartViews(FrameLayout(context), LineChart(context), TextView(context), TextView(context)),
             heartRate = HeartRateChartViews(card, chart, TextView(context), TextView(context)),
             context = context,
-            userPreferences = null,
             onPositionSelected = {},
             onSegmentSelected = { _, _ -> },
             onNothingSelected = {}

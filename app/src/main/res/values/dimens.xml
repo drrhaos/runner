@@ -19,4 +19,6 @@
     <dimen name="expanded_info_min_height">280dp</dimen>
     <!-- The glyph before the segment target's verdict line -->
     <dimen name="target_line_icon_size">16dp</dimen>
+    <!-- Отступ под рядом плиток деталей тренировки -->
+    <dimen name="workout_detail_tile_row_spacing">16dp</dimen>
 </resources>

@@ -95,8 +95,6 @@
     <string name="workout_lap_row_hr_a11y">Lap %1$s: %2$s km, time %3$s, pace %4$s, heart rate %5$s</string>
     <string name="workout_notes_expand">Show the whole note</string>
     <string name="workout_notes_collapse">Shorten the note</string>
-    <string name="workout_pace_label_km">Pace min/km</string>
-    <string name="workout_pace_label_miles">Pace min/mi</string>
     <string name="workout_summary_good">Good workout…</string>
 
     <string name="dialog_choose_workout_title">Choose type of workout</string>
@@ -240,6 +238,7 @@
     <string name="workout_details_charts">Charts</string>
     <string name="workout_details_average_speed">Average speed</string>
     <string name="workout_details_calories">Calories</string>
+    <string name="workout_details_calories_value">%1$d kcal</string>
     <string name="workout_details_btn_share">Share</string>
     <string name="workout_details_btn_export_gpx">GPX export</string>
     <string name="workout_details_btn_share_diagnostics">Share GPS diagnostics</string>
@@ -253,7 +252,7 @@
     <string name="workout_favorite_remove">Remove from favorites</string>
     <string name="workout_favorite_added">Added to favorites</string>
     <string name="workout_favorite_removed">Removed from favorites</string>
-    <string name="workout_details_pace_speed_pulse_title">Pace / Speed / Pulse</string>
+    <string name="workout_details_pace_speed_chart_title">Pace / Speed</string>
     <string name="workout_details_height_title">Elevation</string>
     <string name="workout_details_pace_speed_title">Pace / Speed by segment</string>
     <string name="workout_details_pace">Pace</string>
@@ -272,22 +271,15 @@
     <string name="delete_workout_title">Delete workout</string>
     <string name="delete_workout_message">Are you sure you want to delete this workout? This action cannot be undone.</string>
     <string name="chart_pace_label">Pace (min/km)</string>
-    <string name="chart_pace_label_miles">Pace (min/mi)</string>
     <string name="chart_speed_label">Speed (km/h)</string>
-    <string name="chart_speed_label_miles">Speed (mi/h)</string>
     <string name="chart_pace_value_km">%1$d:%2$02d min/km</string>
-    <string name="chart_pace_value_miles">%1$d:%2$02d min/mi</string>
     <string name="chart_speed_value_kmh">%1$.1f km/h</string>
-    <string name="chart_speed_value_mph">%1$.1f mi/h</string>
     <string name="chart_time_format">%d min</string>
     <string name="chart_elevation_title">Elevation</string>
     <string name="chart_elevation_x_format">%.1f km</string>
     <string name="chart_elevation_y_format">%d m</string>
     <string name="unit_km">km</string>
     <string name="unit_m">m</string>
-    <string name="unit_mile">mile</string>
-    <string name="unit_kmh">km/h</string>
-    <string name="unit_mph">mi/h</string>
     <string name="workout_share_text">🏃 Workout:
 📅 Date: %1$s
 📏 Distance: %2$s
@@ -528,7 +520,7 @@
     </plurals>
 
     <!-- Cadence -->
-    <string name="workout_details_cadence">Cadence spm</string>
+    <string name="workout_details_cadence_value">%1$d spm</string>
     <string name="workout_details_cadence_title">Cadence</string>
     <string name="workout_details_cadence_a11y">Average cadence %1$s</string>
     <string name="workout_details_cadence_pending_a11y">Cadence is still being calculated</string>
@@ -546,13 +538,13 @@
         <item quantity="one">%d beat per minute</item>
         <item quantity="other">%d beats per minute</item>
     </plurals>
-    <string name="workout_details_heart_rate">Heart rate bpm</string>
+    <string name="workout_details_heart_rate_value">%1$d bpm</string>
     <string name="workout_details_heart_rate_title">Heart rate</string>
     <string name="workout_details_heart_rate_a11y">Average heart rate %1$s</string>
     <string name="workout_details_heart_rate_pending_a11y">Heart rate is still being calculated</string>
     <string name="chart_heart_rate_label">Heart rate (bpm)</string>
     <string name="chart_heart_rate_value">Heart rate: %1$d bpm</string>
-    <string name="chart_heart_rate_summary_format">avg %1$d · max %2$d</string>
+    <string name="chart_heart_rate_summary_format">avg %1$d · max %2$d bpm</string>
     <string name="chart_heart_rate_avg_format">avg %1$d bpm</string>
     <string name="chart_heart_rate_limit_label">avg %1$d</string>
     <string name="chart_heart_rate_summary_a11y">Average heart rate %1$s, maximum %2$s</string>
@@ -572,7 +564,7 @@
     <string name="workout_elevation_source_dialog_message">This elevation comes from GPS: the phone has no barometer, or it did not work through this run, or the run was recorded before the app used it. GPS measures height less accurately than position — errors of 10–20 m are common. We smooth it and ignore small changes, so the gain may differ from reality; short climbs may be missed.</string>
     <string name="workout_elevation_source_file_dialog_title">Elevation from the file</string>
     <string name="workout_elevation_source_file_dialog_message">The elevation was taken from the imported file as it is. We smooth it and ignore small changes, like GPS elevation, so the gain may differ from what the device that recorded the file showed.</string>
-    <string name="workout_elevation_summary_format">↑ %1$d m  ↓ %2$d m</string>
+    <string name="workout_elevation_summary_format">↑ %1$d m · ↓ %2$d m</string>
     <string name="workout_elevation_gain_a11y">Elevation gain %1$s</string>
     <string name="workout_elevation_loss_a11y">Elevation loss %1$s</string>
     <string name="workout_elevation_summary_a11y">%1$s, %2$s</string>
@@ -772,6 +764,8 @@
     <string name="voice_interval_goal_distance">Distance %1$s</string>
     <string name="voice_interval_goal_pace">Pace %1$s</string>
     <string name="chart_interval_n">Int %1$d</string>
+    <string name="chart_segment_km">km %1$d</string>
+    <string name="chart_value_missing" translatable="false">—</string>
 
     <!-- Personal records -->
     <string name="menu_records">Records</string>
