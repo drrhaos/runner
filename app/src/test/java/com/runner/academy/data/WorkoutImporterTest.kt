@@ -202,6 +202,27 @@ class WorkoutImporterTest {
     }
 
     @Test
+    fun aBrokenBackupAmongFiles_isOneError_theRestImported() = runBlocking {
+        val broken = """{"version":2,"workouts":[{"date":"""
+        val export = zip("runner_backup.json" to broken.toByteArray(), "run.gpx" to gpx(21).toByteArray())
+
+        val result = importer.importFiles(listOf(ImportFile("export.zip") { export.inputStream() }, file("b.gpx", gpx(22))))
+
+        assertEquals(2, result.imported)
+        assertEquals(1, result.failed)
+    }
+
+    @Test
+    fun backupRowsAmongFiles_moveTheCount() = runBlocking {
+        val export = zip("runner_backup.json" to backupJson(0..2).toByteArray())
+        val counts = mutableListOf<Int>()
+
+        importer.importFiles(listOf(ImportFile("export.zip") { export.inputStream() })) { counts += it.done }
+
+        assertEquals("three rows, then the backup unit", 4, counts.last())
+    }
+
+    @Test
     fun aFolderFileThatIsNoWorkout_isPassedSilently() = runBlocking {
         val result = importer.importFiles(listOf(file("a.gpx", gpx(1)), file("notes.txt", "shopping list")))
 

@@ -128,6 +128,22 @@ class ImportWalkerTest {
     }
 
     @Test
+    fun `an entry of a compression ZIP cannot inflate is an error, not a crash`() {
+        val bytes = zip("a.gpx" to gpx(1), "b.gpx" to gpx(2))
+        // Deflate64 (method 9) in the first entry's local and central headers
+        listOf(byteArrayOf(0x50, 0x4B, 0x03, 0x04) to 8, byteArrayOf(0x50, 0x4B, 0x01, 0x02) to 10).forEach { (signature, offset) ->
+            val at = (0..bytes.size - 4).first { i -> signature.indices.all { bytes[i + it] == signature[it] } }
+            bytes[at + offset] = 9
+            bytes[at + offset + 1] = 0
+        }
+
+        val reads = units(bytes)
+
+        assertEquals("Archive", reads.first().javaClass.simpleName)
+        assertEquals("Failed", reads[1].javaClass.simpleName)
+    }
+
+    @Test
     fun `an archive that stops reading is one error for its rest`() {
         val bytes = zip("a.gpx" to gpx(1), "b.gpx" to gpx(2), "c.gpx" to gpx(3))
         // Cut inside the second entry

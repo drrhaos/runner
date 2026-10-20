@@ -345,7 +345,7 @@
     <string name="workout_list_import_track_folder">Folder of workouts or exports</string>
     <string name="workout_list_import_progress">Importing…</string>
     <string name="workout_list_import_success">Imported %1$d workouts</string>
-    <string name="workout_list_import_partial">Imported %1$d workouts (%2$d files failed)</string>
+    <string name="workout_list_import_partial">Imported %1$d workouts (%2$d unreadable)</string>
     <string name="workout_list_import_empty">Nothing to import</string>
     <string name="workout_list_import_error">Import error: %1$s</string>
     <string name="workout_list_import_no_track_files">No files to import in the folder</string>

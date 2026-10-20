@@ -101,3 +101,6 @@ enum class ActivitySport {
 /** The file is a workout of another sport than running: skipped, counted apart from errors. */
 class NotRunningException(fileName: String?) :
     IllegalArgumentException("Not a run${fileName?.let { " ($it)" } ?: ""}")
+
+/** A FIT file, but no activity (a course, settings, monitoring): no track, skipped silently. */
+class NotAnActivityException(message: String) : IllegalArgumentException(message)

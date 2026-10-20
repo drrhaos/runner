@@ -5,7 +5,7 @@ import android.util.Log
 import com.runner.academy.util.ImportFormat
 import com.runner.academy.util.NotRunningException
 import com.runner.academy.util.TrackFileImport
-import com.runner.academy.util.fit.NotAnActivityException
+import com.runner.academy.util.NotAnActivityException
 import java.io.BufferedInputStream
 import java.io.FilterInputStream
 import java.io.IOException
@@ -59,38 +59,55 @@ class ImportWalker(
         walk(name, BufferedInputStream(NonClosing(input)), containers = 0, Skip(skip))
 
     /** Units still to pass over, shared by the whole walk of a file. */
-    private class Skip(var left: Int)
+    private class Skip(var left: Int) {
+
+        /** Passes one unit over when some are left to pass: true when it was. */
+        fun pass(): Boolean {
+            if (left <= 0) return false
+            left--
+            return true
+        }
+    }
 
     private fun walk(name: String?, input: BufferedInputStream, containers: Int, skip: Skip): Sequence<ImportRead> =
         sequence {
             val format = try {
                 ImportFormat.sniff(input)
-            } catch (e: IOException) {
-                Log.w(TAG, "Unreadable $name: ${e.message}")
-                if (!skip.pass()) yield(ImportRead.Failed)
+            } catch (e: Throwable) {
+                failure(name, e, skip)?.let { yield(it) }
                 return@sequence
             }
-            when (format) {
-                ImportFormat.ZIP, ImportFormat.GZIP -> if (containers >= maxContainers) {
-                    if (!skip.pass()) yield(ImportRead.Ignored)
+            val container = format == ImportFormat.ZIP || format == ImportFormat.GZIP
+            if (container && containers < maxContainers) {
+                yield(ImportRead.Archive)
+                if (format == ImportFormat.ZIP) {
+                    yieldAll(zip(input, containers + 1, skip))
                 } else {
-                    yield(ImportRead.Archive)
-                    if (format == ImportFormat.ZIP) {
-                        yieldAll(zip(input, containers + 1, skip))
-                    } else {
-                        yieldAll(walk(name?.removeSuffix(".gz"), BufferedInputStream(GZIPInputStream(input)), containers + 1, skip))
+                    yieldAll(walk(name?.removeSuffix(".gz"), BufferedInputStream(GZIPInputStream(input)), containers + 1, skip))
+                }
+            } else if (!skip.pass()) {
+                yield(
+                    when (format) {
+                        // Nested too deep, or no workout file
+                        ImportFormat.ZIP, ImportFormat.GZIP, ImportFormat.UNKNOWN -> ImportRead.Ignored
+                        // A backup is read without a limit: its rows stream through
+                        ImportFormat.BACKUP -> ImportRead.Backup(name, input.reader(Charsets.UTF_8).buffered())
+                        ImportFormat.FIT, ImportFormat.GPX, ImportFormat.TCX -> track(format, name, input)
                     }
-                }
-                ImportFormat.UNKNOWN -> if (!skip.pass()) yield(ImportRead.Ignored)
-                // A backup is read without a limit: its rows stream through
-                ImportFormat.BACKUP -> if (!skip.pass()) {
-                    yield(ImportRead.Backup(name, input.reader(Charsets.UTF_8).buffered()))
-                }
-                ImportFormat.FIT, ImportFormat.GPX, ImportFormat.TCX -> if (!skip.pass()) {
-                    yield(track(format, name, input))
-                }
+                )
             }
         }.catchingReads(name, skip)
+
+    /**
+     * The error unit of [name], unreadable past here ([e]); null while it is passed over. Only
+     * failures of reading count: an exception, or the InternalError java.util.zip throws for an
+     * entry it cannot inflate (Deflate64); anything else goes on up.
+     */
+    private fun failure(name: String?, e: Throwable, skip: Skip): ImportRead? {
+        if (e !is Exception && e !is InternalError) throw e
+        Log.w(TAG, "Unreadable $name: ${e.message}")
+        return if (skip.pass()) null else ImportRead.Failed
+    }
 
     /** The files of a ZIP in its order; when it stops reading, its rest is one error. */
     private fun zip(input: InputStream, containers: Int, skip: Skip): Sequence<ImportRead> = sequence {
@@ -102,9 +119,8 @@ class ImportWalker(
         while (true) {
             val entry = try {
                 zip.nextEntry ?: break
-            } catch (e: Exception) {
-                Log.w(TAG, "Archive unreadable past here: ${e.message}")
-                if (!skip.pass()) yield(ImportRead.Failed)
+            } catch (e: Throwable) {
+                failure("archive past here", e, skip)?.let { yield(it) }
                 break
             }
             if (entry.isDirectory) continue
@@ -124,9 +140,8 @@ class ImportWalker(
                 val next = try {
                     if (!reads.hasNext()) break
                     reads.next()
-                } catch (e: Exception) {
-                    Log.w(TAG, "Unreadable $name: ${e.message}")
-                    if (!skip.pass()) yield(ImportRead.Failed)
+                } catch (e: Throwable) {
+                    failure(name, e, skip)?.let { yield(it) }
                     break
                 }
                 yield(next)
@@ -145,13 +160,10 @@ class ImportWalker(
     } catch (e: Exception) {
         Log.w(TAG, "Skip track file $name: ${e.message}")
         ImportRead.Failed
-    }
-
-    /** Passes one unit over when some are left to pass: true when it was. */
-    private fun Skip.pass(): Boolean {
-        if (left <= 0) return false
-        left--
-        return true
+    } catch (e: InternalError) {
+        // java.util.zip on an entry it cannot inflate
+        Log.w(TAG, "Skip track file $name: ${e.message}")
+        ImportRead.Failed
     }
 
     /** A stream whose close leaves the one under it open (an archive's entry, a parser's `use`). */

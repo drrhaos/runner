@@ -10,6 +10,7 @@ import com.runner.academy.data.Workout
 import com.runner.academy.util.ActivitySport
 import com.runner.academy.util.ActivityTotals
 import com.runner.academy.util.HeartRates
+import com.runner.academy.util.NotAnActivityException
 import com.runner.academy.util.ParsedActivity
 import com.runner.academy.util.TrackFileImport
 import com.runner.academy.util.TrackPauses
@@ -331,6 +332,3 @@ object FitImporter {
         return known.sumOf { it.first * it.second } / total
     }
 }
-
-/** A FIT file, but no activity (a course, settings, monitoring): no track, skipped silently. */
-class NotAnActivityException(message: String) : IllegalArgumentException(message)

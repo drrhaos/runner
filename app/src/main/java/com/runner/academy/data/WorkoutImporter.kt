@@ -3,6 +3,7 @@ package com.runner.academy.data
 import android.util.Log
 import com.runner.academy.util.ImportFormat
 import com.runner.academy.util.WorkoutBackupFormat
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -150,7 +151,9 @@ class WorkoutImporter(
                             is ImportRead.Backup -> {
                                 // Its rows go in batches of their own; a run again reads it whole (copies dropped)
                                 save()
-                                totals = importBackupRows(read.reader, totals, onBatch)
+                                val (after, whole) = importBackupRows(read, totals, onBatch)
+                                totals = after
+                                if (!whole) failed++
                             }
                             ImportRead.NotRunning -> notRunning++
                             ImportRead.Failed -> failed++
@@ -194,20 +197,31 @@ class WorkoutImporter(
         )
     }
 
-    /** The rows of a backup met among files, added to [totals] (not counted as units). */
+    /**
+     * The rows of a [backup] met among files, added to [totals]: they move the count shown, not
+     * the position a run again starts from (the backup is one unit). False with the totals when
+     * it broke off: the rows before stay, the backup is one error.
+     */
     private suspend fun importBackupRows(
-        reader: Reader,
+        backup: ImportRead.Backup,
         totals: ImportTotals,
         onBatch: suspend (ImportTotals) -> Unit
-    ): ImportTotals {
+    ): Pair<ImportTotals, Boolean> {
         var result = totals
-        for (batch in WorkoutBackupFormat.backupBatches(reader, BACKUP_BATCH)) {
-            currentCoroutineContext().ensureActive()
-            val saved = repository.importBatch(batch.map { ImportCandidate(it) }, WorkoutStore.Mode.DEFERRED)
-            result = result.plus(saved, rows = 0)
-            onBatch(result)
+        try {
+            for (batch in WorkoutBackupFormat.backupBatches(backup.reader, BACKUP_BATCH)) {
+                currentCoroutineContext().ensureActive()
+                val saved = repository.importBatch(batch.map { ImportCandidate(it) }, WorkoutStore.Mode.DEFERRED)
+                result = result.plus(saved, rows = batch.size)
+                onBatch(result)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Backup ${backup.name} broke off: ${e.message}")
+            return result to false
         }
-        return result
+        return result to true
     }
 
     /** Imports a JSON backup read from [open] as it goes, after its first [from].done rows. */

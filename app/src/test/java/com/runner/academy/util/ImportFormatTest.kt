@@ -51,6 +51,17 @@ class ImportFormatTest {
         // A training plans backup, a service's activity summary: other JSON
         assertEquals(ImportFormat.UNKNOWN, sniff("""{"version":1,"plans":[],"templates":[]}"""))
         assertEquals(ImportFormat.UNKNOWN, sniff("""[{"activityId":1}]"""))
+        // The key inside a nested object or a string is someone else's
+        assertEquals(ImportFormat.UNKNOWN, sniff("""{"summary":{"d":[1,2]},"name":"x"}"""))
+        assertEquals(ImportFormat.UNKNOWN, sniff("""{"note":"\"workouts\": [ quoted","n":1}"""))
+    }
+
+    @Test
+    fun `a DOCTYPE with an internal subset is passed`() {
+        assertEquals(
+            ImportFormat.GPX,
+            sniff("""<?xml version="1.0"?><!DOCTYPE gpx [ <!ENTITY a "b"> ]><gpx></gpx>""")
+        )
     }
 
     @Test
