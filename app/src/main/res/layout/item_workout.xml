@@ -117,14 +117,14 @@
                         android:textColor="?attr/colorPrimary"
                         android:textAppearance="@style/TextAppearance.Runner.Body"
                         android:textStyle="bold"
-                        tools:text="5.0 км" />
+                        tools:text="5.02" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
                         android:maxLines="1"
-                        android:text="@string/workout_distance_label"
+                        android:text="@string/workout_details_tile_distance"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="@dimen/workout_item_metric_caption" />
                 </LinearLayout>
@@ -180,7 +180,7 @@
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
                         android:maxLines="1"
-                        android:text="@string/workout_list_pace_label"
+                        android:text="@string/workout_details_tile_pace"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textSize="@dimen/workout_item_metric_caption" />
                 </LinearLayout>

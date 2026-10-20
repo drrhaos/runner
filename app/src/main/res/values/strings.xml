@@ -80,7 +80,6 @@
     <string name="per_km">per kilometer</string>
     <string name="per_mile">per mile</string>
 
-    <string name="workout_distance_label">Distance</string>
     <string name="workout_time_label">Time</string>
     <string name="workout_moving_time_label">Moving time</string>
     <string name="workout_elapsed_time_label">Elapsed time</string>
@@ -324,8 +323,7 @@
     <string name="statistics_message_no_data">There is no data to display. Start training sessions to see statistics.</string>
 
     <string name="workout_list_num_workouts">Training sessions</string>
-    <string name="workout_list_average_pace">Average pace</string>
-    <string name="workout_list_pace_label">Pace</string>
+    <string name="workout_list_average_pace">Avg pace, min/km</string>
     <string name="workout_list_message_no_workouts">No training sessions yet</string>
     <string name="workout_list_message_start_workout">Start training to create a record.</string>
     <string name="workout_list_empty_start">Start workout</string>

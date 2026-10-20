@@ -40,11 +40,11 @@ class DetailStatsDisplay(
             displayLaps(workout)
 
             // Values are bare numbers: the unit is in each tile's caption
-            textViewDetailDistance.text = DetailTileValue.distance(workout.distance)
+            textViewDetailDistance.text = MetricValue.distance(workout.distance)
             // The time next to the pace is the moving one; the elapsed time gets its own tile
             // only when it differs (otherwise one "Time", as before)
             textViewDetailDuration.text = viewModel.formatDuration(workout.movingDuration)
-            textViewDetailPace.text = DetailTileValue.pace(workout.avgPace)
+            textViewDetailPace.text = MetricValue.pace(workout.avgPace)
             val showsElapsed = MovingTimeDisplay.detailShowsElapsed(workout.duration, workout.movingDuration)
             textViewDetailDurationLabel.setText(
                 if (showsElapsed) R.string.workout_moving_time_label else R.string.workout_time_label
@@ -54,10 +54,10 @@ class DetailStatsDisplay(
             textViewDetailElapsed.text = viewModel.formatDuration(workout.duration)
 
             val avgSpeed = com.runner.academy.util.FormatUtils.calculateAverageSpeed(workout.distance, workout.movingDuration)
-            textViewDetailAvgSpeed.text = DetailTileValue.speed(avgSpeed)
+            textViewDetailAvgSpeed.text = MetricValue.speed(avgSpeed)
 
             val calories = workout.calories ?: 0
-            textViewDetailCalories.text = DetailTileValue.whole(calories)
+            textViewDetailCalories.text = MetricValue.whole(calories)
 
             // Each tile is one TalkBack group: "25:30" alone would be read as "twenty-five colon thirty"
             layoutDetailDistance.contentDescription = DetailTileText.distanceA11y(context, workout.distance)
@@ -181,7 +181,7 @@ class DetailStatsDisplay(
             layoutDetailCadence.visibility = if (display == CadenceDisplay.None) View.GONE else View.VISIBLE
             when (display) {
                 is CadenceDisplay.Value -> {
-                    textViewDetailCadence.text = DetailTileValue.whole(display.spm)
+                    textViewDetailCadence.text = MetricValue.whole(display.spm)
                     layoutDetailCadence.contentDescription = CadenceText.averageA11y(context, display.spm)
                 }
                 CadenceDisplay.Pending -> {
@@ -203,7 +203,7 @@ class DetailStatsDisplay(
             layoutDetailHeartRate.visibility = if (display == HeartRateSummaryDisplay.None) View.GONE else View.VISIBLE
             when (display) {
                 is HeartRateSummaryDisplay.Value -> {
-                    textViewDetailHeartRate.text = DetailTileValue.whole(display.avgBpm)
+                    textViewDetailHeartRate.text = MetricValue.whole(display.avgBpm)
                     layoutDetailHeartRate.contentDescription = HeartRateText.averageA11y(context, display.avgBpm)
                 }
                 HeartRateSummaryDisplay.Pending -> {
@@ -230,8 +230,8 @@ class DetailStatsDisplay(
             buttonElevationSourceNote.visibility = View.GONE
             when (display) {
                 is ElevationDisplay.Value -> {
-                    textViewDetailElevationGain.text = DetailTileValue.whole(display.gainM)
-                    textViewDetailElevationLoss.text = DetailTileValue.whole(display.lossM)
+                    textViewDetailElevationGain.text = MetricValue.whole(display.gainM)
+                    textViewDetailElevationLoss.text = MetricValue.whole(display.lossM)
                     layoutDetailElevationGain.contentDescription = ElevationText.gainA11y(context, display.gainM)
                     layoutDetailElevationLoss.contentDescription = ElevationText.lossA11y(context, display.lossM)
                     ElevationText.sourceTexts(display.source)?.let { texts ->
