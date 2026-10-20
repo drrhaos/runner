@@ -176,7 +176,7 @@ class WorkoutDetailFragment : Fragment() {
         val content = card?.let { RecordCardText.of(requireContext(), it) }
         if (content == null) {
             cardView.visibility = View.GONE
-            ViewCompat.setAccessibilityLiveRegion(cardView, ViewCompat.ACCESSIBILITY_LIVE_REGION_NONE)
+            cardView.accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_NONE
             return
         }
         val (background, foreground) = when (content.tone) {
@@ -203,10 +203,8 @@ class WorkoutDetailFragment : Fragment() {
         binding.textViewRecordsStepsNote.setTextColor(textColor)
         // Announced by TalkBack once: the congratulation the first time it is shown after saving
         val announce = congratulation?.onCardShown() == true
-        ViewCompat.setAccessibilityLiveRegion(
-            cardView,
-            if (announce) ViewCompat.ACCESSIBILITY_LIVE_REGION_POLITE else ViewCompat.ACCESSIBILITY_LIVE_REGION_NONE
-        )
+        cardView.accessibilityLiveRegion =
+            if (announce) View.ACCESSIBILITY_LIVE_REGION_POLITE else View.ACCESSIBILITY_LIVE_REGION_NONE
         cardView.visibility = View.VISIBLE
     }
 
