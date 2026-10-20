@@ -63,9 +63,7 @@ class WorkoutStore(
             val inserted = mutableListOf<Long>()
             workouts.forEachIndexed { index, workout ->
                 val side = ImportConflicts.side(workout)
-                val span = ImportConflicts.spanOf(side.startMs, side.durationMs)
-                val overlapping = workoutDao.listItemsOverlapping(span.first, span.last).map(ImportConflicts::side) +
-                    pendingDao.overlapping(span.first, span.last).map(ImportConflicts::side)
+                val overlapping = overlapping(side.startMs, side.durationMs)
                 when {
                     overlapping.any { ImportConflicts.isSame(it, side) } -> duplicates++
                     overlapping.isNotEmpty() -> {
@@ -83,15 +81,33 @@ class WorkoutStore(
     }
 
     /**
+     * The saved and the waiting workouts whose time touches [startMs] for [durationMs]
+     * ([ImportConflicts.spanOf]), saved ones first.
+     */
+    suspend fun overlapping(startMs: Long, durationMs: Long): List<ConflictSide> {
+        val span = ImportConflicts.spanOf(startMs, durationMs)
+        return workoutDao.listItemsOverlapping(span.first, span.last).map(ImportConflicts::side) +
+            pendingDao.overlapping(span.first, span.last).map(ImportConflicts::side)
+    }
+
+    /** A decided waiting workout: its new id (none when dropped) and the ids it replaced. */
+    data class Resolved(val insertedId: Long?, val replacedIds: List<Long>)
+
+    /**
      * Applies the user's [resolution] to the waiting workout [pendingId], in one transaction:
      * dropped, saved beside the others, or saved in place of every saved workout it overlaps
-     * now. Returns the ids of the replaced (deleted) workouts; null when it waits no more.
+     * now except [keepIds] (saved by the same decision for all: a waiting workout replaces what
+     * was there, not another one just imported). Null when it waits no more.
      */
-    suspend fun resolvePending(pendingId: Long, resolution: ConflictResolution): List<Long>? {
+    suspend fun resolvePending(
+        pendingId: Long,
+        resolution: ConflictResolution,
+        keepIds: Set<Long> = emptySet()
+    ): Resolved? {
         val pending = pendingDao.get(pendingId) ?: return null
         if (resolution == ConflictResolution.KEEP_EXISTING) {
             pendingDao.delete(pendingId)
-            return emptyList()
+            return Resolved(insertedId = null, replacedIds = emptyList())
         }
         val workout = WorkoutBackupFormat.parseWorkoutJson(pending.workoutJson)
         // One row: derived at once, whatever the import was
@@ -100,14 +116,14 @@ class WorkoutStore(
             if (pendingDao.get(pendingId) == null) return@withTransaction null
             val replaced = if (resolution == ConflictResolution.REPLACE) {
                 val span = ImportConflicts.spanOf(pending.startMs, pending.durationMs)
-                workoutDao.listItemsOverlapping(span.first, span.last).map { it.id }
+                workoutDao.listItemsOverlapping(span.first, span.last).map { it.id } - keepIds
             } else {
                 emptyList()
             }
             if (replaced.isNotEmpty()) workoutDao.deleteWorkouts(replaced)
-            insertRow(workout, metrics)
+            val id = insertRow(workout, metrics)
             pendingDao.delete(pendingId)
-            replaced
+            Resolved(id, replaced)
         }
     }
 

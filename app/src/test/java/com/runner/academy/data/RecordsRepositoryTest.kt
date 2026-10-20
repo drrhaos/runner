@@ -124,10 +124,10 @@ class RecordsRepositoryTest {
     }
 
     @Test
-    fun aGpxImport_countsTheRecordsItChanged() = runBlocking {
+    fun aFileImport_countsTheRecordsItChanged() = runBlocking {
         repository.insertWorkout(workout(day = 1, speedMps = 3.0))
 
-        val imported = repository.importGpx(listOf(workout(day = 2, speedMps = 3.5), workout(day = 3, speedMps = 3.2)))
+        val imported = repository.importFiles(listOf(workout(day = 2, speedMps = 3.5), workout(day = 3, speedMps = 3.2)))
 
         assertEquals(2, imported.ids.size)
         assertEquals(1, imported.changedRecordDistances)
@@ -138,7 +138,7 @@ class RecordsRepositoryTest {
     fun aBackupImport_getsItsRecordsFromTheBackgroundPass() = runBlocking {
         val backfill = MetricsBackfill(database, scope)
         val repository = WorkoutRepository(database, onDeferredSaved = backfill::markImported)
-        val ids = repository.importBackup(listOf(workout(day = 1, speedMps = 3.0), workout(day = 2, speedMps = 3.5)))
+        val ids = repository.importBackupRows(listOf(workout(day = 1, speedMps = 3.0), workout(day = 2, speedMps = 3.5)))
         assertNull(kmRecord())
         assertTrue(repository.observeRecordsPending().first())
         assertNull(repository.observeRecordCard(ids[1], justSaved = false).first())
@@ -153,15 +153,15 @@ class RecordsRepositoryTest {
     }
 
     @Test
-    fun aGpxImportDuringTheBackgroundPass_isCountedOnce() = runBlocking {
-        var gpx: GpxImport? = null
+    fun aFileImportDuringTheBackgroundPass_isCountedOnce() = runBlocking {
+        var gpx: FileImport? = null
         // The GPX import lands while the pass derives the backup's row
         val backfill = MetricsBackfill(database, scope, derive = { input ->
-            if (gpx == null) gpx = runBlocking { repository.importGpx(listOf(workout(day = 3, speedMps = 3.5))) }
+            if (gpx == null) gpx = runBlocking { repository.importFiles(listOf(workout(day = 3, speedMps = 3.5))) }
             WorkoutDerivation.derive(input)
         })
         val importing = WorkoutRepository(database, onDeferredSaved = backfill::markImported)
-        importing.importBackup(listOf(workout(day = 1, speedMps = 3.0)))
+        importing.importBackupRows(listOf(workout(day = 1, speedMps = 3.0)))
 
         val report = backfill.runOnce()
 

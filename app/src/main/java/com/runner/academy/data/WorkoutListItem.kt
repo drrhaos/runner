@@ -21,5 +21,7 @@ data class WorkoutListItem(
     /** `trackData IS NOT NULL`: SQLite reads only the record header, not the track. */
     val hasTrack: Boolean,
     val routePreview: String?,
-    val metricsVersion: Int
+    val metricsVersion: Int,
+    /** The name from the file or the form; the list shows it in place of the type. */
+    val title: String? = null
 )

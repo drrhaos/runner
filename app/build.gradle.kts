@@ -164,6 +164,9 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     androidTestImplementation(libs.androidx.room.testing)
 
+    // Background import of workouts (survives leaving the screen and process death)
+    implementation(libs.androidx.work.runtime.ktx)
+
     // Paging
     implementation(libs.androidx.paging.runtime)
 
@@ -195,6 +198,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation(libs.androidx.work.testing)
     testImplementation("org.robolectric:robolectric:4.12")
     testImplementation("androidx.test:core:1.5.0")
     // Android testing

@@ -83,11 +83,13 @@ abstract class WorkoutDao {
 
     /**
      * The workouts whose time (date for duration, at least 1 s, as
-     * [ImportConflicts.spanOf]) touches [fromMs]..[toMs], inclusive.
+     * [ImportConflicts.spanOf]) touches [fromMs]..[toMs], inclusive. The lower bound on the
+     * indexed date keeps it to the workouts around, not the whole history before.
      */
     @Query(
         "SELECT $LIST_ITEM_COLUMNS FROM workouts " +
-            "WHERE date <= :toMs AND date + MAX(duration, 1000) - 1 >= :fromMs ORDER BY date"
+            "WHERE date <= :toMs AND date >= :fromMs - ${ImportConflicts.MAX_SPAN_MS} " +
+            "AND date + MAX(duration, 1000) - 1 >= :fromMs ORDER BY date"
     )
     abstract suspend fun listItemsOverlapping(fromMs: Long, toMs: Long): List<WorkoutListItem>
 
@@ -122,12 +124,15 @@ abstract class WorkoutDao {
     /**
      * Writes derived columns unless the row was saved meanwhile with [version] or newer (an
      * edit computes its own). Returns the number of rows updated: 0 = leave its efforts alone.
+     * A row without a track keeps its heart rate and cadence, like [com.runner.academy.util.Derived.applyTo].
      */
     @Query(
         """
         UPDATE workouts SET elevationGain = :elevationGain, elevationLoss = :elevationLoss,
-            elevationSource = :elevationSource, avgCadence = :avgCadence,
-            avgHeartRate = :avgHeartRate, maxHeartRate = :maxHeartRate,
+            elevationSource = :elevationSource,
+            avgCadence = CASE WHEN trackData IS NULL THEN avgCadence ELSE :avgCadence END,
+            avgHeartRate = CASE WHEN trackData IS NULL THEN avgHeartRate ELSE :avgHeartRate END,
+            maxHeartRate = CASE WHEN trackData IS NULL THEN maxHeartRate ELSE :maxHeartRate END,
             routePreview = :routePreview, metricsVersion = :version
         WHERE id = :id AND metricsVersion < :version
         """
@@ -168,7 +173,7 @@ abstract class WorkoutDao {
         /** The [WorkoutListItem] columns; `IS NOT NULL` reads only the record header of the track. */
         private const val LIST_ITEM_COLUMNS =
             "id, date, distance, duration, movingDuration, avgPace, calories, notes, type, isFavorite, " +
-                "(trackData IS NOT NULL) AS hasTrack, routePreview, metricsVersion"
+                "(trackData IS NOT NULL) AS hasTrack, routePreview, metricsVersion, title"
 
         /** A workout usable as a route: it has a track and is not the one being edited. */
         private const val HAS_TRACK = "trackData IS NOT NULL AND TRIM(trackData) != ''"

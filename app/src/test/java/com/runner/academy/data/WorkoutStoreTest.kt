@@ -111,4 +111,17 @@ class WorkoutStoreTest {
         assertEquals(WorkoutDerivation.CURRENT_METRICS_VERSION, row.metricsVersion)
         assertEquals(null, row.avgCadence)
     }
+
+    @Test
+    fun workoutWithoutTrack_keepsTheHeartRateAndCadenceOfItsFile() = runBlocking {
+        val treadmill = workout(1_000L, track = null).copy(avgHeartRate = 141, maxHeartRate = 172, avgCadence = 168f)
+
+        val id = WorkoutStore(database).insert(treadmill)
+
+        val row = stored(id)
+        assertEquals(WorkoutDerivation.CURRENT_METRICS_VERSION, row.metricsVersion)
+        assertEquals(141, row.avgHeartRate)
+        assertEquals(172, row.maxHeartRate)
+        assertEquals(168f, row.avgCadence)
+    }
 }

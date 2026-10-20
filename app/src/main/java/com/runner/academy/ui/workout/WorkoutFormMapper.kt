@@ -23,7 +23,9 @@ object WorkoutFormMapper {
         val durationMs: Long,
         val calories: Int?,
         val notes: String?,
-        val trackDataJson: String?
+        val trackDataJson: String?,
+        /** The name the user gave (or the file did); blank — none. */
+        val title: String? = null
     )
 
     fun toWorkout(form: FormInput, original: Workout?): Workout {
@@ -38,7 +40,8 @@ object WorkoutFormMapper {
                 calories = form.calories,
                 notes = form.notes,
                 type = form.type,
-                trackData = form.trackDataJson
+                trackData = form.trackDataJson,
+                title = WorkoutTitle.clean(form.title)
             )
         }
         val timeChanged = timeChanged(form.durationMs, original)
@@ -53,7 +56,8 @@ object WorkoutFormMapper {
             calories = form.calories,
             notes = form.notes,
             type = form.type,
-            trackData = form.trackDataJson
+            trackData = form.trackDataJson,
+            title = WorkoutTitle.clean(form.title)
         )
     }
 

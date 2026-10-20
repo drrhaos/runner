@@ -86,8 +86,8 @@ object RecordsAnnouncement {
     fun afterBackfill(state: BackfillState): Int? =
         (state as? BackfillState.Done)?.takeIf { it.afterImport }?.changedDistances?.takeIf { it > 0 }
 
-    /** N of a GPX import, or null when it changed no record. */
-    fun afterGpxImport(changedRecordDistances: Int): Int? = changedRecordDistances.takeIf { it > 0 }
+    /** N of a GPX / TCX import, or null when it changed no record. */
+    fun afterFileImport(changedRecordDistances: Int): Int? = changedRecordDistances.takeIf { it > 0 }
 
     /**
      * "Open" goes to the records unless they are shown already, and never takes the user off

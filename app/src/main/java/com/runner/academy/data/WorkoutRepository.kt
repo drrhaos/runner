@@ -12,9 +12,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.withContext
 
-/** New rows of a GPX import and the record distances they hold now ("Records updated: N"). */
-data class GpxImport(val ids: List<Long>, val changedRecordDistances: Int)
-
 /**
  * Repository layer that abstracts data access from the Room database.
  * Provides a single source of truth for workout data and decouples
@@ -69,32 +66,12 @@ class WorkoutRepository(
     }
 
     /**
-     * Imports a backup in one batch ([importBatch]); returns the new ids. Hundreds of rows at
-     * once: they are saved uncomputed and derived by the background pass.
-     */
-    suspend fun importBackup(workouts: List<Workout>): List<Long> =
-        importBatch(workouts.map { ImportCandidate(it) }, fromBackup = true).insertedIds
-
-    /**
-     * Imports GPX / TCX workouts in one batch ([importBatch]), with their metrics computed before
-     * saving. The records change silently: the result tells on how many distances one of the
-     * imported workouts holds the record now (whatever else is saved meanwhile is not counted).
-     */
-    suspend fun importGpx(workouts: List<Workout>): GpxImport {
-        val ids = importBatch(workouts.map { ImportCandidate(it) }, fromBackup = false).insertedIds
-        return GpxImport(ids, recordDistancesHeldBy(ids))
-    }
-
-    /**
      * Writes one batch of an import ([WorkoutStore.importBatch]): new rows, copies dropped, the
-     * workouts overlapping others put aside for [resolvePendingImport]. A backup's rows
-     * ([fromBackup]) are derived by the background pass, files' rows before saving.
+     * workouts overlapping others put aside for [resolvePendingImport]. A backup's rows are
+     * derived by the background pass ([WorkoutStore.Mode.DEFERRED]), files' rows before saving.
      */
-    suspend fun importBatch(candidates: List<ImportCandidate>, fromBackup: Boolean): ImportBatch =
-        withContext(Dispatchers.IO) {
-            val mode = if (fromBackup) WorkoutStore.Mode.DEFERRED else WorkoutStore.Mode.INLINE
-            store.importBatch(candidates, mode)
-        }
+    suspend fun importBatch(candidates: List<ImportCandidate>, mode: WorkoutStore.Mode): ImportBatch =
+        withContext(Dispatchers.IO) { store.importBatch(candidates, mode) }
 
     /** On how many record distances one of [ids] holds the record now ("Records updated: N"). */
     suspend fun recordDistancesHeldBy(ids: List<Long>): Int = recordBook().distancesHeldBy(ids.toSet())
@@ -113,24 +90,32 @@ class WorkoutRepository(
             .flowOn(Dispatchers.IO)
 
     private suspend fun conflictOf(pending: PendingImportSummary): PendingConflict {
-        val span = ImportConflicts.spanOf(pending.startMs, pending.durationMs)
-        val saved = workoutDao.listItemsOverlapping(span.first, span.last).map(ImportConflicts::side)
-        val waiting = pendingImportDao.overlapping(span.first, span.last)
-            .filter { it.id != pending.id }
-            .map(ImportConflicts::side)
-        return PendingConflict(ImportConflicts.side(pending), (saved + waiting).sortedBy { it.startMs })
+        val others = store.overlapping(pending.startMs, pending.durationMs).filter { it.pendingId != pending.id }
+        return PendingConflict(ImportConflicts.side(pending), others.sortedBy { it.startMs })
     }
 
     /** Applies the user's decision to one waiting workout ([WorkoutStore.resolvePending]). */
-    suspend fun resolvePendingImport(pendingId: Long, resolution: ConflictResolution) = withContext(Dispatchers.IO) {
-        store.resolvePending(pendingId, resolution)?.forEach { diagnosticsStore?.delete(it) }
-        Unit
+    suspend fun resolvePendingImport(pendingId: Long, resolution: ConflictResolution) {
+        resolve(pendingId, resolution, keepIds = emptySet())
     }
 
-    /** The same decision for every waiting workout, one by one in start order. */
+    /**
+     * The same decision for every waiting workout, one by one in start order. Replacing never
+     * deletes one saved by this same decision (a GPX and a TCX of one run both waiting: the
+     * second does not replace the first).
+     */
     suspend fun resolveAllPendingImports(resolution: ConflictResolution) = withContext(Dispatchers.IO) {
-        pendingImportDao.all().forEach { resolvePendingImport(it.id, resolution) }
+        val saved = mutableSetOf<Long>()
+        pendingImportDao.all().forEach { pending ->
+            resolve(pending.id, resolution, saved)?.insertedId?.let(saved::add)
+        }
     }
+
+    private suspend fun resolve(pendingId: Long, resolution: ConflictResolution, keepIds: Set<Long>) =
+        withContext(Dispatchers.IO) {
+            store.resolvePending(pendingId, resolution, keepIds)
+                ?.also { resolved -> resolved.replacedIds.forEach { diagnosticsStore?.delete(it) } }
+        }
 
     /** Saves an edited workout as a whole row with fresh metrics; see [WorkoutDao.saveEdited]. */
     suspend fun saveEdited(workout: Workout) = withContext(Dispatchers.IO) {

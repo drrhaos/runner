@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Строка карточки «Круги»: № | км | время | темп | пульс (и строка заголовков) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="32dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/textView_lap_number"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.6"
+        android:textAppearance="@style/TextAppearance.Runner.Body"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        tools:text="1" />
+
+    <TextView
+        android:id="@+id/textView_lap_km"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="end"
+        android:textAppearance="@style/TextAppearance.Runner.Body"
+        android:textColor="?attr/colorOnSurface"
+        tools:text="1.00" />
+
+    <TextView
+        android:id="@+id/textView_lap_time"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.2"
+        android:gravity="end"
+        android:textAppearance="@style/TextAppearance.Runner.Body"
+        android:textColor="?attr/colorOnSurface"
+        tools:text="05:12" />
+
+    <TextView
+        android:id="@+id/textView_lap_pace"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="end"
+        android:textAppearance="@style/TextAppearance.Runner.Body"
+        android:textColor="?attr/colorOnSurface"
+        tools:text="5:12" />
+
+    <TextView
+        android:id="@+id/textView_lap_heart_rate"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="0.9"
+        android:gravity="end"
+        android:textAppearance="@style/TextAppearance.Runner.Body"
+        android:textColor="?attr/colorOnSurface"
+        tools:text="152" />
+</LinearLayout>

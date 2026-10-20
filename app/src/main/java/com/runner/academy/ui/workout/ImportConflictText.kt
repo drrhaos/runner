@@ -11,8 +11,8 @@ import java.util.Date
 object ImportConflictText {
 
     fun message(context: Context, conflict: PendingConflict): String = buildString {
-        append(context.getString(R.string.workout_import_conflict_incoming))
-        conflict.incoming.source?.let { append(" — ").append(it) }
+        val incoming = context.getString(R.string.workout_import_conflict_incoming)
+        append(conflict.incoming.source?.let { context.getString(R.string.workout_import_conflict_source, incoming, it) } ?: incoming)
         append('\n').append(line(context, conflict.incoming))
         append("\n\n")
         if (conflict.others.isEmpty()) {
@@ -21,20 +21,20 @@ object ImportConflictText {
         }
         append(context.getString(R.string.workout_import_conflict_others))
         conflict.others.forEach { other ->
-            append('\n').append(line(context, other))
             val where = if (other.existingId != null) {
                 context.getString(R.string.workout_import_conflict_saved)
             } else {
                 context.getString(R.string.workout_import_conflict_waiting, other.source ?: "")
             }
-            append(" (").append(where).append(')')
+            append('\n').append(context.getString(R.string.workout_import_conflict_where, line(context, other), where))
         }
     }
 
-    private fun line(context: Context, side: ConflictSide): String = listOf(
+    private fun line(context: Context, side: ConflictSide): String = context.getString(
+        R.string.workout_import_conflict_line,
         FormatUtils.formatDateTime(Date(side.startMs)),
         FormatUtils.formatDistance(side.distanceKm, context),
         FormatUtils.formatTime(side.durationMs),
         context.getString(if (side.hasTrack) R.string.workout_import_conflict_with_track else R.string.workout_import_conflict_no_track)
-    ).joinToString(" · ")
+    )
 }

@@ -64,7 +64,8 @@ interface PendingImportDao {
     /** The waiting workouts whose time touches [fromMs]..[toMs], as [WorkoutDao.listItemsOverlapping]. */
     @Query(
         "SELECT $SUMMARY_COLUMNS FROM pending_imports " +
-            "WHERE startMs <= :toMs AND startMs + MAX(durationMs, 1000) - 1 >= :fromMs ORDER BY startMs"
+            "WHERE startMs <= :toMs AND startMs >= :fromMs - ${ImportConflicts.MAX_SPAN_MS} " +
+            "AND startMs + MAX(durationMs, 1000) - 1 >= :fromMs ORDER BY startMs"
     )
     suspend fun overlapping(fromMs: Long, toMs: Long): List<PendingImportSummary>
 }

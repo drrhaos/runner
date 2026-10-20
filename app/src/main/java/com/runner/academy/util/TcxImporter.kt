@@ -1,16 +1,16 @@
 package com.runner.academy.util
 
 import android.util.Xml
+import com.runner.academy.data.Lap
 import com.runner.academy.data.LocationSource
 import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.PauseKind
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.Workout
-import com.runner.academy.data.WorkoutType
 import org.xmlpull.v1.XmlPullParser
 import java.io.InputStream
+import java.io.Reader
 import java.io.StringReader
-import java.util.Date
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
@@ -18,56 +18,40 @@ import kotlin.math.roundToLong
  * Imports a single workout from a TCX file (Activities/Activity/Lap/Track/Trackpoint);
  * every activity and lap of the file goes into one workout.
  *
- * With a GPS track (at least two points with a Position) it is imported like a GPX track;
- * the long gaps between points become pauses when the laps say the device paused.
- * Without one (a treadmill run, a watch without GPS), or when the GPS froze and the track
- * misses much of the lap distance, the workout takes the lap totals: distance, time and
- * calories, and has no track; its heart rate stays in the file, since the heart rate
- * columns are derived from a track only.
+ * The distance and time are the sums of the laps (what the device counted). With a GPS track
+ * (at least two points with a Position) the track is kept like a GPX one; the long gaps
+ * between points become pauses when the laps say the device paused. Without one (a treadmill
+ * run, a watch without GPS), or when the GPS froze and the track misses much of the lap
+ * distance, the workout has no track and takes the heart rate and cadence of the laps
+ * ([TrackFileImport.workoutOf]). Also read: the sport, the laps, `Notes` and the device
+ * (`Creator/Name`).
  */
 object TcxImporter {
 
     /** A gap between two points from which it is a pause (when the laps confirm one). */
     private const val PAUSE_GAP_MS = 60_000L
 
-    /**
-     * A track shorter than this share of the lap distance: the GPS froze (one place repeated)
-     * and the device counted the distance on its own, from steps or a treadmill.
-     */
-    private const val MIN_TRACK_SHARE = 0.8
+    fun parseTcx(input: InputStream, fileName: String? = null): Workout =
+        TrackFileImport.workoutOf(input.bufferedReader().use { parse(it) }, fileName)
 
-    fun parseTcx(input: InputStream, fileName: String? = null): Workout {
-        return parseTcx(input.bufferedReader().use { it.readText() }, fileName)
-    }
-
-    fun parseTcx(xml: String, fileName: String? = null): Workout {
-        val tcx = parse(xml)
-        val calories = tcx.lapCalories.roundToInt().takeIf { it > 0 }
-        if (tcx.points.size >= 2) {
-            val tracked = TrackFileImport.workoutFromPoints(
-                tcx.points, tcx.timeMissing, fileName, calories, pauses = pausesOf(tcx)
-            )
-            if (tcx.lapMeters <= 0.0 || tracked.distance * 1000.0 >= MIN_TRACK_SHARE * tcx.lapMeters) {
-                return tracked
-            }
-        }
-        return fromLapTotals(tcx, fileName, calories)
-    }
+    fun parseTcx(xml: String, fileName: String? = null): Workout =
+        TrackFileImport.workoutOf(parse(StringReader(xml)), fileName)
 
     /**
      * The time the laps left out of the track (the device paused), as manual pauses: the
      * longest gaps of at least [PAUSE_GAP_MS] between points that fit in it. None when the
      * laps are not shorter than the track by more than that.
      */
-    private fun pausesOf(tcx: ParsedTcx): List<PauseInterval>? {
-        val spanMs = tcx.points.last().timestamp - tcx.points.first().timestamp
-        val lapMs = (tcx.lapSeconds * 1000).roundToLong()
+    private fun pausesOf(points: List<TrackPoint>, lapSeconds: Double): List<PauseInterval>? {
+        if (points.size < 2) return null
+        val spanMs = points.last().timestamp - points.first().timestamp
+        val lapMs = (lapSeconds * 1000).roundToLong()
         if (lapMs <= 0L || lapMs > spanMs - PAUSE_GAP_MS) return null
         val leftOutMs = spanMs - lapMs
         val pauses = mutableListOf<PauseInterval>()
         var coveredMs = 0L
         // A sparse track has many long steps: only the longest ones are where it stood
-        val gaps = tcx.points.zipWithNext()
+        val gaps = points.zipWithNext()
             .map { (prev, curr) -> PauseInterval(prev.timestamp, curr.timestamp, PauseKind.MANUAL) }
             .filter { it.end - it.start >= PAUSE_GAP_MS }
             .sortedByDescending { it.end - it.start }
@@ -81,45 +65,44 @@ object TcxImporter {
         return pauses.sortedBy { it.start }.ifEmpty { null }
     }
 
-    private fun fromLapTotals(tcx: ParsedTcx, fileName: String?, calories: Int?): Workout {
-        val start = tcx.startTime ?: tcx.points.firstOrNull()?.timestamp
-        val durationMs = (tcx.lapSeconds * 1000).roundToLong()
-        if (start == null || tcx.lapMeters <= 0.0 || durationMs <= 0L) {
-            throw IllegalArgumentException(
-                "TCX has neither a track nor a distance and time${fileName?.let { " ($it)" } ?: ""}"
-            )
+    /** Over the time of each lap that has both; null when none has. */
+    private fun timeWeighted(laps: List<Lap>, value: (Lap) -> Double?): Double? {
+        var sum = 0.0
+        var weight = 0L
+        for (lap in laps) {
+            val v = value(lap) ?: continue
+            val ms = lap.timerMs?.takeIf { it > 0L } ?: continue
+            sum += v * ms
+            weight += ms
         }
-        val distanceKm = SpeedPaceCalculator.metersToKm(tcx.lapMeters.toFloat())
-        return Workout(
-            id = 0,
-            date = Date(start),
-            distance = distanceKm,
-            duration = durationMs,
-            // The lap time is what the device counted: its own pauses are already left out
-            movingDuration = durationMs,
-            avgPace = PaceMath.avgPace(distanceKm, durationMs),
-            calories = calories,
-            notes = TrackFileImport.importNote(fileName),
-            type = WorkoutType.EASY_RUN,
-            trackData = null,
-            isFavorite = false
-        )
+        return if (weight > 0L) sum / weight else null
     }
 
-    private class ParsedTcx(
-        val points: List<TrackPoint>,
-        val timeMissing: Boolean,
-        /** The first lap StartTime, else the first activity Id: when the workout began. */
-        val startTime: Long?,
-        val lapSeconds: Double,
-        val lapMeters: Double,
-        val lapCalories: Double
-    )
+    /** A lap being read: its values as they come. */
+    private class LapReader(val start: Long?) {
+        var seconds: Double? = null
+        var meters: Double? = null
+        var avgHr: Int? = null
+        var maxHr: Int? = null
+        var runCadence: Double? = null
 
-    private fun parse(xml: String): ParsedTcx {
+        fun lap(): Lap? = start?.let {
+            Lap(
+                start = it,
+                timerMs = seconds?.let { s -> (s * 1000).roundToLong() },
+                distanceM = meters?.toFloat(),
+                avgHr = avgHr,
+                maxHr = maxHr,
+                // RunCadence counts one foot: steps are twice that
+                avgCadence = runCadence?.let { c -> (c * 2).toFloat() }
+            )
+        }
+    }
+
+    fun parse(reader: Reader): ParsedActivity {
         val parser = Xml.newPullParser()
         parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true)
-        parser.setInput(StringReader(xml))
+        parser.setInput(reader)
 
         val points = mutableListOf<TrackPoint>()
         var timeMissing = false
@@ -128,6 +111,11 @@ object TcxImporter {
         var lapSeconds = 0.0
         var lapMeters = 0.0
         var lapCalories = 0.0
+        val sports = mutableListOf<ActivitySport>()
+        val laps = mutableListOf<Lap>()
+        var lap: LapReader? = null
+        var notes: String? = null
+        var device: String? = null
 
         // Local names from the root: the same name (Time, DistanceMeters, Value) means
         // different things under a Lap and under a Trackpoint
@@ -145,8 +133,11 @@ object TcxImporter {
                 XmlPullParser.START_TAG -> {
                     path.add(parser.name)
                     when (parser.name) {
-                        "Lap" -> if (lapStart == null) {
-                            lapStart = parser.getAttributeValue(null, "StartTime")?.let(TrackFileImport::parseTime)
+                        "Activity" -> sports += ActivitySport.ofTcxSport(parser.getAttributeValue(null, "Sport"))
+                        "Lap" -> {
+                            val start = parser.getAttributeValue(null, "StartTime")?.let(TrackFileImport::parseTime)
+                            if (lapStart == null) lapStart = start
+                            lap = LapReader(start)
                         }
                         "Trackpoint" -> {
                             lat = null
@@ -162,6 +153,7 @@ object TcxImporter {
                     val text = parser.text.trim()
                     val leaf = path.lastOrNull()
                     val parent = path.getOrNull(path.size - 2)
+                    val grandparent = path.getOrNull(path.size - 3)
                     if (text.isNotEmpty() && leaf != null) {
                         if ("Trackpoint" in path) {
                             when (leaf) {
@@ -176,40 +168,68 @@ object TcxImporter {
                                 }
                             }
                         } else if (parent == "Lap") {
-                            val value = text.toDoubleOrNull()?.takeIf { it.isFinite() && it > 0.0 } ?: 0.0
+                            val value = text.toDoubleOrNull()?.takeIf { it.isFinite() && it > 0.0 }
                             when (leaf) {
-                                "TotalTimeSeconds" -> lapSeconds += value
-                                "DistanceMeters" -> lapMeters += value
-                                "Calories" -> lapCalories += value
+                                "TotalTimeSeconds" -> {
+                                    lapSeconds += value ?: 0.0
+                                    lap?.seconds = value
+                                }
+                                "DistanceMeters" -> {
+                                    lapMeters += value ?: 0.0
+                                    lap?.meters = value
+                                }
+                                "Calories" -> lapCalories += value ?: 0.0
                             }
+                        } else if (leaf == "Value" && grandparent == "Lap") {
+                            val bpm = HeartRates.valid(text.toDoubleOrNull()?.takeIf { it.isFinite() }?.roundToInt())
+                            when (parent) {
+                                "AverageHeartRateBpm" -> lap?.avgHr = bpm
+                                "MaximumHeartRateBpm" -> lap?.maxHr = bpm
+                            }
+                        } else if (leaf == "AvgRunCadence" && "Lap" in path) {
+                            lap?.runCadence = text.toDoubleOrNull()?.takeIf { it.isFinite() && it > 0.0 }
                         } else if (leaf == "Id" && parent == "Activity" && activityId == null) {
                             activityId = TrackFileImport.parseTime(text)
+                        } else if (leaf == "Notes" && parent == "Activity" && notes == null) {
+                            notes = text
+                        } else if (leaf == "Name" && parent == "Creator" && grandparent == "Activity" && device == null) {
+                            device = text
                         }
                     }
                 }
                 XmlPullParser.END_TAG -> {
-                    if (parser.name == "Trackpoint") {
-                        val latitude = lat
-                        val longitude = lon
-                        // A point without a Position (a treadmill, a pause in GPS) carries no place
-                        if (latitude != null && longitude != null) {
-                            if (timeMs == null) timeMissing = true
-                            val timestamp = timeMs
-                                ?: (points.lastOrNull()?.timestamp?.plus(1000L)
-                                    ?: System.currentTimeMillis())
-                            points.add(
-                                TrackPoint(
-                                    latitude = latitude,
-                                    longitude = longitude,
-                                    timestamp = timestamp,
-                                    accuracy = null,
-                                    speed = speed,
-                                    altitude = ele,
-                                    afterGap = false,
-                                    source = LocationSource.GPS.name,
-                                    heartRate = heartRate
+                    when (parser.name) {
+                        "Lap" -> {
+                            lap?.lap()?.let { laps += it }
+                            lap = null
+                        }
+                        "Trackpoint" -> {
+                            val latitude = lat
+                            val longitude = lon
+                            // A point without a Position (a treadmill, a pause in GPS) carries no place
+                            if (latitude != null && longitude != null) {
+                                if (timeMs == null) timeMissing = true
+                                // A made-up time follows the previous point, or the start the file names:
+                                // never "now", so the same file read again is the same workout
+                                val timestamp = timeMs
+                                    ?: points.lastOrNull()?.timestamp?.plus(1000L)
+                                    ?: lapStart
+                                    ?: activityId
+                                    ?: throw IllegalArgumentException("TCX track point has no time and the activity no start")
+                                points.add(
+                                    TrackPoint(
+                                        latitude = latitude,
+                                        longitude = longitude,
+                                        timestamp = timestamp,
+                                        accuracy = null,
+                                        speed = speed,
+                                        altitude = ele,
+                                        afterGap = false,
+                                        source = LocationSource.GPS.name,
+                                        heartRate = heartRate
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
                     if (path.isNotEmpty()) path.removeAt(path.size - 1)
@@ -217,6 +237,23 @@ object TcxImporter {
             }
             event = parser.next()
         }
-        return ParsedTcx(points, timeMissing, lapStart ?: activityId, lapSeconds, lapMeters, lapCalories)
+        return ParsedActivity(
+            points = points,
+            timeMissing = timeMissing,
+            pauses = pausesOf(points, lapSeconds),
+            startTime = lapStart ?: activityId,
+            sport = ActivitySport.of(sports),
+            description = notes,
+            device = device,
+            laps = laps,
+            totals = ActivityTotals(
+                distanceM = lapMeters.takeIf { it > 0.0 },
+                timerMs = (lapSeconds * 1000).roundToLong().takeIf { it > 0L },
+                calories = lapCalories.roundToInt().takeIf { it > 0 },
+                avgHeartRate = timeWeighted(laps) { it.avgHr?.toDouble() }?.roundToInt(),
+                maxHeartRate = laps.mapNotNull { it.maxHr }.maxOrNull(),
+                avgCadence = timeWeighted(laps) { it.avgCadence?.toDouble() }?.toFloat()
+            )
+        )
     }
 }

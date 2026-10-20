@@ -42,7 +42,8 @@ class WorkoutFormMapperTest {
         durationMs: Long = 3_600_000L, // the form shows whole seconds
         distanceKm: Float = 10f,
         date: Date = Date(1_700_000_000_000L),
-        trackDataJson: String? = "{\"points\":[]}"
+        trackDataJson: String? = "{\"points\":[]}",
+        title: String? = null
     ) = WorkoutFormMapper.FormInput(
         date = date,
         type = WorkoutType.TEMPO_RUN,
@@ -50,8 +51,26 @@ class WorkoutFormMapperTest {
         durationMs = durationMs,
         calories = 610,
         notes = "new",
-        trackDataJson = trackDataJson
+        trackDataJson = trackDataJson,
+        title = title
     )
+
+    @Test
+    fun title_isSavedTrimmed_blankIsNone() {
+        assertEquals("Lunch Run", WorkoutFormMapper.toWorkout(form(title = "  Lunch Run "), null).title)
+        assertEquals(null, WorkoutFormMapper.toWorkout(form(title = "   "), null).title)
+    }
+
+    @Test
+    fun edit_changesTheTitle_keepsDeviceAndLaps() {
+        val imported = original.copy(title = "Morning Run", device = "Run Watch 265", lapsJson = "[{\"start\":1}]")
+
+        val edited = WorkoutFormMapper.toWorkout(form(title = "Park run"), imported)
+
+        assertEquals("Park run", edited.title)
+        assertEquals("Run Watch 265", edited.device)
+        assertEquals("[{\"start\":1}]", edited.lapsJson)
+    }
 
     @Test
     fun newWorkout_movingDurationIsDuration() {
