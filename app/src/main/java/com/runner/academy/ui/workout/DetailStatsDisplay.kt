@@ -13,7 +13,6 @@ import com.runner.academy.data.WorkoutType
 import com.runner.academy.databinding.ItemLapRowBinding
 import com.runner.academy.util.LapsJson
 import com.runner.academy.util.MovingTimeDisplay
-import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -179,7 +178,7 @@ class DetailStatsDisplay(
             layoutDetailCadence.visibility = if (display == CadenceDisplay.None) View.GONE else View.VISIBLE
             when (display) {
                 is CadenceDisplay.Value -> {
-                    textViewDetailCadence.text = display.spm.toString()
+                    textViewDetailCadence.text = context.getString(R.string.workout_details_cadence_value, display.spm)
                     layoutDetailCadence.contentDescription = CadenceText.averageA11y(context, display.spm)
                 }
                 CadenceDisplay.Pending -> {
@@ -201,7 +200,7 @@ class DetailStatsDisplay(
             layoutDetailHeartRateRow.visibility = if (display == HeartRateSummaryDisplay.None) View.GONE else View.VISIBLE
             when (display) {
                 is HeartRateSummaryDisplay.Value -> {
-                    textViewDetailHeartRate.text = NumberFormat.getIntegerInstance().format(display.avgBpm)
+                    textViewDetailHeartRate.text = context.getString(R.string.workout_details_heart_rate_value, display.avgBpm)
                     layoutDetailHeartRate.contentDescription = HeartRateText.averageA11y(context, display.avgBpm)
                 }
                 HeartRateSummaryDisplay.Pending -> {

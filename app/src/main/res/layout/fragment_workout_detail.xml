@@ -285,7 +285,7 @@
                     <TextView
                         android:id="@+id/textView_detail_distance"
                         style="@style/RunnerDetailMetricValue"
-                        tools:text="5.0 км" />
+                        tools:text="5.00 км" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
@@ -327,11 +327,11 @@
                     <TextView
                         android:id="@+id/textView_detail_pace"
                         style="@style/RunnerDetailMetricValue"
-                        tools:text="5:06" />
+                        tools:text="5:06 /км" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
-                        android:text="@string/workout_pace_label_km" />
+                        android:text="@string/workout_details_pace" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -399,11 +399,11 @@
                     <TextView
                         android:id="@+id/textView_detail_cadence"
                         style="@style/RunnerDetailMetricValue.Secondary"
-                        tools:text="172" />
+                        tools:text="172 шаг/мин" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
-                        android:text="@string/workout_details_cadence" />
+                        android:text="@string/workout_details_cadence_title" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -433,11 +433,11 @@
                     <TextView
                         android:id="@+id/textView_detail_heart_rate"
                         style="@style/RunnerDetailMetricValue.Secondary"
-                        tools:text="152" />
+                        tools:text="152 уд/мин" />
 
                     <TextView
                         style="@style/RunnerDetailMetricCaption"
-                        android:text="@string/workout_details_heart_rate" />
+                        android:text="@string/workout_details_heart_rate_title" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -744,7 +744,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/workout_details_pace_speed_pulse_title"
+                android:text="@string/workout_details_pace_speed_chart_title"
                 android:textAppearance="@style/TextAppearance.Runner.Body"
                 android:textStyle="bold"
                 android:textColor="?attr/colorOnSurface"
@@ -889,7 +889,7 @@
                     android:id="@+id/textView_chart_heart_rate_summary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    tools:text="средний 152 · макс 178"
+                    tools:text="ср. 152 · макс. 178 уд/мин"
                     android:textAppearance="@style/TextAppearance.Runner.Subhead"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
@@ -1005,7 +1005,7 @@
                     android:id="@+id/textView_elevation_chart_summary"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    tools:text="↑ 124 м  ↓ 118 м"
+                    tools:text="↑ 124 м · ↓ 118 м"
                     android:textAppearance="@style/TextAppearance.Runner.Subhead"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />

@@ -236,7 +236,7 @@ class ChartRenderer(
         chart.setDrawMarkers(false)
         // The splits, not the per-step line: one GPS jump would be the "best" pace
         chart.contentDescription = ChartSummaryText.paceA11y(context, distanceSegments.value, isMetric)
-            ?: context.getString(R.string.workout_details_pace_speed_pulse_title)
+            ?: context.getString(R.string.workout_details_pace_speed_chart_title)
 
         selectByTime(chart, points, textViewPaceSpeedValues) { e ->
             // Nearest series entry for the values

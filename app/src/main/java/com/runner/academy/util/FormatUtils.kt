@@ -198,11 +198,11 @@ object FormatUtils {
     }
     
     /**
-     * Форматирует калории
+     * Форматирует калории: "300 ккал"
      */
     fun formatCalories(calories: Int, context: Context? = null): String {
         return if (context != null) {
-            "$calories ${context.getString(R.string.workout_details_calories)}"
+            context.getString(R.string.workout_details_calories_value, calories)
         } else {
             "$calories ккал"
         }

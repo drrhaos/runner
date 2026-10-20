@@ -85,8 +85,6 @@
     <string name="workout_lap_row_hr_a11y">Круг %1$s: %2$s км, время %3$s, темп %4$s, пульс %5$s</string>
     <string name="workout_notes_expand">Показать заметку целиком</string>
     <string name="workout_notes_collapse">Свернуть заметку</string>
-    <string name="workout_pace_label_km">Темп мин/км</string>
-    <string name="workout_pace_label_miles">Темп мин/милю</string>
     <string name="workout_summary_good">Хорошая тренировка…</string>
 
     <string name="dialog_choose_workout_title">Выберите тип тренировки</string>
@@ -226,6 +224,7 @@
     <string name="workout_details_charts">Графики</string>
     <string name="workout_details_average_speed">Средняя скорость</string>
     <string name="workout_details_calories">Калории</string>
+    <string name="workout_details_calories_value">%1$d ккал</string>
     <string name="workout_details_btn_share">Поделиться</string>
     <string name="workout_details_btn_export_gpx">Экспорт GPX</string>
     <string name="workout_details_btn_share_diagnostics">Отправить диагностику GPS</string>
@@ -239,7 +238,7 @@
     <string name="workout_favorite_remove">Убрать из избранного</string>
     <string name="workout_favorite_added">Добавлено в избранное</string>
     <string name="workout_favorite_removed">Удалено из избранного</string>
-    <string name="workout_details_pace_speed_pulse_title">Темп / Скорость / Пульс</string>
+    <string name="workout_details_pace_speed_chart_title">Темп / Скорость</string>
     <string name="workout_details_height_title">Высота</string>
     <string name="workout_details_pace_speed_title">Темп / Скорость по сегментам</string>
     <string name="workout_details_pace">Темп</string>
@@ -531,7 +530,7 @@
     </plurals>
 
     <!-- Каденс -->
-    <string name="workout_details_cadence">Каденс шаг/мин</string>
+    <string name="workout_details_cadence_value">%1$d шаг/мин</string>
     <string name="workout_details_cadence_title">Каденс</string>
     <string name="workout_details_cadence_a11y">Средний каденс %1$s</string>
     <string name="workout_details_cadence_pending_a11y">Каденс ещё считается</string>
@@ -550,14 +549,14 @@
         <item quantity="many">%d ударов в минуту</item>
         <item quantity="other">%d удара в минуту</item>
     </plurals>
-    <string name="workout_details_heart_rate">Пульс уд/мин</string>
+    <string name="workout_details_heart_rate_value">%1$d уд/мин</string>
     <string name="workout_details_heart_rate_title">Пульс</string>
     <string name="workout_details_heart_rate_a11y">Средний пульс %1$s</string>
     <string name="workout_details_heart_rate_pending_a11y">Пульс ещё считается</string>
     <string name="chart_heart_rate_label">Пульс (уд/мин)</string>
     <string name="chart_heart_rate_value">Пульс: %1$d уд/мин</string>
-    <string name="chart_heart_rate_summary_format">средний %1$d · макс %2$d</string>
-    <string name="chart_heart_rate_avg_format">средний %1$d уд/мин</string>
+    <string name="chart_heart_rate_summary_format">ср. %1$d · макс. %2$d уд/мин</string>
+    <string name="chart_heart_rate_avg_format">ср. %1$d уд/мин</string>
     <string name="chart_heart_rate_limit_label">ср. %1$d</string>
     <string name="chart_heart_rate_summary_a11y">Средний пульс %1$s, максимальный %2$s</string>
     <string name="chart_heart_rate_a11y">График пульса, ударов в минуту: в среднем %1$d, от %2$d до %3$d</string>
@@ -576,7 +575,7 @@
     <string name="workout_elevation_source_dialog_message">Эта высота взята из GPS: в телефоне нет барометра, или он не работал во время этой тренировки, или она записана до того, как приложение стало его использовать. GPS определяет высоту хуже, чем положение: ошибка в 10–20 м — обычное дело. Мы сглаживаем её и не считаем мелкие колебания, поэтому набор высоты может отличаться от реального, а короткие подъёмы — не попасть в него.</string>
     <string name="workout_elevation_source_file_dialog_title">Высота из файла</string>
     <string name="workout_elevation_source_file_dialog_message">Высота взята из импортированного файла как есть. Мы сглаживаем её и не считаем мелкие колебания, как высоту по GPS, поэтому набор может отличаться от того, что показало устройство, записавшее файл.</string>
-    <string name="workout_elevation_summary_format">↑ %1$d м  ↓ %2$d м</string>
+    <string name="workout_elevation_summary_format">↑ %1$d м · ↓ %2$d м</string>
     <string name="workout_elevation_gain_a11y">Набор высоты %1$s</string>
     <string name="workout_elevation_loss_a11y">Сброс высоты %1$s</string>
     <string name="workout_elevation_summary_a11y">%1$s, %2$s</string>
