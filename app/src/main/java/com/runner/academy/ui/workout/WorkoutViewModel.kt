@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -45,7 +46,7 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
     val pagedWorkouts: Flow<PagingData<WorkoutListItem>> = _listFilter
         .flatMapLatest { filter ->
             Pager(
-                config = PAGING_CONFIG,
+                config = LIST_PAGING_CONFIG,
                 pagingSourceFactory = {
                     when (filter) {
                         WorkoutListFilter.ALL -> repository.pagingSourceAll()
@@ -55,6 +56,16 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             ).flow
         }
         .cachedIn(viewModelScope)
+
+    /** The months of the shown list, newest first: what the fast scroller names a position by. */
+    val historyIndex: Flow<HistoryIndex> = _listFilter
+        .flatMapLatest { filter ->
+            when (filter) {
+                WorkoutListFilter.ALL -> repository.monthsAll()
+                WorkoutListFilter.FAVORITES -> repository.monthsFavorites()
+            }
+        }
+        .map(::HistoryIndex)
 
     suspend fun countRoutes(excludeId: Long): Int = repository.countRoutes(excludeId)
 
@@ -220,6 +231,22 @@ class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() 
             enablePlaceholders = false,
             maxSize = MAX_LOADED_ITEMS
         )
+
+        /**
+         * The workout list: the same window, with placeholders, so the list has its full length
+         * and the fast scroller can jump anywhere; a jump past [JUMP_THRESHOLD] reloads around
+         * the target instead of paging through everything between.
+         */
+        val LIST_PAGING_CONFIG = PagingConfig(
+            pageSize = PAGE_SIZE,
+            prefetchDistance = PREFETCH_DISTANCE,
+            initialLoadSize = PAGE_SIZE,
+            enablePlaceholders = true,
+            maxSize = MAX_LOADED_ITEMS,
+            jumpThreshold = JUMP_THRESHOLD
+        )
+
+        private const val JUMP_THRESHOLD = PAGE_SIZE * 2
     }
 }
 

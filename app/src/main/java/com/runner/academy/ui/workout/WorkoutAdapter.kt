@@ -43,7 +43,9 @@ class WorkoutAdapter(
     }
 
     override fun onBindViewHolder(holder: WorkoutViewHolder, position: Int) {
-        val workout = getItem(position) ?: return
+        // Null: a placeholder for a row not loaded yet (the list has its full length for the
+        // fast scroller); it is bound again once loaded
+        val workout = getItem(position) ?: return holder.bindPlaceholder()
         holder.bind(workout)
     }
 
@@ -69,6 +71,7 @@ class WorkoutAdapter(
             binding.apply {
                 textViewWorkoutDate.text = dateFormat.format(workout.date)
                 textViewWorkoutType.text = WorkoutTitle.label(workout.title, workout.type.displayName(context))
+                textViewWorkoutType.visibility = View.VISIBLE
                 // Bare numbers as in the details: the units are in the captions
                 textViewDistance.text = MetricValue.distance(workout.distance)
                 // Moving time: distance / time = pace adds up on the card
@@ -86,8 +89,33 @@ class WorkoutAdapter(
                 textViewNotesPreview.visibility = if (notes.isNotEmpty()) View.VISIBLE else View.GONE
                 textViewNotesPreview.text = notes
 
+                buttonFavorite.visibility = View.VISIBLE
                 root.setOnClickListener { onItemClick(workout) }
                 buttonFavorite.setOnClickListener { onFavoriteClick(workout) }
+            }
+        }
+
+        /** An empty card of the same height: no stale workout shows while the row loads. */
+        fun bindPlaceholder() {
+            previewJob?.cancel()
+            previewJob = null
+            boundWorkoutId = -1L
+            binding.apply {
+                // The slot's background alone, without "no route"
+                routePreview.setImageDrawable(null)
+                routePreview.visibility = View.VISIBLE
+                routePreview.contentDescription = null
+                textViewRoutePreviewEmpty.visibility = View.GONE
+                textViewWorkoutDate.text = ""
+                textViewWorkoutType.text = ""
+                textViewWorkoutType.visibility = View.INVISIBLE
+                textViewDistance.text = ""
+                textViewDuration.text = ""
+                textViewPace.text = ""
+                layoutCalories.visibility = View.GONE
+                buttonFavorite.visibility = View.INVISIBLE
+                root.setOnClickListener(null)
+                buttonFavorite.setOnClickListener(null)
             }
         }
 
