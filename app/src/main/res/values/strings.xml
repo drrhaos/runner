@@ -284,9 +284,6 @@
     <string name="chart_elevation_y_format">%d m</string>
     <string name="unit_km">km</string>
     <string name="unit_m">m</string>
-    <string name="unit_mile">mile</string>
-    <string name="unit_kmh">km/h</string>
-    <string name="unit_mph">mi/h</string>
     <string name="workout_share_text">🏃 Workout:
 📅 Date: %1$s
 📏 Distance: %2$s
@@ -771,6 +768,9 @@
     <string name="voice_interval_goal_distance">Distance %1$s</string>
     <string name="voice_interval_goal_pace">Pace %1$s</string>
     <string name="chart_interval_n">Int %1$d</string>
+    <string name="chart_segment_km">km %1$d</string>
+    <string name="chart_segment_mile">mi %1$d</string>
+    <string name="chart_value_missing" translatable="false">—</string>
 
     <!-- Personal records -->
     <string name="menu_records">Records</string>

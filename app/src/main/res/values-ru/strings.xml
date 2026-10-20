@@ -270,9 +270,6 @@
     <string name="chart_elevation_y_format">%d м</string>
     <string name="unit_km">км</string>
     <string name="unit_m">м</string>
-    <string name="unit_mile">миля</string>
-    <string name="unit_kmh">км/ч</string>
-    <string name="unit_mph">миль/ч</string>
     <string name="workout_share_text">🏃 Тренировка:
 📅 Дата: %1$s
 📏 Дистанция: %2$s
@@ -781,6 +778,8 @@
     <string name="voice_interval_goal_distance">Дистанция %1$s</string>
     <string name="voice_interval_goal_pace">Темп %1$s</string>
     <string name="chart_interval_n">Инт %1$d</string>
+    <string name="chart_segment_km">%1$d-й км</string>
+    <string name="chart_segment_mile">%1$d-я миля</string>
 
     <!-- Личные рекорды -->
     <string name="menu_records">Рекорды</string>

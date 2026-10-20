@@ -96,6 +96,35 @@ object TrackChartBuilder {
         return result
     }
 
+    /** Slower than this, min/km, is a stop or a slow walk: the pace line breaks there. */
+    private const val PACE_CHART_MAX_MIN_PER_KM = 20f
+
+    /**
+     * Whether the pace chart draws [paceMinPerUnit] (per km, per mile without [metric]): not
+     * at a stop (0) and not slower than [PACE_CHART_MAX_MIN_PER_KM] — a near-stop would stretch
+     * the axis to an hour per km.
+     */
+    fun isChartPace(paceMinPerUnit: Float, metric: Boolean): Boolean {
+        val limit = if (metric) PACE_CHART_MAX_MIN_PER_KM else PaceSpeedMath.paceMinPerKmToMinPerMile(PACE_CHART_MAX_MIN_PER_KM)
+        return paceMinPerUnit.isFinite() && paceMinPerUnit > 0f && paceMinPerUnit <= limit
+    }
+
+    /** The pace line of [series] as runs, broken where [isChartPace] is false. */
+    fun paceRuns(series: List<PaceSpeedPoint>, metric: Boolean): List<List<PaceSpeedPoint>> {
+        val runs = mutableListOf<List<PaceSpeedPoint>>()
+        var run = mutableListOf<PaceSpeedPoint>()
+        for (point in series) {
+            if (isChartPace(point.paceMinPerUnit, metric)) {
+                run.add(point)
+            } else if (run.isNotEmpty()) {
+                runs.add(run)
+                run = mutableListOf()
+            }
+        }
+        if (run.isNotEmpty()) runs.add(run)
+        return runs
+    }
+
     fun buildElevationSeries(points: List<TrackPoint>, source: ElevationSource): List<ElevationPoint> =
         buildElevationRuns(points, source).flatten()
 
