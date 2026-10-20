@@ -76,20 +76,6 @@ object FitDecoder {
             head[8] == '.'.code.toByte() && head[9] == 'F'.code.toByte() &&
             head[10] == 'I'.code.toByte() && head[11] == 'T'.code.toByte()
 
-    /** [input] starts a FIT file; it is left where it was (mark and reset). */
-    fun isFit(input: BufferedInputStream): Boolean {
-        input.mark(MIN_HEADER)
-        val head = ByteArray(MIN_HEADER)
-        var read = 0
-        while (read < MIN_HEADER) {
-            val n = input.read(head, read, MIN_HEADER - read)
-            if (n < 0) break
-            read += n
-        }
-        input.reset()
-        return isFit(head)
-    }
-
     /**
      * The data messages of [input], only those of [globals] when given. Throws
      * IllegalArgumentException when it does not start as a FIT file; damage after that only

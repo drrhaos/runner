@@ -260,15 +260,6 @@ class FitDecoderTest {
         assertFalse(FitDecoder.isFit(byteArrayOf(14, 0, 0)))
     }
 
-    @Test
-    fun `isFit on a stream leaves it at the start`() {
-        val stream = java.io.BufferedInputStream(FitTestWriter().fileId().bytes().inputStream())
-
-        assertTrue(FitDecoder.isFit(stream))
-        assertTrue(FitDecoder.decode(stream).intact)
-        assertFalse(FitDecoder.isFit(java.io.BufferedInputStream("<gpx/>".byteInputStream())))
-    }
-
     private fun indexOf(haystack: ByteArray, needle: ByteArray): Int =
         (0..haystack.size - needle.size).first { i -> needle.indices.all { haystack[i + it] == needle[it] } }
 }

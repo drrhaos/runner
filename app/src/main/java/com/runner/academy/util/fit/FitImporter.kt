@@ -129,8 +129,8 @@ object FitImporter {
         TrackFileImport.workoutOf(parse(input, fileName), fileName)
 
     /**
-     * Throws IllegalArgumentException when [input] is no FIT activity (another FIT file, or one
-     * with neither records nor a session).
+     * Throws [NotAnActivityException] for another FIT file (a course, settings), and
+     * IllegalArgumentException for an activity with neither records nor a session.
      */
     fun parse(input: InputStream, fileName: String? = null): ParsedActivity {
         val decoded = FitDecoder.decode(input, READ)
@@ -140,7 +140,7 @@ object FitImporter {
 
         val fileIds = of(FILE_ID)
         if (fileIds.none { it.int(FILE_ID_TYPE) == FILE_TYPE_ACTIVITY }) {
-            throw IllegalArgumentException("Not a FIT activity$named")
+            throw NotAnActivityException("Not a FIT activity$named")
         }
         val records = of(RECORD).sortedBy { it.long(FitDecoder.TIMESTAMP) ?: Long.MAX_VALUE }
         val sessions = of(SESSION)
@@ -331,3 +331,6 @@ object FitImporter {
         return known.sumOf { it.first * it.second } / total
     }
 }
+
+/** A FIT file, but no activity (a course, settings, monitoring): no track, skipped silently. */
+class NotAnActivityException(message: String) : IllegalArgumentException(message)

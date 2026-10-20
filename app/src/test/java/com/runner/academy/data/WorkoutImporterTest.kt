@@ -13,8 +13,11 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.ByteArrayOutputStream
 import java.io.StringReader
 import java.util.Date
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28])
@@ -129,6 +132,103 @@ class WorkoutImporterTest {
         assertEquals(1, again.imported)
         assertEquals(1, again.duplicates)
         assertEquals(2, savedCount())
+    }
+
+    private fun zip(vararg entries: Pair<String, ByteArray>): ByteArray = ByteArrayOutputStream().also { out ->
+        ZipOutputStream(out).use { zip ->
+            for ((name, bytes) in entries) {
+                zip.putNextEntry(ZipEntry(name))
+                zip.write(bytes)
+                zip.closeEntry()
+            }
+        }
+    }.toByteArray()
+
+    private fun backupJson(days: IntRange): String = WorkoutBackupFormat.toBackupJson(
+        days.map { n ->
+            Workout(
+                date = Date(n * 86_400_000L), distance = 5f, duration = 1_800_000L, movingDuration = 1_800_000L,
+                avgPace = 6f, calories = null, notes = null, type = WorkoutType.EASY_RUN
+            )
+        },
+        "test"
+    )
+
+    @Test
+    fun anArchive_isReadEntryByEntry_withProgressByCount() = runBlocking {
+        val runs = (1..WorkoutImporter.FILE_BATCH + 2).map { "activities/$it.gpx" to gpx(it).toByteArray() }
+        val export = zip(*runs.toTypedArray(), "media/photo.jpg" to byteArrayOf(1, 2, 3))
+        val progress = mutableListOf<Pair<Int, Int>>()
+
+        val result = importer.importFiles(listOf(ImportFile("export.zip") { export.inputStream() })) {
+            progress += it.done to it.total
+        }
+
+        assertEquals(runs.size, result.imported)
+        assertEquals(0, result.failed)
+        assertEquals("a file count first, then units counted with no total", listOf(0 to 1, 25 to 0, 28 to 0), progress)
+    }
+
+    @Test
+    fun anArchiveRunAgain_passesOverWhatWasSaved() = runBlocking {
+        val runs = (1..WorkoutImporter.FILE_BATCH + 3).map { "$it.gpx" to gpx(it).toByteArray() }
+        val export = zip(*runs.toTypedArray())
+        val files = listOf(file("a.gpx", gpx(29)), ImportFile("export.zip") { export.inputStream() })
+        var saved: ImportTotals? = null
+        runCatching {
+            importer.importFiles(files) { totals ->
+                if (totals.done > 0) {
+                    saved = totals
+                    throw IllegalStateException("killed")
+                }
+            }
+        }
+
+        val result = importer.importFiles(files, from = saved!!)
+
+        assertEquals(runs.size + 1, result.imported)
+        assertEquals("nothing saved before is read again", 0, result.duplicates)
+        assertEquals(runs.size + 1, savedCount())
+    }
+
+    @Test
+    fun aBackupInAnArchive_isImportedWithTheTracks() = runBlocking {
+        val export = zip("runner_backup.json" to backupJson(0..2).toByteArray(), "run.gpx" to gpx(20).toByteArray())
+
+        val result = importer.importFiles(listOf(ImportFile("export.zip") { export.inputStream() }))
+
+        assertEquals(4, result.imported)
+        assertEquals(4, savedCount())
+    }
+
+    @Test
+    fun aFolderFileThatIsNoWorkout_isPassedSilently() = runBlocking {
+        val result = importer.importFiles(listOf(file("a.gpx", gpx(1)), file("notes.txt", "shopping list")))
+
+        assertEquals(1, result.imported)
+        assertEquals(0, result.failed)
+    }
+
+    @Test
+    fun theBackupItem_readsABackupInAZipToo() = runBlocking {
+        val zipped = zip("backup.json" to backupJson(0..4).toByteArray())
+
+        val result = importer.importBackupFile(ImportFile("backup.zip") { zipped.inputStream() })
+
+        assertEquals(5, result.imported)
+    }
+
+    @Test
+    fun theBackupItem_readsAPlainBackupRowByRow() = runBlocking {
+        val json = backupJson(0..4)
+        val progress = mutableListOf<Pair<Int, Int>>()
+
+        val result = importer.importBackupFile(ImportFile("backup.json") { json.byteInputStream() }) {
+            progress += it.done to it.total
+        }
+
+        assertEquals(5, result.imported)
+        assertEquals(listOf(5 to 5), progress)
     }
 
     @Test

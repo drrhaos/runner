@@ -1,21 +1,24 @@
 package com.runner.academy.data
 
 import android.util.Log
-import com.runner.academy.util.NotRunningException
-import com.runner.academy.util.TrackFileImport
+import com.runner.academy.util.ImportFormat
 import com.runner.academy.util.WorkoutBackupFormat
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import java.io.BufferedInputStream
 import java.io.InputStream
+import java.io.InputStreamReader
 import java.io.Reader
 
 /** A file to import: its name and how to open it (null when it cannot be). */
 class ImportFile(val name: String?, val open: () -> InputStream?)
 
 /**
- * How far an import got: [done] of [total] files or backup rows (0 total: not known yet) and
- * what came of them. Every field has a default, so it is saved and read back as JSON.
+ * How far an import got: [done] of [total] import units — files, archive entries or backup rows
+ * (0 total: not known, still listing or reading archives) — and what came of them. Every field
+ * has a default, so it is saved and read back as JSON.
  */
 data class ImportTotals(
     val done: Int = 0,
@@ -23,12 +26,18 @@ data class ImportTotals(
     val insertedIds: List<Long> = emptyList(),
     val pending: Int = 0,
     val duplicates: Int = 0,
-    /** Files of another sport than running, skipped. */
+    /** Workouts of another sport than running, skipped. */
     val notRunning: Int = 0,
-    /** Files that are no GPX or TCX the app reads. */
+    /** Workout files the app could not read (broken, cut, too large). */
     val failed: Int = 0,
     /** Files the app may not read any more (access lost after the process was killed). */
-    val inaccessible: Int = 0
+    val inaccessible: Int = 0,
+    /** Picked files read to their end: a run again opens the next one. */
+    val filesDone: Int = 0,
+    /** Units of the next file read already (an archive's entries): a run again passes them over. */
+    val fileUnits: Int = 0,
+    /** An archive was opened: units are counted with no total ([total] 0). */
+    val archives: Boolean = false
 ) {
     fun plus(batch: ImportBatch, rows: Int) = copy(
         done = done + rows,
@@ -60,51 +69,145 @@ data class ImportResult(
  * [ImportTotals] it got to, it continues after them; anything it saved meanwhile is a copy and
  * skipped. [onBatch] gets the totals after each batch, to be kept for such a restart.
  */
-class WorkoutImporter(private val repository: WorkoutRepository) {
+class WorkoutImporter(
+    private val repository: WorkoutRepository,
+    private val walker: ImportWalker = ImportWalker()
+) {
 
-    /** Imports [files] in their order, after the first [from].done of them. */
+    /**
+     * Imports [files] in their order — track files, archives of them, backups, told by content
+     * ([ImportWalker]) — after the units [from] got to. A file of no workout is passed silently.
+     */
     suspend fun importFiles(
         files: List<ImportFile>,
         from: ImportTotals = ImportTotals(),
         onBatch: suspend (ImportTotals) -> Unit = {}
-    ): ImportResult {
-        var totals = from.copy(total = files.size)
+    ): ImportResult = withContext(Dispatchers.IO) {
+        var totals = if (from.archives) from else from.copy(total = files.size)
         onBatch(totals)
-        files.drop(totals.done).chunked(FILE_BATCH).forEach { chunk ->
-            var notRunning = 0
-            var failed = 0
-            var inaccessible = 0
-            val candidates = withContext(Dispatchers.IO) {
-                chunk.mapNotNull { file ->
-                    ensureActive()
-                    when (val read = read(file)) {
-                        is Read.Workout -> read.candidate
-                        Read.NotRunning -> {
-                            notRunning++
-                            null
+        val candidates = ArrayList<ImportCandidate>()
+        // Read since the last save: units, and what came of those that are no candidate
+        var units = 0
+        var notRunning = 0
+        var failed = 0
+        var inaccessible = 0
+        var archives = totals.archives
+        var filesDone = totals.filesDone
+        var fileUnits = totals.fileUnits
+
+        // Saves what was read; the position it records is where a run again starts
+        suspend fun save() {
+            val batch = repository.importBatch(candidates.toList(), WorkoutStore.Mode.INLINE)
+            totals = totals.plus(batch, units).copy(
+                total = if (archives) 0 else totals.total,
+                notRunning = totals.notRunning + notRunning,
+                failed = totals.failed + failed,
+                inaccessible = totals.inaccessible + inaccessible,
+                filesDone = filesDone,
+                fileUnits = fileUnits,
+                archives = archives
+            )
+            candidates.clear()
+            units = 0
+            notRunning = 0
+            failed = 0
+            inaccessible = 0
+            onBatch(totals)
+        }
+
+        // Checked before a unit is taken (and after a file): a save never falls inside a unit
+        suspend fun saveWhenDue() {
+            if (candidates.size >= FILE_BATCH || units >= UNIT_BATCH) save()
+        }
+
+        for (file in files.drop(filesDone)) {
+            // A file that does not open is one unit, an error or no access
+            val stream = try {
+                file.open().also {
+                    if (it == null) {
+                        Log.w(TAG, "Cannot open ${file.name}")
+                        failed++
+                        units++
+                    }
+                }
+            } catch (e: SecurityException) {
+                Log.w(TAG, "No access to ${file.name}: ${e.message}")
+                inaccessible++
+                units++
+                null
+            }
+            if (stream != null) {
+                stream.use { input ->
+                    for (read in walker.units(file.name, input, skip = fileUnits)) {
+                        ensureActive()
+                        if (read == ImportRead.Archive) {
+                            archives = true
+                            continue
                         }
-                        Read.Failed -> {
-                            failed++
-                            null
+                        saveWhenDue()
+                        when (read) {
+                            is ImportRead.Track -> candidates += read.candidate
+                            is ImportRead.Backup -> {
+                                // Its rows go in batches of their own; a run again reads it whole (copies dropped)
+                                save()
+                                totals = importBackupRows(read.reader, totals, onBatch)
+                            }
+                            ImportRead.NotRunning -> notRunning++
+                            ImportRead.Failed -> failed++
+                            ImportRead.Ignored, ImportRead.Archive -> Unit
                         }
-                        Read.NoAccess -> {
-                            inaccessible++
-                            null
-                        }
+                        units++
+                        fileUnits++
                     }
                 }
             }
-            totals = totals.plus(repository.importBatch(candidates, WorkoutStore.Mode.INLINE), chunk.size)
-                .let {
-                    it.copy(
-                        notRunning = it.notRunning + notRunning,
-                        failed = it.failed + failed,
-                        inaccessible = it.inaccessible + inaccessible
-                    )
-                }
-            onBatch(totals)
+            filesDone++
+            fileUnits = 0
+            saveWhenDue()
         }
-        return resultOf(totals, changedRecordDistances = repository.recordDistancesHeldBy(totals.insertedIds))
+        if (units > 0 || candidates.isNotEmpty()) save()
+        resultOf(totals, changedRecordDistances = repository.recordDistancesHeldBy(totals.insertedIds))
+    }
+
+    /**
+     * The item "Import backup": a JSON backup is read row by row (a run again continues from
+     * [from]); anything else (a ZIP holding the backup) is read as files.
+     */
+    suspend fun importBackupFile(
+        file: ImportFile,
+        from: ImportTotals = ImportTotals(),
+        onBatch: suspend (ImportTotals) -> Unit = {}
+    ): ImportResult {
+        val format = withContext(Dispatchers.IO) {
+            (file.open() ?: throw IllegalStateException("Cannot open ${file.name}")).use {
+                ImportFormat.sniff(BufferedInputStream(it))
+            }
+        }
+        if (format != ImportFormat.BACKUP) return importFiles(listOf(file), from, onBatch)
+        return importBackup(
+            open = {
+                val stream = file.open() ?: throw IllegalStateException("Cannot open ${file.name}")
+                InputStreamReader(stream, Charsets.UTF_8).buffered()
+            },
+            from,
+            onBatch
+        )
+    }
+
+    /** The rows of a backup met among files, added to [totals] (not counted as units). */
+    private suspend fun importBackupRows(
+        reader: Reader,
+        totals: ImportTotals,
+        onBatch: suspend (ImportTotals) -> Unit
+    ): ImportTotals {
+        var result = totals
+        for (batch in WorkoutBackupFormat.backupBatches(reader, BACKUP_BATCH)) {
+            currentCoroutineContext().ensureActive()
+            val saved = repository.importBatch(batch.map { ImportCandidate(it) }, WorkoutStore.Mode.DEFERRED)
+            result = result.plus(saved, rows = 0)
+            onBatch(result)
+        }
+        return result
     }
 
     /** Imports a JSON backup read from [open] as it goes, after its first [from].done rows. */
@@ -137,33 +240,17 @@ class WorkoutImporter(private val repository: WorkoutRepository) {
         changedRecordDistances = changedRecordDistances
     )
 
-    private sealed interface Read {
-        class Workout(val candidate: ImportCandidate) : Read
-        data object NotRunning : Read
-        data object Failed : Read
-        data object NoAccess : Read
-    }
-
-    private fun read(file: ImportFile): Read = try {
-        val workout = file.open()?.use { TrackFileImport.parse(it, file.name) }
-            ?: throw IllegalStateException("Cannot open ${file.name}")
-        Read.Workout(ImportCandidate(workout, source = file.name))
-    } catch (e: NotRunningException) {
-        Log.i(TAG, "Skip ${file.name}: not a run")
-        Read.NotRunning
-    } catch (e: SecurityException) {
-        Log.w(TAG, "No access to ${file.name}: ${e.message}")
-        Read.NoAccess
-    } catch (e: Exception) {
-        Log.w(TAG, "Skip track file ${file.name}: ${e.message}")
-        Read.Failed
-    }
-
     companion object {
         private const val TAG = "WorkoutImport"
 
-        /** Files per transaction: a few dozen tracks in memory at once. */
+        /** Workouts per transaction: a few dozen tracks in memory at once. */
         const val FILE_BATCH = 25
+
+        /**
+         * Units read between saves at most, workouts or not: a run again after a kill does not
+         * page through thousands of a big export's other files again.
+         */
+        const val UNIT_BATCH = 100
 
         /** Backup rows per transaction (saved uncomputed: small). */
         const val BACKUP_BATCH = 200

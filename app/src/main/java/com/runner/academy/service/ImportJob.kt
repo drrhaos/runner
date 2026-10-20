@@ -12,13 +12,13 @@ import java.util.UUID
 /** What an import reads. Every field has a default, so it is read back from JSON. */
 data class ImportRequest(val kind: Kind = Kind.FILES, val uris: List<String> = emptyList()) {
     enum class Kind {
-        /** GPX / TCX files picked one by one. */
+        /** Files picked one by one: tracks, archives of them, backups — told by content. */
         FILES,
 
-        /** A folder tree: its GPX / TCX files, recursively. */
+        /** A folder tree: every file but photos, videos and sound, recursively. */
         FOLDER,
 
-        /** One JSON backup. */
+        /** One JSON backup, or an archive holding one. */
         BACKUP
     }
 }

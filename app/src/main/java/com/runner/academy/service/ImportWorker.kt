@@ -13,10 +13,8 @@ import com.runner.academy.appContainer
 import com.runner.academy.data.ImportFile
 import com.runner.academy.data.ImportTotals
 import com.runner.academy.data.WorkoutImporter
-import com.runner.academy.util.TrackFileImport
 import kotlinx.coroutines.CancellationException
 import java.io.File
-import java.io.InputStreamReader
 
 /**
  * Imports one [ImportJob] in the foreground (a long import outlasts a background worker's
@@ -59,7 +57,7 @@ class ImportWorker(context: Context, params: WorkerParameters) : CoroutineWorker
                     }
                     importer.importFiles(files, job.totals, onBatch)
                 }
-                ImportRequest.Kind.BACKUP -> importer.importBackup(open = { reader(request.uris.single().toUri()) }, job.totals, onBatch)
+                ImportRequest.Kind.BACKUP -> importer.importBackupFile(files(request.uris.map { it.toUri() }).single(), job.totals, onBatch)
             }
             ImportJobs.finish(applicationContext, file)
             notifications.finished(result)
@@ -79,33 +77,41 @@ class ImportWorker(context: Context, params: WorkerParameters) : CoroutineWorker
     private fun files(uris: List<Uri>): List<ImportFile> =
         uris.mapNotNull { DocumentFile.fromSingleUri(applicationContext, it) }.map(::importFile)
 
-    /** The folder's track files in a stable order: a run again continues after the same ones. */
+    /**
+     * The folder's files in a stable order (a run again continues after the same ones). Any
+     * name is read, its content tells what it is (a GPX may come as a `.txt`); photos, videos
+     * and sound are not even opened.
+     */
     private fun folderFiles(treeUri: Uri): List<ImportFile> {
         val root = DocumentFile.fromTreeUri(applicationContext, treeUri)
             ?: throw IllegalStateException("Cannot open folder")
-        return collectTrackFiles(root).sortedBy { it.uri.toString() }.map(::importFile)
+        return collectFiles(root).sortedBy { it.uri.toString() }.map(::importFile)
     }
 
     private fun importFile(document: DocumentFile) =
         ImportFile(document.name) { applicationContext.contentResolver.openInputStream(document.uri) }
 
-    private fun collectTrackFiles(dir: DocumentFile): List<DocumentFile> {
+    private fun collectFiles(dir: DocumentFile): List<DocumentFile> {
         val result = mutableListOf<DocumentFile>()
         dir.listFiles().forEach { child ->
             when {
-                child.isDirectory -> result.addAll(collectTrackFiles(child))
-                child.isFile && TrackFileImport.isTrackFileName(child.name) -> result.add(child)
+                child.isDirectory -> result.addAll(collectFiles(child))
+                child.isFile && !ImportFolder.isMedia(child.type) -> result.add(child)
             }
         }
         return result
     }
 
-    private fun reader(uri: Uri) = InputStreamReader(
-        applicationContext.contentResolver.openInputStream(uri) ?: throw IllegalStateException("Cannot open JSON file"),
-        Charsets.UTF_8
-    ).buffered()
-
     private companion object {
         const val TAG = "ImportWorker"
     }
+}
+
+/** What a folder import reads of a folder's files. */
+internal object ImportFolder {
+
+    private val MEDIA = listOf("image/", "video/", "audio/")
+
+    /** A photo, video or sound by its MIME type: no workout, not opened. */
+    fun isMedia(mimeType: String?): Boolean = mimeType != null && MEDIA.any { mimeType.startsWith(it) }
 }

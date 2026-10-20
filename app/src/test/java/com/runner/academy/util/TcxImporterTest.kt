@@ -249,14 +249,6 @@ class TcxImporterTest {
     }
 
     @Test
-    fun isTrackFileName_acceptsGpxAndTcxInAnyCase() {
-        assertTrue(TrackFileImport.isTrackFileName("run.gpx"))
-        assertTrue(TrackFileImport.isTrackFileName("RUN.TCX"))
-        assertFalse(TrackFileImport.isTrackFileName("workouts.csv"))
-        assertFalse(TrackFileImport.isTrackFileName(null))
-    }
-
-    @Test
     fun parseTime_readsZuluOffsetsAndFractions() {
         val expected = Instant.parse("2016-01-13T15:59:30Z").toEpochMilli()
         assertEquals(expected, TrackFileImport.parseTime("2016-01-13T15:59:30Z"))

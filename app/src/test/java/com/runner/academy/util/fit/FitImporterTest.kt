@@ -324,6 +324,5 @@ class FitImporterTest {
         val workout = TrackFileImport.parse(bytes.inputStream(), "export.bin")
 
         assertEquals(0.2f, workout.distance, 1e-4f)
-        assertTrue(TrackFileImport.isTrackFileName("Run.FIT"))
     }
 }

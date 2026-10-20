@@ -24,11 +24,7 @@ class ImportNotifications(private val context: Context) {
 
     fun progress(workId: UUID, done: Int, total: Int): ForegroundInfo {
         createChannel()
-        val text = if (total == 0) {
-            context.getString(R.string.workout_list_import_progress)
-        } else {
-            context.getString(R.string.workout_list_import_progress_count, done, total)
-        }
+        val text = ImportResultText.progress(context, done, total)
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setContentTitle(context.getString(R.string.import_notification_title))
             .setContentText(text)

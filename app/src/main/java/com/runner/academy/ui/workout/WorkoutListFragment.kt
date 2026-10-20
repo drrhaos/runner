@@ -353,11 +353,7 @@ class WorkoutListFragment : Fragment() {
             indicator.max = progress.total
             indicator.setProgressCompat(progress.done, true)
         }
-        binding.textViewImportProgress.text = if (determinate) {
-            getString(R.string.workout_list_import_progress_count, progress.done, progress.total)
-        } else {
-            getString(R.string.workout_list_import_progress)
-        }
+        binding.textViewImportProgress.text = ImportResultText.progress(requireContext(), progress.done, progress.total)
     }
 
     private fun onImportEnded(ended: ImportState.Ended) {

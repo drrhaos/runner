@@ -93,7 +93,7 @@ class ImportWorkerTest {
             com.runner.academy.data.WorkoutStore.Mode.INLINE
         ).insertedIds
         val job = File(dir, "job.json").apply {
-            writeText(Gson().toJson(ImportJob(ImportRequest(ImportRequest.Kind.FILES, listOf(first, second)), ImportTotals(done = 1, insertedIds = firstId))))
+            writeText(Gson().toJson(ImportJob(ImportRequest(ImportRequest.Kind.FILES, listOf(first, second)), ImportTotals(done = 1, insertedIds = firstId, filesDone = 1))))
         }
 
         val output = BackgroundImport.resultOf(run(job).outputData)
@@ -118,6 +118,37 @@ class ImportWorkerTest {
         assertTrue(result is ListenableWorker.Result.Failure)
         assertTrue(result.outputData.getString(BackgroundImport.KEY_ERROR)!!.isNotEmpty())
         assertFalse(job.exists())
+    }
+
+    @Test
+    fun aBackupInAZip_isImportedByTheBackupItem() = runBlocking {
+        val repository = context.appContainer().workoutRepository
+        val before = repository.getAllWorkouts().first().size
+        val json = com.runner.academy.util.WorkoutBackupFormat.toBackupJson(
+            listOf(com.runner.academy.util.TrackFileImport.parse(gpxFile("e.gpx", 5).readText())),
+            "test"
+        )
+        val zip = File(dir, "backup.zip").apply {
+            java.util.zip.ZipOutputStream(outputStream()).use {
+                it.putNextEntry(java.util.zip.ZipEntry("runner_backup.json"))
+                it.write(json.toByteArray())
+            }
+        }
+
+        val output = BackgroundImport.resultOf(run(job(ImportRequest(ImportRequest.Kind.BACKUP, listOf(Uri.fromFile(zip).toString())))).outputData)
+
+        assertEquals(1, output.imported)
+        assertEquals(before + 1, repository.getAllWorkouts().first().size)
+    }
+
+    @Test
+    fun aFolder_leavesMediaUnopened() {
+        assertTrue(ImportFolder.isMedia("image/jpeg"))
+        assertTrue(ImportFolder.isMedia("video/mp4"))
+        assertTrue(ImportFolder.isMedia("audio/mpeg"))
+        assertFalse(ImportFolder.isMedia("application/octet-stream"))
+        assertFalse(ImportFolder.isMedia("text/plain"))
+        assertFalse(ImportFolder.isMedia(null))
     }
 
     @Test

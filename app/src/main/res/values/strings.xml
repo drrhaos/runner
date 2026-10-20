@@ -341,14 +341,14 @@
     <string name="workout_list_fab_close">Close actions</string>
     <string name="workout_list_import_choose_source">Choose import source</string>
     <string name="workout_list_import_json">JSON backup</string>
-    <string name="workout_list_import_track_files">GPX, TCX or FIT files</string>
-    <string name="workout_list_import_track_folder">Folder with GPX, TCX or FIT files</string>
+    <string name="workout_list_import_track_files">Workout files (GPX, TCX, FIT, ZIP)</string>
+    <string name="workout_list_import_track_folder">Folder of workouts or exports</string>
     <string name="workout_list_import_progress">Importing…</string>
     <string name="workout_list_import_success">Imported %1$d workouts</string>
     <string name="workout_list_import_partial">Imported %1$d workouts (%2$d files failed)</string>
     <string name="workout_list_import_empty">Nothing to import</string>
     <string name="workout_list_import_error">Import error: %1$s</string>
-    <string name="workout_list_import_no_track_files">No GPX, TCX or FIT files found in the folder</string>
+    <string name="workout_list_import_no_track_files">No files to import in the folder</string>
     <string name="workout_import_conflict_incoming">Imported</string>
     <string name="workout_import_conflict_others">Overlaps with</string>
     <string name="workout_import_conflict_saved">already in the app</string>
@@ -358,6 +358,7 @@
     <string name="workout_import_conflict_skip">Skip</string>
     <string name="workout_import_conflict_keep_both">Keep both</string>
     <string name="workout_list_import_progress_count">Importing… %1$d of %2$d</string>
+    <string name="workout_list_import_progress_processed">Importing… %1$d processed</string>
     <string name="workout_list_import_pending_summary">Waiting for a decision: %1$d</string>
     <string name="workout_list_import_duplicates_summary">Already there, skipped: %1$d</string>
     <string name="workout_list_import_not_running_summary">Skipped, not a run: %1$d</string>

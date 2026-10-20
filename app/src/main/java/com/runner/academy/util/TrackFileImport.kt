@@ -8,7 +8,6 @@ import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.hasAltitude
-import com.runner.academy.util.fit.FitDecoder
 import com.runner.academy.util.fit.FitImporter
 import java.io.BufferedInputStream
 import java.io.InputStream
@@ -18,11 +17,10 @@ import java.util.Date
 
 /**
  * Imports one workout from a track file: GPX ([GpxImporter]), TCX ([TcxImporter]) or FIT
- * ([FitImporter]), told apart by the content, so a file with an unusual extension still reads.
+ * ([FitImporter]), told apart by the content ([ImportFormat]), so a file with an unusual
+ * extension still reads.
  */
 object TrackFileImport {
-
-    private val EXTENSIONS = listOf(".gpx", ".tcx", ".fit")
 
     /**
      * A track shorter than this share of the distance the device counted: the GPS froze (one
@@ -30,27 +28,26 @@ object TrackFileImport {
      */
     private const val MIN_TRACK_SHARE = 0.8
 
-    /** The TCX root element, with or without a namespace prefix (`<ns2:TrainingCenterDatabase`). */
-    private val TCX_ROOT = Regex("""<(\w+:)?TrainingCenterDatabase[\s>]""")
-
-    /** The file name has an extension [parse] reads: what a folder import picks up. */
-    fun isTrackFileName(name: String?): Boolean =
-        name != null && EXTENSIONS.any { name.endsWith(it, ignoreCase = true) }
-
-    /** A FIT file by its header, else a GPX or TCX text; throws like [parse] of a text. */
+    /**
+     * The workout of a track file of any of the formats. Throws [NotRunningException] for
+     * another sport, IllegalArgumentException for no workout.
+     */
     fun parse(input: InputStream, fileName: String? = null): Workout {
         val buffered = BufferedInputStream(input)
-        if (FitDecoder.isFit(buffered)) return FitImporter.parseFit(buffered, fileName)
-        return parse(buffered.bufferedReader().use { it.readText() }, fileName)
+        return parse(ImportFormat.sniff(buffered), buffered, fileName)
     }
 
-    /** Throws [NotRunningException] for another sport, IllegalArgumentException for no workout. */
-    fun parse(xml: String, fileName: String? = null): Workout =
-        if (TCX_ROOT.containsMatchIn(xml)) {
-            TcxImporter.parseTcx(xml, fileName)
-        } else {
-            GpxImporter.parseGpx(xml, fileName)
-        }
+    fun parse(xml: String, fileName: String? = null): Workout = parse(xml.byteInputStream(), fileName)
+
+    /**
+     * The workout of [input], a file of [format] (FIT, GPX or TCX; anything else is read as GPX,
+     * whose parser tells what is wrong). Throws like [parse].
+     */
+    fun parse(format: ImportFormat, input: BufferedInputStream, fileName: String?): Workout = when (format) {
+        ImportFormat.FIT -> FitImporter.parseFit(input, fileName)
+        ImportFormat.TCX -> TcxImporter.parseTcx(input.also(ImportFormat::skipBlanks), fileName)
+        else -> GpxImporter.parseGpx(input.also(ImportFormat::skipBlanks), fileName)
+    }
 
     /**
      * The workout of an [activity] read from [fileName]. With a track (two points or more) its

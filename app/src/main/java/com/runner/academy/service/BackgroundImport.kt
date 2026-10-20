@@ -28,7 +28,7 @@ sealed interface ImportState {
 
     data class Finished(override val id: UUID, val result: ImportResult) : Ended
 
-    /** A folder without GPX or TCX files. */
+    /** A folder without a file to read. */
     data class NoFiles(override val id: UUID) : Ended
 
     /** Stopped on an error; the batches before it are saved. */

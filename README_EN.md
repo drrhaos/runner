@@ -86,8 +86,8 @@ On **My Workouts**, the **+** FAB opens a speed dial:
 
 **Import**
 - **JSON backup** — including older `com.example.runner` / `export-all-workouts-example` builds (no `isFavorite`, no `after_gap` on points)
-- **GPX, TCX or FIT files** — one or more workouts from the picked files
-- **Folder of GPX, TCX or FIT files** — recursive import of `.gpx`, `.tcx` and `.fit`. A TCX or FIT without GPS (treadmill) or with a frozen GPS is imported from its lap or session totals: distance, time, calories, no track
+- **Workout files** — GPX, TCX, FIT, `.gz` and ZIP archives (full exports of running services, nested archives, the app backup inside); the format is told by content, not by extension, anything else (photos, JSON summaries) is skipped silently
+- **Folder** — recursive, each file told by content (a GPX in `.txt` too); photos, videos and sound are not opened. A TCX or FIT without GPS (treadmill) or with a frozen GPS is imported from its lap or session totals: distance, time, calories, no track
 - Workouts overlapping saved ones (or each other) in time are put aside and reviewed on the **Import conflicts** screen (a banner in My Workouts): skip, replace or keep both. Importing the same files again creates no duplicates
 
 ### 🎨 Interface
@@ -373,7 +373,7 @@ cd runner
 ### Migrating from old `com.example.runner`
 1. In the old build, export a JSON backup (or GPX files)
 2. Install `com.runner.academy`
-3. **My Workouts → + → Import** and pick the JSON file, GPX / TCX / FIT files or a folder of them
+3. **My Workouts → + → Import** and pick the JSON file, files (GPX / TCX / FIT / ZIP) or a folder
 
 ### Settings
 1. Open **"Settings"** section from the side menu
@@ -403,7 +403,8 @@ app/src/main/
 │       ├── GpxExporter.kt           # GPX export (single workout)
 │       ├── GpxImporter.kt           # GPX import
 │       ├── TcxImporter.kt           # TCX import
-│       ├── TrackFileImport.kt       # GPX / TCX / FIT by content
+│       ├── ImportFormat.kt          # File format by its first bytes
+│       ├── TrackFileImport.kt       # GPX / TCX / FIT into a workout
 │       ├── fit/                     # FIT import: FitDecoder (protocol), FitImporter (workout)
 │       ├── WorkoutGpxBulkExporter.kt # ZIP of all GPX
 │       ├── WorkoutBackupFormat.kt   # JSON backup import/export

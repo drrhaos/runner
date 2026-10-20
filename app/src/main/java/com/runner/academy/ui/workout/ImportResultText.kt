@@ -7,6 +7,16 @@ import com.runner.academy.data.ImportResult
 /** What an import did, a line per outcome: the end's message and its notification alike. */
 object ImportResultText {
 
+    /**
+     * A running import: [done] of [total]; with no total (archives) the units read so far,
+     * and nothing yet while it lists.
+     */
+    fun progress(context: Context, done: Int, total: Int): String = when {
+        total > 0 -> context.getString(R.string.workout_list_import_progress_count, done, total)
+        done > 0 -> context.getString(R.string.workout_list_import_progress_processed, done)
+        else -> context.getString(R.string.workout_list_import_progress)
+    }
+
     fun lines(context: Context, result: ImportResult): List<String> = buildList {
         add(
             when {
