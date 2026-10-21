@@ -52,8 +52,9 @@ data class ElevationConfig(
 /**
  * Elevation gain and loss from the point altitudes of the source ([ElevationSeries]: the GPS
  * or file altitude, the barometric one for the barometer). Per continuous piece of the track
- * (cut at every [TrackPoint.afterGap] and at every point without an altitude — for GPS
- * [knownAltitude]: null or the old 0.0: a gap, a bridge or a missing altitude has no reliable
+ * (cut at every [TrackPoint.afterGap] and where fixes without an altitude — for GPS
+ * [knownAltitude]: null or the old 0.0 — last over [ElevationSeries.MAX_HOLE_MS]; shorter
+ * holes are passed over: a gap, a bridge or a long stretch without altitude has no reliable
  * height, so the climb across it is not counted; the tail and a lead-in have no points at all):
  *  1. false fixes out — Hampel filter: a point further than max(k·MAD, floor) from the median
  *     of its time window is replaced by that median;
@@ -87,9 +88,9 @@ object ElevationGain {
     }
 
     /**
-     * (time, altitude) runs between breaks — a gap, a bridge or a point without altitude, as the
-     * elevation chart draws them ([TrackChartBuilder.buildElevationRuns]); never empty.
-     * [altitudes] are the points' own, by index.
+     * (time, altitude) runs between breaks — a gap, a bridge or a stretch without altitude over
+     * [ElevationSeries.MAX_HOLE_MS], as the elevation chart draws them
+     * ([TrackChartBuilder.buildElevationRuns]); never empty. [altitudes] are the points' own, by index.
      */
     private fun pieces(points: List<TrackPoint>, altitudes: List<Double?>): List<List<Pair<Long, Double>>> {
         val pieces = mutableListOf<List<Pair<Long, Double>>>()
@@ -98,10 +99,18 @@ object ElevationGain {
             if (piece.isNotEmpty()) pieces += piece
             piece = mutableListOf()
         }
+        // Fixes without altitude since the last one with: only such a hole breaks by its length
+        var inHole = false
         for ((i, point) in points.withIndex()) {
             if (point.afterGap) close()
             val altitude = altitudes[i]
-            if (altitude == null) close() else piece += point.timestamp to altitude
+            if (altitude == null) {
+                inHole = true
+                continue
+            }
+            if (inHole && piece.isNotEmpty() && point.timestamp - piece.last().first > ElevationSeries.MAX_HOLE_MS) close()
+            inHole = false
+            piece += point.timestamp to altitude
         }
         close()
         return pieces

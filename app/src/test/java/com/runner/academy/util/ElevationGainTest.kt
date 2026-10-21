@@ -109,7 +109,7 @@ class ElevationGainTest {
     }
 
     @Test
-    fun `a point without altitude breaks the piece, the climbs on both sides still count`() {
+    fun `a point without altitude is passed over, the climb goes on across it`() {
         // +20 m over 600 s, +20 m again after one fix without altitude
         val result = gps(points(toSec = 1_201) { sec ->
             when {
@@ -121,6 +121,30 @@ class ElevationGainTest {
 
         assertEquals(40.0, result.gainM.toDouble(), 4.0)
         assertEquals(0f, result.lossM)
+    }
+
+    @Test
+    fun `fixes often without altitude still count the hills`() {
+        // Every third fix without altitude, as some phones give them: was cut into 1-2 s pieces, 0 m
+        val altitude = hills(40.0)
+        val result = gps(points(toSec = 1_800) { sec -> if (sec % 3 == 0) null else altitude(sec) })!!
+
+        assertEquals(120.0, result.gainM.toDouble(), 120 * 0.05)
+        assertEquals(120.0, result.lossM.toDouble(), 120 * 0.05)
+    }
+
+    @Test
+    fun `holes up to the limit are bridged, a longer one breaks the piece`() {
+        fun gainAcross(holeSec: Int) = gps(points(toSec = 600 + holeSec) { sec ->
+            when {
+                sec < 300 -> 150.0
+                sec < 300 + holeSec -> null
+                else -> 200.0
+            }
+        })!!.gainM
+
+        assertEquals(50f, gainAcross((ElevationSeries.MAX_HOLE_MS / 1000).toInt() - 1), 1f)
+        assertEquals(0f, gainAcross((ElevationSeries.MAX_HOLE_MS / 1000).toInt() + 2))
     }
 
     @Test

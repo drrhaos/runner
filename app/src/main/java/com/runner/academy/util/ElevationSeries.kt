@@ -12,6 +12,14 @@ import com.runner.academy.data.knownBaroAltitude
 object ElevationSeries {
 
     /**
+     * Fixes without altitude over at most this long are passed over, the line and the count go
+     * on across them: some phones leave the altitude out of every few fixes, and breaking at each
+     * one cut the track into pieces too short to count any climb (0 m on a hilly run). A longer
+     * stretch without altitude breaks the line: the height across it is not known.
+     */
+    const val MAX_HOLE_MS = 30_000L
+
+    /**
      * GPS and file: the point's [knownAltitude]. Barometer: its [knownBaroAltitude] lifted by
      * the median of (GPS altitude − barometric altitude) over the points that have both, so the
      * uncalibrated pressure altitude reads on a scale like the absolute one (the differences,
