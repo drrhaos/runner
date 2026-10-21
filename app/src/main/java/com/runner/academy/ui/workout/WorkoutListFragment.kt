@@ -14,22 +14,29 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.datepicker.CalendarConstraints
+import com.google.android.material.datepicker.DateValidatorPointBackward
+import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
 import com.runner.academy.appContainer
+import com.runner.academy.data.ExportPeriod
 import com.runner.academy.data.ImportResult
 import com.runner.academy.databinding.FragmentWorkoutListBinding
 import com.runner.academy.service.ImportState
 import com.runner.academy.ui.records.RecordsAnnouncement
 import com.runner.academy.ui.records.RecordsUpdatedSnackbar
 import com.runner.academy.util.ShareExports
-import com.runner.academy.util.WorkoutBackupFormat
 import com.runner.academy.util.WorkoutGpxBulkExporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.time.ZoneId
+
+/** What an export writes. */
+private enum class ExportFormat { JSON, GPX_ZIP }
 
 class WorkoutListFragment : Fragment() {
 
@@ -82,6 +89,7 @@ class WorkoutListFragment : Fragment() {
         setupSwipeRefresh()
         observeViewModel()
         observeImport()
+        reattachExportRangePickers()
     }
 
     private fun setupSwipeRefresh() {
@@ -223,31 +231,88 @@ class WorkoutListFragment : Fragment() {
             .setTitle(R.string.workout_list_export_choose_format)
             .setItems(options) { _, which ->
                 when (which) {
-                    0 -> exportAllAsJson()
-                    1 -> exportAllAsGpxZip()
+                    0 -> showExportPeriodDialog(ExportFormat.JSON)
+                    1 -> showExportPeriodDialog(ExportFormat.GPX_ZIP)
                 }
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
-    private fun exportAllAsJson() {
+    /** All workouts, or those of a period picked on the calendar. */
+    private fun showExportPeriodDialog(format: ExportFormat) {
+        val options = arrayOf(
+            getString(R.string.workout_list_export_period_all),
+            getString(R.string.workout_list_export_period_range)
+        )
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.workout_list_export_choose_period)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> export(format, period = null)
+                    1 -> showExportRangePicker(format)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showExportRangePicker(format: ExportFormat) {
+        val picker = MaterialDatePicker.Builder.dateRangePicker()
+            .setTitleText(R.string.workout_list_export_period_picker_title)
+            .setCalendarConstraints(
+                CalendarConstraints.Builder().setValidator(DateValidatorPointBackward.now()).build()
+            )
+            .build()
+        onExportRangePicked(picker, format)
+        picker.show(childFragmentManager, exportRangeTag(format))
+    }
+
+    /** A picker shown before a rotation is restored without its listener: given it again. */
+    private fun reattachExportRangePickers() {
+        for (format in ExportFormat.entries) {
+            @Suppress("UNCHECKED_CAST")
+            val picker = childFragmentManager.findFragmentByTag(exportRangeTag(format))
+                as? MaterialDatePicker<androidx.core.util.Pair<Long, Long>> ?: continue
+            onExportRangePicked(picker, format)
+        }
+    }
+
+    private fun onExportRangePicked(picker: MaterialDatePicker<androidx.core.util.Pair<Long, Long>>, format: ExportFormat) {
+        picker.addOnPositiveButtonClickListener { selection ->
+            val first = selection.first ?: return@addOnPositiveButtonClickListener
+            val last = selection.second ?: first
+            export(format, ExportPeriod.ofPickerSelection(first, last, ZoneId.systemDefault()))
+        }
+    }
+
+    private fun exportRangeTag(format: ExportFormat) = "export_range_${format.name}"
+
+    private fun export(format: ExportFormat, period: ExportPeriod?) = when (format) {
+        ExportFormat.JSON -> exportAsJson(period)
+        ExportFormat.GPX_ZIP -> exportAsGpxZip(period)
+    }
+
+    /** "Nothing to export": said for the period when one was picked. */
+    private fun showNothingToExport(period: ExportPeriod?) {
+        val message = if (period == null) R.string.no_data_export else R.string.workout_list_export_period_empty
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun exportAsJson(period: ExportPeriod?) {
         viewLifecycleOwner.lifecycleScope.launch {
             val progress = showProgressDialog(R.string.workout_list_export_progress)
             try {
-                val workouts = viewModel.loadAllForExport()
-                if (workouts.isEmpty()) {
-                    Toast.makeText(requireContext(), R.string.no_data_export, Toast.LENGTH_SHORT).show()
+                val ids = viewModel.exportIds(period)
+                if (ids.isEmpty()) {
+                    showNothingToExport(period)
                     return@launch
                 }
-                val json = withContext(Dispatchers.Default) {
-                    WorkoutBackupFormat.toBackupJson(workouts, requireContext().packageName)
-                }
-                val fileName = WorkoutBackupFormat.getBackupJsonFileName()
-                val file = withContext(Dispatchers.IO) {
-                    writeTempTextFile(fileName, json)
-                }
+                val file = viewModel.writeBackupJson(ids, requireContext().cacheDir, requireContext().packageName)
                 shareFile(file, "application/json")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // The screen left during a long export: nothing to tell
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "JSON export failed: ${e.message}", e)
                 Toast.makeText(
@@ -261,21 +326,18 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
-    private fun exportAllAsGpxZip() {
+    private fun exportAsGpxZip(period: ExportPeriod?) {
         viewLifecycleOwner.lifecycleScope.launch {
             val progress = showProgressDialog(R.string.workout_list_export_progress)
             try {
-                val workouts = viewModel.loadAllForExport()
-                if (workouts.isEmpty()) {
-                    Toast.makeText(requireContext(), R.string.no_data_export, Toast.LENGTH_SHORT).show()
+                val ids = viewModel.exportIds(period)
+                if (ids.isEmpty()) {
+                    showNothingToExport(period)
                     return@launch
                 }
+                val context = requireContext().applicationContext
                 val result = withContext(Dispatchers.IO) {
-                    WorkoutGpxBulkExporter.exportToZip(
-                        workouts,
-                        requireContext(),
-                        requireContext().cacheDir
-                    )
+                    WorkoutGpxBulkExporter.exportToZip(viewModel.workoutsForExport(ids), context, context.cacheDir)
                 }
                 shareFile(result.zipFile, "application/zip", showReadyToast = result.skippedWithoutTrack == 0)
                 if (result.skippedWithoutTrack > 0) {
@@ -289,6 +351,8 @@ class WorkoutListFragment : Fragment() {
                         Toast.LENGTH_LONG
                     ).show()
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "GPX ZIP export failed: ${e.message}", e)
                 Toast.makeText(
@@ -300,10 +364,6 @@ class WorkoutListFragment : Fragment() {
                 dismissProgressSafely(progress)
             }
         }
-    }
-
-    private fun writeTempTextFile(fileName: String, content: String): File {
-        return ShareExports.writeCacheText(requireContext(), fileName, content)
     }
 
     private fun shareFile(file: File, mimeType: String, showReadyToast: Boolean = true) {

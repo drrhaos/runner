@@ -1,16 +1,20 @@
 package com.runner.academy.util
 
-import com.google.gson.JsonArray
+import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
+import com.google.gson.stream.JsonWriter
 import com.runner.academy.data.PauseKind
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
+import java.io.Closeable
 import java.io.Reader
 import java.io.StringReader
+import java.io.StringWriter
+import java.io.Writer
 import java.util.Date
 
 /**
@@ -79,14 +83,17 @@ object WorkoutBackupFormat {
 
     /**
      * The workouts of a backup [batchSize] at a time, read as they are consumed: the file is
-     * never held whole. The first [skip] rows (imported before) are passed over unconverted.
-     * [onCount] gets the declared `workoutCount` when the file has one before its rows. Throws
-     * [IllegalArgumentException] on a broken file or one without workouts, when reached.
+     * never held whole. A batch is cut earlier once its tracks reach [maxBatchChars] — rows
+     * with tracks are hundreds of KB each, rows without a few hundred bytes. The first [skip]
+     * rows (imported before) are passed over unconverted. [onCount] gets the declared
+     * `workoutCount` when the file has one before its rows. Throws [IllegalArgumentException]
+     * on a broken file or one without workouts, when reached.
      */
     fun backupBatches(
         reader: Reader,
         batchSize: Int,
         skip: Int = 0,
+        maxBatchChars: Long = Long.MAX_VALUE,
         onCount: (Int) -> Unit = {}
     ): Sequence<List<Workout>> = sequence {
         JsonReader(reader).use { json ->
@@ -101,16 +108,22 @@ object WorkoutBackupFormat {
                             found = true
                             json.beginArray()
                             val batch = mutableListOf<Workout>()
+                            var batchChars = 0L
                             while (json.hasNext()) {
                                 val element = JsonParser.parseReader(json)
                                 if (!element.isJsonObject) {
                                     throw IllegalArgumentException("Workout at index $rows is not an object")
                                 }
-                                if (rows >= skip) batch += element.asJsonObject.toDto().toWorkout()
+                                if (rows >= skip) {
+                                    val workout = element.asJsonObject.toDto().toWorkout()
+                                    batch += workout
+                                    batchChars += workout.trackData?.length ?: 0
+                                }
                                 rows++
-                                if (batch.size == batchSize) {
+                                if (batch.size == batchSize || batchChars >= maxBatchChars) {
                                     yield(batch.toList())
                                     batch.clear()
+                                    batchChars = 0L
                                 }
                             }
                             json.endArray()
@@ -131,17 +144,48 @@ object WorkoutBackupFormat {
         }
     }
 
+    /** A whole backup in memory: for tests and small sets; an export writes [BackupWriter]. */
     fun toBackupJson(workouts: List<Workout>, packageName: String): String {
-        val workoutsArray = JsonArray()
-        workouts.forEach { workoutsArray.add(it.toJsonObject()) }
-        return JsonObject().apply {
-            addProperty("formatVersion", FORMAT_VERSION)
-            addProperty("exportedAt", java.time.Instant.now().toString())
-            addProperty("packageName", packageName)
-            addProperty("workoutCount", workouts.size)
-            add("workouts", workoutsArray)
-        }.toString()
+        val out = StringWriter()
+        BackupWriter(out, packageName, workouts.size).use { writer ->
+            workouts.forEach(writer::write)
+            writer.finish()
+        }
+        return out.toString()
     }
+
+    /**
+     * Writes a backup to [out] row by row, as [backupBatches] reads it: only the row being
+     * written is held. The header comes first, `workoutCount` ([workoutCount]) before the rows
+     * so an import knows its total from the start. [finish] closes the array and the object;
+     * a writer closed without it leaves a cut file, which an import rejects.
+     */
+    class BackupWriter(out: Writer, packageName: String, workoutCount: Int) : Closeable {
+        private val json = JsonWriter(out)
+
+        init {
+            json.beginObject()
+            json.name("formatVersion").value(FORMAT_VERSION.toLong())
+            json.name("exportedAt").value(java.time.Instant.now().toString())
+            json.name("packageName").value(packageName)
+            json.name("workoutCount").value(workoutCount.toLong())
+            json.name("workouts").beginArray()
+        }
+
+        fun write(workout: Workout) {
+            gson.toJson(workout.toJsonObject(), json)
+        }
+
+        fun finish() {
+            json.endArray()
+            json.endObject()
+            json.flush()
+        }
+
+        override fun close() = json.close()
+    }
+
+    private val gson = Gson()
 
     /** One workout as a backup row holds it: [parseWorkoutJson] reads it back. */
     fun toWorkoutJson(workout: Workout): String = workout.toJsonObject().toString()

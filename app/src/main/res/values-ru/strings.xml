@@ -328,6 +328,11 @@
     <string name="workout_list_export_ready">Экспорт готов</string>
     <string name="workout_list_export_title">Экспорт тренировок</string>
     <string name="workout_list_export_gpx_partial">Экспортировано GPX: %1$d (без трека пропущено: %2$d)</string>
+    <string name="workout_list_export_choose_period">Какие тренировки экспортировать</string>
+    <string name="workout_list_export_period_all">Все тренировки</string>
+    <string name="workout_list_export_period_range">За период…</string>
+    <string name="workout_list_export_period_picker_title">Период экспорта</string>
+    <string name="workout_list_export_period_empty">За этот период тренировок нет</string>
     <string name="workout_list_fab_actions">Действия с тренировками</string>
     <string name="workout_list_fab_close">Закрыть действия</string>
     <string name="workout_list_import_choose_source">Выберите источник импорта</string>

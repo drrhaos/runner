@@ -273,4 +273,28 @@ class WorkoutImporterTest {
         assertEquals("a restart reads only the rows after", 0, again.imported)
         assertEquals(1, again.duplicates)
     }
+
+    @Test
+    fun backupRowsWithTracks_goInBatchesCutBySize_andAllArrive() = runBlocking {
+        val workouts = (1..5).map { n ->
+            val start = n * 86_400_000L
+            val track = """{"points":[{"latitude":55.75,"longitude":37.61,"timestamp":$start},""" +
+                """{"latitude":55.76,"longitude":37.61,"timestamp":${start + 600_000L}}],""" +
+                """"total_distance":1100,"total_duration":600000,"avg_speed":1.8,"max_speed":2,"start_time":$start}"""
+            Workout(
+                date = Date(start), distance = 1.1f, duration = 600_000L, movingDuration = 600_000L,
+                avgPace = 9f, calories = null, notes = null, type = WorkoutType.EASY_RUN, trackData = track
+            )
+        }
+        val json = WorkoutBackupFormat.toBackupJson(workouts, "test")
+        val progress = mutableListOf<Int>()
+        // Any track fills a batch: one row per transaction
+        val bySize = WorkoutImporter(repository, backupBatchChars = 1L)
+
+        val result = bySize.importBackup(open = { StringReader(json) }) { progress += it.done }
+
+        assertEquals(listOf(1, 2, 3, 4, 5), progress)
+        assertEquals(5, result.imported)
+        assertEquals(5, savedCount())
+    }
 }

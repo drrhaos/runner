@@ -72,7 +72,9 @@ data class ImportResult(
  */
 class WorkoutImporter(
     private val repository: WorkoutRepository,
-    private val walker: ImportWalker = ImportWalker()
+    private val walker: ImportWalker = ImportWalker(),
+    /** Track characters per backup transaction at most ([BACKUP_BATCH_CHARS]). */
+    private val backupBatchChars: Long = BACKUP_BATCH_CHARS
 ) {
 
     /**
@@ -209,7 +211,7 @@ class WorkoutImporter(
     ): Pair<ImportTotals, Boolean> {
         var result = totals
         try {
-            for (batch in WorkoutBackupFormat.backupBatches(backup.reader, BACKUP_BATCH)) {
+            for (batch in WorkoutBackupFormat.backupBatches(backup.reader, BACKUP_BATCH, maxBatchChars = backupBatchChars)) {
                 currentCoroutineContext().ensureActive()
                 val saved = repository.importBatch(batch.map { ImportCandidate(it) }, WorkoutStore.Mode.DEFERRED)
                 result = result.plus(saved, rows = batch.size)
@@ -232,7 +234,9 @@ class WorkoutImporter(
     ): ImportResult = withContext(Dispatchers.IO) {
         var totals = from
         open().use { reader ->
-            val batches = WorkoutBackupFormat.backupBatches(reader, BACKUP_BATCH, skip = from.done) { count ->
+            val batches = WorkoutBackupFormat.backupBatches(
+                reader, BACKUP_BATCH, skip = from.done, maxBatchChars = backupBatchChars
+            ) { count ->
                 totals = totals.copy(total = count)
             }
             for (batch in batches) {
@@ -266,7 +270,13 @@ class WorkoutImporter(
          */
         const val UNIT_BATCH = 100
 
-        /** Backup rows per transaction (saved uncomputed: small). */
+        /** Backup rows per transaction at most (saved uncomputed: no derivation to wait for). */
         const val BACKUP_BATCH = 200
+
+        /**
+         * Track characters per backup transaction at most: a row with a track is hundreds of KB,
+         * so 200 of them would hold 100+ MB; this keeps a batch to ~8 MB of strings.
+         */
+        const val BACKUP_BATCH_CHARS = 4_000_000L
     }
 }
