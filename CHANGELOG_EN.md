@@ -4,9 +4,9 @@
 
 Change history for Runner. Version numbers match git tags `v.X.Y.Z` (release `versionName` = `X.Y.Z`).
 
-Current release: **`v.0.1.5`**.
+Current release: **`v.0.1.6`**.
 
-## Unreleased
+## 0.1.6 — `v.0.1.6`
 
 - False GPS signal (spoofing, jamming): teleport fixes, frozen coordinates and impossible speeds are dropped, no jumps are kept in the track
 - A dropped stretch is still counted: steps × stride or the straight line, whichever is longer; the map draws it with its own dashes
@@ -49,6 +49,13 @@ Current release: **`v.0.1.5`**.
 - FIT import (files of sports watches and bike computers) with its own reader, no third-party library: from picked files or a folder together with GPX and TCX, the format told by the content. The track keeps heart rate, cadence and altitude, pauses follow the watch timer (auto or manual); distance, time, calories and laps are as the watch counted them; the device is its model name or maker. Treadmill and indoor runs have no track and keep the session heart rate and cadence. A damaged or cut file imports what could be read; multisport and other sports are skipped as "not a run"
 - Archive import: `.gz` and ZIP, full exports of running services among them (nested ZIPs, `.fit.gz`, GPX in `.txt`) and the app backup inside an archive. Each file is told by its content, not its extension; photos, summaries and the rest are skipped silently, broken files count as errors. An archive is read as a stream, nothing unpacked to disk; progress shows "N processed", and after the process is killed the import goes on from the same place. A folder is read whole by content, no extension filter. "Import backup" takes a ZIP holding the backup too
 - On the workout screen: the name from the file heads the card above the date, the device sits under the type with a watch icon, the note (the file description too) shows under the tiles, four lines until tapped; a "Laps" card (#, km, time, pace, HR) on the Basic tab when there are two laps or more, a treadmill run without a track included. The list shows the name in place of the type, and the workout form has a "Name" field
+- Fast scroll through the history: a thumb on the right edge of the list; dragging it shows the month and year beside the finger, with a light tick at each new month. It appears with 30+ workouts over two months or more; the cards under it stay tappable. The list knows its full length, so a jump anywhere does not page through everything in between
+- The My workouts header is one line: workouts · km · average pace, with a Favorites star filter at its end. It slides away on scrolling down and comes back on scrolling up; the import cards stay put
+- Units in captions: in details and the list the values are bare numbers and the caption names the unit ("Pace, min/km", "Heart rate, bpm"), distance to two decimals; calories on a list card show in kcal
+- Details: tiles flow in rows of three without holes, a short row centred; chart pace axes read min:sec, the pace line breaks at stops and faster is higher; splits are labelled "km 1"; charts are in kilometres like the rest of the app
+- Exporting all workouts no longer runs out of memory on a long history: the backup and the GPX archive are streamed straight to the file, and leaving the screen during an export no longer crashes. Workouts of a period can be exported, picked as a date range on a calendar. Importing a backup with long tracks no longer fills the memory
+- GPX export writes the elevation the details show (the barometer's when it was the source), so other apps count the same gain
+- Elevation gain and loss are no longer zero on phones that leave the altitude out of some fixes; stored workouts are recalculated in the background
 
 ## 0.1.5a1 — `v.0.1.5a1`
 
