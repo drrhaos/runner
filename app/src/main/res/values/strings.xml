@@ -323,12 +323,14 @@
     <string name="statistics_message_no_data">There is no data to display. Start training sessions to see statistics.</string>
 
     <string name="workout_list_num_workouts">Training sessions</string>
-    <string name="workout_list_average_pace">Avg pace, min/km</string>
+    <!-- The one-line totals above the list: "128 workouts · 1234.5 km · 5:06 /km" -->
+    <string name="workout_list_stat_workouts">workouts</string>
+    <string name="workout_list_stat_pace">/km</string>
+    <string name="workout_list_stat_separator" translatable="false">·</string>
     <string name="workout_list_message_no_workouts">No training sessions yet</string>
     <string name="workout_list_message_start_workout">Start training to create a record.</string>
     <string name="workout_list_empty_start">Start workout</string>
     <string name="workout_list_content_description_empty">No workouts yet</string>
-    <string name="workout_list_filter_all">All</string>
     <string name="workout_list_filter_favorites">Favorites</string>
     <string name="workout_list_message_no_favorites">No favorite routes yet</string>
     <string name="workout_list_message_add_favorites">Mark a workout with a star to save it here.</string>
