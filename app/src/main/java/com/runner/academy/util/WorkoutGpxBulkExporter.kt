@@ -2,6 +2,7 @@ package com.runner.academy.util
 
 import android.content.Context
 import com.runner.academy.data.Workout
+import kotlinx.coroutines.flow.Flow
 import java.io.File
 import java.time.Instant
 import java.time.ZoneOffset
@@ -23,28 +24,35 @@ object WorkoutGpxBulkExporter {
         val skippedWithoutTrack: Int
     )
 
-    fun exportToZip(workouts: List<Workout>, context: Context, targetDir: File): GpxZipResult {
+    /** Writes one GPX at a time as [workouts] are collected: the history is never held whole. */
+    suspend fun exportToZip(workouts: Flow<Workout>, context: Context, targetDir: File): GpxZipResult {
         targetDir.mkdirs()
         val zipFile = File(targetDir, getZipFileName())
         var exported = 0
         var skipped = 0
         val usedNames = mutableSetOf<String>()
 
-        ZipOutputStream(zipFile.outputStream().buffered()).use { zip ->
-            workouts.forEach { workout ->
-                val trackData = TrackDataJson.parse(workout.trackData)
-                if (trackData == null || trackData.points.isEmpty()) {
-                    skipped++
-                    return@forEach
+        try {
+            ZipOutputStream(zipFile.outputStream().buffered()).use { zip ->
+                workouts.collect { workout ->
+                    val trackData = TrackDataJson.parse(workout.trackData)
+                    if (trackData == null || trackData.points.isEmpty()) {
+                        skipped++
+                        return@collect
+                    }
+                    val baseName = GpxExporter.getGpxFileName(workout, context)
+                    val entryName = uniqueName(baseName, usedNames)
+                    val gpx = GpxExporter.exportWorkoutToGpx(workout, trackData, context)
+                    zip.putNextEntry(ZipEntry(entryName))
+                    zip.write(gpx.toByteArray(Charsets.UTF_8))
+                    zip.closeEntry()
+                    exported++
                 }
-                val baseName = GpxExporter.getGpxFileName(workout, context)
-                val entryName = uniqueName(baseName, usedNames)
-                val gpx = GpxExporter.exportWorkoutToGpx(workout, trackData, context)
-                zip.putNextEntry(ZipEntry(entryName))
-                zip.write(gpx.toByteArray(Charsets.UTF_8))
-                zip.closeEntry()
-                exported++
             }
+        } catch (e: Throwable) {
+            // A cut archive is no export
+            zipFile.delete()
+            throw e
         }
 
         if (exported == 0) {

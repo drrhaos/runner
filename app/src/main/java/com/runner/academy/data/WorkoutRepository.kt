@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
@@ -34,6 +35,22 @@ class WorkoutRepository(
      * Get all workouts ordered by date descending as a Flow.
      */
     fun getAllWorkouts(): Flow<List<Workout>> = workoutDao.getAllWorkouts()
+
+    /** The ids of every workout, or of those in [period], newest first: the snapshot an export goes through. */
+    suspend fun workoutIdsNewestFirst(period: ExportPeriod? = null): List<Long> = withContext(Dispatchers.IO) {
+        if (period == null) workoutDao.idsNewestFirst() else workoutDao.idsNewestFirstBetween(period.fromMs, period.toMs)
+    }
+
+    /**
+     * The whole rows of [ids] in their order, read [EXPORT_PAGE] at a time: an export of the
+     * whole history holds a few tracks, never all of them. An id deleted meanwhile is passed over.
+     */
+    fun workoutsForExport(ids: List<Long>): Flow<Workout> = flow {
+        for (page in ids.chunked(EXPORT_PAGE)) {
+            val rows = workoutDao.getWorkoutsByIds(page).associateBy { it.id }
+            page.forEach { id -> rows[id]?.let { emit(it) } }
+        }
+    }.flowOn(Dispatchers.IO)
 
     fun pagingSourceAll(): PagingSource<Int, WorkoutListItem> = workoutDao.pagingSourceAll()
 
@@ -224,5 +241,10 @@ class WorkoutRepository(
 
     suspend fun getTotalMovingDuration(): Long? = withContext(Dispatchers.IO) {
         workoutDao.getTotalMovingDuration()
+    }
+
+    companion object {
+        /** Whole rows per query of an export: a long run's track is a few hundred KB. */
+        const val EXPORT_PAGE = 10
     }
 }

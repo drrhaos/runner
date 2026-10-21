@@ -45,6 +45,18 @@ abstract class WorkoutDao {
     )
     abstract suspend fun getStatsRows(): List<WorkoutStatsRow>
 
+    /** Every id, as [getAllWorkouts] orders them: what an export goes through a page at a time. */
+    @Query("SELECT id FROM workouts ORDER BY date DESC")
+    abstract suspend fun idsNewestFirst(): List<Long>
+
+    /** As [idsNewestFirst], of the workouts started in [fromMs]..[toMs] (inclusive). */
+    @Query("SELECT id FROM workouts WHERE date BETWEEN :fromMs AND :toMs ORDER BY date DESC")
+    abstract suspend fun idsNewestFirstBetween(fromMs: Long, toMs: Long): List<Long>
+
+    /** The whole rows of [ids], in no order; an id deleted meanwhile is left out. */
+    @Query("SELECT * FROM workouts WHERE id IN (:ids)")
+    abstract suspend fun getWorkoutsByIds(ids: List<Long>): List<Workout>
+
     @Query("SELECT * FROM workouts WHERE id = :id")
     abstract fun getWorkoutById(id: Long): Flow<Workout?>
 

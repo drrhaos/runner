@@ -7,12 +7,14 @@ import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
+import com.runner.academy.data.ExportPeriod
 import com.runner.academy.data.RecordCard
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutListItem
 import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.PaceMath
+import com.runner.academy.util.WorkoutBackupFormat
 import com.runner.academy.util.WorkoutTrackRebuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 enum class WorkoutListFilter {
     ALL,
@@ -35,10 +38,35 @@ enum class WorkoutListFilter {
 class WorkoutViewModel(private val repository: WorkoutRepository) : ViewModel() {
 
     /**
-     * Every workout with its track — only for explicit "export all" actions. Screens page
-     * through [pagedWorkouts] / [routePages] instead.
+     * The ids of every workout, or of those in [period], newest first, for the explicit export
+     * actions: they read the rows a page at a time ([workoutsForExport]). Screens page through
+     * [pagedWorkouts] / [routePages] instead.
      */
-    suspend fun loadAllForExport(): List<Workout> = repository.getAllWorkouts().first()
+    suspend fun exportIds(period: ExportPeriod? = null): List<Long> = repository.workoutIdsNewestFirst(period)
+
+    /** The whole rows of [ids] in their order, a few at a time. */
+    fun workoutsForExport(ids: List<Long>): Flow<Workout> = repository.workoutsForExport(ids)
+
+    /**
+     * Writes the JSON backup of [ids] into [dir] row by row ([WorkoutBackupFormat.BackupWriter]):
+     * 1300 workouts with tracks are hundreds of MB, never held whole. A file cut by an error is
+     * deleted.
+     */
+    suspend fun writeBackupJson(ids: List<Long>, dir: File, packageName: String): File = withContext(Dispatchers.IO) {
+        val file = File(dir, WorkoutBackupFormat.getBackupJsonFileName())
+        try {
+            file.bufferedWriter(Charsets.UTF_8).use { out ->
+                WorkoutBackupFormat.BackupWriter(out, packageName, ids.size).use { writer ->
+                    workoutsForExport(ids).collect(writer::write)
+                    writer.finish()
+                }
+            }
+        } catch (e: Throwable) {
+            file.delete()
+            throw e
+        }
+        file
+    }
 
     private val _listFilter = MutableStateFlow(WorkoutListFilter.ALL)
     val listFilter: StateFlow<WorkoutListFilter> = _listFilter.asStateFlow()

@@ -343,6 +343,11 @@
     <string name="workout_list_export_ready">Export ready</string>
     <string name="workout_list_export_title">Export workouts</string>
     <string name="workout_list_export_gpx_partial">Exported %1$d GPX files (%2$d without track skipped)</string>
+    <string name="workout_list_export_choose_period">Which workouts to export</string>
+    <string name="workout_list_export_period_all">All workouts</string>
+    <string name="workout_list_export_period_range">For a period…</string>
+    <string name="workout_list_export_period_picker_title">Export period</string>
+    <string name="workout_list_export_period_empty">No workouts in this period</string>
     <string name="workout_list_fab_actions">Workout actions</string>
     <string name="workout_list_fab_close">Close actions</string>
     <string name="workout_list_import_choose_source">Choose import source</string>
