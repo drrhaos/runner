@@ -64,10 +64,7 @@ class HistoryFastScroller @JvmOverloads constructor(
 
     /** Where the thumb is along the track, 0 (top) to 1 (bottom). */
     private var fraction = 0f
-
-    /** True while a finger drags the thumb; a pull-to-refresh around the list must not start. */
-    var dragging = false
-        private set
+    private var dragging = false
     private var label: String? = null
     private var labelMonth: WorkoutMonth? = null
 

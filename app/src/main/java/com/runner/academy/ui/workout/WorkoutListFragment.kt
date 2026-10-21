@@ -1,5 +1,6 @@
 package com.runner.academy.ui.workout
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -14,6 +15,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.color.MaterialColors
 import com.google.android.material.datepicker.CalendarConstraints
 import com.google.android.material.datepicker.DateValidatorPointBackward
 import com.google.android.material.datepicker.MaterialDatePicker
@@ -93,11 +95,6 @@ class WorkoutListFragment : Fragment() {
     }
 
     private fun setupSwipeRefresh() {
-        // Its direct child is the ConstraintLayout, which never scrolls and ignores the fast
-        // scroller's requestDisallowInterceptTouchEvent; ask the list and the thumb instead
-        binding.swipeRefreshWorkouts.setOnChildScrollUpCallback { _, _ ->
-            binding.recyclerViewWorkouts.canScrollVertically(-1) || binding.fastScrollerWorkouts.dragging
-        }
         binding.swipeRefreshWorkouts.setOnRefreshListener {
             viewModel.refreshStatistics()
             workoutAdapter.refresh()
@@ -137,13 +134,26 @@ class WorkoutListFragment : Fragment() {
     }
 
     private fun setupFilterChips() {
-        binding.chipGroupWorkoutFilter.setOnCheckedStateChangeListener { _, checkedIds ->
-            val filter = when {
-                checkedIds.contains(R.id.chip_filter_favorites) -> WorkoutListFilter.FAVORITES
-                else -> WorkoutListFilter.ALL
-            }
-            viewModel.setListFilter(filter)
+        val button = binding.buttonFilterFavorites
+        button.isChecked = viewModel.listFilter.value == WorkoutListFilter.FAVORITES
+        showFavoritesFilter(button.isChecked)
+        button.addOnCheckedChangeListener { _, isChecked ->
+            showFavoritesFilter(isChecked)
+            viewModel.setListFilter(if (isChecked) WorkoutListFilter.FAVORITES else WorkoutListFilter.ALL)
         }
+    }
+
+    /** A filled primary star while only favorites are listed, an outlined one otherwise. */
+    private fun showFavoritesFilter(on: Boolean) {
+        val button = binding.buttonFilterFavorites
+        button.setIconResource(if (on) R.drawable.ic_star else R.drawable.ic_star_border)
+        button.iconTint = ColorStateList.valueOf(
+            MaterialColors.getColor(
+                button,
+                if (on) com.google.android.material.R.attr.colorPrimary
+                else com.google.android.material.R.attr.colorOnSurfaceVariant
+            )
+        )
     }
 
     private var isSpeedDialOpen = false

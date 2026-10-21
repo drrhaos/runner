@@ -6,7 +6,8 @@
     <!-- The timer's Auto-paused / Paused chip -->
     <dimen name="timer_state_chip_text">12sp</dimen>
     <dimen name="workout_item_metric_caption">12sp</dimen>
-    <dimen name="workout_list_stat_caption">12sp</dimen>
+    <!-- The speed dial over the main FAB: its 16dp margin, its 56dp size and a 12dp gap -->
+    <dimen name="workout_list_speed_dial_bottom">84dp</dimen>
     <!-- Detail tiles: the caption under every value, the values of the first and the other rows -->
     <dimen name="workout_detail_metric_caption">12sp</dimen>
     <dimen name="workout_detail_metric_value">24sp</dimen>
