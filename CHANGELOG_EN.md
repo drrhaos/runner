@@ -4,7 +4,11 @@
 
 Change history for Runner. Version numbers match git tags `v.X.Y.Z` (release `versionName` = `X.Y.Z`).
 
-Current release: **`v.0.1.6`**.
+Current release: **`v.0.1.7`**.
+
+## 0.1.7 — `v.0.1.7`
+
+- The refresh spinner in My workouts no longer blinks while scrolling: it shows only for a pull to refresh and goes away once the list has loaded
 
 ## 0.1.6 — `v.0.1.6`
 

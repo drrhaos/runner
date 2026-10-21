@@ -94,8 +94,17 @@ class WorkoutListFragment : Fragment() {
         reattachExportRangePickers()
     }
 
+    /**
+     * A pull to refresh in flight: asked for, then loading. Only it shows the spinner — the list
+     * also reloads on its own (a fast scroll jumps over placeholders, the database changes), and
+     * tying the spinner to every such load made it blink while scrolling.
+     */
+    private var pullRefreshAsked = false
+    private var pullRefreshLoading = false
+
     private fun setupSwipeRefresh() {
         binding.swipeRefreshWorkouts.setOnRefreshListener {
+            pullRefreshAsked = true
             viewModel.refreshStatistics()
             workoutAdapter.refresh()
         }
@@ -125,7 +134,13 @@ class WorkoutListFragment : Fragment() {
         workoutAdapter.addLoadStateListener { loadStates ->
             if (_binding == null || !isAdded || isDetached) return@addLoadStateListener
             val refresh = loadStates.refresh
-            binding.swipeRefreshWorkouts.isRefreshing = refresh is LoadState.Loading
+            if (pullRefreshAsked && refresh is LoadState.Loading) {
+                pullRefreshAsked = false
+                pullRefreshLoading = true
+            } else if (pullRefreshLoading && refresh !is LoadState.Loading) {
+                pullRefreshLoading = false
+                binding.swipeRefreshWorkouts.isRefreshing = false
+            }
             val isEmpty = refresh is LoadState.NotLoading &&
                 loadStates.append.endOfPaginationReached &&
                 workoutAdapter.itemCount == 0
