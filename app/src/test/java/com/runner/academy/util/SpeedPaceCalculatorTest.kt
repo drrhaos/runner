@@ -279,14 +279,26 @@ class SpeedPaceCalculatorTest {
     }
 
     @Test
-    fun `the elevation line breaks where there is no altitude, never drawing zero`() {
+    fun `the elevation line passes over short holes in the altitude, never drawing zero`() {
+        // A fix every 10 s: the holes last 20 and 30 s, within the limit
         val altitudes = listOf(100.0, 101.0, null, 103.0, 0.0, 0.0, 106.0, 107.0)
         val points = altitudes.mapIndexed { i, alt -> point(55.75, 37.60 + i * 0.0016, i * 10_000L, altitude = alt) }
 
         val runs = TrackChartBuilder.buildElevationRuns(points, ElevationSource.GPS)
 
-        assertEquals(listOf(listOf(100f, 101f), listOf(103f), listOf(106f, 107f)), runs.map { run -> run.map { it.altitudeMeters } })
+        assertEquals(listOf(listOf(100f, 101f, 103f, 106f, 107f)), runs.map { run -> run.map { it.altitudeMeters } })
         assertTrue(SpeedPaceCalculator.buildElevationSeries(points, ElevationSource.GPS).none { it.altitudeMeters == 0f })
+    }
+
+    @Test
+    fun `the elevation line breaks over a long stretch without altitude`() {
+        // 40 s without altitude: longer than the limit
+        val altitudes = listOf(100.0, 101.0, null, null, null, 105.0, 106.0)
+        val points = altitudes.mapIndexed { i, alt -> point(55.75, 37.60 + i * 0.0016, i * 10_000L, altitude = alt) }
+
+        val runs = TrackChartBuilder.buildElevationRuns(points, ElevationSource.GPS)
+
+        assertEquals(listOf(listOf(100f, 101f), listOf(105f, 106f)), runs.map { run -> run.map { it.altitudeMeters } })
     }
 
     @Test

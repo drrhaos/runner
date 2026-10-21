@@ -129,8 +129,9 @@ object TrackChartBuilder {
         buildElevationRuns(points, source).flatten()
 
     /**
-     * The elevation line over distance as runs of points: it breaks at a point without altitude
-     * ([knownAltitude]: null or the old 0.0, never drawn as zero) and at every
+     * The elevation line over distance as runs of points: a point without altitude
+     * ([knownAltitude]: null or the old 0.0, never drawn as zero) is left out, the line breaks
+     * where such points last over [ElevationSeries.MAX_HOLE_MS] and at every
      * [TrackPoint.afterGap] — a gap or a dropped stretch has no altitude, as in [ElevationGain].
      * The distance still counts a bridge, like the total. The altitudes are those of [source]
      * ([ElevationSeries]: the barometer's lifted to the GPS scale).
@@ -157,10 +158,17 @@ object TrackChartBuilder {
                 )
                 if (points[i].afterGap) closeRun()
             }
-            val altitude = altitudes[i]?.toFloat()
-            if (altitude == null || !altitude.isFinite() || !cumulativeKm.isFinite()) {
+            if (!cumulativeKm.isFinite()) {
                 closeRun()
                 continue
+            }
+            val altitude = altitudes[i]?.toFloat()?.takeIf { it.isFinite() } ?: continue
+            // Fixes without altitude since the last drawn point: only such a hole breaks by its length
+            val last = run.lastOrNull()
+            if (last != null && last.trackPointIndex < i - 1 &&
+                points[i].timestamp - points[last.trackPointIndex].timestamp > ElevationSeries.MAX_HOLE_MS
+            ) {
+                closeRun()
             }
             run.add(
                 ElevationPoint(
