@@ -31,7 +31,9 @@ object GpxExporter {
         
         // GPX заголовок
         builder.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        // creator is required by GPX 1.1; TrackPointExtension v1 only for the heart rate
         builder.append("<gpx version=\"$GPX_VERSION\" ")
+        builder.append("creator=\"").append(escapeXml(context.getString(R.string.app_name))).append("\" ")
         builder.append("xmlns=\"$GPX_NAMESPACE\" ")
         builder.append("xmlns:gpxtpx=\"http://www.garmin.com/xmlschemas/TrackPointExtension/v1\" ")
         builder.append("xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" ")
@@ -48,14 +50,14 @@ object GpxExporter {
         // Трек
         builder.append("  <trk>\n")
         builder.append("    <name>").append(escapeXml(workout.type.displayName(context))).append("</name>\n")
-        builder.append("    <type>Running</type>\n")
-        
-        // Описание
+
+        // Описание: в схеме trk идёт name, cmt, desc, …, type
         val description = buildDescription(workout, context)
         if (description.isNotEmpty()) {
             builder.append("    <desc>").append(escapeXml(description)).append("</desc>\n")
         }
-        
+        builder.append("    <type>Running</type>\n")
+
         // Сегмент трека
         builder.append("    <trkseg>\n")
         
@@ -65,35 +67,23 @@ object GpxExporter {
 
         // Точки трека
         trackData?.points?.forEachIndexed { index, point ->
-            builder.append("      <trkpt lat=\"").append(point.latitude)
-                .append("\" lon=\"").append(point.longitude).append("\">\n")
+            builder.append("      <trkpt lat=\"").append(decimal(point.latitude))
+                .append("\" lon=\"").append(decimal(point.longitude)).append("\">\n")
 
             // Высота: только известная (старое 0.0 значит «нет высоты», а не уровень моря)
             altitudes?.get(index)?.let { altitude ->
-                builder.append("        <ele>").append(altitude).append("</ele>\n")
+                builder.append("        <ele>").append(decimal(altitude)).append("</ele>\n")
             }
-            
+
             // Время
             builder.append("        <time>").append(formatIso8601(Date(point.timestamp))).append("</time>\n")
-            
-            // Расширения (пульс, точность, скорость)
-            if (point.heartRate != null || point.accuracy != null || point.speed != null) {
+
+            // Пульс. В TrackPointExtension v1 только atemp, wtemp, depth, hr, cad: ни точности
+            // (метры, а не HDOP), ни скорости там нет, и файл с ними не проходит схему
+            point.heartRate?.let { bpm ->
                 builder.append("        <extensions>\n")
                 builder.append("          <gpxtpx:TrackPointExtension>\n")
-
-                // Пульс первым: в XSD v1 порядок atemp, wtemp, depth, hr, cad
-                point.heartRate?.let { bpm ->
-                    builder.append("            <gpxtpx:hr>").append(bpm).append("</gpxtpx:hr>\n")
-                }
-
-                point.accuracy?.let { accuracy ->
-                    builder.append("            <gpxtpx:hdop>").append(String.format("%.1f", accuracy)).append("</gpxtpx:hdop>\n")
-                }
-                
-                point.speed?.let { speed ->
-                    builder.append("            <gpxtpx:speed>").append(String.format("%.2f", speed)).append("</gpxtpx:speed>\n")
-                }
-                
+                builder.append("            <gpxtpx:hr>").append(bpm).append("</gpxtpx:hr>\n")
                 builder.append("          </gpxtpx:TrackPointExtension>\n")
                 builder.append("        </extensions>\n")
             }
@@ -126,6 +116,12 @@ object GpxExporter {
         }
         
         return parts.joinToString("; ")
+    }
+
+    /** xsd:decimal: a dot whatever the locale, and never 5.0E-4 near the equator or Greenwich. */
+    private fun decimal(value: Double): String {
+        val text = value.toString()
+        return if ('E' in text) java.math.BigDecimal(text).stripTrailingZeros().toPlainString() else text
     }
 
     private fun formatIso8601(date: Date): String {

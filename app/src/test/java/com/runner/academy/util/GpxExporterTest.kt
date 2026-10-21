@@ -76,7 +76,7 @@ class GpxExporterTest {
     }
 
     @Test
-    fun `the heart rate is the first element of the extension, alone it still opens one`() {
+    fun `the extension holds only the heart rate, as TrackPointExtension v1 allows`() {
         val points = listOf(
             TrackPoint(55.75, 37.60, 1_800_000_000_000L, 5f, 3f, null, heartRate = 150),
             TrackPoint(55.75, 37.6001, 1_800_000_001_000L, null, null, null, heartRate = 151)
@@ -84,9 +84,28 @@ class GpxExporterTest {
 
         val gpx = GpxExporter.exportWorkoutToGpx(workoutOf(points), trackOf(points), context)
 
-        // TrackPointExtension v1 is a sequence: atemp, wtemp, depth, hr, cad
-        assertTrue(gpx.contains("<gpxtpx:TrackPointExtension>\n            <gpxtpx:hr>150</gpxtpx:hr>\n            <gpxtpx:hdop>"))
+        // TrackPointExtension v1 is a sequence of atemp, wtemp, depth, hr, cad: no hdop, no speed
+        assertTrue(gpx.contains("<gpxtpx:TrackPointExtension>\n            <gpxtpx:hr>150</gpxtpx:hr>\n          </gpxtpx:TrackPointExtension>"))
         assertTrue(gpx.contains("<gpxtpx:TrackPointExtension>\n            <gpxtpx:hr>151</gpxtpx:hr>\n          </gpxtpx:TrackPointExtension>"))
+        assertFalse(gpx.contains("hdop"))
+        assertFalse(gpx.contains("speed>"))
+    }
+
+    @Test
+    fun `the root names its creator and the track keeps the schema order`() {
+        val points = listOf(
+            TrackPoint(0.00005, -0.0001, 1_800_000_000_000L, null, null, 0.0005),
+            TrackPoint(0.0001, -0.0002, 1_800_000_001_000L, null, null, 0.001)
+        )
+
+        val gpx = GpxExporter.exportWorkoutToGpx(workoutOf(points), trackOf(points), context)
+
+        assertTrue(Regex("<gpx version=\"1.1\" creator=\"[^\"]+\" ").containsMatchIn(gpx))
+        assertTrue(gpx.indexOf("<desc>") in 0 until gpx.indexOf("<type>"))
+        // xsd:decimal near the equator and Greenwich: no exponent
+        assertTrue(gpx.contains("<trkpt lat=\"0.00005\" lon=\"-0.0001\">"))
+        assertTrue(gpx.contains("<ele>0.0005</ele>"))
+        assertFalse(gpx.contains("E-"))
     }
 
     @Test
