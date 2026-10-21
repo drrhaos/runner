@@ -162,6 +162,8 @@
     <string name="settings_hint_auto_pause_no_sensor">На этом устройстве нет датчика шагов — срабатывает только по GPS, на несколько секунд позже.</string>
     <string name="settings_btn_reset">Сбросить настройки</string>
     <string name="settings_about_title">О приложении</string>
+    <string name="settings_version_title">Версия</string>
+    <string name="settings_version_value">%1$s (сборка %2$d)</string>
     <string name="settings_oss_licenses_title">Лицензии открытого ПО</string>
     <string name="settings_weight_saved">Вес сохранен</string>
     <string name="settings_height_saved">Рост сохранен</string>

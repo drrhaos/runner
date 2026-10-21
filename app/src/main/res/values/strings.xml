@@ -172,6 +172,9 @@
     <string name="settings_hint_auto_pause_no_sensor">This device has no step sensor, so it relies on GPS alone and reacts a few seconds later.</string>
     <string name="settings_btn_reset">Reset settings</string>
     <string name="settings_about_title">About</string>
+    <string name="settings_version_title">Version</string>
+    <!-- versionName (versionCode) -->
+    <string name="settings_version_value">%1$s (build %2$d)</string>
     <string name="settings_oss_licenses_title">Open-source licenses</string>
     <string name="settings_weight_saved">Weight saved</string>
     <string name="settings_height_saved">Height saved</string>

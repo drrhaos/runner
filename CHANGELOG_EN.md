@@ -56,6 +56,7 @@ Current release: **`v.0.1.6`**.
 - Exporting all workouts no longer runs out of memory on a long history: the backup and the GPX archive are streamed straight to the file, and leaving the screen during an export no longer crashes. Workouts of a period can be exported, picked as a date range on a calendar. Importing a backup with long tracks no longer fills the memory
 - GPX export writes the elevation the details show (the barometer's when it was the source), so other apps count the same gain
 - Elevation gain and loss are no longer zero on phones that leave the altitude out of some fixes; stored workouts are recalculated in the background
+- Settings show the app version and build number in the About card
 
 ## 0.1.5a1 — `v.0.1.5a1`
 

@@ -189,6 +189,11 @@ class SettingsFragment : Fragment() {
             showResetConfirmationDialog()
         }
 
+        // Версия: в релизе versionName приходит из тега, локальная сборка — 1.0 (1)
+        binding.textViewAppVersion.text = getString(
+            R.string.settings_version_value, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE
+        )
+
         // Лицензии открытого ПО
         binding.rowOssLicenses.setOnClickListener {
             OpenSourceLicensesDialog.show(requireContext())
