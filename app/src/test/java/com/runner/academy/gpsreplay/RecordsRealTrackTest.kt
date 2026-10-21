@@ -16,7 +16,7 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 /**
- * Local only: the real diagnostics of run 79 (a test phone,false fixes ~9 km away mid-run, see
+ * Local only: the real diagnostics of run 79 (a test phone, false fixes ~9 km away mid-run, see
  * [ElevationRealTrackTest]). The file holds exact coordinates, so it never goes into the
  * repository; without it the test is skipped.
  */

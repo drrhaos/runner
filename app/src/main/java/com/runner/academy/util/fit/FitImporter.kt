@@ -46,13 +46,11 @@ object FitImporter {
 
     // file_id fields
     private const val FILE_ID_TYPE = 0
-    private const val FILE_ID_MANUFACTURER = 1
     private const val FILE_ID_TIME_CREATED = 4
     private const val FILE_ID_PRODUCT_NAME = 8
 
     // device_info fields
     private const val DEVICE_INDEX = 0
-    private const val DEVICE_MANUFACTURER = 2
     private const val DEVICE_PRODUCT_NAME = 27
 
     // sport fields
@@ -116,15 +114,6 @@ object FitImporter {
     private const val MIN_DATE_TIME = 0x10000000L
 
     private const val SEMICIRCLE_DEG = 180.0 / 2_147_483_648.0
-
-    /**
-     * The makers of watches and bike computers, for a device that names no product.
-     */
-    private val MAKERS = mapOf(
-        1 to "Maker A", 13 to "Maker A", 15 to "Maker A", 89 to "Maker B", 23 to "Maker C",
-        32 to "Maker D", 123 to "Maker E", 129 to "Maker F", 294 to "Maker F",
-        289 to "Maker I", 310 to "Maker J", 339 to "Maker K", 348 to "Maker L"
-    )
 
     fun parseFit(input: InputStream, fileName: String? = null): Workout =
         TrackFileImport.workoutOf(parse(input, fileName), fileName)
@@ -272,15 +261,12 @@ object FitImporter {
         return ActivitySport.of(declared.map(ActivitySport::ofFitSport))
     }
 
-    /** The product name of the file or of the recording device (index 0), else its maker. */
+    /** The product name of the file or of the recording device (index 0); never a maker number. */
     private fun deviceOf(fileIds: List<FitMessage>, devices: List<FitMessage>): String? {
         val creator = devices.filter { it.int(DEVICE_INDEX) == 0 }
         val name = fileIds.firstNotNullOfOrNull { it.string(FILE_ID_PRODUCT_NAME) }
             ?: creator.firstNotNullOfOrNull { it.string(DEVICE_PRODUCT_NAME) }
-        if (!name.isNullOrBlank()) return name.trim()
-        val maker = fileIds.firstNotNullOfOrNull { it.int(FILE_ID_MANUFACTURER) }
-            ?: creator.firstNotNullOfOrNull { it.int(DEVICE_MANUFACTURER) }
-        return maker?.let { MAKERS[it] }
+        return name?.trim()?.takeIf { it.isNotEmpty() }
     }
 
     private fun totalsOf(

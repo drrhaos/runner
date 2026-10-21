@@ -227,7 +227,7 @@ class FitImporterTest {
     }
 
     @Test
-    fun `the device is the product name, else the maker`() {
+    fun `the device is the product name, never the maker number`() {
         fun device(writer: FitTestWriter) = activity(writer.track(points = 2).bytes()).device
 
         assertEquals("Run Watch 265", device(FitTestWriter().fileId(productName = "Run Watch 265")))
@@ -239,8 +239,8 @@ class FitImporterTest {
                     .deviceInfo(0, manufacturer = 294, productName = "Trail Watch 3")
             )
         )
-        assertEquals("Maker A", device(FitTestWriter().fileId(manufacturer = 1)))
-        assertEquals("Maker F", device(FitTestWriter().fileId(manufacturer = 294)))
+        assertNull(device(FitTestWriter().fileId(manufacturer = 1)))
+        assertNull(device(FitTestWriter().fileId(manufacturer = 294)))
         assertNull(device(FitTestWriter().fileId(manufacturer = 9999)))
     }
 

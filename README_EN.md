@@ -485,7 +485,6 @@ Current release: **`v.0.0.7`**.
 
 ## 🐛 Known Issues
 
-- Heart rate is shown as a placeholder (`--`) — no BLE/Health Connect integration yet
 - Changing `applicationId` (`com.example.runner` / `com.drrhaos.runner` → `com.runner.academy`) does not migrate data automatically — use **JSON/GPX export** on the old build and **import** on the new one
 
 ## 🔮 Future Plans
