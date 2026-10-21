@@ -93,6 +93,11 @@ class WorkoutListFragment : Fragment() {
     }
 
     private fun setupSwipeRefresh() {
+        // Its direct child is the ConstraintLayout, which never scrolls and ignores the fast
+        // scroller's requestDisallowInterceptTouchEvent; ask the list and the thumb instead
+        binding.swipeRefreshWorkouts.setOnChildScrollUpCallback { _, _ ->
+            binding.recyclerViewWorkouts.canScrollVertically(-1) || binding.fastScrollerWorkouts.dragging
+        }
         binding.swipeRefreshWorkouts.setOnRefreshListener {
             viewModel.refreshStatistics()
             workoutAdapter.refresh()
