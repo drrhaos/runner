@@ -128,4 +128,21 @@ class GpxExporterTest {
 
         assertEquals(listOf(null, null, null, null, 25), imported.points.map { it.heartRate })
     }
+
+    @Test
+    fun `a barometric track exports the barometer's altitudes on the GPS scale, not the GPS ones`() {
+        // GPS altitude 190 m with a false 90 m dip; the barometer reads 40..49 m (off by the weather)
+        val gps = listOf(190.0, 190.0, 190.0, 100.0, 100.0, 190.0, 190.0, 190.0, 190.0, 190.0)
+        val points = gps.mapIndexed { i, alt ->
+            TrackPoint(55.75, 37.60 + i * 0.0001, 1_800_000_000_000L + i * 1_000L, 5f, 3f, alt, baroM = 40f + i)
+        }
+
+        val gpx = GpxExporter.exportWorkoutToGpx(workoutOf(points), trackOf(points), context)
+
+        val elevations = Regex("<ele>([^<]*)</ele>").findAll(gpx).map { it.groupValues[1].toDouble() }.toList()
+        // Lifted by the median of GPS − barometer (150 − 4 … 150 − 5): the dip is gone, the climb stays
+        val offset = elevations.first() - 40.0
+        assertEquals((0 until 10).map { 40.0 + it + offset }, elevations)
+        assertTrue("on the GPS scale: $offset", offset in 140.0..150.0)
+    }
 }

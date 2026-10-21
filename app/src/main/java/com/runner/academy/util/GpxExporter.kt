@@ -2,11 +2,11 @@ package com.runner.academy.util
 
 import android.content.Context
 import com.runner.academy.R
+import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.TrackData
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
-import com.runner.academy.data.knownAltitude
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -59,13 +59,17 @@ object GpxExporter {
         // Сегмент трека
         builder.append("    <trkseg>\n")
         
+        // The altitudes the details count and draw (ElevationSeries): the barometer's, lifted to
+        // the GPS scale, where it is the source — not the GPS ones, which may be far off then
+        val altitudes = trackData?.let { ElevationSeries.of(it.points, ElevationSource.of(it)) }
+
         // Точки трека
-        trackData?.points?.forEach { point ->
+        trackData?.points?.forEachIndexed { index, point ->
             builder.append("      <trkpt lat=\"").append(point.latitude)
                 .append("\" lon=\"").append(point.longitude).append("\">\n")
-            
+
             // Высота: только известная (старое 0.0 значит «нет высоты», а не уровень моря)
-            point.knownAltitude()?.let { altitude ->
+            altitudes?.get(index)?.let { altitude ->
                 builder.append("        <ele>").append(altitude).append("</ele>\n")
             }
             
