@@ -28,9 +28,18 @@ class RunnerApplication : Application() {
         AppCompatDelegate.setApplicationLocales(localeList)
         ThemeUtils.applyTheme(userPreferences.themeMode)
 
-        // Unsaved GPS diagnostics recordings (workout discarded) are dropped after a day
+        // Rows migrated or imported without derived metrics; continues an interrupted pass
+        container.metricsBackfill.start()
+
+        // Debug: unsaved GPS diagnostics recordings (workout discarded) are dropped after a week.
+        // Release records nothing, so whatever an older version left behind goes on every start.
         Thread {
-            container.gpsDiagnosticsStore.cleanupOrphans(System.currentTimeMillis())
+            if (BuildConfig.DEBUG) {
+                container.gpsDiagnosticsStore.cleanupOrphans(System.currentTimeMillis())
+            } else {
+                container.gpsDiagnosticsStore.purgeAll()
+                userPreferences.forgetGpsDiagnostics()
+            }
         }.start()
     }
 }

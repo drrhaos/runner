@@ -31,6 +31,7 @@
     <string name="btn_stop_description">Стоп</string>
     <string name="btn_start_description">Старт</string>
     <string name="btn_pause_description">Пауза</string>
+    <string name="btn_resume_description">Продолжить</string>
     <string name="btn_my_location_description">Мое местоположение</string>
     <string name="stop_hold_hint_initial">Удерживайте 3 сек. для остановки</string>
     <string name="stop_hold_hint">Удерживайте %1$d сек. для остановки</string>
@@ -60,17 +61,29 @@
     <string name="save_without_distance">Сохранить без дистанции</string>
     <string name="voice_gps_lost">Сигнал GPS потерян</string>
     <string name="voice_gps_recovered">Сигнал GPS восстановлен</string>
+    <string name="voice_auto_pause">Автопауза</string>
+    <string name="voice_auto_resume">Продолжаем</string>
     <string name="voice_gps_unreliable">Сигнал GPS ненадёжен</string>
 
     <string name="kilometers_per_hour_float">%.1f км/ч</string>
     <string name="miles_per_hour_float">%.1f миль/ч</string>
     <string name="per_km">на километр</string>
-    <string name="voice_notif_text_each_km">Дистанция: %1$s, время: %2$s, средний темп: %3$s.</string>
+    <string name="per_mile">на милю</string>
 
-    <string name="workout_distance_label">Дистанция</string>
     <string name="workout_time_label">Время</string>
-    <string name="workout_pace_label_km">Темп мин/км</string>
-    <string name="workout_pace_label_miles">Темп мин/милю</string>
+    <string name="workout_moving_time_label">В движении</string>
+    <string name="workout_elapsed_time_label">Общее время</string>
+    <string name="workout_laps_title">Круги</string>
+    <string name="workout_laps_col_number">№</string>
+    <string name="workout_laps_col_km">км</string>
+    <string name="workout_laps_col_time">Время</string>
+    <string name="workout_laps_col_pace">Темп</string>
+    <string name="workout_laps_col_heart_rate">Пульс</string>
+    <string name="workout_device_a11y">Записано на %1$s</string>
+    <string name="workout_lap_row_a11y">Круг %1$s: %2$s км, время %3$s, темп %4$s</string>
+    <string name="workout_lap_row_hr_a11y">Круг %1$s: %2$s км, время %3$s, темп %4$s, пульс %5$s</string>
+    <string name="workout_notes_expand">Показать заметку целиком</string>
+    <string name="workout_notes_collapse">Свернуть заметку</string>
     <string name="workout_summary_good">Хорошая тренировка…</string>
 
     <string name="dialog_choose_workout_title">Выберите тип тренировки</string>
@@ -82,6 +95,8 @@
     <string name="add_workout_label_distance">Дистанция (км):</string>
     <string name="add_workout_label_time">Время (часы:минуты:секунды):</string>
     <string name="add_workout_label_calories">Калории (опционально):</string>
+    <string name="add_workout_label_name">Название:</string>
+    <string name="add_workout_hint_name">Например, «Утренний бег»</string>
     <string name="add_workout_label_notes">Заметки:</string>
     <string name="add_workout_hint_date">Выберите дату</string>
     <string name="add_workout_hint_type">Выберите тип тренировки</string>
@@ -94,7 +109,7 @@
     <string name="edit_workout_title">Редактировать тренировку</string>
     <string name="edit_workout_label_route">Маршрут</string>
     <string name="edit_workout_route_none">Маршрут не привязан</string>
-    <string name="edit_workout_route_attached">Маршрут привязан (%1$d точек)</string>
+    <string name="edit_workout_route_attached">Маршрут привязан (%1$s)</string>
     <string name="edit_workout_select_route">Выбрать маршрут</string>
     <string name="edit_workout_clear_route">Очистить</string>
     <string name="edit_workout_pick_route_title">Выберите маршрут</string>
@@ -115,7 +130,6 @@
     <string name="edit_workout_keep_editing">Продолжить редактирование</string>
     <string name="edit_workout_route_preview_cd">Превью маршрута</string>
     <string name="edit_workout_route_meta">%1$.1f км · %2$s</string>
-    <string name="edit_workout_route_points">%1$d точек</string>
     <string name="workout_updated">Тренировка обновлена</string>
 
     <string name="settings_title">Настройки</string>
@@ -136,13 +150,21 @@
     <string name="settings_theme_system">Как в системе</string>
     <string name="settings_theme_light">Светлая</string>
     <string name="settings_theme_dark">Темная</string>
-    <string name="settings_label_voice_notifications">Голосовые уведомления</string>
+    <string name="settings_hold_hint">Удерживайте пункт, чтобы узнать подробнее</string>
     <string name="settings_label_gps_diagnostics">Записывать диагностику GPS</string>
     <string name="settings_hint_gps_diagnostics">Сырые точки GPS и спутники для каждой новой тренировки, хранятся только на телефоне. Помогает разбирать проблемы с GPS; отправить можно из деталей тренировки.</string>
     <string name="settings_label_steps_for_distance">Шаги для дистанции при потере GPS</string>
     <string name="settings_hint_steps_for_distance">Считает шаги и каденс датчиком телефона, чтобы дистанция шла и в тоннелях, и среди плотной застройки. Нужно разрешение «Физическая активность».</string>
     <string name="settings_hint_steps_no_sensor">На этом устройстве нет датчика шагов.</string>
+    <string name="settings_label_auto_pause">Автопауза</string>
+    <string name="settings_hint_auto_pause">Останавливает время, когда вы стоите — на светофоре или у воды. Темп считается по времени в движении. В интервальных тренировках не действует.</string>
+    <string name="settings_hint_auto_pause_gps_only">Без доступа к шагам срабатывает только по GPS — на несколько секунд позже.</string>
+    <string name="settings_hint_auto_pause_no_sensor">На этом устройстве нет датчика шагов — срабатывает только по GPS, на несколько секунд позже.</string>
     <string name="settings_btn_reset">Сбросить настройки</string>
+    <string name="settings_about_title">О приложении</string>
+    <string name="settings_version_title">Версия</string>
+    <string name="settings_version_value">%1$s (сборка %2$d)</string>
+    <string name="settings_oss_licenses_title">Лицензии открытого ПО</string>
     <string name="settings_weight_saved">Вес сохранен</string>
     <string name="settings_height_saved">Рост сохранен</string>
     <string name="settings_birthdate_saved">Дата рождения сохранена</string>
@@ -179,12 +201,21 @@
     <string name="settings_language_changed">Язык изменён</string>
 
     <string name="track_info_time_label">Время (ч:мин:с)</string>
+    <string name="track_info_state_paused">Пауза</string>
+    <string name="track_info_state_auto_paused">Автопауза</string>
+    <string name="track_info_state_auto_paused_a11y">Автопауза: время остановлено, продолжится, когда вы побежите</string>
+    <string name="track_info_state_running_a11y">Время идёт</string>
+    <string name="track_info_elapsed_time_format">Общее время %1$s</string>
+    <string name="track_info_auto_pause_unavailable">Автопауза в интервальных тренировках не работает</string>
     <string name="track_info_distance_label_km">Дистанция (км)</string>
     <string name="track_info_distance_label_miles">Дистанция (миль)</string>
     <string name="track_info_average_speed_label_km">Средняя скорость (км/ч)</string>
     <string name="track_info_average_speed_label_miles">Средняя скорость (миль/ч)</string>
     <string name="track_info_current_pace_label_km">Текущий темп (мин/км)</string>
     <string name="track_info_current_pace_label_miles">Текущий темп (мин/милю)</string>
+    <string name="tracking_pace_tile_a11y">Текущий темп: %1$s</string>
+    <string name="tracking_pace_tile_approx_a11y">Текущий темп приблизительно, по шагам: %1$s</string>
+    <string name="tracking_pace_tile_no_data_a11y">Текущий темп: нет данных</string>
     <string name="track_info_average_pace_label_km">Средний темп (мин/км)</string>
     <string name="track_info_average_pace_label_miles">Средний темп (мин/милю)</string>
     <string name="track_info_calories_label">Калории (ккал)</string>
@@ -192,8 +223,12 @@
 
     <string name="workout_details_basic_params">Основные параметры</string>
     <string name="workout_details_charts">Графики</string>
-    <string name="workout_details_average_speed">Средняя скорость</string>
+    <string name="workout_details_average_speed">Ср. скорость, км/ч</string>
     <string name="workout_details_calories">Калории</string>
+    <string name="workout_details_calories_value">%1$d ккал</string>
+    <string name="workout_details_tile_calories">Калории, ккал</string>
+    <string name="workout_details_tile_distance">Дистанция, км</string>
+    <string name="workout_details_tile_pace">Темп, мин/км</string>
     <string name="workout_details_btn_share">Поделиться</string>
     <string name="workout_details_btn_export_gpx">Экспорт GPX</string>
     <string name="workout_details_btn_share_diagnostics">Отправить диагностику GPS</string>
@@ -207,7 +242,7 @@
     <string name="workout_favorite_remove">Убрать из избранного</string>
     <string name="workout_favorite_added">Добавлено в избранное</string>
     <string name="workout_favorite_removed">Удалено из избранного</string>
-    <string name="workout_details_pace_speed_pulse_title">Темп / Скорость / Пульс</string>
+    <string name="workout_details_pace_speed_chart_title">Темп / Скорость</string>
     <string name="workout_details_height_title">Высота</string>
     <string name="workout_details_pace_speed_title">Темп / Скорость по сегментам</string>
     <string name="workout_details_pace">Темп</string>
@@ -226,22 +261,15 @@
     <string name="delete_workout_title">Удалить тренировку</string>
     <string name="delete_workout_message">Вы уверены, что хотите удалить эту тренировку? Это действие нельзя отменить.</string>
     <string name="chart_pace_label">Темп (мин/км)</string>
-    <string name="chart_pace_label_miles">Темп (мин/милю)</string>
     <string name="chart_speed_label">Скорость (км/ч)</string>
-    <string name="chart_speed_label_miles">Скорость (миль/ч)</string>
     <string name="chart_pace_value_km">%1$d:%2$02d мин/км</string>
-    <string name="chart_pace_value_miles">%1$d:%2$02d мин/милю</string>
     <string name="chart_speed_value_kmh">%1$.1f км/ч</string>
-    <string name="chart_speed_value_mph">%1$.1f миль/ч</string>
     <string name="chart_time_format">%d мин</string>
     <string name="chart_elevation_title">Высота</string>
     <string name="chart_elevation_x_format">%.1f км</string>
     <string name="chart_elevation_y_format">%d м</string>
     <string name="unit_km">км</string>
     <string name="unit_m">м</string>
-    <string name="unit_mile">миля</string>
-    <string name="unit_kmh">км/ч</string>
-    <string name="unit_mph">миль/ч</string>
     <string name="workout_share_text">🏃 Тренировка:
 📅 Дата: %1$s
 📏 Дистанция: %2$s
@@ -256,6 +284,7 @@
     <string name="statistics_total_workouts_label">Всего тренировок:</string>
     <string name="statistics_total_distance_label">Общая дистанция:</string>
     <string name="statistics_total_time_label">Общее время:</string>
+    <string name="statistics_total_moving_time_label">Время в движении:</string>
     <string name="statistics_total_calories_label">Всего калорий:</string>
     <string name="statistics_best_results">Лучшие результаты</string>
     <string name="statistics_best_pace">Лучший темп:</string>
@@ -281,17 +310,17 @@
     <string name="statistics_message_no_data">Нет данных для отображения.\nНачните тренировки, чтобы увидеть статистику.</string>
 
     <string name="workout_list_num_workouts">Тренировок</string>
-    <string name="workout_list_average_pace">Средний темп</string>
-    <string name="workout_list_pace_label">Темп</string>
+    <string name="workout_list_stat_workouts">трен.</string>
+    <string name="workout_list_stat_pace">/км</string>
     <string name="workout_list_message_no_workouts">Пока нет тренировок</string>
     <string name="workout_list_message_start_workout">Начните тренировку, чтобы появилась первая запись.</string>
     <string name="workout_list_empty_start">Начать тренировку</string>
     <string name="workout_list_content_description_empty">Пока нет тренировок</string>
-    <string name="workout_list_filter_all">Все</string>
     <string name="workout_list_filter_favorites">Избранное</string>
     <string name="workout_list_message_no_favorites">Пока нет избранных маршрутов</string>
     <string name="workout_list_message_add_favorites">Отметьте тренировку звёздочкой, чтобы сохранить её здесь.</string>
     <string name="workout_list_no_route_preview">Нет трека</string>
+    <string name="workout_list_route_preview_pending_cd">Превью маршрута ещё готовится</string>
     <string name="workout_list_import">Импорт тренировок</string>
     <string name="workout_list_export">Экспорт тренировок</string>
     <string name="workout_list_export_choose_format">Выберите формат экспорта</string>
@@ -301,17 +330,59 @@
     <string name="workout_list_export_ready">Экспорт готов</string>
     <string name="workout_list_export_title">Экспорт тренировок</string>
     <string name="workout_list_export_gpx_partial">Экспортировано GPX: %1$d (без трека пропущено: %2$d)</string>
+    <string name="workout_list_export_choose_period">Какие тренировки экспортировать</string>
+    <string name="workout_list_export_period_all">Все тренировки</string>
+    <string name="workout_list_export_period_range">За период…</string>
+    <string name="workout_list_export_period_picker_title">Период экспорта</string>
+    <string name="workout_list_export_period_empty">За этот период тренировок нет</string>
     <string name="workout_list_fab_actions">Действия с тренировками</string>
     <string name="workout_list_fab_close">Закрыть действия</string>
     <string name="workout_list_import_choose_source">Выберите источник импорта</string>
     <string name="workout_list_import_json">Бэкап JSON</string>
-    <string name="workout_list_import_gpx_folder">Папка с GPX-файлами</string>
+    <string name="workout_list_import_track_files">Файлы тренировок (GPX, TCX, FIT, ZIP)</string>
+    <string name="workout_list_import_track_folder">Папка с тренировками или выгрузками</string>
     <string name="workout_list_import_progress">Импорт…</string>
     <string name="workout_list_import_success">Импортировано тренировок: %1$d</string>
     <string name="workout_list_import_partial">Импортировано %1$d (ошибок: %2$d)</string>
     <string name="workout_list_import_empty">Нечего импортировать</string>
     <string name="workout_list_import_error">Ошибка импорта: %1$s</string>
-    <string name="workout_list_import_no_gpx">В папке нет GPX-файлов</string>
+    <string name="workout_list_import_no_track_files">В папке нет файлов для импорта</string>
+    <string name="workout_import_conflict_incoming">Импортируемая</string>
+    <string name="workout_import_conflict_others">Пересекается с</string>
+    <string name="workout_import_conflict_saved">уже в приложении</string>
+    <string name="workout_import_conflict_with_track">с треком</string>
+    <string name="workout_import_conflict_no_track">без трека</string>
+    <string name="workout_import_conflict_replace">Заменить</string>
+    <string name="workout_import_conflict_skip">Пропустить</string>
+    <string name="workout_import_conflict_keep_both">Оставить обе</string>
+    <string name="workout_list_import_progress_count">Импорт… %1$d из %2$d</string>
+    <string name="workout_list_import_progress_processed">Импорт… обработано: %1$d</string>
+    <string name="workout_list_import_pending_summary">Ждут решения: %1$d</string>
+    <string name="workout_list_import_duplicates_summary">Уже были, пропущено: %1$d</string>
+    <string name="workout_list_import_not_running_summary">Пропущено, не бег: %1$d</string>
+    <string name="workout_list_pending_imports">Импортированные тренировки ждут решения: %1$d</string>
+    <string name="workout_list_pending_imports_review">Разобрать</string>
+    <string name="workout_import_conflict_none">Больше ни с чем не пересекается</string>
+    <string name="workout_import_conflict_waiting">тоже ждёт решения: %1$s</string>
+    <string name="workout_import_conflict_import">Импортировать</string>
+    <string name="import_conflicts_label">Совпадения при импорте</string>
+    <string name="import_conflicts_title">Тренировки в одно время</string>
+    <string name="import_conflicts_subtitle">Ждут решения: %1$d. До решения их нет в списке, статистике и рекордах.</string>
+    <string name="import_conflicts_empty">Нет тренировок, ждущих решения</string>
+    <string name="import_conflicts_all">Для всех…</string>
+    <string name="import_conflicts_all_skip">Пропустить все</string>
+    <string name="import_conflicts_all_replace">Заменить все</string>
+    <string name="import_conflicts_all_keep_both">Оставить все</string>
+    <string name="import_conflicts_replace_all_message">Каждая ожидающая тренировка заменит сохранённые, с которыми пересекается. Их заметки и правки будут потеряны.</string>
+    <string name="import_notification_channel">Импорт тренировок</string>
+    <string name="import_notification_title">Импорт тренировок</string>
+    <string name="import_notification_stop">Остановить</string>
+    <string name="import_notification_done">Импорт завершён</string>
+    <string name="workout_list_import_inaccessible">Нет доступа к файлам: %1$d — выберите их снова</string>
+    <string name="workout_list_import_running">Импорт уже идёт</string>
+    <string name="workout_import_conflict_source">%1$s — %2$s</string>
+    <string name="workout_import_conflict_line">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="workout_import_conflict_where">%1$s (%2$s)</string>
     <string name="gps_label">GPS</string>
     <string name="gps_status_a11y">Сигнал GPS: %1$s</string>
     <string name="workout_fragment_label">Тренировка</string>
@@ -354,12 +425,14 @@
     <string name="notification_channel_name">Трекинг тренировок</string>
     <string name="notification_channel_description">Уведомления о активной тренировке</string>
     <string name="notification_workout_format">%1$s • %2$s</string>
+    <string name="notification_workout_paused_format">Пауза • %1$s • %2$s</string>
+    <string name="notification_workout_auto_paused_format">Автопауза • %1$s • %2$s</string>
     <string name="notification_interrupted_channel_name">Оповещения о тренировке</string>
     <string name="notification_interrupted_channel_description">Оповещения, когда запись тренировки неожиданно останавливается</string>
     <string name="notification_interrupted_title">Тренировка прервана</string>
     <string name="notification_interrupted_text">Откройте приложение, чтобы продолжить</string>
 
-    <string name="csv_header">Дата,Время,Тип тренировки,Дистанция (км),Длительность (мин),Темп (мин/км),Калории,Заметки\n</string>
+    <string name="csv_header">Дата,Время,Тип тренировки,Дистанция (км),Длительность (мин),Темп (мин/км),Калории,В движении (мин),Набор (м),Сброс (м),Каденс (шаг/мин),Заметки\n</string>
     <string name="csv_statistics_header">Статистика тренировок\n\nКатегория,Значение\n</string>
     <string name="csv_total_workouts">Всего тренировок</string>
     <string name="csv_total_distance">Общая дистанция (км)</string>
@@ -368,7 +441,7 @@
     <string name="csv_average_pace">Средний темп (мин/км)</string>
     <string name="csv_average_distance">Средняя дистанция (км)</string>
     <string name="csv_average_time">Среднее время (минуты)</string>
-    <string name="csv_best_pace">Лучший темп (мин/км)</string>
+    <string name="csv_average_cadence">Средний каденс (шаг/мин)</string>    <string name="csv_best_pace">Лучший темп (мин/км)</string>
     <string name="csv_max_distance">Максимальная дистанция (км)</string>
     <string name="csv_longest_time">Самая длинная тренировка (минуты)</string>
     <string name="csv_breakdown_header">\nРаспределение по типам тренировок\nТип тренировки,Количество,Дистанция (км)\n</string>
@@ -392,6 +465,13 @@
         <item quantity="few">%d часа</item>
         <item quantity="many">%d часов</item>
         <item quantity="other">%d часа</item>
+    </plurals>
+
+    <plurals name="edit_workout_route_points_count">
+        <item quantity="one">%d точка</item>
+        <item quantity="few">%d точки</item>
+        <item quantity="many">%d точек</item>
+        <item quantity="other">%d точек</item>
     </plurals>
 
     <plurals name="minutes">
@@ -441,6 +521,109 @@
         <item quantity="few">%d километра в час</item>
         <item quantity="many">%d километров в час</item>
         <item quantity="other">%d километра в час</item>
+    </plurals>
+
+    <plurals name="cadence_steps_per_minute">
+        <item quantity="one">%d шаг в минуту</item>
+        <item quantity="few">%d шага в минуту</item>
+        <item quantity="many">%d шагов в минуту</item>
+        <item quantity="other">%d шага в минуту</item>
+    </plurals>
+
+    <!-- Каденс -->
+    <string name="workout_details_tile_cadence">Каденс, шаг/мин</string>
+    <string name="workout_details_cadence_title">Каденс</string>
+    <string name="workout_details_cadence_a11y">Средний каденс %1$s</string>
+    <string name="workout_details_cadence_pending_a11y">Каденс ещё считается</string>
+    <string name="chart_cadence_label">Каденс (шаг/мин)</string>
+    <string name="chart_cadence_value">Каденс: %1$d шаг/мин</string>
+    <string name="chart_cadence_avg_format">ср. %1$d шаг/мин</string>
+    <string name="chart_cadence_limit_label">ср. %1$d</string>
+    <string name="chart_cadence_a11y">График каденса, шагов в минуту: в среднем %1$d, от %2$d до %3$d</string>
+    <string name="statistics_average_cadence_label">Средний каденс:</string>
+    <string name="statistics_cadence_format">%1$d шаг/мин</string>
+
+    <!-- Пульс -->
+    <plurals name="heart_rate_beats_per_minute">
+        <item quantity="one">%d удар в минуту</item>
+        <item quantity="few">%d удара в минуту</item>
+        <item quantity="many">%d ударов в минуту</item>
+        <item quantity="other">%d удара в минуту</item>
+    </plurals>
+    <string name="workout_details_tile_heart_rate">Пульс, уд/мин</string>
+    <string name="workout_details_heart_rate_title">Пульс</string>
+    <string name="workout_details_heart_rate_a11y">Средний пульс %1$s</string>
+    <string name="workout_details_heart_rate_pending_a11y">Пульс ещё считается</string>
+    <string name="chart_heart_rate_label">Пульс (уд/мин)</string>
+    <string name="chart_heart_rate_value">Пульс: %1$d уд/мин</string>
+    <string name="chart_heart_rate_summary_format">ср. %1$d · макс. %2$d уд/мин</string>
+    <string name="chart_heart_rate_avg_format">ср. %1$d уд/мин</string>
+    <string name="chart_heart_rate_limit_label">ср. %1$d</string>
+    <string name="chart_heart_rate_summary_a11y">Средний пульс %1$s, максимальный %2$s</string>
+    <string name="chart_heart_rate_a11y">График пульса, ударов в минуту: в среднем %1$d, от %2$d до %3$d</string>
+    <string name="chart_heart_rate_range_a11y">График пульса, ударов в минуту: от %1$d до %2$d</string>
+
+    <!-- Набор и сброс высоты -->
+    <string name="workout_elevation_gain_label">Набор высоты, м</string>
+    <string name="workout_elevation_loss_label">Сброс высоты, м</string>
+    <string name="workout_elevation_source_gps">Высота по GPS — приблизительно</string>
+    <string name="workout_elevation_source_gps_short">по GPS, приблизительно</string>
+    <string name="workout_elevation_source_file">Высота из файла</string>
+    <string name="workout_elevation_source_file_short">из файла</string>
+    <string name="workout_elevation_source_dialog_title">Высота по GPS</string>
+    <string name="workout_elevation_source_dialog_message">Эта высота взята из GPS: в телефоне нет барометра, или он не работал во время этой тренировки, или она записана до того, как приложение стало его использовать. GPS определяет высоту хуже, чем положение: ошибка в 10–20 м — обычное дело. Мы сглаживаем её и не считаем мелкие колебания, поэтому набор высоты может отличаться от реального, а короткие подъёмы — не попасть в него.</string>
+    <string name="workout_elevation_source_file_dialog_title">Высота из файла</string>
+    <string name="workout_elevation_source_file_dialog_message">Высота взята из импортированного файла как есть. Мы сглаживаем её и не считаем мелкие колебания, как высоту по GPS, поэтому набор может отличаться от того, что показало устройство, записавшее файл.</string>
+    <string name="workout_elevation_summary_format">↑ %1$d м · ↓ %2$d м</string>
+    <string name="workout_elevation_gain_a11y">Набор высоты %1$s</string>
+    <string name="workout_elevation_loss_a11y">Сброс высоты %1$s</string>
+    <string name="workout_elevation_summary_a11y">%1$s, %2$s</string>
+    <string name="workout_elevation_gain_pending_a11y">Набор высоты ещё считается</string>
+    <string name="workout_elevation_loss_pending_a11y">Сброс высоты ещё считается</string>
+    <string name="chart_elevation_a11y">График высоты: набор %1$s, сброс %2$s, от %3$s до %4$s</string>
+    <string name="chart_elevation_range_a11y">График высоты: от %1$s до %2$s</string>
+    <string name="statistics_total_elevation_gain_label">Набор высоты:</string>
+    <string name="statistics_elevation_format">%1$,d м</string>
+    <string name="statistics_elevation_approx_format">≈ %1$s</string>
+    <string name="statistics_elevation_approx_a11y">приблизительно %1$s</string>
+    <string name="statistics_elevation_approx_note">≈ — часть высоты посчитана по GPS и приблизительна</string>
+
+    <!-- TalkBack: плитки деталей и сводки графиков -->
+    <string name="workout_details_distance_a11y">Дистанция %1$s</string>
+    <string name="workout_details_time_a11y">Время %1$s</string>
+    <string name="workout_details_moving_time_a11y">Время в движении %1$s</string>
+    <string name="workout_details_elapsed_time_a11y">Общее время %1$s</string>
+    <string name="workout_details_pace_a11y">Средний темп %1$s</string>
+    <string name="workout_details_pace_unknown_a11y">Средний темп неизвестен</string>
+    <string name="workout_details_average_speed_a11y">Средняя скорость %1$s</string>
+    <string name="workout_details_calories_a11y">Калории %1$s</string>
+    <string name="kilometers_per_hour_fraction_a11y">%1$.1f километра в час</string>
+    <string name="miles_per_hour_fraction_a11y">%1$.1f мили в час</string>
+    <string name="chart_pace_a11y">График темпа: средний %1$s, лучший %2$s, худший %3$s</string>
+    <string name="chart_segments_a11y">График по отрезкам: %1$s, быстрее всего — %2$s, %3$s, медленнее всего — %4$s, %5$s</string>
+    <string name="chart_segment_n_a11y">отрезок %1$d</string>
+    <string name="chart_segment_titled_a11y">%1$s, %2$s</string>
+    <string name="chart_segments_single_a11y">График по отрезкам: один отрезок, %1$s</string>
+
+    <plurals name="kilocalories">
+        <item quantity="one">%d килокалория</item>
+        <item quantity="few">%d килокалории</item>
+        <item quantity="many">%d килокалорий</item>
+        <item quantity="other">%d килокалории</item>
+    </plurals>
+
+    <plurals name="miles_per_hour">
+        <item quantity="one">%d миля в час</item>
+        <item quantity="few">%d мили в час</item>
+        <item quantity="many">%d миль в час</item>
+        <item quantity="other">%d мили в час</item>
+    </plurals>
+
+    <plurals name="chart_segments_count">
+        <item quantity="one">%d отрезок</item>
+        <item quantity="few">%d отрезка</item>
+        <item quantity="many">%d отрезков</item>
+        <item quantity="other">%d отрезка</item>
     </plurals>
 
     <!-- Планы тренировок -->
@@ -502,7 +685,6 @@
     <string name="segment_goal_distance">Дистанция</string>
     <string name="segment_duration_hint">Время</string>
     <string name="segment_distance_hint">Дистанция</string>
-    <string name="segment_pace_hint">Целевой темп (опционально)</string>
     <string name="segment_dialog_duration_title">Время</string>
     <string name="segment_dialog_distance_title">Дистанция</string>
     <string name="segment_dialog_pace_title">Целевой темп</string>
@@ -583,15 +765,345 @@
     <string name="tracking_interval_progress">Интервал %1$d / %2$d</string>
     <string name="tracking_interval_status">%1$d/%2$d · %3$s · %4$d%%</string>
     <string name="tracking_mode_plan">По плану: %1$s</string>
+    <string name="tracking_mode_sheet_title">Режим тренировки</string>
+    <string name="tracking_mode_group_plan">Сегодня по плану</string>
+    <string name="tracking_mode_group_templates">Шаблоны</string>
+    <string name="tracking_mode_easy_subtitle">Без отрезков</string>
+    <string name="tracking_mode_plan_subtitle">План «%1$s» · день %2$d</string>
+    <string name="tracking_mode_repeats">%1$d × %2$s</string>
+    <string name="tracking_mode_minutes">%1$d мин</string>
+    <string name="tracking_mode_about">≈ %1$s</string>
+    <string name="tracking_mode_button_a11y">Режим тренировки: %1$s, изменить</string>
     <string name="tracking_free_run">Свободный бег</string>
-    <string name="voice_interval_start">Интервал: %1$s</string>
-    <string name="voice_interval_start_with_detail">Интервал: %1$s. %2$s</string>
-    <string name="voice_interval_upcoming">Следующий интервал: %1$s</string>
-    <string name="voice_interval_upcoming_with_detail">Следующий интервал: %1$s. %2$s</string>
-    <string name="voice_interval_upcoming_in_30s">Через 30 секунд начнется интервал: %1$s</string>
+    <string name="voice_interval_upcoming_in_30s">Через 30 секунд начнётся интервал: %1$s</string>
     <string name="voice_interval_goal_duration">Время %1$s</string>
     <string name="voice_interval_goal_distance">Дистанция %1$s</string>
     <string name="voice_interval_goal_pace">Темп %1$s</string>
     <string name="chart_interval_n">Инт %1$d</string>
+    <string name="chart_segment_km">%1$d-й км</string>
+
+    <!-- Личные рекорды -->
+    <string name="menu_records">Рекорды</string>
+    <string name="records_title">Рекорды</string>
+    <string name="records_subtitle">Лучшее время на дистанции внутри любой тренировки с GPS-треком</string>
+    <string name="records_distance_1k">1 км</string>
+    <string name="records_distance_5k">5 км</string>
+    <string name="records_distance_10k">10 км</string>
+    <string name="records_distance_half">Полумарафон</string>
+    <string name="records_distance_marathon">Марафон</string>
+    <string name="records_distance_1k_a11y">1 километр</string>
+    <string name="records_distance_5k_a11y">5 километров</string>
+    <string name="records_distance_10k_a11y">10 километров</string>
+    <string name="records_steps_note">≈ часть дистанции посчитана по шагам</string>
+    <string name="records_history_toggle">История улучшений (%1$d)</string>
+    <string name="records_history_first">первый</string>
+    <string name="records_history_delta">−%1$s</string>
+    <string name="records_history_expanded">развёрнуто</string>
+    <string name="records_history_collapsed">свёрнуто</string>
+    <string name="records_not_reached_hint">Пробегите %1$s за одну тренировку</string>
+    <string name="records_distance_km">%1$s км</string>
+    <string name="records_empty_title">Пока нет рекордов</string>
+    <string name="records_empty_message">Рекорды появятся после первой пробежки с GPS: лучшие 1 км, 5 км, 10 км, полумарафон и марафон.</string>
+    <string name="records_empty_manual_only">Ручные тренировки без трека в рекордах не учитываются.</string>
+    <string name="records_empty_start">Начать тренировку</string>
+    <string name="records_recalc_progress">Пересчитываем рекорды: %1$d из %2$d</string>
+    <string name="records_recalc_indeterminate">Пересчитываем рекорды…</string>
+    <string name="records_open_all">Все рекорды</string>
+    <string name="records_item_a11y">%1$s: %2$s, %3$s. Открыть тренировку</string>
+    <string name="records_item_not_reached_a11y">%1$s: пока нет результата</string>
+    <string name="records_history_item_a11y">%1$s, %2$s, быстрее на %3$s</string>
+    <string name="records_history_first_a11y">%1$s, %2$s, первый результат</string>
+    <string name="records_congrats_title">Новый личный рекорд!</string>
+    <string name="records_congrats_title_plural">Новые личные рекорды!</string>
+    <string name="records_congrats_line">%1$s — %2$s, на %3$s быстрее</string>
+    <string name="records_first_result_title">Первый результат</string>
+    <string name="records_first_result_line">Первый результат: %1$s — %2$s</string>
+    <string name="records_badge_current">Личный рекорд: %1$s</string>
+    <string name="records_badge_former">Был рекордом: %1$s (до %2$s)</string>
+    <string name="records_pair_format">%1$s — %2$s</string>
+    <string name="records_approx_time">≈%1$s</string>
+    <string name="records_exclude_label">Не учитывать в рекордах</string>
+    <string name="records_auto_excluded">Не учитывается в рекордах: время маршрута рассчитано</string>
+    <string name="records_updated_open">Открыть</string>
+    <plurals name="records_updated">
+        <item quantity="one">Обновлён %d рекорд</item>
+        <item quantity="few">Обновлены %d рекорда</item>
+        <item quantity="many">Обновлено %d рекордов</item>
+        <item quantity="other">Обновлено %d рекорда</item>
+    </plurals>
+
+    <!-- Устройства (пульсометр) -->
+    <string name="devices_title">Устройства</string>
+    <string name="devices_section_heart_rate">Пульсометр</string>
+    <string name="devices_unnamed">Без имени</string>
+    <string name="devices_status_connected">подключено</string>
+    <string name="devices_bpm">· %1$d уд/мин</string>
+    <string name="devices_status_no_contact">подключено · ремень не надет</string>
+    <string name="devices_status_searching">ищем…</string>
+    <string name="devices_status_offline">не в сети</string>
+    <string name="devices_status_never_seen">ещё не был на связи</string>
+    <string name="devices_status_bluetooth_off">Bluetooth выключен</string>
+    <string name="devices_status_no_permission">Нет доступа к устройствам поблизости</string>
+    <string name="devices_enable_bluetooth">Включить</string>
+    <string name="devices_allow">Разрешить</string>
+    <string name="devices_open_settings">Открыть настройки</string>
+    <string name="devices_battery">батарея %1$d %%</string>
+    <string name="devices_last_seen">на связи: %1$s</string>
+    <string name="devices_menu_a11y">Действия с «%1$s»</string>
+    <string name="devices_menu_replace">Заменить устройство</string>
+    <string name="devices_menu_forget">Забыть устройство</string>
+    <string name="devices_forget_title">Забыть «%1$s»?</string>
+    <string name="devices_forget_message">Пульс перестанет записываться, пока не добавите датчик снова.</string>
+    <string name="devices_forget_confirm">Забыть</string>
+    <string name="devices_empty_title">Пульсометр не добавлен</string>
+    <string name="devices_empty_message">Подключите нагрудный ремень или часы с трансляцией пульса — пульс будет в каждой тренировке.</string>
+    <string name="devices_add">Добавить пульсометр</string>
+    <string name="devices_ble_unsupported">На этом телефоне нет Bluetooth LE — пульсометр не подключить.</string>
+    <string name="devices_paired_snackbar">«%1$s» добавлен</string>
+    <plurals name="devices_battery_a11y">
+        <item quantity="one">батарея %d процент</item>
+        <item quantity="few">батарея %d процента</item>
+        <item quantity="many">батарея %d процентов</item>
+        <item quantity="other">батарея %d процента</item>
+    </plurals>
+
+    <string name="add_sensor_title">Добавить пульсометр</string>
+    <string name="add_sensor_permission_rationale_31">Чтобы найти пульсометр, разрешите доступ к устройствам поблизости. Местоположение не определяется.</string>
+    <string name="add_sensor_permission_rationale_30">На Android 11 и ниже Bluetooth-устройства ищутся только с доступом к точному местоположению.</string>
+    <string name="add_sensor_permission_denied">Доступ запрещён. Включите его в системных настройках приложения.</string>
+    <string name="add_sensor_location_off">Включите геолокацию: без неё Android 11 и ниже не находит Bluetooth-устройства.</string>
+    <string name="add_sensor_open_location">Включить геолокацию</string>
+    <string name="add_sensor_scanning">Ищем пульсометры…</string>
+    <string name="add_sensor_seconds_left">ещё %1$d с</string>
+    <plurals name="add_sensor_seconds_left_a11y">
+        <item quantity="one">осталась %d секунда</item>
+        <item quantity="few">осталось %d секунды</item>
+        <item quantity="many">осталось %d секунд</item>
+        <item quantity="other">осталось %d секунды</item>
+    </plurals>
+    <string name="add_sensor_signal_excellent">сигнал отличный</string>
+    <string name="add_sensor_signal_good">сигнал хороший</string>
+    <string name="add_sensor_signal_weak">сигнал слабый</string>
+    <string name="add_sensor_signal_very_weak">сигнал очень слабый</string>
+    <string name="add_sensor_already_paired">уже добавлен</string>
+    <string name="add_sensor_scan_again">Искать снова</string>
+    <string name="add_sensor_retry_in">Повторить через %1$d с</string>
+    <plurals name="add_sensor_retry_in_a11y">
+        <item quantity="one">Искать снова через %d секунду</item>
+        <item quantity="few">Искать снова через %d секунды</item>
+        <item quantity="many">Искать снова через %d секунд</item>
+        <item quantity="other">Искать снова через %d секунды</item>
+    </plurals>
+    <string name="add_sensor_not_found_link">Нет вашего датчика?</string>
+    <string name="add_sensor_empty_title">Ничего не нашли</string>
+    <string name="add_sensor_hint_strap">Наденьте ремень и смочите контакты: датчик просыпается от контакта с кожей.</string>
+    <string name="add_sensor_hint_single_connection">Многие датчики держат одно подключение: отключите свой от часов или другого приложения.</string>
+    <string name="add_sensor_hint_watch_broadcast">Часы: включите трансляцию пульса в настройках часов.</string>
+    <string name="add_sensor_hint_no_broadcast">Некоторые часы пульс не транслируют вовсе.</string>
+    <string name="add_sensor_found_a11y">Найдено устройств: %1$d</string>
+    <string name="add_sensor_replace_title">Заменить «%1$s»?</string>
+    <string name="add_sensor_replace_message">Пульсометр может быть только один: «%1$s» будет забыт, вместо него — «%2$s».</string>
+    <string name="add_sensor_replace">Заменить</string>
+    <string name="add_sensor_probing">Проверяем «%1$s»…</string>
+    <string name="add_sensor_probing_hint">Это до 30 секунд. Ремень должен быть надет.</string>
+    <string name="add_sensor_probe_unreachable">«%1$s» не ответил. Наденьте ремень, поднесите телефон ближе и отключите датчик от часов.</string>
+    <string name="add_sensor_probe_not_hr">«%1$s» не передаёт пульс. Выберите другое устройство.</string>
+    <string name="add_sensor_error_bluetooth_off">Bluetooth выключен</string>
+    <string name="add_sensor_error_failed">Не удалось начать поиск (ошибка %1$d). Повторите позже.</string>
+    <string name="add_sensor_error_failed_no_code">Не удалось начать поиск. Повторите позже.</string>
+    <string name="add_sensor_retry">Повторить</string>
+    <string name="add_sensor_back_to_list">К списку</string>
+
+    <string name="settings_devices_title">Датчики</string>
+    <string name="settings_debug_title">Отладка</string>
+    <string name="settings_label_devices">Устройства</string>
+    <string name="settings_devices_none">Пульсометр не добавлен</string>
+    <string name="settings_devices_summary">Пульсометр: %1$s</string>
+    <string name="settings_devices_summary_connected">Пульсометр: %1$s · подключено</string>
+    <string name="settings_devices_summary_bt_off">Пульсометр: %1$s · Bluetooth выключен</string>
+    <string name="settings_devices_summary_no_access">Пульсометр: %1$s · нет доступа</string>
+
+    <string name="tracking_hr_tile_no_sensor_a11y">Пульс: датчик не добавлен</string>
+    <string name="tracking_hr_tile_open_devices">открыть «Устройства»</string>
+    <string name="tracking_hr_tile_a11y">Пульс: %1$s</string>
+    <string name="tracking_hr_tile_stale_a11y">Пульс: %1$s, данные не обновляются</string>
+    <string name="tracking_hr_tile_no_data_a11y">Пульс: нет данных</string>
+    <string name="tracking_hr_link_connected">датчик подключён</string>
+    <string name="tracking_hr_link_searching">ищем датчик</string>
+    <string name="tracking_hr_link_lost">датчик потерян</string>
+    <string name="voice_hr_sensor_lost">Датчик пульса потерян</string>
+    <string name="voice_hr_sensor_connected">Датчик пульса подключён</string>
+
+    <!-- ===== Релиз 4: пульсовые зоны (feature/r4-hr-zones) ===== -->
+    <string name="settings_label_hr_max">Максимальный пульс</string>
+    <string name="settings_hr_max_source_auto">по возрасту: 220 − %1$d</string>
+    <string name="settings_hr_max_source_manual">задан вручную</string>
+    <string name="settings_hr_max_source_none">Зоны выключены: укажите дату рождения или задайте вручную</string>
+    <string name="settings_hr_max_a11y">Максимальный пульс %1$s, %2$s</string>
+    <string name="settings_hr_max_none_a11y">Максимальный пульс не задан, зоны выключены</string>
+    <string name="settings_dialog_hr_max_title">Максимальный пульс</string>
+    <string name="settings_dialog_hr_max_auto_formula">По возрасту: 220 − %1$d = %2$d. Если знаете свой максимум по тесту, задайте его здесь.</string>
+    <string name="settings_dialog_hr_max_no_birth">Даты рождения нет — задайте максимум вручную. Без него зоны выключены.</string>
+    <string name="settings_dialog_hr_max_auto">По возрасту</string>
+    <string name="settings_hr_max_unit">уд/мин</string>
+    <string name="settings_hr_max_saved">Максимальный пульс сохранён</string>
+    <string name="hr_max_source_auto_short">по возрасту</string>
+    <string name="tracking_hr_tile_zone_a11y">Пульс: %1$s, зона %2$d</string>
+    <string name="tracking_hr_tile_stale_zone_a11y">Пульс: %1$s, зона %2$d, данные не обновляются</string>
+    <string name="tracking_hr_tile_below_zone_a11y">Пульс: %1$s, ниже зоны 1</string>
+    <string name="workout_details_hr_zones_title">Время в зонах</string>
+    <string name="workout_details_hr_zones_basis">По максимальному пульсу %1$d (%2$s)</string>
+    <string name="workout_details_hr_zone_below">ниже Z1</string>
+    <string name="workout_details_hr_zone_percent">%1$d&#160;%%</string>
+    <!-- Без тире для TalkBack; «уд/мин» не склоняется, поэтому «до 171 уд/мин» и «меньше 95 уд/мин» верны -->
+    <string name="workout_details_hr_zone_row_a11y">Зона %1$d, от %2$d до %3$s: %4$s, %5$s</string>
+    <string name="workout_details_hr_zone_below_a11y">Ниже зоны 1, меньше %1$s: %2$s, %3$s</string>
+    <plurals name="hr_zone_bound_a11y">
+        <item quantity="one">%d уд/мин</item>
+        <item quantity="few">%d уд/мин</item>
+        <item quantity="many">%d уд/мин</item>
+        <item quantity="other">%d уд/мин</item>
+    </plurals>
+    <string name="settings_dialog_hr_max_age_out_of_range">Максимум по возрасту считается для возраста от 10 до 100 лет. Задайте его вручную — без него зоны выключены.</string>
+    <string name="settings_dialog_hr_max_zones_off">Выключить зоны</string>
+    <string name="settings_hr_max_zones_off_done">Пульсовые зоны выключены</string>
+    <string name="chart_heart_rate_zones_a11y">График пульса, ударов в минуту: в среднем %1$d, от %2$d до %3$d. Линия раскрашена по пульсовым зонам</string>
+    <string name="chart_heart_rate_value_zone">Пульс: %1$d уд/мин · Z%2$d</string>
+    <string name="chart_heart_rate_value_below">Пульс: %1$d уд/мин · ниже Z1</string>
+    <plurals name="percent_a11y">
+        <item quantity="one">%d процент</item>
+        <item quantity="few">%d процента</item>
+        <item quantity="many">%d процентов</item>
+        <item quantity="other">%d процента</item>
+    </plurals>
+    <!-- ===== Конец пульсовых зон ===== -->
+
+    <!-- Голосовая сводка (релиз 4): по части на метрику, между ними пауза -->
+    <string name="voice_summary_distance">Дистанция %1$s</string>
+    <string name="voice_summary_time">Время %1$s</string>
+    <string name="voice_summary_avg_pace">Средний темп %1$s</string>
+    <string name="voice_summary_split_pace">Темп за %1$s: %2$s</string>
+    <string name="voice_summary_split_pace_since">Темп с прошлой сводки: %1$s</string>
+    <string name="voice_summary_split_hr">Средний пульс за %1$s: %2$d</string>
+    <string name="voice_summary_split_hr_since">Средний пульс с прошлой сводки: %1$d</string>
+    <string name="voice_summary_split_pace_since_start">Темп с начала пробежки: %1$s</string>
+    <string name="voice_summary_split_hr_since_start">Средний пульс с начала пробежки: %1$d</string>
+    <string name="voice_summary_current_hr">Пульс %1$d</string>
+    <string name="voice_span_km_0_5">последние 500 метров</string>
+    <string name="voice_span_km_1">последний километр</string>
+    <string name="voice_span_km_2">последние 2 километра</string>
+    <string name="voice_span_km_5">последние 5 километров</string>
+    <string name="voice_span_min_1">последнюю минуту</string>
+    <string name="voice_span_min_5">последние 5 минут</string>
+    <string name="voice_span_min_10">последние 10 минут</string>
+    <string name="voice_span_min_15">последние 15 минут</string>
+
+    <!-- ===== Release 4: voice coaching settings (feature/r4-voice-settings) ===== -->
+    <string name="settings_label_voice">Голосовые подсказки</string>
+    <string name="settings_voice_summary_off">Выключены</string>
+    <string name="settings_voice_summary_on">Включены · сводка %1$s</string>
+    <string name="settings_voice_summary_on_no_summary">Включены · без сводки</string>
+    <string name="settings_voice_open_a11y">открыть настройки голоса</string>
+    <string name="voice_settings_title">Голосовые подсказки</string>
+    <string name="voice_enabled_label">Голосовые подсказки</string>
+    <string name="voice_enabled_hint">Сводки, отрезки и подсказки по цели. Музыка на время фразы становится тише.</string>
+    <string name="voice_status_note">Сигнал GPS, датчик пульса и автопауза озвучиваются всегда, когда голос включён.</string>
+    <string name="voice_profile_free">Бег без отрезков</string>
+    <string name="voice_profile_intervals">Интервалы</string>
+    <string name="voice_profile_intervals_hint">Когда в тренировке есть отрезки</string>
+    <string name="voice_summary_label">Сводка</string>
+    <string name="voice_summary_dialog_title">Как часто говорить сводку</string>
+    <string name="voice_every_off">Выкл.</string>
+    <string name="voice_every_km_0_5">Каждые 0,5 км</string>
+    <string name="voice_every_km_1">Каждый 1 км</string>
+    <string name="voice_every_km_2">Каждые 2 км</string>
+    <string name="voice_every_km_5">Каждые 5 км</string>
+    <string name="voice_every_min_1">Каждую минуту</string>
+    <string name="voice_every_min_5">Каждые 5 мин</string>
+    <string name="voice_every_min_10">Каждые 10 мин</string>
+    <string name="voice_every_min_15">Каждые 15 мин</string>
+    <string name="voice_every_short_km_0_5">каждые 0,5 км</string>
+    <string name="voice_every_short_km_1">каждый 1 км</string>
+    <string name="voice_every_short_km_2">каждые 2 км</string>
+    <string name="voice_every_short_km_5">каждые 5 км</string>
+    <string name="voice_every_short_min_1">каждую минуту</string>
+    <string name="voice_every_short_min_5">каждые 5 мин</string>
+    <string name="voice_every_short_min_10">каждые 10 мин</string>
+    <string name="voice_every_short_min_15">каждые 15 мин</string>
+    <string name="voice_metrics_label">Что говорить</string>
+    <string name="voice_metrics_dialog_title">Что говорить в сводке</string>
+    <string name="voice_metrics_done">Готово</string>
+    <string name="voice_metric_distance">Дистанция</string>
+    <string name="voice_metric_time">Время</string>
+    <string name="voice_metric_avg_pace">Средний темп</string>
+    <string name="voice_metric_split_pace">Темп за отрезок сводки</string>
+    <string name="voice_metric_split_hr">Средний пульс за отрезок сводки</string>
+    <string name="voice_metric_current_hr">Текущий пульс</string>
+    <string name="voice_metric_distance_lower">дистанция</string>
+    <string name="voice_metric_time_lower">время</string>
+    <string name="voice_metric_avg_pace_lower">средний темп</string>
+    <string name="voice_metric_split_pace_lower">темп за отрезок сводки</string>
+    <string name="voice_metric_split_hr_lower">средний пульс за отрезок сводки</string>
+    <string name="voice_metric_current_hr_lower">текущий пульс</string>
+    <string name="voice_metrics_hr_no_sensor">Пульсометр не добавлен: пульс в сводке будет пропущен</string>
+    <string name="voice_segment_change_label">Смена отрезка</string>
+    <string name="voice_segment_change_hint">За 30 секунд — что дальше, на старте — сигнал</string>
+    <string name="voice_target_check_label">Подсказки по цели</string>
+    <string name="voice_target_check_hint">«Быстрее», «Медленнее», «Выше зоны», «Ниже зоны» — не чаще раза в 30 секунд</string>
+    <string name="voice_target_section">Цель отрезка</string>
+    <string name="voice_pace_tolerance_label">Допуск темпа</string>
+    <string name="voice_pace_tolerance_value">±%1$d с/км</string>
+    <string name="voice_pace_tolerance_hint">В пределах допуска темп считается попаданием в цель — для голоса и для полосы отрезков.</string>
+    <string name="voice_metric_units_note">Голос говорит в километрах, и сводка считается по километрам.</string>
+    <string name="voice_switch_on_a11y">включено</string>
+    <string name="voice_switch_off_a11y">выключено</string>
+    <!-- ===== End of voice coaching settings ===== -->
+
+    <!-- ===== Релиз 4: цель «зона» в отрезке (feature/r4-zone-target) ===== -->
+    <string name="segment_target_label">Целевой темп или зона</string>
+    <string name="segment_target_none">Нет</string>
+    <string name="segment_target_pace">Темп</string>
+    <string name="segment_target_zone">Зона</string>
+    <string name="segment_target_zone_hint">Пульсовая зона</string>
+    <string name="segment_target_zone_value">Зона %1$d · %2$d–%3$d уд/мин</string>
+    <string name="segment_target_zone_value_no_range">Зона %1$d</string>
+    <string name="segment_target_zone_disabled">Зоны выключены: укажите дату рождения или максимальный пульс</string>
+    <string name="segment_target_open_settings">Открыть настройки</string>
+    <string name="segment_dialog_zone_title">Пульсовая зона</string>
+    <string name="segment_zone_item">Зона %1$d · %2$d–%3$d уд/мин · %4$s</string>
+    <string name="segment_target_zone_value_a11y">Зона %1$d, от %2$d до %3$s</string>
+    <string name="segment_zone_item_a11y">Зона %1$d, от %2$d до %3$s, %4$s</string>
+    <string name="segment_target_zone_short">Z%1$d</string>
+    <string name="segment_target_zone_a11y">зона %1$d</string>
+    <string name="hr_zone_name_1">восстановление</string>
+    <string name="hr_zone_name_2">аэробная база</string>
+    <string name="hr_zone_name_3">темповая</string>
+    <string name="hr_zone_name_4">пороговая</string>
+    <string name="hr_zone_name_5">максимум</string>
+    <string name="voice_interval_goal_zone">Зона %1$d</string>
+    <!-- ===== Конец цели «зона» ===== -->
+
+    <!-- ===== Релиз 4: контроль цели отрезка (feature/r4-target-check) ===== -->
+    <string name="voice_target_faster">Быстрее, темп %1$s</string>
+    <string name="voice_target_slower">Медленнее, темп %1$s</string>
+    <string name="voice_target_above_zone">Выше зоны, пульс %1$d</string>
+    <string name="voice_target_below_zone">Ниже зоны, пульс %1$d</string>
+    <string name="voice_target_faster_short">Быстрее</string>
+    <string name="voice_target_slower_short">Медленнее</string>
+    <string name="voice_target_above_zone_short">Выше зоны</string>
+    <string name="voice_target_below_zone_short">Ниже зоны</string>
+    <string name="target_state_in">В цели</string>
+    <string name="target_state_faster">Быстрее</string>
+    <string name="target_state_slower">Медленнее</string>
+    <string name="target_state_above_zone">Выше зоны</string>
+    <string name="target_state_below_zone">Ниже зоны</string>
+    <string name="target_state_pending_pace">Набираем темп…</string>
+    <string name="target_state_pending_zone">Пульс догоняет нагрузку…</string>
+    <string name="target_state_no_pace">Нет темпа</string>
+    <string name="target_state_no_hr">Нет пульса</string>
+    <string name="target_state_zones_off">Зоны выключены</string>
+    <string name="target_state_approx_a11y">%1$s, приблизительно, по шагам</string>
+    <string name="target_announce">Цель отрезка: %1$s</string>
+    <!-- ===== Конец контроля цели отрезка ===== -->
 
 </resources>

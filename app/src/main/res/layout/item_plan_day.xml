@@ -7,7 +7,7 @@
     android:paddingHorizontal="8dp"
     android:paddingVertical="4dp">
 
-    <CheckBox
+    <com.google.android.material.checkbox.MaterialCheckBox
         android:id="@+id/checkBox_select"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
@@ -24,7 +24,7 @@
         android:id="@+id/textView_day"
         android:layout_width="72dp"
         android:layout_height="wrap_content"
-        android:textAppearance="?attr/textAppearanceBodyMedium" />
+        android:textAppearance="@style/TextAppearance.Runner.Subhead" />
 
     <TextView
         android:id="@+id/textView_assignment"
@@ -33,5 +33,5 @@
         android:layout_weight="1"
         android:background="?attr/selectableItemBackground"
         android:padding="12dp"
-        android:textAppearance="?attr/textAppearanceBodyMedium" />
+        android:textAppearance="@style/TextAppearance.Runner.Subhead" />
 </LinearLayout>

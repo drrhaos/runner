@@ -2,15 +2,28 @@ package com.runner.academy.util
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
+import com.runner.academy.BuildConfig
+import com.runner.academy.voice.VoiceSettings
+import com.runner.academy.voice.VoiceSettingsCodec
+import java.time.LocalDate
+import java.time.ZoneId
 
 /**
  * Управление настройками пользователя
  */
-class UserPreferences(context: Context) {
-    
+class UserPreferences(
+    context: Context,
+    private val debugBuild: Boolean = BuildConfig.DEBUG
+) {
+
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    
+
     companion object {
+        /** GPS diagnostics are a debug-build tool: a release build never records, whatever is stored. */
+        fun gpsDiagnosticsEnabled(debug: Boolean, stored: Boolean): Boolean = debug && stored
+
+
         private const val PREFS_NAME = "runner_preferences"
         
         // Ключи настроек
@@ -19,7 +32,7 @@ class UserPreferences(context: Context) {
         private const val KEY_USER_BIRTH_DATE = "user_birth_date"
         private const val KEY_USER_GENDER = "user_gender"
         private const val KEY_UNIT_SYSTEM = "unit_system"
-        private const val KEY_VOICE_FEEDBACK = "voice_feedback"
+        private const val KEY_VOICE_FEEDBACK = VoiceSettingsCodec.KEY_ENABLED
         private const val KEY_FIRST_LAUNCH = "first_launch"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_APP_LANGUAGE = "app_language"
@@ -28,8 +41,11 @@ class UserPreferences(context: Context) {
         private const val KEY_GPS_DIAGNOSTICS = "gps_diagnostics"
         private const val KEY_STEPS_FOR_DISTANCE = "steps_for_distance"
         private const val KEY_STEP_PERMISSION_ASKED = "step_permission_asked"
+        private const val KEY_SETTINGS_HOLD_HINT_SHOWN = "settings_hold_hint_shown"
         private const val KEY_STRIDE_MODEL = "stride_model"
-        
+        private const val KEY_AUTO_PAUSE = "auto_pause"
+        private const val KEY_HR_MAX_MANUAL = "hr_max_manual"
+
         // Значения по умолчанию
         private const val DEFAULT_WEIGHT = 70f
         private const val DEFAULT_HEIGHT = 175f
@@ -39,6 +55,7 @@ class UserPreferences(context: Context) {
         private const val DEFAULT_VOICE_FEEDBACK = false
         private const val DEFAULT_GPS_DIAGNOSTICS = false
         private const val DEFAULT_STEPS_FOR_DISTANCE = true
+        private const val DEFAULT_AUTO_PAUSE = false
         private const val DEFAULT_FIRST_LAUNCH = true
         private val DEFAULT_THEME_MODE = ThemeUtils.THEME_SYSTEM
         private const val DEFAULT_APP_LANGUAGE = "en"
@@ -82,13 +99,10 @@ class UserPreferences(context: Context) {
      * Возраст пользователя (вычисляется из даты рождения)
      */
     val userAge: Int
-        get() {
-            if (userBirthDate == 0L) return 0
-            val birthDate = java.util.Date(userBirthDate)
-            val currentDate = java.util.Date()
-            val diffInMillis = currentDate.time - birthDate.time
-            return (diffInMillis / (365.25 * 24 * 60 * 60 * 1000)).toInt()
-        }
+        get() = ageOn(LocalDate.now(), ZoneId.systemDefault())
+
+    /** Полных лет на [today] (0 — дата рождения не задана); то же правило, что у [hrMax] по возрасту. */
+    fun ageOn(today: LocalDate, zone: ZoneId): Int = Ages.fullYears(userBirthDate, today, zone) ?: 0
     
     /**
      * Система единиц измерения
@@ -103,6 +117,34 @@ class UserPreferences(context: Context) {
     var voiceFeedback: Boolean
         get() = prefs.getBoolean(KEY_VOICE_FEEDBACK, DEFAULT_VOICE_FEEDBACK)
         set(value) = prefs.edit().putBoolean(KEY_VOICE_FEEDBACK, value).apply()
+
+    /**
+     * Все настройки голоса; [voiceFeedback] — их главный переключатель ([VoiceSettings.enabled]).
+     * Сервис читает их на каждом тике: смена посреди пробежки действует сразу.
+     */
+    fun voiceSettings(): VoiceSettings {
+        // Only the 8 keys, not a copy of every preference; a value of another type reads as absent
+        val values = HashMap<String, Any?>()
+        fun read(key: String, get: () -> Any?) {
+            if (prefs.contains(key)) values[key] = runCatching(get).getOrNull()
+        }
+        VoiceSettingsCodec.BOOLEAN_KEYS.forEach { key -> read(key) { prefs.getBoolean(key, false) } }
+        VoiceSettingsCodec.STRING_KEYS.forEach { key -> read(key) { prefs.getString(key, null) } }
+        VoiceSettingsCodec.INT_KEYS.forEach { key -> read(key) { prefs.getInt(key, 0) } }
+        return VoiceSettingsCodec.decode(values)
+    }
+
+    fun setVoiceSettings(settings: VoiceSettings) {
+        prefs.edit {
+            VoiceSettingsCodec.encode(settings).forEach { (key, value) ->
+                when (value) {
+                    is Boolean -> putBoolean(key, value)
+                    is Int -> putInt(key, value)
+                    is String -> putString(key, value)
+                }
+            }
+        }
+    }
 
     /**
      * Режим темы приложения (system/light/dark)
@@ -129,11 +171,18 @@ class UserPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_APP_LANGUAGE, value).apply()
 
     /**
-     * Записывать диагностику GPS (сырые точки, спутники) в файл тренировки. По умолчанию выключено.
+     * Записывать диагностику GPS (сырые точки, спутники) в файл тренировки. По умолчанию выключено;
+     * в релизной сборке всегда false — см. [gpsDiagnosticsEnabled].
      */
     var gpsDiagnostics: Boolean
-        get() = prefs.getBoolean(KEY_GPS_DIAGNOSTICS, DEFAULT_GPS_DIAGNOSTICS)
+        get() = gpsDiagnosticsEnabled(
+            debug = debugBuild,
+            stored = prefs.getBoolean(KEY_GPS_DIAGNOSTICS, DEFAULT_GPS_DIAGNOSTICS)
+        )
         set(value) = prefs.edit().putBoolean(KEY_GPS_DIAGNOSTICS, value).apply()
+
+    /** Удаляет сохранённый переключатель диагностики GPS (релиз, см. [com.runner.academy.data.GpsDiagnosticsStore.purgeAll]). */
+    fun forgetGpsDiagnostics() = prefs.edit().remove(KEY_GPS_DIAGNOSTICS).apply()
 
     /**
      * Количество секунд обратного отсчета перед стартом тренировки
@@ -151,6 +200,31 @@ class UserPreferences(context: Context) {
         get() = prefs.getBoolean(KEY_STEPS_FOR_DISTANCE, DEFAULT_STEPS_FOR_DISTANCE)
         set(value) = prefs.edit().putBoolean(KEY_STEPS_FOR_DISTANCE, value).apply()
 
+    /**
+     * Автопауза: часы «в движении» встают, когда бегун стоит. По умолчанию выключено;
+     * в тренировках с отрезками не действует.
+     */
+    var autoPause: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_PAUSE, DEFAULT_AUTO_PAUSE)
+        set(value) = prefs.edit { putBoolean(KEY_AUTO_PAUSE, value) }
+
+    /** Максимальный пульс, заданный вручную; 0 — по возрасту (220 − возраст). */
+    var hrMaxManual: Int
+        get() = prefs.getInt(KEY_HR_MAX_MANUAL, 0)
+        set(value) = prefs.edit { putInt(KEY_HR_MAX_MANUAL, value) }
+
+    /** Максимальный пульс для зон; null — зоны выключены (нет ни даты рождения, ни ручного значения). */
+    fun hrMax(today: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault()): HrMax? =
+        HrMax.resolve(userBirthDate, hrMaxManual, today, zone)
+
+    /** Пульсовые зоны по текущему [hrMax]; null — зоны выключены. */
+    fun hrZones(today: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault()): HrZones? =
+        hrMax(today, zone)?.zones
+
+    /** Вес, пол и возраст для формул калорий ([Calories]). */
+    fun calorieProfile(today: LocalDate = LocalDate.now(), zone: ZoneId = ZoneId.systemDefault()): CalorieProfile =
+        CalorieProfile.of(userWeight, userGender, userBirthDate, today, zone)
+
     /** Разрешение ACTIVITY_RECOGNITION уже запрашивалось — повторно автоматически не спрашиваем. */
     var stepPermissionAsked: Boolean
         get() = prefs.getBoolean(KEY_STEP_PERMISSION_ASKED, false)
@@ -164,16 +238,24 @@ class UserPreferences(context: Context) {
         prefs.edit().putString(KEY_STRIDE_MODEL, model.serialize()).apply()
     }
 
+    /** Намёк «Удерживайте пункт, чтобы узнать подробнее» на экранах настроек уже показан. */
+    var settingsHoldHintShown: Boolean
+        get() = prefs.getBoolean(KEY_SETTINGS_HOLD_HINT_SHOWN, false)
+        set(value) = prefs.edit().putBoolean(KEY_SETTINGS_HOLD_HINT_SHOWN, value).apply()
+
     /**
-     * Сбрасывает все настройки к значениям по умолчанию. Обученная модель шага и отметка
-     * «разрешение на шаги уже спрашивали» — не настройки, а накопленное состояние: сохраняются.
+     * Сбрасывает все настройки к значениям по умолчанию. Обученная модель шага, отметка
+     * «разрешение на шаги уже спрашивали» и показанный намёк про удержание пункта — не настройки,
+     * а накопленное состояние: сохраняются.
      */
     fun resetToDefaults() {
         val stepPermissionAsked = stepPermissionAsked
+        val holdHintShown = settingsHoldHintShown
         val strideModel = prefs.getString(KEY_STRIDE_MODEL, null)
         // Editor.clear() is applied before the puts of the same edit.
         val editor = prefs.edit().clear()
         if (stepPermissionAsked) editor.putBoolean(KEY_STEP_PERMISSION_ASKED, true)
+        if (holdHintShown) editor.putBoolean(KEY_SETTINGS_HOLD_HINT_SHOWN, true)
         if (strideModel != null) editor.putString(KEY_STRIDE_MODEL, strideModel)
         editor.apply()
     }

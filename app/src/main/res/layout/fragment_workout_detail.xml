@@ -19,13 +19,14 @@
             android:clickable="true" />
 
         <!-- Индикатор загрузки маршрута -->
-        <ProgressBar
+        <com.google.android.material.progressindicator.CircularProgressIndicator
             android:id="@+id/progressBar_map_loading"
+            android:indeterminate="true"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
             android:visibility="visible"
-            style="?android:attr/progressBarStyleLarge" />
+            app:indicatorSize="48dp" />
 
     </FrameLayout>
 
@@ -34,9 +35,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp">
+        android:layout_marginTop="8dp">
 
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/toggleGroup_analysis"
@@ -51,7 +50,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/workout_details_basic_params"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                style="@style/Widget.Runner.Button.Outlined" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/button_charts"
@@ -59,7 +58,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="@string/workout_details_charts"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                style="@style/Widget.Runner.Button.Outlined" />
 
         </com.google.android.material.button.MaterialButtonToggleGroup>
 
@@ -84,13 +83,91 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+    <!-- Рекорды тренировки: поздравление сразу после сохранения, иначе отметка -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_records"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        app:cardBackgroundColor="?attr/colorTertiaryContainer"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingTop="16dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="4dp">
+
+            <ImageView
+                android:id="@+id/imageView_records_icon"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_menu_records"
+                app:tint="?attr/colorOnTertiaryContainer" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/textView_records_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnTertiaryContainer"
+                    tools:text="@string/records_congrats_title" />
+
+                <LinearLayout
+                    android:id="@+id/layout_records_lines"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:orientation="vertical" />
+
+                <TextView
+                    android:id="@+id/textView_records_steps_note"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/records_steps_note"
+                    android:textAppearance="@style/TextAppearance.Runner.Caption"
+                    android:textColor="?attr/colorOnTertiaryContainer"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/button_records_open_all"
+                    style="@style/Widget.Runner.Button.Text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:text="@string/records_open_all"
+                    app:icon="@drawable/ic_chevron_right"
+                    app:iconGravity="textEnd"
+                    app:iconTint="@color/ios_blue" />
+            </LinearLayout>
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
     <!-- Панель с информацией о тренировке -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp">
+        android:layout_margin="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -113,12 +190,25 @@
                     android:layout_weight="1"
                     android:orientation="vertical">
 
+                    <!-- Название из файла или формы: заголовком над датой -->
+                    <TextView
+                        android:id="@+id/textView_detail_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="2dp"
+                        android:textAppearance="@style/TextAppearance.Runner.Title3"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorOnSurface"
+                        android:visibility="gone"
+                        tools:text="Morning Run"
+                        tools:visibility="visible" />
+
                     <TextView
                         android:id="@+id/textView_detail_date"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         tools:text="01.01.2024"
-                        android:textSize="20sp"
+                        android:textAppearance="@style/TextAppearance.Runner.Title3"
                         android:textStyle="bold"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -127,9 +217,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         tools:text="14:30"
-                        android:textSize="14sp"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    android:layout_marginTop="2dp" />
+                        android:textAppearance="@style/TextAppearance.Runner.Subhead"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        android:layout_marginTop="2dp" />
                 </LinearLayout>
 
                 <ImageButton
@@ -148,7 +238,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     tools:text="@string/workout_type_easy_run"
-                    android:textSize="14sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Subhead"
                     android:textColor="?attr/colorOnPrimary"
                     android:background="@drawable/type_chip_background"
                     android:paddingStart="12dp"
@@ -156,6 +246,24 @@
                     android:paddingTop="6dp"
                     android:paddingBottom="6dp" />
             </LinearLayout>
+
+            <!-- Устройство, записавшее тренировку (из файла) -->
+            <TextView
+                android:id="@+id/textView_detail_device"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginTop="-8dp"
+                android:layout_marginBottom="12dp"
+                android:drawablePadding="4dp"
+                android:gravity="center_vertical"
+                android:textAppearance="@style/TextAppearance.Runner.Caption"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                app:drawableStartCompat="@drawable/ic_watch"
+                app:drawableTint="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                tools:text="Run Watch 265"
+                tools:visibility="visible" />
 
             <!-- Основная статистика -->
             <LinearLayout
@@ -166,138 +274,310 @@
 
                 <!-- Дистанция -->
                 <LinearLayout
+                    android:id="@+id/layout_detail_distance"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:focusable="true">
 
                     <TextView
                         android:id="@+id/textView_detail_distance"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:text="5.0 км"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary" />
+                        style="@style/RunnerDetailMetricValue"
+                        tools:text="5.00" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_distance_label"
-                        android:textSize="12sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_details_tile_distance" />
                 </LinearLayout>
 
                 <!-- Время -->
                 <LinearLayout
+                    android:id="@+id/layout_detail_duration"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:focusable="true">
 
                     <TextView
                         android:id="@+id/textView_detail_duration"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                        style="@style/RunnerDetailMetricValue"
                         android:text="@string/track_info_time_placeholder"
-                        tools:text="25:30"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary" />
+                        tools:text="25:30" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_time_label"
-                        android:textSize="12sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        android:id="@+id/textView_detail_duration_label"
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_time_label" />
                 </LinearLayout>
 
                 <!-- Средний темп -->
                 <LinearLayout
+                    android:id="@+id/layout_detail_pace"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:focusable="true">
 
                     <TextView
                         android:id="@+id/textView_detail_pace"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:text="5:06"
-                        android:textSize="24sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary" />
+                        style="@style/RunnerDetailMetricValue"
+                        tools:text="5:06" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_pace_label_km"
-                        android:textSize="12sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_details_tile_pace" />
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Дополнительная статистика -->
+            <!-- Дополнительная статистика: плитки раскладываются из кода по три в ряд, скрытые
+                 пропускаются (DetailTileRows) — без пустых ячеек посреди ряда -->
             <LinearLayout
+                android:id="@+id/layout_detail_secondary_tiles"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="16dp">
+                android:orientation="vertical">
 
                 <!-- Средняя скорость -->
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:id="@+id/layout_detail_avg_speed"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:focusable="true">
 
                     <TextView
                         android:id="@+id/textView_detail_avg_speed"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:text="11.8 км/ч"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary" />
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="11.8" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_details_average_speed"
-                        android:textSize="10sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_details_average_speed" />
+                </LinearLayout>
+
+                <!-- Пульс: скрыт, когда пульса нет -->
+                <LinearLayout
+                    android:id="@+id/layout_detail_heart_rate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:id="@+id/textView_detail_heart_rate"
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="152" />
+
+                    <TextView
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_details_tile_heart_rate" />
+                </LinearLayout>
+
+                <!-- Каденс: скрыт, когда шагов нет -->
+                <LinearLayout
+                    android:id="@+id/layout_detail_cadence"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:id="@+id/textView_detail_cadence"
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="172" />
+
+                    <TextView
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_details_tile_cadence" />
                 </LinearLayout>
 
                 <!-- Калории -->
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:id="@+id/layout_detail_calories"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
                     android:orientation="vertical"
-                    android:gravity="center">
+                    android:gravity="center"
+                    android:focusable="true">
 
                     <TextView
                         android:id="@+id/textView_detail_calories"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        tools:text="300 ккал"
-                        android:textSize="18sp"
-                        android:textStyle="bold"
-                        android:textColor="?attr/colorPrimary" />
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="300" />
 
                     <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/workout_details_calories"
-                        android:textSize="10sp"
-                        android:textColor="?attr/colorOnSurfaceVariant" />
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_details_tile_calories" />
+                </LinearLayout>
+
+                <!-- Общее время: когда отличается от времени в движении -->
+                <LinearLayout
+                    android:id="@+id/layout_detail_elapsed"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:id="@+id/textView_detail_elapsed"
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="28:40" />
+
+                    <TextView
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_elapsed_time_label" />
+                </LinearLayout>
+
+                <!-- Набор высоты: с набором и сбросом в своём ряду, когда в треке есть высоты -->
+                <LinearLayout
+                    android:id="@+id/layout_detail_elevation_gain"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:id="@+id/textView_detail_elevation_gain"
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="124" />
+
+                    <TextView
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_elevation_gain_label" />
+                </LinearLayout>
+
+                <!-- Сброс высоты -->
+                <LinearLayout
+                    android:id="@+id/layout_detail_elevation_loss"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    tools:visibility="visible">
+
+                    <TextView
+                        android:id="@+id/textView_detail_elevation_loss"
+                        style="@style/RunnerDetailMetricValue.Secondary"
+                        tools:text="118" />
+
+                    <TextView
+                        style="@style/RunnerDetailMetricCaption"
+                        android:text="@string/workout_elevation_loss_label" />
                 </LinearLayout>
             </LinearLayout>
+
+            <!-- Заметка (в том числе описание из файла): до 4 строк, нажатие раскрывает -->
+            <TextView
+                android:id="@+id/textView_detail_notes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:ellipsize="end"
+                android:background="?attr/selectableItemBackground"
+                android:textAppearance="@style/TextAppearance.Runner.Body"
+                android:textColor="?attr/colorOnSurface"
+                android:visibility="gone"
+                tools:text="Easy loop around the park"
+                tools:visibility="visible" />
+
+            <!-- Пометка источника высоты (GPS, файл): открывает пояснение -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/button_elevation_source_note"
+                style="@style/Widget.Runner.Button.Text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
+                android:layout_marginTop="-8dp"
+                android:layout_marginBottom="8dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="8dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:textAllCaps="false"
+                android:textAppearance="@style/TextAppearance.Runner.Caption"
+                android:letterSpacing="0"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                app:icon="@drawable/ic_info_outline"
+                app:iconSize="16dp"
+                app:iconPadding="6dp"
+                app:iconTint="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                tools:text="@string/workout_elevation_source_gps"
+                tools:visibility="visible" />
+
+            <!-- Не учитывать в рекордах: строка читается одной группой, нажатие переключает свитч -->
+            <LinearLayout
+                android:id="@+id/row_exclude_records"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="56dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:focusable="true"
+                android:background="?attr/selectableItemBackground"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:id="@+id/textView_exclude_records_label"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/records_exclude_label"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/switch_exclude_records"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:importantForAccessibility="no"
+                    android:saveEnabled="false"
+                    tools:checked="false" />
+
+            </LinearLayout>
+
+            <!-- Почему тренировка не учитывается в рекордах сама по себе -->
+            <TextView
+                android:id="@+id/textView_records_auto_excluded"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:drawablePadding="6dp"
+                android:text="@string/records_auto_excluded"
+                android:textAppearance="@style/TextAppearance.Runner.Caption"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                app:drawableStartCompat="@drawable/ic_info_outline_small"
+                app:drawableTint="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
             <!-- Кнопки действий -->
             <LinearLayout
@@ -319,8 +599,8 @@
                         android:layout_marginEnd="8dp"
                         android:padding="2dp"
                         android:text="@string/workout_details_btn_share"
-                        android:drawableStart="@android:drawable/ic_menu_share"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                        app:icon="@drawable/ic_share"
+                        style="@style/Widget.Runner.Button.Outlined" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/button_export_gpx"
@@ -329,8 +609,8 @@
                         android:layout_weight="1"
                         android:padding="2dp"
                         android:text="@string/workout_details_btn_export_gpx"
-                        android:drawableStart="@android:drawable/ic_menu_upload"
-                        style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                        app:icon="@drawable/ic_menu_export"
+                        style="@style/Widget.Runner.Button.Outlined" />
                 </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
@@ -339,10 +619,10 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
                     android:text="@string/workout_details_btn_share_diagnostics"
-                    android:drawableStart="@android:drawable/ic_menu_share"
+                    app:icon="@drawable/ic_share"
                     android:visibility="gone"
                     tools:visibility="visible"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                    style="@style/Widget.Runner.Button.Outlined" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_edit"
@@ -350,23 +630,58 @@
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"
                     android:text="@string/edit"
-                    android:drawableStart="@android:drawable/ic_menu_edit"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+                    app:icon="@drawable/ic_edit"
+                    style="@style/Widget.Runner.Button.Outlined" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/button_delete"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/workout_details_btn_delete"
-                    android:drawableStart="@android:drawable/ic_menu_delete"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    app:icon="@drawable/ic_delete"
+                    style="@style/Widget.Runner.Button"
                     android:textColor="?attr/colorOnError"
+                    app:iconTint="?attr/colorOnError"
                     app:backgroundTint="?attr/colorError" />
 
             </LinearLayout>
 
         </LinearLayout>
 
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Круги из файла (FIT, TCX): при двух и более -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_laps"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/textView_laps_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/workout_laps_title"
+                android:textAppearance="@style/TextAppearance.Runner.Headline"
+                android:textColor="?attr/colorOnSurface" />
+
+            <LinearLayout
+                android:id="@+id/layout_lap_rows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
@@ -377,15 +692,15 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:visibility="visible">
+        android:paddingBottom="16dp"
+        android:visibility="gone">
 
     <!-- График темпа/скорости/пульса -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp">
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -396,8 +711,8 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/workout_details_pace_speed_pulse_title"
-                android:textSize="16sp"
+                android:text="@string/workout_details_pace_speed_chart_title"
+                android:textAppearance="@style/TextAppearance.Runner.Body"
                 android:textStyle="bold"
                 android:textColor="?attr/colorOnSurface"
                 android:layout_marginBottom="8dp" />
@@ -419,9 +734,9 @@
                     android:layout_gravity="top|end"
                     android:layout_margin="8dp"
                     android:text=""
-                    android:textSize="12sp"
-                    android:textColor="?attr/colorOnSurface"
-                    android:background="@color/panel_surface_color"
+                    android:textAppearance="@style/TextAppearance.Runner.Caption"
+                    android:textColor="@color/chart_values_text"
+                    android:background="@color/chart_values_background"
                     android:padding="8dp"
                     android:gravity="start"
                     android:visibility="gone" />
@@ -432,13 +747,160 @@
 
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- График высоты -->
+    <!-- График каденса: скрыт целиком, когда каденса в точках нет -->
     <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_chart_cadence"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp">
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:baselineAligned="false"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/workout_details_cadence_title"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <TextView
+                    android:id="@+id/textView_chart_cadence_avg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="ср. 172 шаг/мин"
+                    android:textAppearance="@style/TextAppearance.Runner.Subhead"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="200dp">
+
+                <com.github.mikephil.charting.charts.LineChart
+                    android:id="@+id/chart_cadence"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <TextView
+                    android:id="@+id/textView_chart_cadence_values"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="8dp"
+                    android:text=""
+                    android:textAppearance="@style/TextAppearance.Runner.Caption"
+                    android:textColor="@color/chart_values_text"
+                    android:background="@color/chart_values_background"
+                    android:padding="8dp"
+                    android:gravity="start"
+                    android:visibility="gone" />
+
+            </FrameLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- График пульса: скрыт целиком, когда точек с пульсом меньше двух -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_chart_heart_rate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:baselineAligned="false"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/workout_details_heart_rate_title"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <TextView
+                    android:id="@+id/textView_chart_heart_rate_summary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="ср. 152 · макс. 178 уд/мин"
+                    android:textAppearance="@style/TextAppearance.Runner.Subhead"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+            </LinearLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="200dp">
+
+                <com.github.mikephil.charting.charts.LineChart
+                    android:id="@+id/chart_heart_rate"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <TextView
+                    android:id="@+id/textView_chart_heart_rate_values"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="8dp"
+                    android:text=""
+                    android:textAppearance="@style/TextAppearance.Runner.Caption"
+                    android:textColor="@color/chart_values_text"
+                    android:background="@color/chart_values_background"
+                    android:padding="8dp"
+                    android:gravity="start"
+                    android:visibility="gone" />
+
+            </FrameLayout>
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Время в зонах: по текущему максимальному пульсу; скрыто без зон, без пульса и при
+         покрытии меньше минуты. Строки (layout_hr_zone_row) создаются из кода -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_hr_zones"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
+        android:visibility="gone"
+        tools:visibility="visible">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -447,13 +909,88 @@
             android:padding="16dp">
 
             <TextView
+                android:id="@+id/textView_hr_zones_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/workout_details_height_title"
-                android:textSize="16sp"
+                android:text="@string/workout_details_hr_zones_title"
+                android:textAppearance="@style/TextAppearance.Runner.Body"
                 android:textStyle="bold"
-                android:textColor="?attr/colorOnSurface"
-                android:layout_marginBottom="8dp" />
+                android:textColor="?attr/colorOnSurface" />
+
+            <TextView
+                android:id="@+id/textView_hr_zones_basis"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                tools:text="По максимальному пульсу 185 (по возрасту)"
+                android:textAppearance="@style/TextAppearance.Runner.Caption"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <LinearLayout
+                android:id="@+id/layout_hr_zone_rows"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- График высоты: скрыт целиком, когда высот в точках нет -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_chart_elevation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:baselineAligned="false">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/workout_details_height_title"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+
+                <TextView
+                    android:id="@+id/textView_elevation_chart_summary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="↑ 124 м · ↓ 118 м"
+                    android:textAppearance="@style/TextAppearance.Runner.Subhead"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/textView_elevation_chart_source"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="@string/workout_elevation_source_gps_short"
+                android:textAppearance="@style/TextAppearance.Runner.Caption"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="8dp" />
 
             <FrameLayout
                 android:layout_width="match_parent"
@@ -471,9 +1008,9 @@
                     android:layout_gravity="top|end"
                     android:layout_margin="8dp"
                     android:text=""
-                    android:textSize="12sp"
-                    android:textColor="?attr/colorOnSurface"
-                    android:background="@color/panel_surface_color"
+                    android:textAppearance="@style/TextAppearance.Runner.Caption"
+                    android:textColor="@color/chart_values_text"
+                    android:background="@color/chart_values_background"
                     android:padding="8dp"
                     android:gravity="start"
                     android:visibility="gone" />
@@ -488,9 +1025,8 @@
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp">
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="16dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -510,7 +1046,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/workout_details_pace_speed_title"
-                    android:textSize="16sp"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
                     android:textStyle="bold"
                     android:textColor="?attr/colorOnSurface" />
 
@@ -527,14 +1063,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/workout_details_pace"
-                        style="@style/Widget.MaterialComponents.Chip.Choice" />
+                        style="@style/Widget.Runner.Chip.Filter" />
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chip_speed"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/workout_details_speed"
-                        style="@style/Widget.MaterialComponents.Chip.Choice" />
+                        style="@style/Widget.Runner.Chip.Filter" />
 
                 </com.google.android.material.chip.ChipGroup>
 
@@ -556,9 +1092,9 @@
                     android:layout_gravity="top|end"
                     android:layout_margin="8dp"
                     android:text=""
-                    android:textSize="12sp"
-                    android:textColor="?attr/colorOnSurface"
-                    android:background="@color/panel_surface_color"
+                    android:textAppearance="@style/TextAppearance.Runner.Caption"
+                    android:textColor="@color/chart_values_text"
+                    android:background="@color/chart_values_background"
                     android:padding="8dp"
                     android:gravity="start"
                     android:visibility="gone" />

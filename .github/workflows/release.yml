@@ -86,15 +86,16 @@ jobs:
           cp "$SRC" "$DEST"
           echo "path=$DEST" >> "$GITHUB_OUTPUT"
 
+      # The version's section of both changelogs ("## X.Y.Z — `v.X.Y.Z`"); a tag with no
+      # section of its own (a prerelease aN) gets GitHub's generated notes instead
+      - name: Release notes from the changelog
+        id: notes
+        run: bash .github/scripts/release-notes.sh "${{ steps.version.outputs.version }}" release-notes.md
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: ${{ steps.version.outputs.tag }}
           files: ${{ steps.apk.outputs.path }}
-          generate_release_notes: true
-          body: |
-            ## Install
-
-            Download the APK below and install it on your Android device (API 26+).
-
-            See the [README](https://github.com/${{ github.repository }}#readme) for build and setup instructions.
+          generate_release_notes: ${{ steps.notes.outputs.found != 'true' }}
+          body_path: release-notes.md

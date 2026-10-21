@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.androidx.room)
     alias(libs.plugins.androidx.navigation.safeargs)
+    alias(libs.plugins.aboutlibraries)
     id("jacoco")
 }
 
@@ -89,6 +90,8 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        // BuildConfig.DEBUG: GPS diagnostics exist in debug builds only
+        buildConfig = true
     }
 
     // AGP embeds a dependency list encrypted with a Google key into APK/AAB; it is only
@@ -100,6 +103,9 @@ android {
 
     sourceSets {
         getByName("androidTest").assets.srcDir("$projectDir/schemas")
+        // JVM migration tests build old databases from the exported schemas (classpath resources):
+        // Robolectric does not see test-only assets, so MigrationTestHelper cannot run there
+        getByName("test").resources.srcDir("$projectDir/schemas")
     }
 
     testOptions {
@@ -128,6 +134,16 @@ room {
     schemaDirectory("$projectDir/schemas")
 }
 
+// Open-source licenses screen (Settings). Offline: no network at build time (F-Droid).
+// config/aboutlibraries adds what has no POM (Material Icons, OSM data) or a POM without
+// a license (MPAndroidChart from JitPack).
+aboutLibraries {
+    configPath = "config/aboutlibraries"
+    offlineMode = true
+    // A build timestamp would make the APK differ on every build (reproducible builds)
+    excludeFields = arrayOf("generated")
+}
+
 dependencies {
 
     implementation(libs.androidx.core.ktx)
@@ -147,6 +163,9 @@ dependencies {
     implementation(libs.androidx.room.paging)
     ksp(libs.androidx.room.compiler)
     androidTestImplementation(libs.androidx.room.testing)
+
+    // Background import of workouts (survives leaving the screen and process death)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Paging
     implementation(libs.androidx.paging.runtime)
@@ -172,10 +191,14 @@ dependencies {
     // Charts
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 
+    // Open-source licenses screen: reads the list the aboutlibraries plugin generates
+    implementation(libs.aboutlibraries.core)
+
     // Unit testing
     testImplementation(libs.junit)
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     testImplementation("androidx.arch.core:core-testing:2.2.0")
+    testImplementation(libs.androidx.work.testing)
     testImplementation("org.robolectric:robolectric:4.12")
     testImplementation("androidx.test:core:1.5.0")
     // Android testing

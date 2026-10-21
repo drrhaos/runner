@@ -21,12 +21,12 @@ import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.data.Workout
+import com.runner.academy.data.WorkoutListItem
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.DialogRoutePickerBinding
 import com.runner.academy.databinding.FragmentAddWorkoutBinding
 import com.runner.academy.util.ErrorHandler
-import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.WorkoutTrackRebuilder
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -87,7 +87,8 @@ class AddWorkoutFragment : Fragment() {
         val minutes: String,
         val seconds: String,
         val calories: String,
-        val notes: String
+        val notes: String,
+        val title: String
     )
 
     override fun onCreateView(
@@ -196,11 +197,14 @@ class AddWorkoutFragment : Fragment() {
     }
 
     private fun setupCaloriesAutoCalculation() {
-        binding.editTextDistance.doAfterTextChanged { text ->
-            if (!form.caloriesAuto) return@doAfterTextChanged
-            val distance = text?.toString()?.toFloatOrNull() ?: return@doAfterTextChanged
-            setCaloriesText(calculateCalories(distance).toString())
-        }
+        // Дистанция и время: калории зависят от времени в движении, не только от дистанции.
+        listOf(binding.editTextDistance, binding.editTextHours, binding.editTextMinutes, binding.editTextSeconds)
+            .forEach { field ->
+                field.doAfterTextChanged {
+                    // Загрузка тренировки не пересчитывает: сохранённые калории не меняются без правки.
+                    if (form.caloriesAuto && !isBindingFields) recomputeCalories()
+                }
+            }
         binding.editTextCalories.doAfterTextChanged { text ->
             if (isBindingFields) return@doAfterTextChanged
             // Ручной ввод отключает автоподсчёт; пустое поле возвращает его.
@@ -217,8 +221,16 @@ class AddWorkoutFragment : Fragment() {
         }
     }
 
-    private fun calculateCalories(distanceKm: Float): Int =
-        FormatUtils.calculateCalories(distanceKm, requireContext().appContainer().userPreferences.userWeight)
+    private fun recomputeCalories() {
+        val distance = binding.editTextDistance.text?.toString()?.toFloatOrNull() ?: return
+        val seconds = listOf(binding.editTextHours to 3600, binding.editTextMinutes to 60, binding.editTextSeconds to 1)
+            .sumOf { (field, unit) -> (field.text?.toString()?.toIntOrNull() ?: 0) * unit }
+        if (seconds <= 0) return
+        val calories = WorkoutFormMapper.autoCalories(calorieProfile(), distance, seconds * 1000L, form.originalWorkout)
+        setCaloriesText(calories.toString())
+    }
+
+    private fun calorieProfile() = requireContext().appContainer().userPreferences.calorieProfile()
 
     private fun loadExistingWorkout() {
         viewLifecycleOwner.lifecycleScope.launch {
@@ -260,9 +272,8 @@ class AddWorkoutFragment : Fragment() {
         form.selectedDate = workout.date
         form.selectedType = workout.type
         form.selectedTrackDataJson = workout.trackData
-        // Калории, совпадающие с авторасчётом, продолжают пересчитываться от дистанции.
-        form.caloriesAuto = workout.calories == null ||
-            workout.calories == calculateCalories(workout.distance)
+        // Калории, совпадающие с авторасчётом, продолжают пересчитываться от дистанции и времени.
+        form.caloriesAuto = WorkoutFormMapper.caloriesAreAuto(workout, calorieProfile())
 
         isBindingFields = true
         try {
@@ -280,6 +291,7 @@ class AddWorkoutFragment : Fragment() {
             binding.editTextSeconds.setText((totalSeconds % 60).toString())
 
             binding.editTextNotes.setText(workout.notes.orEmpty())
+            binding.editTextName.setText(workout.title.orEmpty())
         } finally {
             isBindingFields = false
         }
@@ -333,9 +345,9 @@ class AddWorkoutFragment : Fragment() {
                     .setNegativeButton(R.string.cancel, null)
                     .create()
 
-                val adapter = RoutePickerAdapter { workout ->
+                val adapter = RoutePickerAdapter { route ->
                     dialog.dismiss()
-                    onRouteSelected(workout)
+                    pickRoute(route)
                 }
                 dialogBinding.recyclerViewRoutes.layoutManager =
                     LinearLayoutManager(requireContext())
@@ -359,27 +371,47 @@ class AddWorkoutFragment : Fragment() {
         }
     }
 
-    private fun onRouteSelected(source: Workout) {
-        form.selectedTrackDataJson = source.trackData
+    /** Picker rows carry no track: the picked one is read by id here. */
+    private fun pickRoute(route: WorkoutListItem) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val trackJson = try {
+                viewModel.getTrackData(route.id)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.e(TAG, "Error loading route track: ${e.message}", e)
+                null
+            }
+            if (!isAdded || isDetached) return@launch
+            if (trackJson.isNullOrBlank()) {
+                // Deleted or cleared since the picker listed it
+                Toast.makeText(requireContext(), getString(R.string.route_load_error), Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+            onRouteSelected(trackJson, route.distance)
+        }
+    }
+
+    private fun onRouteSelected(trackJson: String, routeDistanceKm: Float) {
+        form.selectedTrackDataJson = trackJson
         updateFieldLocks()
-        applyDistanceFromRoute(source)
+        applyDistanceFromRoute(trackJson, routeDistanceKm)
         updateRouteStatus()
         Toast.makeText(requireContext(), getString(R.string.edit_workout_route_selected), Toast.LENGTH_SHORT)
             .show()
     }
 
-    private fun applyDistanceFromRoute(source: Workout) {
-        val trackJson = source.trackData
+    private fun applyDistanceFromRoute(trackJson: String, routeDistanceKm: Float) {
         val distanceKm = try {
-            val trackData = trackJson?.let { TrackDataJson.parse(it) }
+            val trackData = TrackDataJson.parse(trackJson)
             if (trackData != null && trackData.totalDistance > 0) {
                 trackData.totalDistance / 1000f
             } else {
-                source.distance
+                routeDistanceKm
             }
         } catch (e: Exception) {
             android.util.Log.e(TAG, "Error reading route distance: ${e.message}", e)
-            source.distance
+            routeDistanceKm
         }
         binding.editTextDistance.setText(formatDistance(distanceKm))
     }
@@ -414,7 +446,8 @@ class AddWorkoutFragment : Fragment() {
         } catch (_: Exception) {
             0
         }
-        binding.textViewRouteStatus.text = getString(R.string.edit_workout_route_attached, pointCount)
+        val points = resources.getQuantityString(R.plurals.edit_workout_route_points_count, pointCount, pointCount)
+        binding.textViewRouteStatus.text = getString(R.string.edit_workout_route_attached, points)
         binding.buttonClearRoute.isEnabled = true
     }
 
@@ -435,7 +468,8 @@ class AddWorkoutFragment : Fragment() {
         minutes = binding.editTextMinutes.text.toString(),
         seconds = binding.editTextSeconds.text.toString(),
         calories = binding.editTextCalories.text.toString(),
-        notes = binding.editTextNotes.text.toString()
+        notes = binding.editTextNotes.text.toString(),
+        title = binding.editTextName.text.toString()
     )
 
     private fun hasUnsavedChanges(): Boolean {
@@ -465,6 +499,7 @@ class AddWorkoutFragment : Fragment() {
         val secondsText = binding.editTextSeconds.text.toString()
         val caloriesText = binding.editTextCalories.text.toString()
         val notesText = binding.editTextNotes.text.toString()
+        val titleText = binding.editTextName.text.toString()
 
         if (distanceText.isBlank() || hoursText.isBlank() || minutesText.isBlank() || secondsText.isBlank()) {
             Toast.makeText(context, getString(R.string.fill_required_fields), Toast.LENGTH_SHORT).show()
@@ -510,19 +545,18 @@ class AddWorkoutFragment : Fragment() {
                 return
             }
 
-            val avgPace = viewModel.calculatePace(distance, duration)
-            val workout = Workout(
-                id = original?.id ?: 0,
-                date = form.selectedDate,
-                distance = distance,
-                duration = duration,
-                avgPace = avgPace,
-                calories = calories,
-                notes = notesText.ifBlank { null },
-                type = form.selectedType,
-                trackData = form.selectedTrackDataJson,
-                isFavorite = original?.isFavorite ?: false,
-                intervalSegmentsJson = original?.intervalSegmentsJson
+            val workout = WorkoutFormMapper.toWorkout(
+                WorkoutFormMapper.FormInput(
+                    date = form.selectedDate,
+                    type = form.selectedType,
+                    distanceKm = distance,
+                    durationMs = duration,
+                    calories = calories,
+                    notes = notesText.ifBlank { null },
+                    trackDataJson = form.selectedTrackDataJson,
+                    title = titleText
+                ),
+                original
             )
             persistWorkout(workout, original)
         } catch (e: NumberFormatException) {

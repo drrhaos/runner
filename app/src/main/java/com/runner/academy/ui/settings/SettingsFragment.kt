@@ -1,26 +1,36 @@
 package com.runner.academy.ui.settings
 
 import android.app.DatePickerDialog
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
-import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.view.ViewCompat
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
+import com.runner.academy.BuildConfig
+import com.runner.academy.NavDestinations
 import com.runner.academy.R
 import com.runner.academy.appContainer
+import com.runner.academy.databinding.DialogHrMaxBinding
 import com.runner.academy.databinding.FragmentSettingsBinding
+import com.runner.academy.debug.DebugSensors
+import com.runner.academy.ui.workout.HeartRateText
+import com.runner.academy.util.HrMax
+import com.google.android.material.color.MaterialColors
 import com.runner.academy.util.StepPermissionPolicy
 import com.runner.academy.util.StepTrackingAccess
+import com.runner.academy.util.openAppSystemSettings
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.Calendar
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 class SettingsFragment : Fragment() {
@@ -30,11 +40,18 @@ class SettingsFragment : Fragment() {
 
     private val viewModel: SettingsViewModel by viewModels {
         val app = requireContext().appContainer()
-        SettingsViewModelFactory(requireContext(), app.userPreferences)
+        SettingsViewModelFactory(
+            requireContext(),
+            app.userPreferences,
+            app.pairedSensors,
+            app.heartRateSensor.status
+        )
     }
 
     /** Set while the UI writes switch states, so programmatic changes do not act as taps. */
     private var bindingState = false
+
+    private var holdHints: HoldHints? = null
 
     private val stepPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -61,9 +78,27 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        
+
+        // Debug card: debug builds only; the simulated heart-rate switch (release inflates a Space)
+        binding.cardDebug.isVisible = BuildConfig.DEBUG
+        DebugSensors.bind(binding.stubDebugSettings.inflate())
         setupClickListeners()
+        setupHoldHints()
         observeViewModel()
+    }
+
+    /** Explanations on touch and hold; the state warnings are read from the current state. */
+    private fun setupHoldHints() {
+        val hints = HoldHints(binding.root).also { holdHints = it }
+        val state = { viewModel.settingsState.value }
+        hints.attach(binding.rowAutoPause) {
+            SettingsHintTexts.join(requireContext(), SettingsHintTexts.autoPause(state().hasStepSensor, state().stepsForDistance))
+        }
+        hints.attach(binding.rowStepsForDistance) {
+            SettingsHintTexts.join(requireContext(), SettingsHintTexts.steps(state().hasStepSensor))
+        }
+        hints.attach(binding.rowGpsDiagnostics) { getString(R.string.settings_hint_gps_diagnostics) }
+        HoldHints.sayOnce(binding.root, requireContext().appContainer().userPreferences)
     }
 
     private fun setupClickListeners() {
@@ -80,6 +115,11 @@ class SettingsFragment : Fragment() {
         // Дата рождения
         binding.rowAge.setOnClickListener {
             showBirthDateDialog()
+        }
+
+        // Максимальный пульс
+        binding.rowHrMax.setOnClickListener {
+            showHrMaxDialog()
         }
 
         // Пол пользователя
@@ -107,12 +147,26 @@ class SettingsFragment : Fragment() {
             showStartCountdownDialog()
         }
 
-        // Голосовые уведомления
-        binding.switchVoiceFeedback.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.updateVoiceFeedback(isChecked)
+        // Голосовые подсказки: свой экран, главный переключатель там
+        binding.rowVoiceSettings.setOnClickListener {
+            val navController = findNavController()
+            if (navController.currentDestination?.id in NavDestinations.settings) navController.navigate(R.id.nav_voice_settings)
+        }
+        ViewCompat.replaceAccessibilityAction(
+            binding.rowVoiceSettings,
+            AccessibilityNodeInfoCompat.AccessibilityActionCompat.ACTION_CLICK,
+            getString(R.string.settings_voice_open_a11y),
+            null
+        )
+
+        // Автопауза: нажатие на всю строку переключает свитч
+        binding.rowAutoPause.setOnClickListener { binding.switchAutoPause.toggle() }
+        binding.switchAutoPause.setOnCheckedChangeListener { _, isChecked ->
+            if (bindingState) return@setOnCheckedChangeListener
+            viewModel.updateAutoPause(isChecked)
         }
 
-        // Диагностика GPS
+        // Диагностика GPS: в карточке «Отладка»
         binding.switchGpsDiagnostics.setOnCheckedChangeListener { _, isChecked ->
             viewModel.updateGpsDiagnostics(isChecked)
         }
@@ -123,9 +177,26 @@ class SettingsFragment : Fragment() {
             onStepsForDistanceToggled(isChecked)
         }
 
+        // Устройства (пульсометр)
+        binding.rowDevices.setOnClickListener {
+            // A double tap would open it twice
+            val navController = findNavController()
+            if (navController.currentDestination?.id in NavDestinations.settings) navController.navigate(R.id.nav_devices)
+        }
+
         // Сброс настроек
         binding.buttonResetSettings.setOnClickListener {
             showResetConfirmationDialog()
+        }
+
+        // Версия: в релизе versionName приходит из тега, локальная сборка — 1.0 (1)
+        binding.textViewAppVersion.text = getString(
+            R.string.settings_version_value, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE
+        )
+
+        // Лицензии открытого ПО
+        binding.rowOssLicenses.setOnClickListener {
+            OpenSourceLicensesDialog.show(requireContext())
         }
     }
 
@@ -133,6 +204,13 @@ class SettingsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.settingsState.collect { settings ->
                 updateUI(settings)
+            }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.devicesSummary.collect { summary ->
+                val name = summary.sensorName ?: getString(R.string.devices_unnamed)
+                binding.textViewDevicesSummary.text =
+                    if (summary.hasSensor) getString(summary.text, name) else getString(summary.text)
             }
         }
     }
@@ -143,47 +221,44 @@ class SettingsFragment : Fragment() {
         binding.textViewHeightValue.text = getString(R.string.settings_height_format, settings.userHeight.toInt())
         binding.textViewAgeValue.text = if (settings.userAge > 0) getString(R.string.settings_age_format, settings.userAge) else getString(R.string.settings_gender_unknown)
         binding.textViewGenderValue.text = getGenderDisplayName(settings.userGender)
-        
+        showHrMax(settings.hrMax)
+
         // Настройки приложения
         binding.textViewUnitSystemValue.text = viewModel.getUnitSystemDisplayName(settings.unitSystem)
         binding.textViewThemeModeValue.text = viewModel.getThemeModeDisplayName(settings.themeMode)
         binding.textViewLanguageValue.text = viewModel.getLanguageDisplayName(settings.appLanguage)
         binding.textViewStartCountdownValue.text = "${settings.startCountdownSeconds} s"
-        binding.switchVoiceFeedback.isChecked = settings.voiceFeedback
+        showVoiceSummary(settings)
         binding.switchGpsDiagnostics.isChecked = settings.gpsDiagnostics
         bindingState = true
         binding.switchStepsForDistance.isChecked = settings.stepsForDistance && settings.hasStepSensor
         bindingState = false
         binding.switchStepsForDistance.isEnabled = settings.hasStepSensor
-        binding.textViewStepsForDistanceHint.setText(
-            if (settings.hasStepSensor) R.string.settings_hint_steps_for_distance
-            else R.string.settings_hint_steps_no_sensor
-        )
+        bindingState = true
+        binding.switchAutoPause.isChecked = settings.autoPause
+        bindingState = false
+    }
+
+    /** "On · summary every 1 km"; TalkBack reads the label and the subtitle as one row. */
+    private fun showVoiceSummary(settings: SettingsState) {
+        val summary = VoiceRowSummary.of(settings.voice)
+        val text = summary.every?.let { getString(summary.text, getString(it)) } ?: getString(summary.text)
+        binding.textViewVoiceSummary.text = text
+        binding.rowVoiceSettings.contentDescription = getString(R.string.settings_label_voice) + ", " + text
     }
 
     override fun onResume() {
         super.onResume()
         // The permission may have been changed in system settings meanwhile.
         viewModel.refreshStepsForDistance()
+        // Back from the voice screen, which writes through its own view model.
+        viewModel.refreshVoice()
     }
 
     private fun onStepsForDistanceToggled(enabled: Boolean) {
         viewModel.updateStepsForDistance(enabled)
         if (enabled && !StepTrackingAccess.hasPermission(requireContext())) {
             stepPermissionRequest.launch(StepPermissionPolicy.PERMISSION)
-        }
-    }
-
-    private fun openAppSystemSettings() {
-        try {
-            startActivity(
-                Intent(
-                    Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.fromParts("package", requireContext().packageName, null)
-                )
-            )
-        } catch (e: Exception) {
-            android.util.Log.w("SettingsFragment", "App settings unavailable: ${e.message}")
         }
     }
 
@@ -328,7 +403,8 @@ class SettingsFragment : Fragment() {
     private fun showBirthDateDialog() {
         val currentBirthDate = viewModel.settingsState.value.userBirthDate
         val calendar = Calendar.getInstance()
-        if (currentBirthDate > 0) {
+        // 0 is "not set"; a date before 1970 is negative and real
+        if (currentBirthDate != 0L) {
             calendar.timeInMillis = currentBirthDate
         } else {
             calendar.add(Calendar.YEAR, -25)
@@ -353,6 +429,85 @@ class SettingsFragment : Fragment() {
             setTitle(getString(R.string.settings_dialog_birthdate_title))
             datePicker.maxDate = System.currentTimeMillis()
         }.show()
+    }
+
+    /** The value, where it comes from (or why the zones are off), read by TalkBack as one row. */
+    private fun showHrMax(hrMax: HrMax?) {
+        val value = binding.textViewHrMaxValue
+        val source = binding.textViewHrMaxSource
+        if (hrMax == null) {
+            value.setText(R.string.settings_hr_max_none)
+            value.setTextColor(MaterialColors.getColor(value, com.google.android.material.R.attr.colorOnSurfaceVariant))
+            source.setText(R.string.settings_hr_max_source_none)
+            binding.rowHrMax.contentDescription = getString(R.string.settings_hr_max_none_a11y)
+            return
+        }
+        value.text = String.format(Locale.getDefault(), "%d", hrMax.bpm)
+        value.setTextColor(MaterialColors.getColor(value, androidx.appcompat.R.attr.colorPrimary))
+        val age = hrMax.ageYears
+        source.text = if (age != null) {
+            getString(R.string.settings_hr_max_source_auto, age)
+        } else {
+            getString(R.string.settings_hr_max_source_manual)
+        }
+        binding.rowHrMax.contentDescription = getString(
+            R.string.settings_hr_max_a11y,
+            HeartRateText.beatsPerMinute(requireContext(), hrMax.bpm),
+            getString(if (age != null) R.string.hr_max_source_auto_short else R.string.settings_hr_max_source_manual)
+        )
+    }
+
+    /**
+     * A picker of 100..230 with the zones it gives; Save writes a manual value (unless an
+     * automatic one was left as it was), "By age" goes back to the automatic one.
+     */
+    private fun showHrMaxDialog() {
+        val state = viewModel.settingsState.value
+        val current = state.hrMax
+        val byAge = state.hrMaxByAge
+        val dialogBinding = DialogHrMaxBinding.inflate(layoutInflater)
+        dialogBinding.textViewHrMaxExplain.text = when (HrMaxDialog.explanation(state.userBirthDate, byAge)) {
+            HrMaxDialog.Explanation.FORMULA ->
+                getString(R.string.settings_dialog_hr_max_auto_formula, byAge?.ageYears, byAge?.bpm)
+            HrMaxDialog.Explanation.NO_BIRTH_DATE -> getString(R.string.settings_dialog_hr_max_no_birth)
+            HrMaxDialog.Explanation.AGE_OUT_OF_RANGE ->
+                getString(R.string.settings_dialog_hr_max_age_out_of_range)
+        }
+        val picker = dialogBinding.numberPickerHrMax
+        picker.minValue = HrMax.MIN_MANUAL_BPM
+        picker.maxValue = HrMax.MAX_MANUAL_BPM
+        picker.wrapSelectorWheel = false
+        picker.value = HrMaxDialog.initialBpm(current)
+        fun showPreview(bpm: Int) {
+            dialogBinding.textViewHrMaxZonesPreview.text = HrMaxDialog.zonesPreview(bpm).joinToString("\n") { (zone, range) ->
+                getString(R.string.settings_hr_max_zone_line, zone, range.first, range.last)
+            }
+        }
+        showPreview(picker.value)
+        picker.setOnValueChangedListener { _, _, bpm -> showPreview(bpm) }
+
+        val builder = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.settings_dialog_hr_max_title)
+            .setView(dialogBinding.root)
+            .setPositiveButton(R.string.save) { _, _ ->
+                HrMaxDialog.manualToSave(current, picker.value)?.let {
+                    viewModel.updateHrMaxManual(it)
+                    Toast.makeText(requireContext(), getString(R.string.settings_hr_max_saved), Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+        val (neutralLabel, neutralToast) = when (HrMaxDialog.neutral(current, byAge)) {
+            HrMaxDialog.Neutral.BY_AGE -> R.string.settings_dialog_hr_max_auto to R.string.settings_hr_max_saved
+            HrMaxDialog.Neutral.ZONES_OFF -> R.string.settings_dialog_hr_max_zones_off to R.string.settings_hr_max_zones_off_done
+            null -> null to null
+        }
+        if (neutralLabel != null && neutralToast != null) {
+            builder.setNeutralButton(neutralLabel) { _, _ ->
+                viewModel.updateHrMaxManual(0)
+                Toast.makeText(requireContext(), getString(neutralToast), Toast.LENGTH_SHORT).show()
+            }
+        }
+        builder.show()
     }
 
     private fun showGenderDialog() {
@@ -385,6 +540,8 @@ class SettingsFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
+        holdHints?.dismiss()
+        holdHints = null
         _binding = null
     }
 }

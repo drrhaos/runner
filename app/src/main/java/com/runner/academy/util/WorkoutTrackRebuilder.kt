@@ -53,15 +53,16 @@ object WorkoutTrackRebuilder {
 
         val recorded = TrackDataJson.parse(originalTrackJson)
         val aligned = recorded?.let { RouteTimeAligner.alignToRecorded(route, it) }
+        // Both branches give the route the form's time, not a recording's: not a record candidate
         if (aligned != null) {
             return Result(
-                TrackDataJson.toJson(RouteTimeAligner.shiftTime(aligned, dateShiftMs)),
+                TrackDataJson.toJson(RouteTimeAligner.shiftTime(aligned, dateShiftMs).copy(timeSynthetic = true)),
                 TimeSource.RECORDED
             )
         }
 
         val uniform = RouteTimeAligner.distributeByDistance(route, newDate.time, durationMs)
             ?: return Result(selectedTrackJson, TimeSource.UNCHANGED)
-        return Result(TrackDataJson.toJson(uniform), TimeSource.UNIFORM)
+        return Result(TrackDataJson.toJson(uniform.copy(timeSynthetic = true)), TimeSource.UNIFORM)
     }
 }

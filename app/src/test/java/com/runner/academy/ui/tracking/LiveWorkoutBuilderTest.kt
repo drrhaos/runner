@@ -1,0 +1,173 @@
+package com.runner.academy.ui.tracking
+
+import com.runner.academy.data.ElevationSource
+import com.runner.academy.data.PauseInterval
+import com.runner.academy.data.PauseKind
+import com.runner.academy.data.TrackPoint
+import com.runner.academy.data.WorkoutSession
+import com.runner.academy.data.WorkoutType
+import com.runner.academy.service.SessionClock
+import com.runner.academy.util.CalorieProfile
+import com.runner.academy.util.Calories
+import com.runner.academy.util.DerivationInput
+import com.runner.academy.util.TrackDataJson
+import com.runner.academy.util.WorkoutDerivation
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [28])
+class LiveWorkoutBuilderTest {
+
+    private val t0 = 1_700_000_000_000L
+    private fun at(sec: Int) = t0 + sec * 1_000L
+    private val profile = CalorieProfile(weightKg = 70f, sex = CalorieProfile.Sex.MALE, ageYears = null)
+
+    /** 1 Hz points due north at 3 m/s for [seconds]. */
+    private fun points(seconds: Int) = (0..seconds).map { s ->
+        TrackPoint(55.75 + s * 3.0 / 111_320.0, 37.6, at(s), 5f, 3f, 150.0)
+    }
+
+    private fun session(clock: SessionClock, currentTime: Long) = WorkoutSession(
+        isTracking = true,
+        startTime = t0,
+        currentTime = currentTime,
+        movingTime = currentTime,
+        rawTrackDataPoints = points(100),
+        clock = clock.state
+    )
+
+    private fun build(session: WorkoutSession, stopAt: Long) = LiveWorkoutBuilder.build(
+        session, WorkoutType.EASY_RUN, null, null, null, profile, stopAt
+    )!!
+
+    @Test
+    fun `duration, moving time and pauses come from the clock stopped at Stop`() {
+        val clock = SessionClock().apply {
+            start(t0)
+            pauseManual(at(40))
+            resumeManual(at(70))
+            enterAutoPause(at(100))
+        }
+
+        val workout = build(session(clock, 99_000L), stopAt = at(130))
+        val track = TrackDataJson.parse(workout.trackData)!!
+
+        assertEquals(100_000L, workout.duration)
+        assertEquals(70_000L, workout.movingDuration)
+        assertEquals(
+            listOf(PauseInterval(at(40), at(70), PauseKind.MANUAL), PauseInterval(at(100), at(130), PauseKind.AUTO)),
+            track.pauses
+        )
+        assertEquals(at(130), track.endTime)
+    }
+
+    @Test
+    fun `a session stopped earlier keeps its stop however late the save`() {
+        val clock = SessionClock().apply { start(t0) }
+        val stopped = LiveWorkoutBuilder.stopped(session(clock, 59_000L), at(60))
+
+        val workout = build(stopped, stopAt = at(600))
+
+        assertEquals(60_000L, stopped.currentTime)
+        assertEquals(60_000L, workout.duration)
+        assertEquals(60_000L, workout.movingDuration)
+        assertEquals(emptyList<PauseInterval>(), TrackDataJson.parse(workout.trackData)!!.pauses)
+    }
+
+    @Test
+    fun `a session without a clock keeps the ticked time and writes no pauses`() {
+        val session = WorkoutSession(
+            isTracking = true, startTime = t0, currentTime = 100_000L, movingTime = 0L,
+            rawTrackDataPoints = points(100)
+        )
+
+        val workout = build(session, stopAt = at(500))
+
+        assertEquals(100_000L, workout.duration)
+        assertEquals(100_000L, workout.movingDuration)
+        assertNull(TrackDataJson.parse(workout.trackData)!!.pauses)
+    }
+
+    @Test
+    fun `a recording with altitudes declares them GPS`() {
+        val workout = build(session(SessionClock().apply { start(t0) }, 100_000L), stopAt = at(100))
+
+        assertEquals(ElevationSource.GPS, TrackDataJson.parse(workout.trackData)!!.elevationSource)
+    }
+
+    @Test
+    fun `a recording without altitudes stores none, not zeros`() {
+        val session = session(SessionClock().apply { start(t0) }, 100_000L).let { s ->
+            s.copy(rawTrackDataPoints = s.rawTrackDataPoints.map { it.copy(altitude = null) })
+        }
+
+        val track = TrackDataJson.parse(build(session, stopAt = at(100)).trackData)!!
+
+        assertNull(track.elevationSource)
+        assertEquals(ElevationSource.NONE, ElevationSource.of(track))
+        assertTrue(track.points.all { it.altitude == null })
+    }
+
+    @Test
+    fun `a recording with the barometer on most fixes declares it and keeps each fix's value`() {
+        val session = session(SessionClock().apply { start(t0) }, 100_000L).let { s ->
+            // A fix in ten has no reading around it (the sensor stalled): still 90 %
+            s.copy(rawTrackDataPoints = s.rawTrackDataPoints.mapIndexed { i, p ->
+                p.copy(baroM = if (i % 10 == 5) null else 120f + i * 0.1f)
+            })
+        }
+
+        val track = TrackDataJson.parse(build(session, stopAt = at(100)).trackData)!!
+
+        assertEquals(ElevationSource.BAROMETER, track.elevationSource)
+        assertEquals(120f + 3 * 0.1f, track.points.first { it.timestamp == at(3) }.baroM!!, 0.001f)
+        assertNull(track.points.first { it.timestamp == at(5) }.baroM)
+    }
+
+    @Test
+    fun `a recording with the barometer on too few fixes stays GPS`() {
+        val session = session(SessionClock().apply { start(t0) }, 100_000L).let { s ->
+            s.copy(rawTrackDataPoints = s.rawTrackDataPoints.mapIndexed { i, p -> if (i < 50) p.copy(baroM = 120f) else p })
+        }
+
+        val track = TrackDataJson.parse(build(session, stopAt = at(100)).trackData)!!
+
+        assertEquals(ElevationSource.GPS, track.elevationSource)
+        assertEquals(ElevationSource.GPS, ElevationSource.of(track))
+    }
+
+    @Test
+    fun `the saved calories add the climb of the shown track`() {
+        val climbing = (0..600).map { s ->
+            TrackPoint(55.75 + s * 3.0 / 111_320.0, 37.6, at(s), 5f, 3f, 150.0 + s * 0.1)
+        }
+        val session = session(SessionClock().apply { start(t0) }, 600_000L).copy(rawTrackDataPoints = climbing)
+        val workout = build(session, stopAt = at(600))
+
+        val derived = WorkoutDerivation.derive(DerivationInput(workout.trackData, workout.type, workout.duration))
+        val climb = derived.elevationGain!!
+        assertTrue("climb $climb", climb > 30f)
+        val expected = Calories.estimate(profile, workout.distance * 1000f, workout.movingDuration, climb, avgHeartRate = null)
+        assertEquals(expected, workout.calories)
+        assertTrue(expected > Calories.estimate(profile, workout.distance * 1000f, workout.movingDuration, null, null))
+    }
+
+    @Test
+    fun `the saved calories use the average heart rate with an age`() {
+        val withHr = (0..300).map { s ->
+            TrackPoint(55.75 + s * 3.0 / 111_320.0, 37.6, at(s), 5f, 3f, 150.0, heartRate = 160)
+        }
+        val session = session(SessionClock().apply { start(t0) }, 300_000L).copy(rawTrackDataPoints = withHr)
+        val aged = profile.copy(ageYears = 40)
+        val workout = LiveWorkoutBuilder.build(session, WorkoutType.EASY_RUN, null, null, null, aged, at(300))!!
+
+        val expected = Calories.estimate(aged, workout.distance * 1000f, workout.movingDuration, null, avgHeartRate = 160)
+        assertEquals(expected, workout.calories)
+    }
+}

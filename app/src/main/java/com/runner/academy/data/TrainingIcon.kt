@@ -1,6 +1,7 @@
 package com.runner.academy.data
 
 import android.content.Context
+import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 import com.runner.academy.R
 
@@ -41,6 +42,18 @@ fun TrainingIcon.drawableRes(): Int = when (this) {
     TrainingIcon.INTERVAL -> R.drawable.ic_intensity_interval
     TrainingIcon.RACE -> R.drawable.ic_intensity_race
     TrainingIcon.PLAN -> R.drawable.ic_intensity_plan
+}
+
+/** The icon's own color, for a square or circle behind it in white. */
+@ColorRes
+fun TrainingIcon.colorRes(): Int = when (this) {
+    TrainingIcon.RECOVERY -> R.color.intensity_recovery
+    TrainingIcon.EASY -> R.color.intensity_easy
+    TrainingIcon.LONG -> R.color.intensity_long
+    TrainingIcon.TEMPO -> R.color.intensity_tempo
+    TrainingIcon.INTERVAL -> R.color.intensity_interval
+    TrainingIcon.RACE -> R.color.intensity_race
+    TrainingIcon.PLAN -> R.color.intensity_plan
 }
 
 fun TrainingIcon.displayName(context: Context): String = when (this) {

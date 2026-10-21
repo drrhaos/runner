@@ -1,11 +1,20 @@
 package com.runner.academy.util
 
-import com.google.gson.JsonArray
+import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.google.gson.stream.JsonReader
+import com.google.gson.stream.JsonToken
+import com.google.gson.stream.JsonWriter
+import com.runner.academy.data.PauseKind
 import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutType
+import java.io.Closeable
+import java.io.Reader
+import java.io.StringReader
+import java.io.StringWriter
+import java.io.Writer
 import java.util.Date
 
 /**
@@ -20,23 +29,45 @@ import java.util.Date
  *
  * Parsing is manual via JsonObject so missing fields don't blow up —
  * Gson + Kotlin non-null defaults are unsafe.
+ *
+ * formatVersion=2 (DB schema 7) adds movingDurationMs, excludeFromRecords, avgHeartRate and
+ * maxHeartRate. Derived metrics (elevation, cadence, route preview, records) are not exported:
+ * imported rows get metricsVersion 0 and are recomputed from the track. Older builds read
+ * format 2 too — they ignore unknown keys. The heart rate is derived from the track too since
+ * metrics version 7; its keys stay in the format and the recompute overwrites them.
+ * Without a track nothing is recomputed: such a row keeps the heart rate and the cadence
+ * (`avgCadence`, written only then) an imported file gave it. Schema 10 adds `title`,
+ * `device` and `lapsJson`, all optional, with no new format version.
  */
 object WorkoutBackupFormat {
 
-    const val FORMAT_VERSION = 1
+    const val FORMAT_VERSION = 2
+
+    /** The workouts array: `workouts`, or `d` in obfuscated older builds. */
+    private val WORKOUTS_KEYS = setOf("workouts", "d")
 
     data class WorkoutBackupDto(
         val id: Long = 0,
         val dateMillis: Long,
         val distanceKm: Float,
         val durationMs: Long,
+        /** Format 2; absent in format 1 (= durationMs). */
+        val movingDurationMs: Long? = null,
         val avgPace: Float,
         val calories: Int? = null,
         val notes: String? = null,
         val type: String = WorkoutType.EASY_RUN.name,
         val trackData: String? = null,
         val isFavorite: Boolean = false,
-        val intervalSegmentsJson: String? = null
+        val intervalSegmentsJson: String? = null,
+        val excludeFromRecords: Boolean = false,
+        val avgHeartRate: Int? = null,
+        val maxHeartRate: Int? = null,
+        /** Written for a workout without a track only: nothing to derive it from again. */
+        val avgCadence: Float? = null,
+        val title: String? = null,
+        val device: String? = null,
+        val lapsJson: String? = null
     )
 
     data class WorkoutsBackupFile(
@@ -47,53 +78,141 @@ object WorkoutBackupFormat {
         val workouts: List<WorkoutBackupDto> = emptyList()
     )
 
-    fun parseBackupJson(json: String): List<Workout> {
-        val root = try {
-            JsonParser.parseString(json).asJsonObject
-        } catch (e: Exception) {
-            throw IllegalArgumentException("Invalid workout backup JSON", e)
-        }
+    fun parseBackupJson(json: String): List<Workout> =
+        backupBatches(StringReader(json), batchSize = Int.MAX_VALUE).flatten().toList()
 
-        val workoutsEl = root.workoutsArrayOrNull()
-            ?: throw IllegalArgumentException("Backup missing workouts array")
-        if (workoutsEl.isEmpty) {
-            throw IllegalArgumentException("Backup contains no workouts")
-        }
-
-        return workoutsEl.mapIndexed { index, element ->
-            if (!element.isJsonObject) {
-                throw IllegalArgumentException("Workout at index $index is not an object")
+    /**
+     * The workouts of a backup [batchSize] at a time, read as they are consumed: the file is
+     * never held whole. A batch is cut earlier once its tracks reach [maxBatchChars] — rows
+     * with tracks are hundreds of KB each, rows without a few hundred bytes. The first [skip]
+     * rows (imported before) are passed over unconverted. [onCount] gets the declared
+     * `workoutCount` when the file has one before its rows. Throws [IllegalArgumentException]
+     * on a broken file or one without workouts, when reached.
+     */
+    fun backupBatches(
+        reader: Reader,
+        batchSize: Int,
+        skip: Int = 0,
+        maxBatchChars: Long = Long.MAX_VALUE,
+        onCount: (Int) -> Unit = {}
+    ): Sequence<List<Workout>> = sequence {
+        JsonReader(reader).use { json ->
+            var found = false
+            var rows = 0
+            try {
+                json.beginObject()
+                while (json.hasNext()) {
+                    val name = json.nextName()
+                    when {
+                        name in WORKOUTS_KEYS && !found && json.peek() == JsonToken.BEGIN_ARRAY -> {
+                            found = true
+                            json.beginArray()
+                            val batch = mutableListOf<Workout>()
+                            var batchChars = 0L
+                            while (json.hasNext()) {
+                                val element = JsonParser.parseReader(json)
+                                if (!element.isJsonObject) {
+                                    throw IllegalArgumentException("Workout at index $rows is not an object")
+                                }
+                                if (rows >= skip) {
+                                    val workout = element.asJsonObject.toDto().toWorkout()
+                                    batch += workout
+                                    batchChars += workout.trackData?.length ?: 0
+                                }
+                                rows++
+                                if (batch.size == batchSize || batchChars >= maxBatchChars) {
+                                    yield(batch.toList())
+                                    batch.clear()
+                                    batchChars = 0L
+                                }
+                            }
+                            json.endArray()
+                            if (batch.isNotEmpty()) yield(batch.toList())
+                        }
+                        name == "workoutCount" && json.peek() == JsonToken.NUMBER -> onCount(json.nextInt())
+                        else -> json.skipValue()
+                    }
+                }
+                json.endObject()
+            } catch (e: IllegalArgumentException) {
+                throw e
+            } catch (e: Exception) {
+                throw IllegalArgumentException("Invalid workout backup JSON", e)
             }
-            element.asJsonObject.toDto().toWorkout()
+            if (!found) throw IllegalArgumentException("Backup missing workouts array")
+            if (rows == 0) throw IllegalArgumentException("Backup contains no workouts")
         }
     }
 
+    /** A whole backup in memory: for tests and small sets; an export writes [BackupWriter]. */
     fun toBackupJson(workouts: List<Workout>, packageName: String): String {
-        val workoutsArray = JsonArray()
-        workouts.forEach { workout ->
-            workoutsArray.add(
-                JsonObject().apply {
-                    addProperty("id", workout.id)
-                    addProperty("dateMillis", workout.date.time)
-                    addProperty("distanceKm", workout.distance)
-                    addProperty("durationMs", workout.duration)
-                    addProperty("avgPace", workout.avgPace)
-                    workout.calories?.let { addProperty("calories", it) }
-                    workout.notes?.let { addProperty("notes", it) }
-                    addProperty("type", workout.type.name)
-                    workout.trackData?.let { addProperty("trackData", it) }
-                    addProperty("isFavorite", workout.isFavorite)
-                    workout.intervalSegmentsJson?.let { addProperty("intervalSegmentsJson", it) }
-                }
-            )
+        val out = StringWriter()
+        BackupWriter(out, packageName, workouts.size).use { writer ->
+            workouts.forEach(writer::write)
+            writer.finish()
         }
-        return JsonObject().apply {
-            addProperty("formatVersion", FORMAT_VERSION)
-            addProperty("exportedAt", java.time.Instant.now().toString())
-            addProperty("packageName", packageName)
-            addProperty("workoutCount", workouts.size)
-            add("workouts", workoutsArray)
-        }.toString()
+        return out.toString()
+    }
+
+    /**
+     * Writes a backup to [out] row by row, as [backupBatches] reads it: only the row being
+     * written is held. The header comes first, `workoutCount` ([workoutCount]) before the rows
+     * so an import knows its total from the start. [finish] closes the array and the object;
+     * a writer closed without it leaves a cut file, which an import rejects.
+     */
+    class BackupWriter(out: Writer, packageName: String, workoutCount: Int) : Closeable {
+        private val json = JsonWriter(out)
+
+        init {
+            json.beginObject()
+            json.name("formatVersion").value(FORMAT_VERSION.toLong())
+            json.name("exportedAt").value(java.time.Instant.now().toString())
+            json.name("packageName").value(packageName)
+            json.name("workoutCount").value(workoutCount.toLong())
+            json.name("workouts").beginArray()
+        }
+
+        fun write(workout: Workout) {
+            gson.toJson(workout.toJsonObject(), json)
+        }
+
+        fun finish() {
+            json.endArray()
+            json.endObject()
+            json.flush()
+        }
+
+        override fun close() = json.close()
+    }
+
+    private val gson = Gson()
+
+    /** One workout as a backup row holds it: [parseWorkoutJson] reads it back. */
+    fun toWorkoutJson(workout: Workout): String = workout.toJsonObject().toString()
+
+    /** A workout written by [toWorkoutJson], read as a backup row is (metrics to be derived again). */
+    fun parseWorkoutJson(json: String): Workout = JsonParser.parseString(json).asJsonObject.toDto().toWorkout()
+
+    private fun Workout.toJsonObject() = JsonObject().apply {
+        addProperty("id", id)
+        addProperty("dateMillis", date.time)
+        addProperty("distanceKm", distance)
+        addProperty("durationMs", duration)
+        addProperty("movingDurationMs", movingDuration)
+        addProperty("avgPace", avgPace)
+        calories?.let { addProperty("calories", it) }
+        notes?.let { addProperty("notes", it) }
+        addProperty("type", type.name)
+        trackData?.let { addProperty("trackData", it) }
+        addProperty("isFavorite", isFavorite)
+        intervalSegmentsJson?.let { addProperty("intervalSegmentsJson", it) }
+        addProperty("excludeFromRecords", excludeFromRecords)
+        avgHeartRate?.let { addProperty("avgHeartRate", it) }
+        maxHeartRate?.let { addProperty("maxHeartRate", it) }
+        if (trackData == null) avgCadence?.let { addProperty("avgCadence", it) }
+        title?.let { addProperty("title", it) }
+        device?.let { addProperty("device", it) }
+        lapsJson?.let { addProperty("lapsJson", it) }
     }
 
     fun getBackupJsonFileName(): String {
@@ -108,31 +227,32 @@ object WorkoutBackupFormat {
      * older release builds: exportedAt/packageName/workoutCount/workouts → a/b/c/d
      * (formatVersion was absent in that DTO layout).
      */
-    private fun JsonObject.workoutsArrayOrNull(): JsonArray? {
-        val named = get("workouts")
-        if (named != null && named.isJsonArray) return named.asJsonArray
-        val obfuscated = get("d")
-        if (obfuscated != null && obfuscated.isJsonArray) return obfuscated.asJsonArray
-        return null
-    }
-
     private fun JsonObject.toDto(): WorkoutBackupDto {
         // Field order in the obfuscated Gson DTO:
         // id, dateMillis, distanceKm, durationMs, avgPace, calories, notes,
         // type, trackData, isFavorite [, intervalSegmentsJson]
         // → a … j [, k]. Null notes are omitted, so letters after notes still match.
+        // Format 2 keys never had obfuscated aliases.
         return WorkoutBackupDto(
             id = longOr(listOf("id", "a"), 0L),
             dateMillis = longOr(listOf("dateMillis", "b"), System.currentTimeMillis()),
             distanceKm = floatOr(listOf("distanceKm", "c"), 0f),
             durationMs = longOr(listOf("durationMs", "d"), 0L),
+            movingDurationMs = longOrNull(listOf("movingDurationMs")),
             avgPace = floatOr(listOf("avgPace", "e"), 0f),
             calories = intOrNull(listOf("calories", "f")),
             notes = stringOrNull(listOf("notes", "g")),
             type = stringOr(listOf("type", "h"), WorkoutType.EASY_RUN.name),
             trackData = trackDataOrNull(listOf("trackData", "i")),
             isFavorite = booleanOr(listOf("isFavorite", "j"), false),
-            intervalSegmentsJson = stringOrNull(listOf("intervalSegmentsJson", "k"))
+            intervalSegmentsJson = stringOrNull(listOf("intervalSegmentsJson", "k")),
+            excludeFromRecords = booleanOr(listOf("excludeFromRecords"), false),
+            avgHeartRate = intOrNull(listOf("avgHeartRate")),
+            maxHeartRate = intOrNull(listOf("maxHeartRate")),
+            avgCadence = floatOrNull(listOf("avgCadence")),
+            title = stringOrNull(listOf("title")),
+            device = stringOrNull(listOf("device")),
+            lapsJson = stringOrNull(listOf("lapsJson"))
         )
     }
 
@@ -155,17 +275,19 @@ object WorkoutBackupFormat {
         return null
     }
 
-    private fun JsonObject.longOr(keys: List<String>, default: Long): Long {
-        val el = firstPresent(keys) ?: return default
+    private fun JsonObject.longOr(keys: List<String>, default: Long): Long =
+        longOrNull(keys) ?: default
+
+    private fun JsonObject.longOrNull(keys: List<String>): Long? {
+        val el = firstPresent(keys) ?: return null
         return try {
             when {
                 el.isJsonPrimitive && el.asJsonPrimitive.isNumber -> el.asLong
-                el.isJsonPrimitive && el.asJsonPrimitive.isString ->
-                    el.asString.toLongOrNull() ?: default
-                else -> default
+                el.isJsonPrimitive && el.asJsonPrimitive.isString -> el.asString.toLongOrNull()
+                else -> null
             }
         } catch (_: Exception) {
-            default
+            null
         }
     }
 
@@ -182,6 +304,9 @@ object WorkoutBackupFormat {
             default
         }
     }
+
+    private fun JsonObject.floatOrNull(keys: List<String>): Float? =
+        floatOr(keys, Float.NaN).takeIf { it.isFinite() }
 
     private fun JsonObject.intOrNull(keys: List<String>): Int? {
         val el = firstPresent(keys) ?: return null
@@ -230,18 +355,42 @@ object WorkoutBackupFormat {
     private fun WorkoutBackupDto.toWorkout(): Workout {
         val workoutType = WorkoutType.entries.find { it.name.equals(type, ignoreCase = true) }
             ?: WorkoutType.EASY_RUN
+        val distance = distanceKm.coerceAtLeast(0f)
+        val duration = durationMs.coerceAtLeast(0L)
+        // Format 1 has no moving time; a value out of 0 < m ≤ duration is not trusted: then the
+        // track's auto-pauses tell it (none known → duration)
+        val movingDuration = movingDurationMs?.takeIf { it in 1..duration }
+            ?: movingFromPauses(duration, trackData)
         return Workout(
             id = 0,
             date = Date(dateMillis),
-            distance = distanceKm.coerceAtLeast(0f),
-            duration = durationMs.coerceAtLeast(0L),
-            avgPace = avgPace.coerceAtLeast(0f),
+            distance = distance,
+            duration = duration,
+            movingDuration = movingDuration,
+            // Recomputed like on every other path, not taken from the file
+            avgPace = PaceMath.avgPace(distance, movingDuration),
             calories = calories,
             notes = notes,
             type = workoutType,
             trackData = TrackDataJson.normalizeStored(trackData),
             isFavorite = isFavorite,
-            intervalSegmentsJson = intervalSegmentsJson
+            intervalSegmentsJson = intervalSegmentsJson,
+            excludeFromRecords = excludeFromRecords,
+            avgHeartRate = avgHeartRate,
+            maxHeartRate = maxHeartRate,
+            // A track derives its own cadence; without one the file's value stays
+            avgCadence = if (trackData == null) avgCadence else null,
+            metricsVersion = 0,
+            title = title,
+            device = device,
+            lapsJson = lapsJson
         )
+    }
+
+    /** duration − Σ auto-pauses of the track, if that stays in 0 < m ≤ duration; else duration. */
+    private fun movingFromPauses(duration: Long, trackJson: String?): Long {
+        val pauses = trackJson?.takeIf { it.contains("pauses") }?.let { TrackDataJson.parse(it)?.pauses }
+        val moving = duration - TrackPauses.totalMs(pauses, PauseKind.AUTO)
+        return moving.takeIf { it in 1..duration } ?: duration
     }
 }

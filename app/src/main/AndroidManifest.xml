@@ -9,10 +9,36 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <!-- Import of workouts (WorkManager in the foreground) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Датчик шагов (API 29+ — runtime): дистанция при потере GPS, каденс. Спрашивается один раз. -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
+    <!--
+      Пульсометр по Bluetooth LE. До 30 включительно: BLUETOOTH/BLUETOOTH_ADMIN + точная
+      геолокация (она уже есть для GPS, maxSdkVersion у неё намеренно нет). С 31: «Устройства
+      поблизости» — SCAN (neverForLocation: маяки не нужны) и CONNECT, один запрос при привязке.
+      Тип FGS connectedDevice (34+) — только при привязанном датчике и выданном CONNECT.
+    -->
+    <uses-permission
+        android:name="android.permission.BLUETOOTH"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_ADMIN"
+        android:maxSdkVersion="30" />
+    <uses-permission
+        android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="s" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+
+    <!-- Без BLE приложение ставится и работает, просто без пульсометра -->
+    <uses-feature
+        android:name="android.hardware.bluetooth_le"
+        android:required="false" />
 
     <!--
       Намеренно НЕ объявлены (см. docs/ROADMAP.md, этап 0):
@@ -50,8 +76,14 @@
             android:name=".service.WorkoutTrackingService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="location"
+            android:foregroundServiceType="location|connectedDevice"
             android:stopWithTask="false" />
+
+        <!-- WorkManager's foreground service: the import of workouts is a data sync -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
 
         <!-- FileProvider для экспорта GPX файлов -->
         <provider

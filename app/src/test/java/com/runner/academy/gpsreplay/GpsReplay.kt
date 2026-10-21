@@ -124,6 +124,9 @@ data class SyntheticRun(
     val accuracyM: Float = 6f,
     /** Seconds (from start) with no fixes at all — tunnel / indoor. */
     val gapSec: IntRange? = null,
+    /** Seconds (from start) with a fix only every [sparseEverySec] seconds — a weak receiver. */
+    val sparseSec: IntRange? = null,
+    val sparseEverySec: Int = 20,
     /** Seconds at which a single fix jumps [outlierOffsetM] off the route. */
     val outlierAtSec: Set<Int> = emptySet(),
     val outlierOffsetM: Double = 300.0,
@@ -134,8 +137,112 @@ data class SyntheticRun(
      * distance moved / stride) and the cadence. Null: no step sensor.
      */
     val strideM: Double? = null,
-    val seed: Long = 42L
+    val seed: Long = 42L,
+    /**
+     * The run as a sequence of phases along [route]; set, it replaces [speedMps] and the
+     * stand-still fields as the timeline. Null: the single-speed run (older scenarios).
+     */
+    val phases: List<Phase>? = null,
+    /** True altitude by the distance moved, metres; null: flat at [ALTITUDE_M]. */
+    val elevation: ((Double) -> Double)? = null,
+    /**
+     * GPS altitude error, the same AR(1) model as the position ([altitudeNoiseDecay]) with this
+     * standard deviation, metres; its own random stream, so the positions do not change.
+     */
+    val altitudeNoiseM: Double = 0.0,
+    val altitudeNoiseDecay: Double = 0.95,
+    /** Seconds (from start) whose fixes have no altitude. */
+    val missingAltitude: IntRange? = null,
+    /** The phone's barometer: set, every fix carries a pressure altitude (`baro_m`); null: none. */
+    val barometer: Barometer? = null,
+    /**
+     * The heart-rate sensor's script by ms from the start: [SessionReplay] plays it through a
+     * fake sensor at 1 Hz (also over pauses) and each fix takes the value of its own moment
+     * like the service; null from it: a "no contact" sample. Null: no sensor at all. The raw
+     * fixes carry no `hr`.
+     */
+    val hrAt: ((Long) -> Int?)? = null
 ) {
+    /**
+     * A barometer read at each fix: the true altitude ([elevation]) off by [offsetM] (the
+     * weather — never calibrated), drifting [driftMPerHour] over the run, plus white noise of
+     * [noiseM] (standard deviation) after the tracker's median. [missingSec]: no reading
+     * around those fixes.
+     */
+    data class Barometer(
+        val driftMPerHour: Double = 8.0,
+        val noiseM: Double = 0.3,
+        val offsetM: Double = -35.0,
+        val missingSec: IntRange? = null
+    )
+
+    /** One stretch of a phased run. Steps grow only while moving (stride [strideM]). */
+    sealed class Phase {
+        /** [meters] along the route at [speedMps]. */
+        data class Run(val meters: Double, val speedMps: Double = 3.3) : Phase()
+
+        /** [sec] seconds walking at [speedMps]. */
+        data class Walk(val sec: Int, val speedMps: Double = 1.2) : Phase()
+
+        /**
+         * [sec] seconds standing; fixes keep coming. [stepsContinue]: stepping on the spot at
+         * the cadence of the phase before.
+         */
+        data class Stand(val sec: Int, val stepsContinue: Boolean = false) : Phase()
+
+        /** [sec] seconds on a manual pause: no fixes and no steps, the time goes on. */
+        data class ManualPause(val sec: Int) : Phase()
+    }
+
+    private class Span(
+        val fromSec: Double,
+        val toSec: Double,
+        val fromM: Double,
+        val speedMps: Double,
+        val fromSteps: Double,
+        val stepsPerSec: Double,
+        val phase: Phase
+    )
+
+    private val spans: List<Span>? by lazy {
+        val list = phases ?: return@lazy null
+        var sec = 0.0
+        var meters = 0.0
+        var steps = 0.0
+        var lastStepsPerSec = 0.0
+        list.map { phase ->
+            val (duration, speed) = when (phase) {
+                is Phase.Run -> phase.meters / phase.speedMps to phase.speedMps
+                is Phase.Walk -> phase.sec.toDouble() to phase.speedMps
+                is Phase.Stand -> phase.sec.toDouble() to 0.0
+                is Phase.ManualPause -> phase.sec.toDouble() to 0.0
+            }
+            val stride = strideM
+            val stepsPerSec = when {
+                stride == null -> 0.0
+                speed > 0.0 -> speed / stride
+                phase is Phase.Stand && phase.stepsContinue -> lastStepsPerSec
+                else -> 0.0
+            }
+            if (speed > 0.0) lastStepsPerSec = stepsPerSec
+            Span(sec, sec + duration, meters, speed, steps, stepsPerSec, phase).also {
+                sec += duration
+                meters += speed * duration
+                steps += stepsPerSec * duration
+            }
+        }
+    }
+
+    private fun spanAt(t: Double): Span? {
+        val list = spans ?: return null
+        return list.firstOrNull { t < it.toSec } ?: list.last()
+    }
+
+    /** Manual pause phases as [from, to) seconds from the start. */
+    val manualPauseSeconds: List<Pair<Int, Int>>
+        get() = spans.orEmpty().filter { it.phase is Phase.ManualPause }
+            .map { it.fromSec.toInt() to it.toSec.toInt() }
+
     /**
      * A false-signal episode over [seconds] (from start). Fixes keep coming with good reported
      * accuracy, but their position is wrong; the true run continues underneath.
@@ -171,7 +278,8 @@ data class SyntheticRun(
 
     val routeLengthM: Double = route.zipWithNext { a, b -> hypot(b.first - a.first, b.second - a.second) }.sum()
 
-    val durationSec: Int get() = standStillSec + (routeLengthM / speedMps).toInt()
+    val durationSec: Int
+        get() = spans?.last()?.toSec?.toInt() ?: (standStillSec + (routeLengthM / speedMps).toInt())
 
     /**
      * Expected distance when the spoofed stretch is dropped and, without a step sensor,
@@ -201,18 +309,31 @@ data class SyntheticRun(
             to - from
         } ?: 0.0
 
+    /** True altitude after [distance] metres. */
+    fun trueAltitudeAt(distance: Double): Double = elevation?.invoke(distance) ?: ALTITUDE_M
+
     fun rawPoints(): List<TrackPoint> {
         val random = Random(seed)
+        val altitudeRandom = Random(seed * 31 + 7)
+        val baroRandom = Random(seed * 17 + 3)
+        // Innovation for the stationary standard deviation [altitudeNoiseM]
+        val altitudeInnovation = altitudeNoiseM * sqrt(1 - altitudeNoiseDecay * altitudeNoiseDecay)
         var errX = 0.0
         var errY = 0.0
+        var errZ = altitudeNoiseM * gaussian(altitudeRandom)
         val points = mutableListOf<TrackPoint>()
         val stepSec = intervalMs / 1000.0
         var t = 0.0
         while (t <= durationSec) {
             errX = noiseDecay * errX + gaussian(random) * noiseInnovationM
             errY = noiseDecay * errY + gaussian(random) * noiseInnovationM
+            errZ = altitudeNoiseDecay * errZ + gaussian(altitudeRandom) * altitudeInnovation
+            val baroNoise = gaussian(baroRandom)
             val second = t.toInt()
-            if (gapSec == null || second !in gapSec) {
+            val onManualPause = spanAt(t)?.phase is Phase.ManualPause
+            val skippedBySparse = sparseSec != null && second in sparseSec &&
+                (second - sparseSec.first) % sparseEverySec != 0
+            if ((gapSec == null || second !in gapSec) && !onManualPause && !skippedBySparse) {
                 val spoofed = spoofedPosition(t)
                 val (x, y) = spoofed ?: positionAt(movedAt(t))
                 val noisy = spoofed == null || spoof?.noisy == true
@@ -223,14 +344,21 @@ data class SyntheticRun(
                     x + (if (noisy) errX else 0.0) + outlier,
                     y + (if (noisy) errY else 0.0),
                     timeMs = START_TIME + (t * 1000).toLong(),
-                    speed = burst?.speedMps ?: if (moving && noisy) speedMps.toFloat() else 0f,
-                    altitude = burst?.altitudeM ?: ALTITUDE_M
+                    speed = burst?.speedMps ?: if (moving && noisy) speedAt(t).toFloat() else 0f,
+                    altitude = when {
+                        burst != null -> burst.altitudeM
+                        missingAltitude != null && second in missingAltitude -> null
+                        else -> trueAltitudeAt(movedAt(t)) + errZ
+                    }
                 ).let { p ->
-                    val stride = strideM ?: return@let p
-                    p.copy(
-                        steps = (movedAt(t) / stride).toInt(),
-                        cadence = if (moving) (60.0 * speedMps / stride).toFloat() else 0f
-                    )
+                    val (steps, cadence) = stepsAndCadence(t) ?: return@let p
+                    p.copy(steps = steps, cadence = cadence)
+                }.let { p ->
+                    val baro = barometer ?: return@let p
+                    if (baro.missingSec != null && second in baro.missingSec) return@let p
+                    val altitude = trueAltitudeAt(movedAt(t)) + baro.offsetM +
+                        baro.driftMPerHour * t / 3_600.0 + baro.noiseM * baroNoise
+                    p.copy(baroM = altitude.toFloat())
                 }
             }
             t += stepSec
@@ -262,12 +390,19 @@ data class SyntheticRun(
     }
 
     /** The step sensor at [timeMs] (steps since the start, cadence); null without [strideM]. */
-    fun stepsAt(timeMs: Long): Pair<Int, Float?>? {
+    fun stepsAt(timeMs: Long): Pair<Int, Float?>? = stepsAndCadence((timeMs - START_TIME) / 1000.0)
+
+    private fun stepsAndCadence(t: Double): Pair<Int, Float>? {
         val stride = strideM ?: return null
-        val t = (timeMs - START_TIME) / 1000.0
-        val cadence = if (isStanding(t)) 0f else (60.0 * speedMps / stride).toFloat()
-        return (movedAt(t) / stride).toInt() to cadence
+        val span = spanAt(t) ?: run {
+            val cadence = if (isStanding(t)) 0f else (60.0 * speedMps / stride).toFloat()
+            return (movedAt(t) / stride).toInt() to cadence
+        }
+        val local = (t - span.fromSec).coerceIn(0.0, span.toSec - span.fromSec)
+        return (span.fromSteps + span.stepsPerSec * local).toInt() to (60.0 * span.stepsPerSec).toFloat()
     }
+
+    private fun speedAt(t: Double): Double = spanAt(t)?.speedMps ?: speedMps
 
     /** Time of the run's start. */
     val startTimeMs: Long get() = START_TIME
@@ -276,6 +411,10 @@ data class SyntheticRun(
     val endTimeMs: Long get() = START_TIME + durationSec * 1000L
 
     private fun movedAt(t: Number): Double {
+        spanAt(t.toDouble())?.let { span ->
+            val local = (t.toDouble() - span.fromSec).coerceIn(0.0, span.toSec - span.fromSec)
+            return (span.fromM + span.speedMps * local).coerceAtMost(routeLengthM)
+        }
         val unstopped = t.toDouble() * speedMps
         val moved = if (unstopped > standStillAtM) {
             (unstopped - standStillSec * speedMps).coerceAtLeast(standStillAtM)
@@ -286,6 +425,7 @@ data class SyntheticRun(
     }
 
     private fun isStanding(t: Double): Boolean {
+        spanAt(t)?.let { return it.speedMps <= 0.0 }
         val from = standStillAtM / speedMps
         return t >= from && t < from + standStillSec
     }
@@ -303,7 +443,7 @@ data class SyntheticRun(
         return route.last()
     }
 
-    private fun point(x: Double, y: Double, timeMs: Long, speed: Float, altitude: Double) = TrackPoint(
+    private fun point(x: Double, y: Double, timeMs: Long, speed: Float, altitude: Double?) = TrackPoint(
         latitude = LAT0 + y / M_PER_DEG,
         longitude = LON0 + x / (M_PER_DEG * cos(Math.toRadians(LAT0))),
         timestamp = timeMs,

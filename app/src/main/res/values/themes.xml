@@ -55,6 +55,9 @@
         <item name="toolbarStyle">@style/Widget.Runner.Toolbar</item>
         <item name="textInputStyle">@style/Widget.Runner.TextInput</item>
         <item name="switchStyle">@style/Widget.Runner.Switch</item>
+        <item name="materialSwitchStyle">@style/Widget.Runner.Switch</item>
+        <item name="chipStyle">@style/Widget.Runner.Chip.Filter</item>
+        <item name="checkboxStyle">@style/Widget.Runner.CheckBox</item>
         <item name="materialAlertDialogTheme">@style/ThemeOverlay.Runner.MaterialAlertDialog</item>
         <item name="snackbarStyle">@style/Widget.Runner.Snackbar</item>
         <item name="snackbarButtonStyle">@style/Widget.Runner.Snackbar.Button</item>
@@ -97,6 +100,7 @@
     <style name="Widget.Runner.Button.Outlined" parent="Widget.Material3.Button.OutlinedButton">
         <item name="cornerRadius">12dp</item>
         <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">-0.01</item>
         <item name="strokeColor">@color/ios_opaque_separator</item>
         <item name="strokeWidth">1dp</item>
     </style>
@@ -114,7 +118,7 @@
     </style>
 
     <style name="SettingsButtonStyle" parent="Widget.Runner.Button.Text">
-        <item name="android:textSize">17sp</item>
+        <item name="android:textAppearance">@style/TextAppearance.Runner.Body</item>
         <item name="android:paddingStart">8dp</item>
         <item name="android:paddingEnd">8dp</item>
         <item name="android:paddingTop">4dp</item>
@@ -161,9 +165,30 @@
         <item name="boxStrokeColor">@color/ios_text_input_stroke</item>
     </style>
 
+    <style name="Widget.Runner.TextInput.ExposedDropdown" parent="Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+        <item name="boxCornerRadiusTopStart">10dp</item>
+        <item name="boxCornerRadiusTopEnd">10dp</item>
+        <item name="boxCornerRadiusBottomStart">10dp</item>
+        <item name="boxCornerRadiusBottomEnd">10dp</item>
+        <item name="boxStrokeColor">@color/ios_text_input_stroke</item>
+    </style>
+
+    <!-- iOS switch: green track, white thumb, no outline while off -->
     <style name="Widget.Runner.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
         <item name="thumbTint">@color/ios_switch_thumb</item>
         <item name="trackTint">@color/ios_switch_track</item>
+        <item name="trackDecorationTint">@android:color/transparent</item>
+    </style>
+
+    <!-- A single-choice filter: the pill fills in, no check mark -->
+    <style name="Widget.Runner.Chip.Filter" parent="Widget.Material3.Chip.Filter">
+        <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Full</item>
+        <item name="checkedIconVisible">false</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="Widget.Runner.CheckBox" parent="Widget.Material3.CompoundButton.CheckBox">
+        <item name="buttonTint">@color/ios_checkbox_tint</item>
     </style>
 
     <style name="ThemeOverlay.Runner.MaterialAlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">

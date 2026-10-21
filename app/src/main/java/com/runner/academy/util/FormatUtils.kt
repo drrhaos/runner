@@ -31,6 +31,30 @@ object FormatUtils {
         }
     }
 
+    /** A record time: "3:58", "24:31", "1:52:07" (no leading zero, whole seconds). */
+    fun formatRecordTime(milliseconds: Long): String {
+        val totalSeconds = (milliseconds / 1000).coerceAtLeast(0L)
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        return if (hours > 0) {
+            String.format(Locale.ROOT, "%d:%02d:%02d", hours, minutes, seconds)
+        } else {
+            String.format(Locale.ROOT, "%d:%02d", minutes, seconds)
+        }
+    }
+
+    /**
+     * How much faster [recordMs] is than [previousMs], as the two times are shown (whole
+     * seconds): "25:13" → "24:31" is 0:42 even when the exact difference is 41.3 s.
+     */
+    fun recordDeltaMs(previousMs: Long, recordMs: Long): Long =
+        ((previousMs / 1000) - (recordMs / 1000)).coerceAtLeast(0L) * 1000
+
+    /** [recordDeltaMs] in the format of [formatRecordTime]. */
+    fun formatRecordDelta(previousMs: Long, recordMs: Long): String =
+        formatRecordTime(recordDeltaMs(previousMs, recordMs))
+
     fun formatTimeForTTS(milliseconds: Long, context: Context): String {
         val totalSeconds = (milliseconds / 1000).coerceAtLeast(0L).toInt()
         val hours = totalSeconds / 3600
@@ -84,10 +108,14 @@ object FormatUtils {
         }
     }
 
-    fun formatPaceForTTS(paceMinutesPerKm: Float, context: Context): String {
-        if (paceMinutesPerKm <= 0) return ""
+    /**
+     * "5 minutes 6 seconds per kilometer"; with [metric] false the pace is per mile; without
+     * [perUnit] just "5 minutes 6 seconds" (a short voice cue).
+     */
+    fun formatPaceForTTS(paceMinPerUnit: Float, context: Context, metric: Boolean = true, perUnit: Boolean = true): String {
+        if (!paceMinPerUnit.isFinite() || paceMinPerUnit <= 0f) return ""
 
-        val (minutes, seconds) = SpeedPaceCalculator.paceToMinutesSeconds(paceMinutesPerKm)
+        val (minutes, seconds) = SpeedPaceCalculator.paceToMinutesSeconds(paceMinPerUnit)
         val parts = mutableListOf<String>()
         if (minutes > 0) {
             parts += context.resources.getQuantityString(R.plurals.minutes, minutes, minutes)
@@ -95,7 +123,7 @@ object FormatUtils {
         if (seconds > 0 || parts.isEmpty()) {
             parts += context.resources.getQuantityString(R.plurals.seconds, seconds, seconds)
         }
-        parts += context.getString(R.string.per_km)
+        if (perUnit) parts += context.getString(if (metric) R.string.per_km else R.string.per_mile)
         return parts.joinToString(" ")
     }
     
@@ -170,11 +198,11 @@ object FormatUtils {
     }
     
     /**
-     * Форматирует калории
+     * Форматирует калории: "300 ккал"
      */
     fun formatCalories(calories: Int, context: Context? = null): String {
         return if (context != null) {
-            "$calories ${context.getString(R.string.workout_details_calories)}"
+            context.getString(R.string.workout_details_calories_value, calories)
         } else {
             "$calories ккал"
         }
@@ -196,12 +224,5 @@ object FormatUtils {
 
     fun calculatePaceMph(distanceKm: Float, durationMs: Long): Float {
         return SpeedPaceCalculator.segmentPaceMetric(durationMs, distanceKm, metric = false)
-    }
-    
-    /**
-     * Вычисляет калории (приблизительно)
-     */
-    fun calculateCalories(distanceKm: Float, weightKg: Float = 70f): Int {
-        return (distanceKm * weightKg).toInt()
     }
 }

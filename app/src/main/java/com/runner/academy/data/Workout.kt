@@ -1,27 +1,98 @@
 package com.runner.academy.data
 
 import android.content.Context
+import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.runner.academy.R
 import java.util.Date
 
-@Entity(tableName = "workouts")
+/** Indexed by [date]: the list's order and the import's look-up of workouts at the same time. */
+@Entity(tableName = "workouts", indices = [Index(value = ["date"])])
 data class Workout(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val date: Date,
     val distance: Float, // в километрах
-    val duration: Long, // в миллисекундах
-    val avgPace: Float, // темп в минутах на километр
+    val duration: Long, // в миллисекундах, без ручных пауз
+    /**
+     * [duration] minus auto-pause intervals, always ≤ [duration]. No Kotlin default on purpose:
+     * every path that builds a workout must decide it explicitly (a forgotten field would
+     * silently become 0 and break the pace).
+     */
+    @ColumnInfo(defaultValue = "0")
+    val movingDuration: Long,
+    val avgPace: Float, // темп по движению: movingDuration / distance, минуты на километр
     val calories: Int?,
     val notes: String?,
     val type: WorkoutType,
     val trackData: String? = null, // JSON с траекторией и временными метками
     val isFavorite: Boolean = false,
     /** JSON snapshot of template intervals used during this workout (for charts). */
-    val intervalSegmentsJson: String? = null
+    val intervalSegmentsJson: String? = null,
+    // Derived from the track by the metrics pass; null until computed or when there is no data
+    val elevationGain: Float? = null, // метры
+    val elevationLoss: Float? = null, // метры
+    val elevationSource: ElevationSource? = null,
+    val avgCadence: Float? = null, // шагов в минуту
+    /** Encoded route preview for the list, so pages do not load the track JSON. */
+    val routePreview: String? = null,
+    /** User flag: the workout never counts towards personal records. */
+    @ColumnInfo(defaultValue = "0")
+    val excludeFromRecords: Boolean = false,
+    val avgHeartRate: Int? = null, // уд/мин, средний по времени движения
+    val maxHeartRate: Int? = null, // уд/мин, без одиночных выбросов
+    /**
+     * Version of the algorithms the derived columns were computed with; 0 = not computed yet
+     * (tells "not computed" apart from "no data" and reruns the pass when an algorithm changes).
+     */
+    @ColumnInfo(defaultValue = "0")
+    val metricsVersion: Int = 0,
+    /** The name an imported file gives the run (GPX `trk/name`); null — none. */
+    val title: String? = null,
+    /** The device that recorded an imported file (TCX `Creator/Name`); null for own records. */
+    val device: String? = null,
+    /** JSON of the laps an imported file has ([LapsJson]); independent of the track. */
+    val lapsJson: String? = null
 )
+
+/** Where [Workout.elevationGain] comes from; stored by name. */
+enum class ElevationSource {
+    BAROMETER,
+    GPS,
+    FILE,
+    NONE;
+
+    companion object {
+        /**
+         * The source of [track]'s altitudes, derived from the track alone (so the column can
+         * always be recomputed): what the writer declared when the track has that data, else
+         * the barometer when ≥ 80 % of the points carry a pressure altitude ([isBarometric]),
+         * else GPS when some point has a known altitude ([knownAltitude]; tracks recorded
+         * before the source was stored), else none.
+         */
+        fun of(track: TrackData): ElevationSource {
+            when (track.elevationSource) {
+                BAROMETER -> if (track.points.isBarometric()) return BAROMETER
+                GPS, FILE -> if (track.points.hasAltitude()) return track.elevationSource
+                NONE, null -> Unit
+            }
+            return ofPoints(track.points)
+        }
+
+        /**
+         * The source recorded [points] have, nothing declared: the barometer when it worked
+         * through the run ([isBarometric]), else GPS when some point has a known altitude,
+         * else none. The recording declares this; [of] falls back on it.
+         */
+        fun ofPoints(points: List<TrackPoint>): ElevationSource = when {
+            points.isBarometric() -> BAROMETER
+            points.hasAltitude() -> GPS
+            else -> NONE
+        }
+    }
+}
 
 enum class WorkoutType {
     EASY_RUN,

@@ -15,6 +15,8 @@ bin/
 gen/
 out/
 release/
+# The release source set (debug-only code has its no-op twins there)
+!app/src/release/
 
 # Gradle files
 .gradle/

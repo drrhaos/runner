@@ -4,64 +4,208 @@ import androidx.paging.PagingSource
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
+/** An abstract class rather than an interface so the whole-row [updateWorkout] can stay protected. */
 @Dao
-interface WorkoutDao {
+abstract class WorkoutDao {
     @Query("SELECT * FROM workouts ORDER BY date DESC")
-    fun getAllWorkouts(): Flow<List<Workout>>
+    abstract fun getAllWorkouts(): Flow<List<Workout>>
 
-    @Query("SELECT * FROM workouts ORDER BY date DESC")
-    fun pagingSourceAll(): PagingSource<Int, Workout>
+    /** List pages never load the track: [WorkoutListItem] columns only. */
+    @Query("SELECT $LIST_ITEM_COLUMNS FROM workouts ORDER BY date DESC")
+    abstract fun pagingSourceAll(): PagingSource<Int, WorkoutListItem>
 
-    @Query("SELECT * FROM workouts WHERE isFavorite = 1 ORDER BY date DESC")
-    fun pagingSourceFavorites(): PagingSource<Int, Workout>
+    @Query("SELECT $LIST_ITEM_COLUMNS FROM workouts WHERE isFavorite = 1 ORDER BY date DESC")
+    abstract fun pagingSourceFavorites(): PagingSource<Int, WorkoutListItem>
 
-    /** Route picker: workouts with a track, favorites first; excludes the one being edited. */
-    @Query("SELECT * FROM workouts WHERE $ROUTE_FILTER ORDER BY isFavorite DESC, date DESC")
-    fun pagingSourceRoutes(excludeId: Long): PagingSource<Int, Workout>
+    /**
+     * The months of [pagingSourceAll], newest first, as the list runs: the first `count` rows
+     * are the first month and so on — the fast scroller names any position without loading it.
+     */
+    @Query("SELECT $MONTH_COLUMNS FROM workouts GROUP BY year, month ORDER BY year DESC, month DESC")
+    abstract fun monthsAll(): Flow<List<WorkoutMonth>>
+
+    /** The months of [pagingSourceFavorites], as [monthsAll]. */
+    @Query("SELECT $MONTH_COLUMNS FROM workouts WHERE isFavorite = 1 GROUP BY year, month ORDER BY year DESC, month DESC")
+    abstract fun monthsFavorites(): Flow<List<WorkoutMonth>>
+
+    /**
+     * Route picker: workouts with a track, favorites first; excludes the one being edited.
+     * The filter reads the track in SQLite only; the chosen one is loaded by [getTrackData].
+     */
+    @Query("SELECT $LIST_ITEM_COLUMNS FROM workouts WHERE $ROUTE_FILTER ORDER BY isFavorite DESC, date DESC")
+    abstract fun pagingSourceRoutes(excludeId: Long): PagingSource<Int, WorkoutListItem>
 
     @Query("SELECT COUNT(*) FROM workouts WHERE $ROUTE_FILTER")
-    suspend fun countRoutes(excludeId: Long): Int
+    abstract suspend fun countRoutes(excludeId: Long): Int
 
     /** Statistics need only these columns; tracks stay on disk. */
-    @Query("SELECT date, distance, duration, avgPace, calories, type FROM workouts")
-    suspend fun getStatsRows(): List<WorkoutStatsRow>
+    @Query(
+        "SELECT date, distance, duration, movingDuration, avgPace, calories, type, " +
+            "elevationGain, elevationSource, avgCadence FROM workouts"
+    )
+    abstract suspend fun getStatsRows(): List<WorkoutStatsRow>
+
+    /** Every id, as [getAllWorkouts] orders them: what an export goes through a page at a time. */
+    @Query("SELECT id FROM workouts ORDER BY date DESC")
+    abstract suspend fun idsNewestFirst(): List<Long>
+
+    /** As [idsNewestFirst], of the workouts started in [fromMs]..[toMs] (inclusive). */
+    @Query("SELECT id FROM workouts WHERE date BETWEEN :fromMs AND :toMs ORDER BY date DESC")
+    abstract suspend fun idsNewestFirstBetween(fromMs: Long, toMs: Long): List<Long>
+
+    /** The whole rows of [ids], in no order; an id deleted meanwhile is left out. */
+    @Query("SELECT * FROM workouts WHERE id IN (:ids)")
+    abstract suspend fun getWorkoutsByIds(ids: List<Long>): List<Workout>
 
     @Query("SELECT * FROM workouts WHERE id = :id")
-    fun getWorkoutById(id: Long): Flow<Workout?>
+    abstract fun getWorkoutById(id: Long): Flow<Workout?>
+
+    /** The track of one workout (the route picker hands it to the form); null without one. */
+    @Query("SELECT trackData FROM workouts WHERE id = :id")
+    abstract suspend fun getTrackData(id: Long): String?
 
     @Insert
-    suspend fun insertWorkout(workout: Workout): Long
+    abstract suspend fun insertWorkout(workout: Workout): Long
 
     @Insert
-    suspend fun insertWorkouts(workouts: List<Workout>): List<Long>
+    abstract suspend fun insertWorkouts(workouts: List<Workout>): List<Long>
+
+    /**
+     * The only whole-row rewrite. [workout] must be a copy of the stored row (see
+     * [com.runner.academy.ui.workout.WorkoutFormMapper]) so columns the editor does not know
+     * about survive. Single flags have their own point updates.
+     */
+    suspend fun saveEdited(workout: Workout) {
+        require(workout.id != 0L) { "saveEdited needs a stored workout" }
+        updateWorkout(workout)
+    }
 
     @Update
-    suspend fun updateWorkout(workout: Workout)
+    protected abstract suspend fun updateWorkout(workout: Workout)
 
     @Query("UPDATE workouts SET isFavorite = :isFavorite WHERE id = :id")
-    suspend fun setFavorite(id: Long, isFavorite: Boolean)
+    abstract suspend fun setFavorite(id: Long, isFavorite: Boolean)
+
+    /** Records are filtered by this flag when read, so nothing has to be recomputed. */
+    @Query("UPDATE workouts SET excludeFromRecords = :exclude WHERE id = :id")
+    abstract suspend fun setExcludeFromRecords(id: Long, exclude: Boolean)
 
     @Delete
-    suspend fun deleteWorkout(workout: Workout)
+    abstract suspend fun deleteWorkout(workout: Workout)
+
+    /**
+     * Emits on every write to `workouts` (Room re-runs it on each invalidation): what follows
+     * the saved workouts without loading them.
+     */
+    @Query("SELECT COUNT(*) FROM workouts")
+    abstract fun observeChanges(): Flow<Int>
+
+    /** Deletes by id; their best efforts go with them (cascade). */
+    @Query("DELETE FROM workouts WHERE id IN (:ids)")
+    abstract suspend fun deleteWorkouts(ids: List<Long>)
+
+    /**
+     * The workouts whose time (date for duration, at least 1 s, as
+     * [ImportConflicts.spanOf]) touches [fromMs]..[toMs], inclusive. The lower bound on the
+     * indexed date keeps it to the workouts around, not the whole history before.
+     */
+    @Query(
+        "SELECT $LIST_ITEM_COLUMNS FROM workouts " +
+            "WHERE date <= :toMs AND date >= :fromMs - ${ImportConflicts.MAX_SPAN_MS} " +
+            "AND date + MAX(duration, 1000) - 1 >= :fromMs ORDER BY date"
+    )
+    abstract suspend fun listItemsOverlapping(fromMs: Long, toMs: Long): List<WorkoutListItem>
+
+    /** Rows whose derived columns are older than [version], newest first (they head the list). */
+    @Query("SELECT id FROM workouts WHERE metricsVersion < :version ORDER BY date DESC LIMIT :limit")
+    abstract suspend fun idsWithMetricsBelow(version: Int, limit: Int): List<Long>
+
+    @Query("SELECT COUNT(*) FROM workouts WHERE metricsVersion < :version")
+    abstract suspend fun countWithMetricsBelow(version: Int): Int
+
+    /** Of [ids], those still below [version] (not computed yet). */
+    @Query("SELECT id FROM workouts WHERE id IN (:ids) AND metricsVersion < :version")
+    abstract suspend fun idsAmongWithMetricsBelow(ids: List<Long>, version: Int): List<Long>
+
+    /** True while some workout with a track still waits for its best efforts below [version]. */
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM workouts WHERE metricsVersion < :version AND trackData IS NOT NULL LIMIT 1)"
+    )
+    abstract fun observeTrackedWithMetricsBelow(version: Int): Flow<Boolean>
+
+    /** True while there are workouts and none of them has a track (all added by hand). */
+    @Query(
+        "SELECT EXISTS(SELECT 1 FROM workouts LIMIT 1) " +
+            "AND NOT EXISTS(SELECT 1 FROM workouts WHERE $HAS_TRACK LIMIT 1)"
+    )
+    abstract fun observeOnlyManualWorkouts(): Flow<Boolean>
+
+    /** Only what the metrics are derived from: one track in memory at a time. */
+    @Query("SELECT id, trackData, type, duration FROM workouts WHERE id = :id")
+    abstract suspend fun getMetricsSource(id: Long): MetricsSourceRow?
+
+    /**
+     * Writes derived columns unless the row was saved meanwhile with [version] or newer (an
+     * edit computes its own). Returns the number of rows updated: 0 = leave its efforts alone.
+     * A row without a track keeps its heart rate and cadence, like [com.runner.academy.util.Derived.applyTo].
+     */
+    @Query(
+        """
+        UPDATE workouts SET elevationGain = :elevationGain, elevationLoss = :elevationLoss,
+            elevationSource = :elevationSource,
+            avgCadence = CASE WHEN trackData IS NULL THEN avgCadence ELSE :avgCadence END,
+            avgHeartRate = CASE WHEN trackData IS NULL THEN avgHeartRate ELSE :avgHeartRate END,
+            maxHeartRate = CASE WHEN trackData IS NULL THEN maxHeartRate ELSE :maxHeartRate END,
+            routePreview = :routePreview, metricsVersion = :version
+        WHERE id = :id AND metricsVersion < :version
+        """
+    )
+    abstract suspend fun updateMetricsIfOlder(
+        id: Long,
+        version: Int,
+        elevationGain: Float?,
+        elevationLoss: Float?,
+        elevationSource: ElevationSource?,
+        avgCadence: Float?,
+        avgHeartRate: Int?,
+        maxHeartRate: Int?,
+        routePreview: String?
+    ): Int
 
     @Query("SELECT SUM(distance) FROM workouts")
-    suspend fun getTotalDistance(): Float?
+    abstract suspend fun getTotalDistance(): Float?
 
     @Query("SELECT COUNT(*) FROM workouts")
-    suspend fun getTotalWorkouts(): Int
+    abstract suspend fun getTotalWorkouts(): Int
 
     @Query("SELECT COUNT(*) FROM workouts WHERE isFavorite = 1")
-    suspend fun getFavoriteWorkoutsCount(): Int
+    abstract suspend fun getFavoriteWorkoutsCount(): Int
 
-    @Query("SELECT AVG(duration) FROM workouts")
-    suspend fun getAverageDuration(): Long?
+    /** "Average time" is over moving time, like the statistics screen. */
+    @Query("SELECT AVG(movingDuration) FROM workouts")
+    abstract suspend fun getAverageMovingDuration(): Long?
 
     @Query("SELECT SUM(duration) FROM workouts")
-    suspend fun getTotalDuration(): Long?
+    abstract suspend fun getTotalDuration(): Long?
+
+    /** The pace of all workouts is over moving time. */
+    @Query("SELECT SUM(movingDuration) FROM workouts")
+    abstract suspend fun getTotalMovingDuration(): Long?
 
     companion object {
+        /** The [WorkoutListItem] columns; `IS NOT NULL` reads only the record header of the track. */
+        private const val LIST_ITEM_COLUMNS =
+            "id, date, distance, duration, movingDuration, avgPace, calories, notes, type, isFavorite, " +
+                "(trackData IS NOT NULL) AS hasTrack, routePreview, metricsVersion, title"
+
+        /** Year, month and count of a calendar month in the phone's time zone (`date` is ms). */
+        private const val MONTH_COLUMNS =
+            "CAST(strftime('%Y', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS year, " +
+                "CAST(strftime('%m', date / 1000, 'unixepoch', 'localtime') AS INTEGER) AS month, " +
+                "COUNT(*) AS count"
+
         /** A workout usable as a route: it has a track and is not the one being edited. */
-        private const val ROUTE_FILTER =
-            "trackData IS NOT NULL AND TRIM(trackData) != '' AND id != :excludeId"
+        private const val HAS_TRACK = "trackData IS NOT NULL AND TRIM(trackData) != ''"
+        private const val ROUTE_FILTER = "$HAS_TRACK AND id != :excludeId"
     }
 }

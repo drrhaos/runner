@@ -11,6 +11,13 @@
         android:label="@string/menu_workouts"
         tools:layout="@layout/fragment_workout_list" />
 
+    <!-- Imported workouts that overlap others, from the list's banner -->
+    <fragment
+        android:id="@+id/nav_import_conflicts"
+        android:name="com.runner.academy.ui.workout.ImportConflictsFragment"
+        android:label="@string/import_conflicts_label"
+        tools:layout="@layout/fragment_import_conflicts" />
+
     <fragment
         android:id="@+id/nav_add_workout"
         android:name="com.runner.academy.ui.workout.AddWorkoutFragment"
@@ -36,6 +43,11 @@
             android:name="workoutId"
             app:argType="long"
             android:defaultValue="-1L" />
+        <!-- Opened right after saving: a record is a congratulation -->
+        <argument
+            android:name="justSaved"
+            app:argType="boolean"
+            android:defaultValue="false" />
     </fragment>
 
     <fragment
@@ -43,6 +55,20 @@
         android:name="com.runner.academy.ui.statistics.StatisticsFragment"
         android:label="@string/menu_statistics"
         tools:layout="@layout/fragment_statistics" />
+
+    <!-- Records from the drawer: a top-level screen -->
+    <fragment
+        android:id="@+id/nav_records"
+        android:name="com.runner.academy.ui.records.RecordsFragment"
+        android:label="@string/menu_records"
+        tools:layout="@layout/fragment_records" />
+
+    <!-- The same screen opened from Statistics, the details or "Records updated": with Up -->
+    <fragment
+        android:id="@+id/nav_all_records"
+        android:name="com.runner.academy.ui.records.RecordsFragment"
+        android:label="@string/menu_records"
+        tools:layout="@layout/fragment_records" />
 
     <fragment
         android:id="@+id/nav_my_plan"
@@ -89,4 +115,31 @@
         android:name="com.runner.academy.ui.settings.SettingsFragment"
         android:label="@string/menu_settings"
         tools:layout="@layout/fragment_settings" />
+
+    <!-- The same settings from the segment editor («Open settings»): not top-level, so Up returns to the editor -->
+    <fragment
+        android:id="@+id/nav_settings_from_editor"
+        android:name="com.runner.academy.ui.settings.SettingsFragment"
+        android:label="@string/menu_settings"
+        tools:layout="@layout/fragment_settings" />
+
+    <!-- Paired sensors: from Settings and the heart-rate tile, with Up -->
+    <fragment
+        android:id="@+id/nav_devices"
+        android:name="com.runner.academy.ui.devices.DevicesFragment"
+        android:label="@string/devices_title"
+        tools:layout="@layout/fragment_devices" />
+
+    <!-- Voice coaching: from Settings, with Up -->
+    <fragment
+        android:id="@+id/nav_voice_settings"
+        android:name="com.runner.academy.ui.settings.VoiceSettingsFragment"
+        android:label="@string/voice_settings_title"
+        tools:layout="@layout/fragment_voice_settings" />
+
+    <fragment
+        android:id="@+id/nav_add_sensor"
+        android:name="com.runner.academy.ui.devices.AddSensorFragment"
+        android:label="@string/add_sensor_title"
+        tools:layout="@layout/fragment_add_sensor" />
 </navigation>

@@ -7,30 +7,42 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.location.Location
 import android.os.IBinder
+import android.os.SystemClock
+import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.runner.academy.RunnerApplication
+import com.runner.academy.sensor.HeartRateDisplay
+import com.runner.academy.sensor.HeartRateSample
+import com.runner.academy.sensor.HeartRateSensor
+import com.runner.academy.sensor.PairedSensor
+import com.runner.academy.sensor.SensorLease
+import com.runner.academy.sensor.SensorType
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import com.runner.academy.util.GpsLocationClient
-import com.runner.academy.data.TrackData
 import com.runner.academy.data.TrackPoint
-import com.runner.academy.data.Workout
 import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutState
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.service.IntervalCursor
 import com.runner.academy.service.WorkoutTrackingService
+import com.runner.academy.util.HrZones
 import com.runner.academy.util.IntervalSegmentsJson
-import com.runner.academy.util.SpeedPaceCalculator
-import com.runner.academy.util.TrackDataJson
 import com.runner.academy.util.StrideModel
-import com.runner.academy.util.TrackSanitizer
 import com.runner.academy.util.UserPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.Date
 
 /**
  * UI mirror of [WorkoutTrackingService]. Does not run GPS or workout timers locally —
@@ -38,11 +50,141 @@ import java.util.Date
  */
 class WorkoutTrackingViewModel(
     private val repository: WorkoutRepository,
-    private val application: Application
+    private val application: Application,
+    private val pairedSensors: StateFlow<Map<SensorType, PairedSensor>>,
+    private val heartRateSensor: HeartRateSensor,
+    private val clockNanos: () -> Long = SystemClock::elapsedRealtimeNanos,
+    private val hrZonesSource: () -> HrZones? = {
+        ((application as? RunnerApplication)?.container?.userPreferences ?: UserPreferences(application)).hrZones()
+    }
 ) : ViewModel() {
+
+    private val _hrZones = MutableStateFlow(hrZonesSource())
+
+    /** The zones of the heart-rate tile's badge; null: off. Read again by [refreshHrZones]. */
+    val hrZones: StateFlow<HrZones?> = _hrZones.asStateFlow()
+
+    /** The screen's `onResume`: HRmax may have been changed in the settings meanwhile. */
+    fun refreshHrZones() {
+        _hrZones.value = hrZonesSource()
+    }
+
+    /**
+     * The heart-rate tile; also during a workout (its state lives in the service). Without a
+     * connected sensor ([HeartRateTile.opensDevices]) a tap opens Devices.
+     */
+    val heartRateTile: StateFlow<HeartRateTile> =
+        combine(pairedSensors, heartRateSensor.status) { sensors, status ->
+            HeartRateTile.of(sensors[SensorType.HEART_RATE], status.link)
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            HeartRateTile.of(pairedSensors.value[SensorType.HEART_RATE], heartRateSensor.status.value.link)
+        )
 
     private val _workoutSession = MutableStateFlow(WorkoutSession())
     val workoutSession: StateFlow<WorkoutSession> = _workoutSession.asStateFlow()
+
+    // -- Heart rate before the start --
+
+    private var prestartLease: SensorLease? = null
+    private var prestartJob: Job? = null
+    private var prestartLatest: HeartRateSample? = null
+
+    /** The tile before the start, ticked once a second while the screen holds its lease. */
+    private val prestartDisplay = MutableStateFlow<HeartRateDisplay?>(null)
+
+    /**
+     * What the heart-rate tile shows: during a workout the service's
+     * [WorkoutSession.heartRateDisplay], before it the screen's own (see
+     * [holdHeartRateBeforeStart]); null without a paired sensor.
+     */
+    val heartRateDisplay: StateFlow<HeartRateDisplay?> =
+        combine(_workoutSession, pairedSensors, prestartDisplay) { session, sensors, prestart ->
+            when {
+                session.isTracking || session.isPaused -> session.heartRateDisplay
+                sensors[SensorType.HEART_RATE] == null -> null
+                // Paired, the lease not taken (yet): the screen is about to connect, searching
+                else -> prestart ?: HeartRateDisplay.ofLeased(null, heartRateSensor.status.value.link, clockNanos())
+            }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Between the screen's `onStart` and `onStop`: it wants the sensor whenever no workout runs. */
+    private var screenWantsHeartRate = false
+
+    /**
+     * Keeps the paired sensor connected while the workout screen is visible before the start
+     * (lease `"tracking-prestart"`): by the start the heart rate is already there. Called from
+     * the screen's `onStart`; nothing happens without a paired sensor or during a workout.
+     * Held through the countdown; handed over once the service holds `"workout"`, see
+     * [onSessionFromService], and taken again when the workout is over and the screen still
+     * seen ([resetWorkout]).
+     */
+    fun holdHeartRateBeforeStart() {
+        screenWantsHeartRate = true
+        acquirePrestart()
+    }
+
+    private fun acquirePrestart() {
+        if (prestartLease != null) return
+        if (pairedSensors.value[SensorType.HEART_RATE] == null) return
+        val session = _workoutSession.value
+        if (session.isTracking || session.isPaused) return
+        prestartLease = heartRateSensor.acquire(PRESTART_LEASE)
+        refreshPrestartDisplay()
+        prestartJob = viewModelScope.launch {
+            launch {
+                heartRateSensor.samples.collect {
+                    prestartLatest = it
+                    refreshPrestartDisplay()
+                }
+            }
+            launch { heartRateSensor.status.collect { refreshPrestartDisplay() } }
+            while (isActive) {
+                delay(HEART_RATE_TICK_MS)
+                refreshPrestartDisplay()
+            }
+        }
+    }
+
+    /** The screen stopped (`onStop`). Releasing twice is harmless. */
+    fun releaseHeartRateBeforeStart() {
+        screenWantsHeartRate = false
+        dropPrestart()
+    }
+
+    /** The service took over, or the screen let go. */
+    private fun dropPrestart() {
+        prestartJob?.cancel()
+        prestartJob = null
+        prestartLease?.release()
+        prestartLease = null
+        prestartLatest = null
+        prestartDisplay.value = null
+    }
+
+    private fun refreshPrestartDisplay() {
+        if (prestartLease == null) return
+        // Under the screen's lease: IDLE is the sensor about to connect, not a lost link
+        prestartDisplay.value = HeartRateDisplay.ofLeased(prestartLatest, heartRateSensor.status.value.link, clockNanos())
+    }
+
+    /**
+     * A session from the service. The service takes its `"workout"` lease before it publishes
+     * the started (or restored) session, so once one is tracking the screen's lease can go
+     * without the connection dropping in between. An idle one (no workout) while the screen is
+     * seen takes the lease back.
+     */
+    @VisibleForTesting
+    internal fun onSessionFromService(session: WorkoutSession) {
+        _workoutSession.value = session
+        if (session.isTracking || session.isPaused) {
+            dropPrestart()
+        } else if (screenWantsHeartRate) {
+            acquirePrestart()
+        }
+        updateWorkoutState()
+    }
 
     private val _workoutState = MutableStateFlow(WorkoutState.NOT_STARTED)
     val workoutState: StateFlow<WorkoutState> = _workoutState.asStateFlow()
@@ -112,10 +254,7 @@ class WorkoutTrackingViewModel(
             isServiceBound = true
             serviceBound.value = true
 
-            trackingService?.setSessionUpdateCallback { session ->
-                _workoutSession.value = session
-                updateWorkoutState()
-            }
+            trackingService?.setSessionUpdateCallback { session -> onSessionFromService(session) }
             trackingService?.let { adoptServiceSession(it) }
         }
 
@@ -159,11 +298,10 @@ class WorkoutTrackingViewModel(
 
     private fun adoptServiceSession(svc: WorkoutTrackingService) {
         val serviceSession = svc.getCurrentSession()
-        _workoutSession.value = serviceSession
         if (serviceSession.isTracking || serviceSession.isPaused) {
             restoreUiMetadataFromService(svc)
         }
-        updateWorkoutState()
+        onSessionFromService(serviceSession)
     }
 
     private fun restoreUiMetadataFromService(svc: WorkoutTrackingService) {
@@ -245,11 +383,12 @@ class WorkoutTrackingViewModel(
             }
             application.startService(intent)
             unbindTrackingService()
+            // The moment of Stop: the save path takes duration and moving time from it, however
+            // long the save dialog stays open (no more updates arrive once unbound)
+            _workoutSession.value = LiveWorkoutBuilder.stopped(_workoutSession.value, System.currentTimeMillis())
         } else {
-            _workoutSession.value = _workoutSession.value.copy(
-                isTracking = false,
-                isPaused = false
-            )
+            _workoutSession.value = LiveWorkoutBuilder.stopped(_workoutSession.value, System.currentTimeMillis())
+                .copy(isTracking = false, isPaused = false)
             _workoutState.value = WorkoutState.STOPPED
         }
     }
@@ -267,6 +406,8 @@ class WorkoutTrackingViewModel(
         _workoutSession.value = WorkoutSession()
         _workoutState.value = WorkoutState.NOT_STARTED
         clearActiveIntervalSegments()
+        // The workout's lease is gone with the service; a screen still seen takes its own again
+        if (screenWantsHeartRate) acquirePrestart()
     }
 
     private fun updateWorkoutState() {
@@ -307,82 +448,24 @@ class WorkoutTrackingViewModel(
         val session = _workoutSession.value
         if (session.currentTime <= 0) return null
 
-        val sourcePoints = if (session.rawTrackDataPoints.isNotEmpty()) {
-            session.rawTrackDataPoints
-        } else {
-            session.trackDataPoints
-        }
         val userPrefs = (application as? com.runner.academy.RunnerApplication)?.container?.userPreferences
             ?: UserPreferences(application)
         // The run's frozen stride, as the live path used it: the same bridges, the same distance
         val stepDistance = session.strideModelState?.let { StrideModel.frozenEstimatorOf(it, userPrefs.userHeight) }
-        // An open silence or false signal at Stop keeps its step distance as the track's tail
-        val sanitizedPoints = TrackSanitizer.sanitize(sourcePoints, workoutType, stepDistance, session.openStepMeters)
-        val hasTrack = sanitizedPoints.size >= 2
-
-        val totalDistanceMeters = when {
-            manualDistanceKm != null && manualDistanceKm >= 0f -> manualDistanceKm * 1000f
-            hasTrack -> SpeedPaceCalculator.totalDistanceMeters(sanitizedPoints)
-            session.distance > 0f -> session.distance * 1000f
-            else -> 0f
-        }
-        if (totalDistanceMeters <= 0f && session.currentTime <= 0) {
+        // The clock was stopped at Stop (stopWorkout); duration and moving time are its own
+        val workout = LiveWorkoutBuilder.build(
+            session = session,
+            workoutType = workoutType,
+            manualDistanceKm = manualDistanceKm,
+            intervalSegmentsJson = intervalSegmentsJson,
+            stepDistance = stepDistance,
+            calorieProfile = userPrefs.calorieProfile(),
+            stopAt = System.currentTimeMillis()
+        )
+        if (workout == null) {
             android.util.Log.w(TAG, "No distance and no duration to save")
             return null
         }
-        val totalDistanceKm = totalDistanceMeters / 1000f
-        val durationMs = session.currentTime
-        val avgSpeedMps = if (totalDistanceMeters > 0f) {
-            SpeedPaceCalculator.averageSpeedMs(totalDistanceMeters, durationMs)
-        } else {
-            0f
-        }
-        val avgPace = if (totalDistanceKm > 0f) {
-            SpeedPaceCalculator.overallAveragePace(
-                totalDistanceMeters = totalDistanceKm * 1000.0,
-                totalDurationSeconds = durationMs / 1000.0
-            )
-        } else {
-            0f
-        }
-        val maxSpeedMps = if (hasTrack && manualDistanceKm == null) {
-            SpeedPaceCalculator.maxDerivedSpeedMs(sanitizedPoints)
-        } else {
-            0f
-        }
-
-        val calories = com.runner.academy.util.FormatUtils.calculateCalories(
-            totalDistanceKm,
-            userPrefs.userWeight
-        )
-
-        val trackDataJson = if (hasTrack && manualDistanceKm == null && totalDistanceMeters > 0f) {
-            TrackDataJson.toJson(
-                TrackData(
-                    points = sanitizedPoints,
-                    totalDistance = totalDistanceMeters,
-                    totalDuration = durationMs,
-                    avgSpeed = avgSpeedMps,
-                    maxSpeed = maxSpeedMps,
-                    startTime = session.startTime,
-                    endTime = System.currentTimeMillis()
-                )
-            )
-        } else {
-            null
-        }
-
-        val workout = Workout(
-            date = Date(session.startTime),
-            distance = totalDistanceKm,
-            duration = durationMs,
-            avgPace = avgPace,
-            calories = calories,
-            notes = null,
-            type = workoutType,
-            trackData = trackDataJson,
-            intervalSegmentsJson = intervalSegmentsJson
-        )
 
         return try {
             val id = com.runner.academy.util.ErrorHandler.retryWithBackoff(
@@ -424,12 +507,15 @@ class WorkoutTrackingViewModel(
 
     override fun onCleared() {
         super.onCleared()
+        releaseHeartRateBeforeStart()
         cleanup()
     }
 
     companion object {
         private const val TAG = "WorkoutTrackingViewModel"
         private const val BIND_TIMEOUT_MS = 5_000L
+        const val PRESTART_LEASE = "tracking-prestart"
+        private const val HEART_RATE_TICK_MS = 1_000L
     }
 }
 
@@ -457,12 +543,14 @@ object TrackingModeSelectionCodec {
 
 class WorkoutTrackingViewModelFactory(
     private val repository: WorkoutRepository,
-    private val application: Application
+    private val application: Application,
+    private val pairedSensors: StateFlow<Map<SensorType, PairedSensor>>,
+    private val heartRateSensor: HeartRateSensor
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(WorkoutTrackingViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return WorkoutTrackingViewModel(repository, application) as T
+            return WorkoutTrackingViewModel(repository, application, pairedSensors, heartRateSensor) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -8,17 +8,23 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.widget.TextViewCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import com.runner.academy.R
 import com.runner.academy.appContainer
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.data.displayName
 import com.runner.academy.databinding.FragmentStatisticsBinding
+import com.runner.academy.ui.workout.CadenceText
+import com.runner.academy.ui.workout.ElevationText
 import com.runner.academy.util.FormatUtils
+import com.runner.academy.util.MovingTimeDisplay
 import com.runner.academy.util.ShareExports
 import com.google.android.material.color.MaterialColors
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -52,6 +58,9 @@ class StatisticsFragment : Fragment() {
         binding.buttonExportCsv.setOnClickListener {
             exportStatisticsToCsv()
         }
+        binding.buttonAllRecords.setOnClickListener {
+            findNavController().navigate(R.id.nav_all_records)
+        }
     }
     
     private fun exportStatisticsToCsv() {
@@ -78,6 +87,7 @@ class StatisticsFragment : Fragment() {
                     longestDuration = data.longestDuration,
                     workoutsByType = data.workoutsByType,
                     distanceByType = data.distanceByType,
+                    averageCadence = data.averageCadence,
                     context = requireContext()
                 )
                 
@@ -136,7 +146,28 @@ class StatisticsFragment : Fragment() {
         binding.textViewTotalWorkouts.text = data.totalWorkouts.toString()
         binding.textViewTotalDistance.text = String.format("%.2f %s", data.totalDistance, getString(R.string.unit_km))
         binding.textViewTotalDuration.text = FormatUtils.formatTime(data.totalDuration)
+        // Hidden when equal to the total (no auto-pauses in the selection): no duplicate row
+        binding.layoutTotalMovingDuration.visibility =
+            if (MovingTimeDisplay.statisticsShowsMoving(data.totalDuration, data.totalMovingDuration)) View.VISIBLE else View.GONE
+        binding.textViewTotalMovingDuration.text = FormatUtils.formatTime(data.totalMovingDuration)
         binding.textViewTotalCalories.text = String.format("%s %s", data.totalCalories, getString(R.string.workout_details_calories))
+        // Only over workouts with elevation; hidden when none has it, "≈" when part is from GPS
+        val gain = data.totalElevationGain?.roundToInt()
+        binding.layoutTotalElevationGain.visibility = if (gain != null) View.VISIBLE else View.GONE
+        binding.textViewElevationApproxNote.visibility =
+            if (gain != null && data.elevationApproximate) View.VISIBLE else View.GONE
+        if (gain != null) {
+            val meters = getString(R.string.statistics_elevation_format, gain)
+            val spoken = ElevationText.meters(requireContext(), gain)
+            if (data.elevationApproximate) {
+                binding.textViewTotalElevationGain.text = getString(R.string.statistics_elevation_approx_format, meters)
+                binding.textViewTotalElevationGain.contentDescription =
+                    getString(R.string.statistics_elevation_approx_a11y, spoken)
+            } else {
+                binding.textViewTotalElevationGain.text = meters
+                binding.textViewTotalElevationGain.contentDescription = spoken
+            }
+        }
 
         // Лучшие результаты
         binding.textViewBestPace.text = if (data.bestPace > 0) {
@@ -155,6 +186,13 @@ class StatisticsFragment : Fragment() {
         }
         binding.textViewAverageDistance.text = String.format("%.2f %s", data.averageDistance, getString(R.string.unit_km))
         binding.textViewAverageDuration.text = FormatUtils.formatTime(data.averageDuration)
+        // Only over workouts with steps; hidden when none has them
+        val cadence = data.averageCadence?.roundToInt()
+        binding.layoutAverageCadence.visibility = if (cadence != null) View.VISIBLE else View.GONE
+        if (cadence != null) {
+            binding.textViewAverageCadence.text = getString(R.string.statistics_cadence_format, cadence)
+            binding.textViewAverageCadence.contentDescription = CadenceText.stepsPerMinute(requireContext(), cadence)
+        }
 
         // Активность
         binding.textViewWorkoutsThisWeek.text = data.workoutsThisWeek.toString()
@@ -174,7 +212,7 @@ class StatisticsFragment : Fragment() {
         if (workoutsByType.isEmpty()) {
             val emptyText = TextView(requireContext()).apply {
                 text = getString(R.string.no_data_text)
-                textSize = 14f
+                TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Runner_Subhead)
                 setTextColor(
                     MaterialColors.getColor(
                         requireContext(),
@@ -201,7 +239,7 @@ class StatisticsFragment : Fragment() {
 
             val typeText = TextView(requireContext()).apply {
                 text = "${type.displayName(requireContext())}:"
-                textSize = 14f
+                TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Runner_Subhead)
                 setTextColor(
                     MaterialColors.getColor(
                         requireContext(),
@@ -218,7 +256,7 @@ class StatisticsFragment : Fragment() {
 
             val countText = TextView(requireContext()).apply {
                 text = "$count ${getString(R.string.workout_list_num_workouts)} (${String.format("%.2f %s", distance, getString(R.string.unit_km))})"
-                textSize = 14f
+                TextViewCompat.setTextAppearance(this, R.style.TextAppearance_Runner_Subhead)
                 setTypeface(null, android.graphics.Typeface.BOLD)
                 setTextColor(
                     MaterialColors.getColor(

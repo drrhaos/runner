@@ -5,6 +5,7 @@ import com.runner.academy.data.LocationSource
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutType
 import com.runner.academy.util.GpsFilter
+import com.runner.academy.util.HeartRates
 import com.runner.academy.util.StepDistanceEstimator
 import com.runner.academy.util.TrackFilter
 import org.osmdroid.util.GeoPoint
@@ -89,6 +90,10 @@ class GpsLocationProcessor {
      *
      * @param resumeAfterGap When true (e.g. session was [com.runner.academy.data.GpsStatus.LOST]),
      *   the first valid fix re-anchors the track with zero segment distance.
+     * @param baroM Barometric altitude at the fix's own time ([BarometerTracker.altitudeAt]);
+     *   null without a barometer. Stored on the point as it is (`baro_m`).
+     * @param heartRate Heart rate at the fix's own time; null without a sensor or contact.
+     *   Stored on the point (`hr`) when [HeartRates.valid].
      */
     fun processLocation(
         location: Location,
@@ -97,7 +102,9 @@ class GpsLocationProcessor {
         existingRawTrackDataPoints: MutableList<TrackPoint>,
         resumeAfterGap: Boolean = false,
         steps: Int? = null,
-        cadence: Float? = null
+        cadence: Float? = null,
+        baroM: Float? = null,
+        heartRate: Int? = null
     ): ProcessResult {
         val newTrackPoints = existingTrackPoints.toMutableList()
         val newTrackDataPoints = existingTrackDataPoints.toMutableList()
@@ -110,12 +117,14 @@ class GpsLocationProcessor {
             timestamp = if (location.time > 0) location.time else System.currentTimeMillis(),
             accuracy = location.accuracy,
             speed = location.speed,
-            altitude = location.altitude,
+            altitude = if (location.hasAltitude()) location.altitude else null,
             afterGap = false,
             source = LocationSource.GPS.name,
             steps = steps,
             cadence = cadence,
-            afterPause = if (nextFixAfterPause) true else null
+            afterPause = if (nextFixAfterPause) true else null,
+            baroM = baroM,
+            heartRate = HeartRates.valid(heartRate)
         )
         nextFixAfterPause = false
         newRawTrackDataPoints.add(rawTrackPoint)
@@ -199,7 +208,7 @@ class GpsLocationProcessor {
             timestamp = if (location.time > 0) location.time else System.currentTimeMillis(),
             accuracy = location.accuracy,
             speed = location.speed,
-            altitude = location.altitude,
+            altitude = if (location.hasAltitude()) location.altitude else null,
             afterGap = false,
             source = LocationSource.GPS.name
         )

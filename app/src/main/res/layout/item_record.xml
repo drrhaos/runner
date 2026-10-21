@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A record card: the distance's badge (RecordsLook) and name, the time big with the pace and
+     the date beside it; a record not reached asks to run the distance instead. -->
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/Widget.Runner.Card"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingBottom="8dp">
+
+        <!-- Шапка и результат: открывает тренировку-рекорд -->
+        <LinearLayout
+            android:id="@+id/row_record_main"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingStart="14dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="4dp"
+            android:background="?attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <FrameLayout
+                    android:id="@+id/view_record_badge"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="@drawable/bg_record_badge"
+                    tools:backgroundTint="@color/ios_blue">
+
+                    <ImageView
+                        android:id="@+id/imageView_record_icon"
+                        android:layout_width="19dp"
+                        android:layout_height="19dp"
+                        android:layout_gravity="center"
+                        android:importantForAccessibility="no"
+                        app:tint="@android:color/white"
+                        tools:src="@drawable/ic_record_medal" />
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/textView_record_distance"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:maxLines="2"
+                    android:textAppearance="@style/TextAppearance.Runner.Body"
+                    android:textStyle="bold"
+                    android:textColor="?attr/colorOnSurface"
+                    tools:text="@string/records_distance_5k" />
+
+                <ImageView
+                    android:id="@+id/imageView_record_chevron"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="4dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_chevron_right"
+                    app:tint="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+
+            <!-- Время крупно; справа темп (жирнее) и дата -->
+            <LinearLayout
+                android:id="@+id/layout_record_result"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:paddingEnd="6dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/textView_record_time"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:maxLines="1"
+                    android:textSize="32sp"
+                    android:textStyle="bold"
+                    android:fontFeatureSettings="tnum"
+                    android:textColor="?attr/colorOnSurface"
+                    tools:text="24:31" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:orientation="vertical"
+                    android:gravity="end">
+
+                    <TextView
+                        android:id="@+id/textView_record_pace"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearance.Runner.Subhead"
+                        android:textStyle="bold"
+                        android:fontFeatureSettings="tnum"
+                        android:textColor="?attr/colorOnSurface"
+                        tools:text="4:54 /km" />
+
+                    <TextView
+                        android:id="@+id/textView_record_date"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearance.Runner.Footnote"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        tools:text="03.10.2026" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Рекорд не достигнут -->
+            <TextView
+                android:id="@+id/textView_record_hint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp"
+                android:paddingEnd="6dp"
+                android:textAppearance="@style/TextAppearance.Runner.Subhead"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:visibility="gone"
+                tools:text="@string/records_not_reached_hint" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/textView_record_steps_note"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:text="@string/records_steps_note"
+            android:textAppearance="@style/TextAppearance.Runner.Caption"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/button_record_history"
+            style="@style/Widget.Runner.Button.Text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:gravity="start|center_vertical"
+            app:icon="@drawable/ic_expand_more"
+            app:iconGravity="end"
+            app:iconTint="?attr/colorOnSurfaceVariant"
+            android:visibility="gone"
+            tools:text="@string/records_history_toggle"
+            tools:visibility="visible" />
+
+        <LinearLayout
+            android:id="@+id/layout_record_history"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

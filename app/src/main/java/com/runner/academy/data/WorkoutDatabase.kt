@@ -16,9 +16,11 @@ import android.content.Context
         TrainingPlan::class,
         TrainingPlanDay::class,
         PlanSchedule::class,
-        ScheduledWorkout::class
+        ScheduledWorkout::class,
+        BestEffort::class,
+        PendingImport::class
     ],
-    version = 6,
+    version = 10,
     exportSchema = true
 )
 @TypeConverters(Converters::class)
@@ -27,6 +29,8 @@ abstract class WorkoutDatabase : RoomDatabase() {
     abstract fun workoutTemplateDao(): WorkoutTemplateDao
     abstract fun trainingPlanDao(): TrainingPlanDao
     abstract fun planScheduleDao(): PlanScheduleDao
+    abstract fun bestEffortDao(): BestEffortDao
+    abstract fun pendingImportDao(): PendingImportDao
 
     companion object {
         @Volatile
@@ -173,13 +177,96 @@ abstract class WorkoutDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Release 3 metrics. Only `movingDuration` is filled here (= duration: old rows had no
+         * auto-pause); the derived columns stay empty with `metricsVersion = 0` for the background
+         * metrics pass. DEFAULT values must match the entity's `@ColumnInfo(defaultValue)`.
+         */
+        internal val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "ALTER TABLE workouts ADD COLUMN movingDuration INTEGER NOT NULL DEFAULT 0"
+                )
+                database.execSQL("UPDATE workouts SET movingDuration = duration")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN elevationGain REAL")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN elevationLoss REAL")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN elevationSource TEXT")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN avgCadence REAL")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN routePreview TEXT")
+                database.execSQL(
+                    "ALTER TABLE workouts ADD COLUMN excludeFromRecords INTEGER NOT NULL DEFAULT 0"
+                )
+                database.execSQL("ALTER TABLE workouts ADD COLUMN avgHeartRate INTEGER")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN maxHeartRate INTEGER")
+                database.execSQL(
+                    "ALTER TABLE workouts ADD COLUMN metricsVersion INTEGER NOT NULL DEFAULT 0"
+                )
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `best_efforts` (
+                        `workoutId` INTEGER NOT NULL,
+                        `distanceM` INTEGER NOT NULL,
+                        `elapsedMs` INTEGER NOT NULL,
+                        `startTime` INTEGER NOT NULL,
+                        `endTime` INTEGER NOT NULL,
+                        `stepsShare` REAL NOT NULL,
+                        PRIMARY KEY(`workoutId`, `distanceM`),
+                        FOREIGN KEY(`workoutId`) REFERENCES `workouts`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_best_efforts_workoutId` ON `best_efforts` (`workoutId`)"
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_best_efforts_distanceM_elapsedMs` ON `best_efforts` (`distanceM`, `elapsedMs`)"
+                )
+            }
+        }
+
+        /** Release 4: the heart rate zone target of a segment (1..5, null — none). */
+        internal val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE workout_template_segments ADD COLUMN targetHrZone INTEGER")
+            }
+        }
+
+        /** Imported workouts that overlap others wait here for the user's decision. */
+        internal val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `pending_imports` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`startMs` INTEGER NOT NULL, `durationMs` INTEGER NOT NULL, `distanceKm` REAL NOT NULL, " +
+                        "`hasTrack` INTEGER NOT NULL, `source` TEXT, `workoutJson` TEXT NOT NULL)"
+                )
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_pending_imports_startMs` ON `pending_imports` (`startMs`)")
+            }
+        }
+
+        /**
+         * Workouts indexed by date (the list's order and the import's overlap look-up); the
+         * title, device and laps an imported file has.
+         */
+        internal val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_workouts_date` ON `workouts` (`date`)")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN title TEXT")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN device TEXT")
+                database.execSQL("ALTER TABLE workouts ADD COLUMN lapsJson TEXT")
+            }
+        }
+
         /** Every migration, oldest first — shared with the migration tests. Append new ones here. */
         internal val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
             MIGRATION_3_4,
             MIGRATION_4_5,
-            MIGRATION_5_6
+            MIGRATION_5_6,
+            MIGRATION_6_7,
+            MIGRATION_7_8,
+            MIGRATION_8_9,
+            MIGRATION_9_10
         )
 
         fun getDatabase(context: Context): WorkoutDatabase {

@@ -13,7 +13,9 @@ import com.google.gson.JsonParser
  *  - `gnss` — satellites per system (visible / used in fix / C/N0), to spot spoofing and jamming;
  *  - `event` — pause, resume, screen on/off and similar session events;
  *  - `power` — battery saver state and its location mode ([PowerSaveCheck.locationModeName]),
- *    at the start of the recording and on every change, since it can cut GPS with the screen off.
+ *    at the start of the recording and on every change, since it can cut GPS with the screen off;
+ *  - `sensor` — a link event of an external sensor (`sensor`: `hr`), e.g. a disconnect with its
+ *    GATT `status`, battery or RSSI `value`. A fix carries the heart rate it got as `hr`.
  *
  * Times: `t` is elapsedRealtime in ms (monotonic, comparable across record types);
  * `time` on a fix is the provider's wall-clock time.
@@ -58,7 +60,9 @@ object GpsDiagnostics {
         /** Steps since the workout start at this fix, null without a step sensor. */
         val steps: Int? = null,
         /** Steps/min around this fix, null when unknown. */
-        val cadence: Float? = null
+        val cadence: Float? = null,
+        /** The heart rate given to this fix (`hr` of its point), null without a sensor or value. */
+        val heartRate: Int? = null
     )
 
     /** Session events; [wire] is the name stored in the file. */
@@ -123,6 +127,18 @@ object GpsDiagnostics {
         data class Event(val elapsedMs: Long, val name: String) : DiagRecord()
         /** [locationMode] is the wire name from [PowerSaveCheck.locationModeName]. */
         data class Power(val elapsedMs: Long, val powerSaveMode: Boolean, val locationMode: String) : DiagRecord()
+
+        /**
+         * An external sensor's link event ([event] is `SensorDiagEvent.Kind.wireName` or a service
+         * event like `fgs_no_connected_device`); [status] a GATT status, [value] battery % or dBm.
+         */
+        data class Sensor(
+            val elapsedMs: Long,
+            val sensor: String,
+            val event: String,
+            val status: Int? = null,
+            val value: Int? = null
+        ) : DiagRecord()
     }
 
     fun headerLine(startTimeMs: Long, appVersion: String, sdkInt: Int): String = JsonObject().apply {
@@ -149,7 +165,26 @@ object GpsDiagnostics {
         reason?.let { addProperty("reason", it) }
         fix.steps?.let { addProperty("steps", it) }
         fix.cadence?.let { addProperty("cadence", it) }
+        fix.heartRate?.let { addProperty("hr", it) }
     }.toString()
+
+    /** The heart-rate sensor is the only one so far: [sensor] is `hr`. */
+    fun sensorLine(
+        elapsedMs: Long,
+        event: String,
+        status: Int? = null,
+        value: Int? = null,
+        sensor: String = SENSOR_HEART_RATE
+    ): String = JsonObject().apply {
+        addProperty("type", "sensor")
+        addProperty("t", elapsedMs)
+        addProperty("sensor", sensor)
+        addProperty("event", event)
+        status?.let { addProperty("status", it) }
+        value?.let { addProperty("value", it) }
+    }.toString()
+
+    const val SENSOR_HEART_RATE = "hr"
 
     fun gnssLine(elapsedMs: Long, summary: GnssSummary): String = JsonObject().apply {
         addProperty("type", "gnss")
@@ -209,7 +244,8 @@ object GpsDiagnostics {
                 provider = o.get("provider").asString,
                 isMock = o.get("mock")?.asBoolean ?: false,
                 steps = o.get("steps")?.asInt,
-                cadence = o.get("cadence")?.asFloat
+                cadence = o.get("cadence")?.asFloat,
+                heartRate = o.get("hr")?.asInt
             ),
             result = FixResult.valueOf(o.get("result").asString),
             reason = o.get("reason")?.asString
@@ -233,6 +269,13 @@ object GpsDiagnostics {
             elapsedMs = o.get("t").asLong,
             powerSaveMode = o.get("saver").asBoolean,
             locationMode = o.get("location").asString
+        )
+        "sensor" -> DiagRecord.Sensor(
+            elapsedMs = o.get("t").asLong,
+            sensor = o.get("sensor").asString,
+            event = o.get("event").asString,
+            status = o.get("status")?.asInt,
+            value = o.get("value")?.asInt
         )
         else -> null
     }

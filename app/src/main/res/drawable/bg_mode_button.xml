@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The workout mode "pill": an outline, fully rounded, with a ripple -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?attr/colorControlHighlight">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="999dp" />
+            <stroke android:width="1.5dp" android:color="?attr/colorOutlineVariant" />
+        </shape>
+    </item>
+    <item android:id="@android:id/mask">
+        <shape android:shape="rectangle">
+            <corners android:radius="999dp" />
+            <solid android:color="@android:color/white" />
+        </shape>
+    </item>
+</ripple>

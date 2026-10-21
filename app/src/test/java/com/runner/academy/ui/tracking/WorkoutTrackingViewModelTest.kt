@@ -3,6 +3,7 @@ package com.runner.academy.ui.tracking
 import android.Manifest
 import android.app.Application
 import android.content.Context
+import android.os.Looper
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.test.core.app.ApplicationProvider
 import com.runner.academy.data.GpsStatus
@@ -15,9 +16,15 @@ import com.runner.academy.data.WorkoutRepository
 import com.runner.academy.data.WorkoutSession
 import com.runner.academy.data.WorkoutState
 import com.runner.academy.data.WorkoutType
+import com.runner.academy.sensor.FakeHeartRateSensor
+import com.runner.academy.sensor.HeartRateDisplay
+import com.runner.academy.sensor.PairedSensor
+import com.runner.academy.sensor.SensorLink
+import com.runner.academy.sensor.SensorType
 import com.runner.academy.util.FormatUtils
 import com.runner.academy.util.TrackDataJson
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -31,6 +38,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowApplication
 import java.util.Date
@@ -47,6 +55,8 @@ class WorkoutTrackingViewModelTest {
     private lateinit var database: WorkoutDatabase
     private lateinit var workoutDao: WorkoutDao
     private lateinit var viewModel: WorkoutTrackingViewModel
+    private val pairedSensors = MutableStateFlow<Map<SensorType, PairedSensor>>(emptyMap())
+    private val hrSensor = FakeHeartRateSensor()
 
     @Before
     fun setUp() {
@@ -57,12 +67,183 @@ class WorkoutTrackingViewModelTest {
         )
         database = WorkoutDatabase.getInMemoryDatabase(context)
         workoutDao = database.workoutDao()
-        viewModel = WorkoutTrackingViewModel(WorkoutRepository(workoutDao), context as Application)
+        viewModel = WorkoutTrackingViewModel(
+            WorkoutRepository(database), context as Application, pairedSensors, hrSensor, clockNanos = { nowNanos }
+        )
+    }
+
+    private var nowNanos = 1_000_000_000_000L
+    private val strap = PairedSensor(SensorType.HEART_RATE, "AA:BB", "HR Strap 10", 1L, null, null)
+
+    @Test
+    fun `before the start a paired sensor is held by the screen and shown`() {
+        pairedSensors.value = mapOf(SensorType.HEART_RATE to strap)
+        hrSensor.setLink(SensorLink.CONNECTING)
+        viewModel.holdHeartRateBeforeStart()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(listOf(WorkoutTrackingViewModel.PRESTART_LEASE), hrSensor.owners)
+        assertEquals(HeartRateDisplay.LinkIcon.SEARCHING, viewModel.heartRateDisplay.value!!.link)
+        assertNull(viewModel.heartRateDisplay.value!!.bpm)
+
+        hrSensor.setLink(SensorLink.CONNECTED)
+        hrSensor.emit(141, atNanos = nowNanos)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(141, viewModel.heartRateDisplay.value!!.bpm)
+        assertEquals(HeartRateDisplay.LinkIcon.CONNECTED, viewModel.heartRateDisplay.value!!.link)
+
+        // A second hold (onStart again) keeps one lease
+        viewModel.holdHeartRateBeforeStart()
+        assertEquals(1, hrSensor.leaseCount)
+
+        viewModel.releaseHeartRateBeforeStart()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(0, hrSensor.leaseCount)
+    }
+
+    @Test
+    fun `the pre-start value goes grey on the one second tick`() {
+        pairedSensors.value = mapOf(SensorType.HEART_RATE to strap)
+        hrSensor.setLink(SensorLink.CONNECTED)
+        viewModel.holdHeartRateBeforeStart()
+        hrSensor.emit(141, atNanos = nowNanos)
+        shadowOf(Looper.getMainLooper()).idle()
+
+        nowNanos += 8_000_000_000L
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(1))
+        assertEquals(HeartRateDisplay.Freshness.STALE, viewModel.heartRateDisplay.value!!.freshness)
+        viewModel.releaseHeartRateBeforeStart()
+    }
+
+    @Test
+    fun `without a paired sensor nothing is held and the tile has no sensor`() {
+        viewModel.holdHeartRateBeforeStart()
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(0, hrSensor.leaseCount)
+        assertNull(viewModel.heartRateDisplay.value)
+    }
+
+    @Test
+    fun `the screen lets its lease go only once the service runs the workout`() {
+        pairedSensors.value = mapOf(SensorType.HEART_RATE to strap)
+        viewModel.holdHeartRateBeforeStart()
+        // The countdown and the service start: the screen still holds
+        viewModel.onSessionFromService(WorkoutSession())
+        assertEquals(listOf(WorkoutTrackingViewModel.PRESTART_LEASE), hrSensor.owners)
+
+        // The service takes "workout" before it publishes the running session
+        hrSensor.acquire("workout")
+        val display = HeartRateDisplay(150, HeartRateDisplay.Freshness.FRESH, HeartRateDisplay.LinkIcon.CONNECTED)
+        viewModel.onSessionFromService(WorkoutSession(isTracking = true, heartRateDisplay = display))
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(listOf("workout"), hrSensor.owners)
+        assertEquals(WorkoutState.RUNNING, viewModel.workoutState.value)
+        // During the workout the tile is the service's
+        assertEquals(display, viewModel.heartRateDisplay.value)
+    }
+
+    @Test
+    fun `idle under the screen's lease is searching, never a red lost`() {
+        pairedSensors.value = mapOf(SensorType.HEART_RATE to strap)
+        hrSensor.setLink(SensorLink.IDLE)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(HeartRateDisplay.LinkIcon.SEARCHING, viewModel.heartRateDisplay.value!!.link)
+
+        viewModel.holdHeartRateBeforeStart()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(HeartRateDisplay.LinkIcon.SEARCHING, viewModel.heartRateDisplay.value!!.link)
+        viewModel.releaseHeartRateBeforeStart()
+    }
+
+    @Test
+    fun `after the workout the screen still seen takes its lease again`() {
+        pairedSensors.value = mapOf(SensorType.HEART_RATE to strap)
+        viewModel.holdHeartRateBeforeStart()
+        hrSensor.acquire("workout").let { workout ->
+            viewModel.onSessionFromService(WorkoutSession(isTracking = true))
+            assertEquals(listOf("workout"), hrSensor.owners)
+            workout.release()
+        }
+
+        viewModel.resetWorkout()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(listOf(WorkoutTrackingViewModel.PRESTART_LEASE), hrSensor.owners)
+
+        // Not after the screen stopped
+        viewModel.releaseHeartRateBeforeStart()
+        viewModel.onSessionFromService(WorkoutSession())
+        assertEquals(0, hrSensor.leaseCount)
+    }
+
+    @Test
+    fun `during a workout no pre-start lease is taken`() {
+        pairedSensors.value = mapOf(SensorType.HEART_RATE to strap)
+        viewModel.onSessionFromService(WorkoutSession(isTracking = true))
+        viewModel.holdHeartRateBeforeStart()
+
+        assertEquals(0, hrSensor.leaseCount)
+    }
+
+    @Test
+    fun heart_rate_tile_opens_devices_without_a_sensor() {
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(HeartRateTile.NO_SENSOR, viewModel.heartRateTile.value)
+        assertTrue(viewModel.heartRateTile.value.opensDevices)
+    }
+
+    @Test
+    fun heart_rate_tile_follows_the_paired_sensor_and_its_link() {
+        pairedSensors.value = mapOf(
+            SensorType.HEART_RATE to PairedSensor(SensorType.HEART_RATE, "AA:BB", "HR Strap 10", 1L, null, null)
+        )
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(HeartRateTile.DISCONNECTED, viewModel.heartRateTile.value)
+        assertTrue(viewModel.heartRateTile.value.opensDevices)
+
+        hrSensor.setLink(SensorLink.CONNECTED)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(HeartRateTile.CONNECTED, viewModel.heartRateTile.value)
+        assertFalse(viewModel.heartRateTile.value.opensDevices)
+
+        hrSensor.setLink(SensorLink.SEARCHING)
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(HeartRateTile.DISCONNECTED, viewModel.heartRateTile.value)
+        assertTrue(viewModel.heartRateTile.value.opensDevices)
     }
 
     @After
     fun tearDown() {
         database.close()
+    }
+
+    @Test
+    fun `the zones are read from the preferences again on refresh`() {
+        var zones: com.runner.academy.util.HrZones? = null
+        val vm = WorkoutTrackingViewModel(
+            WorkoutRepository(database), context as Application, pairedSensors, hrSensor,
+            hrZonesSource = { zones }
+        )
+        assertNull(vm.hrZones.value)
+
+        // HRmax set in the settings while the screen was away: seen once it is back (onResume)
+        zones = com.runner.academy.util.HrZones(185)
+        assertNull(vm.hrZones.value)
+        vm.refreshHrZones()
+
+        assertEquals(com.runner.academy.util.HrZones(185), vm.hrZones.value)
+    }
+
+    @Test
+    fun `by default the zones come from the user preferences`() {
+        val prefs = (context as com.runner.academy.RunnerApplication).container.userPreferences
+        prefs.hrMaxManual = 190
+
+        viewModel.refreshHrZones()
+
+        assertEquals(com.runner.academy.util.HrZones(190), viewModel.hrZones.value)
     }
 
     @Test
@@ -169,7 +350,10 @@ class WorkoutTrackingViewModelTest {
 
         val saved = workoutDao.getAllWorkouts().first().first()
         assertEquals(120_000L, saved.duration)
+        // No auto-pause yet: all of the time is moving
+        assertEquals(120_000L, saved.movingDuration)
         assertEquals(0f, saved.distance)
+        assertEquals(0f, saved.avgPace)
         assertNull(saved.trackData)
     }
 
@@ -193,6 +377,7 @@ class WorkoutTrackingViewModelTest {
             date = Date(),
             distance = 0.2f,
             duration = 2000L,
+            movingDuration = 2000L,
             avgPace = 5.0f,
             calories = 50,
             notes = null,

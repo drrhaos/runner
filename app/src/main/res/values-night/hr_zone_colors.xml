@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="hr_zone_0">#FF8E8E93</color>
+    <color name="hr_zone_1">#FF8FA9C2</color>
+    <color name="hr_zone_2">#FF4DA3FF</color>
+    <color name="hr_zone_3">#FF4CC764</color>
+    <color name="hr_zone_4">#FFFF9F43</color>
+    <color name="hr_zone_5">#FFFF5A52</color>
+    <color name="hr_zone_on">#FF000000</color>
+    <color name="hr_zone_stale_bg">#FF3A3A3C</color>
+</resources>

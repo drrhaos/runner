@@ -1,9 +1,13 @@
 package com.runner.academy.util
 
+import com.runner.academy.data.ElevationSource
+import com.runner.academy.data.PauseInterval
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutTemplateSegment
+import com.runner.academy.data.knownAltitude
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /** Single data point for pace/speed chart series. */
 data class PaceSpeedPoint(
@@ -18,6 +22,18 @@ data class ElevationPoint(
     val distanceKm: Float,
     val altitudeMeters: Float,
     val trackPointIndex: Int
+)
+
+/** Single data point for cadence chart series. */
+data class CadencePoint(
+    val timeMinutes: Float,
+    val cadence: Float
+)
+
+/** Single data point for heart rate chart series. */
+data class HeartRatePoint(
+    val timeMinutes: Float,
+    val bpm: Float
 )
 
 /** Statistics for a 1 km / 1 mile (or plan) segment. */
@@ -80,11 +96,59 @@ object TrackChartBuilder {
         return result
     }
 
-    fun buildElevationSeries(points: List<TrackPoint>): List<ElevationPoint> {
-        if (points.isEmpty() || points.all { it.altitude == null }) return emptyList()
+    /** Slower than this, min/km, is a stop or a slow walk: the pace line breaks there. */
+    private const val PACE_CHART_MAX_MIN_PER_KM = 20f
 
-        val result = mutableListOf<ElevationPoint>()
+    /**
+     * Whether the pace chart draws [paceMinPerUnit] (per km, per mile without [metric]): not
+     * at a stop (0) and not slower than [PACE_CHART_MAX_MIN_PER_KM] — a near-stop would stretch
+     * the axis to an hour per km.
+     */
+    fun isChartPace(paceMinPerUnit: Float, metric: Boolean): Boolean {
+        val limit = if (metric) PACE_CHART_MAX_MIN_PER_KM else PaceSpeedMath.paceMinPerKmToMinPerMile(PACE_CHART_MAX_MIN_PER_KM)
+        return paceMinPerUnit.isFinite() && paceMinPerUnit > 0f && paceMinPerUnit <= limit
+    }
+
+    /** The pace line of [series] as runs, broken where [isChartPace] is false. */
+    fun paceRuns(series: List<PaceSpeedPoint>, metric: Boolean): List<List<PaceSpeedPoint>> {
+        val runs = mutableListOf<List<PaceSpeedPoint>>()
+        var run = mutableListOf<PaceSpeedPoint>()
+        for (point in series) {
+            if (isChartPace(point.paceMinPerUnit, metric)) {
+                run.add(point)
+            } else if (run.isNotEmpty()) {
+                runs.add(run)
+                run = mutableListOf()
+            }
+        }
+        if (run.isNotEmpty()) runs.add(run)
+        return runs
+    }
+
+    fun buildElevationSeries(points: List<TrackPoint>, source: ElevationSource): List<ElevationPoint> =
+        buildElevationRuns(points, source).flatten()
+
+    /**
+     * The elevation line over distance as runs of points: a point without altitude
+     * ([knownAltitude]: null or the old 0.0, never drawn as zero) is left out, the line breaks
+     * where such points last over [ElevationSeries.MAX_HOLE_MS] and at every
+     * [TrackPoint.afterGap] — a gap or a dropped stretch has no altitude, as in [ElevationGain].
+     * The distance still counts a bridge, like the total. The altitudes are those of [source]
+     * ([ElevationSeries]: the barometer's lifted to the GPS scale).
+     */
+    fun buildElevationRuns(
+        points: List<TrackPoint>,
+        source: ElevationSource
+    ): List<List<ElevationPoint>> {
+        val altitudes = ElevationSeries.of(points, source)
+        val runs = mutableListOf<List<ElevationPoint>>()
+        var run = mutableListOf<ElevationPoint>()
         var cumulativeKm = 0f
+
+        fun closeRun() {
+            if (run.isNotEmpty()) runs.add(run)
+            run = mutableListOf()
+        }
 
         for (i in points.indices) {
             if (i > 0) {
@@ -92,10 +156,21 @@ object TrackChartBuilder {
                 cumulativeKm += SpeedPaceUnits.metersToKm(
                     TrackGeometry.stepDistanceMeters(points[i - 1], points[i])
                 )
+                if (points[i].afterGap) closeRun()
             }
-            val altitude = points[i].altitude?.toFloat() ?: continue
-            if (!altitude.isFinite() || !cumulativeKm.isFinite()) continue
-            result.add(
+            if (!cumulativeKm.isFinite()) {
+                closeRun()
+                continue
+            }
+            val altitude = altitudes[i]?.toFloat()?.takeIf { it.isFinite() } ?: continue
+            // Fixes without altitude since the last drawn point: only such a hole breaks by its length
+            val last = run.lastOrNull()
+            if (last != null && last.trackPointIndex < i - 1 &&
+                points[i].timestamp - points[last.trackPointIndex].timestamp > ElevationSeries.MAX_HOLE_MS
+            ) {
+                closeRun()
+            }
+            run.add(
                 ElevationPoint(
                     distanceKm = cumulativeKm,
                     altitudeMeters = altitude,
@@ -103,8 +178,89 @@ object TrackChartBuilder {
                 )
             )
         }
-        return result
+        closeRun()
+        return runs
     }
+
+    /**
+     * The cadence line as runs of points: a point without cadence (sensor silence) or strictly
+     * inside a pause is left out, and the line breaks there, over a pause between two fixes
+     * and over a GPS gap (a bridge by steps keeps it). Never zero for a missing value.
+     */
+    fun buildCadenceSeries(points: List<TrackPoint>, pauses: List<PauseInterval>?): List<List<CadencePoint>> {
+        val startTime = points.firstOrNull()?.timestamp ?: return emptyList()
+        val runs = buildRuns(
+            points,
+            pauses,
+            hasValue = { it.cadence?.isFinite() == true },
+            breakBetween = { prev, point -> TrackGeometry.isTrackGapStep(prev, point) && !TrackGeometry.isBridgeStep(point) }
+        )
+        return runs.map { run -> run.map { CadencePoint(minutesFrom(startTime, it), it.cadence!!) } }
+    }
+
+    /**
+     * The heart rate line as runs of points ([TrackHeartRate.stretches]): a point without a
+     * value (no contact, no sensor) or strictly inside a pause is left out, and the line breaks
+     * there, over a pause between two fixes and over a step longer than
+     * [TrackHeartRate.MAX_PAIR_MS] — the pairs [TrackHeartRate.average] counts. Nothing is
+     * interpolated.
+     */
+    fun buildHeartRateSeries(points: List<TrackPoint>, pauses: List<PauseInterval>?): List<List<HeartRatePoint>> {
+        val startTime = points.firstOrNull()?.timestamp ?: return emptyList()
+        return TrackHeartRate.stretches(points, pauses).map { run ->
+            run.map { HeartRatePoint(minutesFrom(startTime, it), it.heartRate!!.toFloat()) }
+        }
+    }
+
+    /**
+     * The zone of each line segment of [run] (`run.size - 1` of them): of the mean of its two
+     * points, in whole beats floored, the rule [TrackHeartRate.timeInZones] counts by.
+     */
+    fun zoneOfSegments(run: List<HeartRatePoint>, zones: HrZones): IntArray =
+        IntArray((run.size - 1).coerceAtLeast(0)) { i ->
+            zones.zoneOf(((run[i].bpm.roundToInt() + run[i + 1].bpm.roundToInt()) / 2))
+        }
+
+    /**
+     * A per-point value line split into runs: a point without the value ([hasValue]) or
+     * strictly inside a pause is left out and breaks the run; a run also breaks over a pause
+     * between two kept points and wherever [breakBetween] says so. Never a zero for a missing
+     * value, nothing interpolated.
+     */
+    fun buildRuns(
+        points: List<TrackPoint>,
+        pauses: List<PauseInterval>?,
+        hasValue: (TrackPoint) -> Boolean,
+        breakBetween: (prev: TrackPoint, point: TrackPoint) -> Boolean
+    ): List<List<TrackPoint>> {
+        val runs = mutableListOf<List<TrackPoint>>()
+        var run = mutableListOf<TrackPoint>()
+
+        fun closeRun() {
+            if (run.isNotEmpty()) runs.add(run)
+            run = mutableListOf()
+        }
+
+        for (point in points) {
+            if (!hasValue(point) || TrackPauses.isInside(pauses, point.timestamp)) {
+                closeRun()
+                continue
+            }
+            val prev = run.lastOrNull()
+            if (prev != null && (
+                    TrackPauses.overlapMs(pauses, prev.timestamp, point.timestamp) > 0L || breakBetween(prev, point)
+                    )
+            ) {
+                closeRun()
+            }
+            run.add(point)
+        }
+        closeRun()
+        return runs
+    }
+
+    private fun minutesFrom(startTime: Long, point: TrackPoint): Float =
+        (point.timestamp - startTime) / SpeedPaceUnits.MS_PER_MINUTE
 
     /**
      * Segments of 1 km (metric) or 1 mile (imperial).

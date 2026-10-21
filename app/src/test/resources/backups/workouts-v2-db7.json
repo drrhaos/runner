@@ -1,0 +1,35 @@
+{
+  "formatVersion": 2,
+  "exportedAt": "2026-10-05T12:00:00Z",
+  "packageName": "com.runner.academy",
+  "workoutCount": 2,
+  "workouts": [
+    {
+      "id": 11,
+      "dateMillis": 1790000000000,
+      "distanceKm": 0.4125,
+      "durationMs": 180000,
+      "movingDurationMs": 120000,
+      "avgPace": 4.848485,
+      "calories": 31,
+      "notes": "Светофоры на набережной",
+      "type": "EASY_RUN",
+      "trackData": "{\"points\":[{\"latitude\":55.7558,\"longitude\":37.6173,\"timestamp\":1790000000000,\"accuracy\":4.5,\"speed\":2.9,\"altitude\":152.0,\"after_gap\":false,\"source\":\"GPS\"},{\"latitude\":55.756,\"longitude\":37.6178,\"timestamp\":1790000002000,\"accuracy\":5.0,\"speed\":3.1,\"altitude\":152.5,\"after_gap\":false,\"source\":\"GPS\"},{\"latitude\":55.759,\"longitude\":37.6201,\"timestamp\":1790000180000,\"accuracy\":8.0,\"speed\":3.0,\"after_gap\":false,\"source\":\"GPS\"}],\"total_distance\":412.5,\"total_duration\":180000,\"avg_speed\":2.29,\"max_speed\":3.1,\"start_time\":1790000000000,\"end_time\":1790000180000}",
+      "isFavorite": false,
+      "excludeFromRecords": true,
+      "avgHeartRate": 148,
+      "maxHeartRate": 176
+    },
+    {
+      "id": 12,
+      "dateMillis": 1790100000000,
+      "distanceKm": 10.0,
+      "durationMs": 3000000,
+      "movingDurationMs": 3000000,
+      "avgPace": 5.0,
+      "type": "TEMPO_RUN",
+      "isFavorite": true,
+      "excludeFromRecords": false
+    }
+  ]
+}

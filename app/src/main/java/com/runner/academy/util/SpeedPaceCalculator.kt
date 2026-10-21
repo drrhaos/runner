@@ -1,5 +1,6 @@
 package com.runner.academy.util
 
+import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutTemplateSegment
 
@@ -41,9 +42,6 @@ object SpeedPaceCalculator {
     fun segmentPaceMetric(durationMs: Long, distanceKm: Float, metric: Boolean): Float =
         PaceSpeedMath.segmentPaceMetric(durationMs, distanceKm, metric)
 
-    fun overallAveragePace(totalDistanceMeters: Double, totalDurationSeconds: Double): Float =
-        PaceSpeedMath.overallAveragePace(totalDistanceMeters, totalDurationSeconds)
-
     fun averageSpeedKmh(distanceKm: Float, durationMs: Long): Float =
         PaceSpeedMath.averageSpeedKmh(distanceKm, durationMs)
 
@@ -76,8 +74,8 @@ object SpeedPaceCalculator {
     fun buildPaceSpeedSeries(points: List<TrackPoint>, metric: Boolean): List<PaceSpeedPoint> =
         TrackChartBuilder.buildPaceSpeedSeries(points, metric)
 
-    fun buildElevationSeries(points: List<TrackPoint>): List<ElevationPoint> =
-        TrackChartBuilder.buildElevationSeries(points)
+    fun buildElevationSeries(points: List<TrackPoint>, source: ElevationSource): List<ElevationPoint> =
+        TrackChartBuilder.buildElevationSeries(points, source)
 
     fun isTrackGapStep(prev: TrackPoint, point: TrackPoint): Boolean =
         TrackGeometry.isTrackGapStep(prev, point)

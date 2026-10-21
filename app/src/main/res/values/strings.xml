@@ -42,6 +42,7 @@
     <string name="btn_stop_description">Stop</string>
     <string name="btn_start_description">Start</string>
     <string name="btn_pause_description">Pause</string>
+    <string name="btn_resume_description">Resume</string>
     <string name="btn_my_location_description">My location</string>
     <string name="stop_hold_hint_initial">To stop, hold for 3 sec.</string>
     <string name="stop_hold_hint">To stop, hold for %1$d sec.</string>
@@ -71,16 +72,28 @@
     <string name="save_without_distance">Save without distance</string>
     <string name="voice_gps_lost">GPS signal lost</string>
     <string name="voice_gps_recovered">GPS signal recovered</string>
+    <string name="voice_auto_pause">Auto-pause</string>
+    <string name="voice_auto_resume">Resuming</string>
     <string name="voice_gps_unreliable">GPS signal unreliable</string>
     <string name="kilometers_per_hour_float">%.1f km/h</string>
     <string name="miles_per_hour_float">%.1f mi/h</string>
     <string name="per_km">per kilometer</string>
-    <string name="voice_notif_text_each_km">Distance: %1$s, time: %2$s, average pace: %3$s.</string>
+    <string name="per_mile">per mile</string>
 
-    <string name="workout_distance_label">Distance</string>
     <string name="workout_time_label">Time</string>
-    <string name="workout_pace_label_km">Pace min/km</string>
-    <string name="workout_pace_label_miles">Pace min/mi</string>
+    <string name="workout_moving_time_label">Moving time</string>
+    <string name="workout_elapsed_time_label">Elapsed time</string>
+    <string name="workout_laps_title">Laps</string>
+    <string name="workout_laps_col_number">#</string>
+    <string name="workout_laps_col_km">km</string>
+    <string name="workout_laps_col_time">Time</string>
+    <string name="workout_laps_col_pace">Pace</string>
+    <string name="workout_laps_col_heart_rate">HR</string>
+    <string name="workout_device_a11y">Recorded with %1$s</string>
+    <string name="workout_lap_row_a11y">Lap %1$s: %2$s km, time %3$s, pace %4$s</string>
+    <string name="workout_lap_row_hr_a11y">Lap %1$s: %2$s km, time %3$s, pace %4$s, heart rate %5$s</string>
+    <string name="workout_notes_expand">Show the whole note</string>
+    <string name="workout_notes_collapse">Shorten the note</string>
     <string name="workout_summary_good">Good workout…</string>
 
     <string name="dialog_choose_workout_title">Choose type of workout</string>
@@ -92,6 +105,8 @@
     <string name="add_workout_label_distance">Distance (km):</string>
     <string name="add_workout_label_time">Time (hours:minutes:seconds):</string>
     <string name="add_workout_label_calories">Calories (optional):</string>
+    <string name="add_workout_label_name">Name:</string>
+    <string name="add_workout_hint_name">Say, “Morning run”</string>
     <string name="add_workout_label_notes">Notes:</string>
     <string name="add_workout_hint_date">Select date</string>
     <string name="add_workout_hint_type">Select workout type</string>
@@ -104,7 +119,7 @@
     <string name="edit_workout_title">Edit workout</string>
     <string name="edit_workout_label_route">Route</string>
     <string name="edit_workout_route_none">No route attached</string>
-    <string name="edit_workout_route_attached">Route attached (%1$d points)</string>
+    <string name="edit_workout_route_attached">Route attached (%1$s)</string>
     <string name="edit_workout_select_route">Select route</string>
     <string name="edit_workout_clear_route">Clear</string>
     <string name="edit_workout_pick_route_title">Select a route</string>
@@ -125,7 +140,6 @@
     <string name="edit_workout_keep_editing">Keep editing</string>
     <string name="edit_workout_route_preview_cd">Route preview</string>
     <string name="edit_workout_route_meta">%1$.1f km · %2$s</string>
-    <string name="edit_workout_route_points">%1$d points</string>
     <string name="workout_updated">Workout updated</string>
 
     <string name="settings_title">Settings</string>
@@ -146,13 +160,22 @@
     <string name="settings_theme_system">As in the system</string>
     <string name="settings_theme_light">Light</string>
     <string name="settings_theme_dark">Dark</string>
-    <string name="settings_label_voice_notifications">Voice notifications</string>
+    <string name="settings_hold_hint">Touch and hold a setting to learn more</string>
     <string name="settings_label_gps_diagnostics">Record GPS diagnostics</string>
     <string name="settings_hint_gps_diagnostics">Raw GPS points and satellites for each new workout, kept on this phone. Helps fix GPS problems; share from the workout details.</string>
     <string name="settings_label_steps_for_distance">Steps for distance when GPS is lost</string>
     <string name="settings_hint_steps_for_distance">Counts steps and cadence with the phone\'s step sensor to keep measuring distance in tunnels and dense streets. Needs the Physical activity permission.</string>
     <string name="settings_hint_steps_no_sensor">This device has no step sensor.</string>
+    <string name="settings_label_auto_pause">Auto-pause</string>
+    <string name="settings_hint_auto_pause">Stops the clock while you stand still — at a traffic light or a water stop. Pace uses moving time. Not used in interval workouts.</string>
+    <string name="settings_hint_auto_pause_gps_only">Without step access it relies on GPS alone and reacts a few seconds later.</string>
+    <string name="settings_hint_auto_pause_no_sensor">This device has no step sensor, so it relies on GPS alone and reacts a few seconds later.</string>
     <string name="settings_btn_reset">Reset settings</string>
+    <string name="settings_about_title">About</string>
+    <string name="settings_version_title">Version</string>
+    <!-- versionName (versionCode) -->
+    <string name="settings_version_value">%1$s (build %2$d)</string>
+    <string name="settings_oss_licenses_title">Open-source licenses</string>
     <string name="settings_weight_saved">Weight saved</string>
     <string name="settings_height_saved">Height saved</string>
     <string name="settings_birthdate_saved">Date of birth saved</string>
@@ -189,6 +212,12 @@
     <string name="settings_language_changed">Language changed</string>
 
     <string name="track_info_time_label">Time (h:min:s)</string>
+    <string name="track_info_state_paused">Paused</string>
+    <string name="track_info_state_auto_paused">Auto-paused</string>
+    <string name="track_info_state_auto_paused_a11y">Auto-paused: the clock is stopped and resumes when you start running</string>
+    <string name="track_info_state_running_a11y">Clock running</string>
+    <string name="track_info_elapsed_time_format">Elapsed %1$s</string>
+    <string name="track_info_auto_pause_unavailable">Auto-pause is off in interval workouts</string>
     <string name="track_info_distance_label_km">Distance (km)</string>
     <string name="track_info_distance_label_miles">Distance (miles)</string>
     <string name="track_info_average_speed_label_km">Average speed (km/h)</string>
@@ -196,6 +225,11 @@
     <string name="track_info_time_placeholder" translatable="false">--:--</string>
     <string name="track_info_current_pace_label_km">Current pace (min/km)</string>
     <string name="track_info_current_pace_label_miles">Current pace (min/mi)</string>
+    <!-- The smoothed pace counted from steps: U+2248 and a no-break space -->
+    <string name="tracking_pace_approximate" translatable="false">≈&#160;%1$s</string>
+    <string name="tracking_pace_tile_a11y">Current pace: %1$s</string>
+    <string name="tracking_pace_tile_approx_a11y">Current pace, approximate from steps: %1$s</string>
+    <string name="tracking_pace_tile_no_data_a11y">Current pace: no data</string>
     <string name="track_info_average_pace_label_km">Average pace (min/km)</string>
     <string name="track_info_average_pace_label_miles">Average pace (min/mi)</string>
     <string name="track_info_calories_label">Calories (kcal)</string>
@@ -204,8 +238,12 @@
 
     <string name="workout_details_basic_params">Basic parameters</string>
     <string name="workout_details_charts">Charts</string>
-    <string name="workout_details_average_speed">Average speed</string>
+    <string name="workout_details_average_speed">Avg speed, km/h</string>
     <string name="workout_details_calories">Calories</string>
+    <string name="workout_details_calories_value">%1$d kcal</string>
+    <string name="workout_details_tile_calories">Calories, kcal</string>
+    <string name="workout_details_tile_distance">Distance, km</string>
+    <string name="workout_details_tile_pace">Pace, min/km</string>
     <string name="workout_details_btn_share">Share</string>
     <string name="workout_details_btn_export_gpx">GPX export</string>
     <string name="workout_details_btn_share_diagnostics">Share GPS diagnostics</string>
@@ -219,8 +257,8 @@
     <string name="workout_favorite_remove">Remove from favorites</string>
     <string name="workout_favorite_added">Added to favorites</string>
     <string name="workout_favorite_removed">Removed from favorites</string>
-    <string name="workout_details_pace_speed_pulse_title">Pace / Speed / Pulse</string>
-    <string name="workout_details_height_title">Height</string>
+    <string name="workout_details_pace_speed_chart_title">Pace / Speed</string>
+    <string name="workout_details_height_title">Elevation</string>
     <string name="workout_details_pace_speed_title">Pace / Speed by segment</string>
     <string name="workout_details_pace">Pace</string>
     <string name="workout_details_speed">Speed</string>
@@ -238,22 +276,15 @@
     <string name="delete_workout_title">Delete workout</string>
     <string name="delete_workout_message">Are you sure you want to delete this workout? This action cannot be undone.</string>
     <string name="chart_pace_label">Pace (min/km)</string>
-    <string name="chart_pace_label_miles">Pace (min/mi)</string>
     <string name="chart_speed_label">Speed (km/h)</string>
-    <string name="chart_speed_label_miles">Speed (mi/h)</string>
     <string name="chart_pace_value_km">%1$d:%2$02d min/km</string>
-    <string name="chart_pace_value_miles">%1$d:%2$02d min/mi</string>
     <string name="chart_speed_value_kmh">%1$.1f km/h</string>
-    <string name="chart_speed_value_mph">%1$.1f mi/h</string>
     <string name="chart_time_format">%d min</string>
     <string name="chart_elevation_title">Elevation</string>
     <string name="chart_elevation_x_format">%.1f km</string>
     <string name="chart_elevation_y_format">%d m</string>
     <string name="unit_km">km</string>
     <string name="unit_m">m</string>
-    <string name="unit_mile">mile</string>
-    <string name="unit_kmh">km/h</string>
-    <string name="unit_mph">mi/h</string>
     <string name="workout_share_text">🏃 Workout:
 📅 Date: %1$s
 📏 Distance: %2$s
@@ -269,6 +300,7 @@
     <string name="statistics_count_zero" translatable="false">0</string>
     <string name="statistics_total_distance_label">Total distance:</string>
     <string name="statistics_total_time_label">Total time:</string>
+    <string name="statistics_total_moving_time_label">Moving time:</string>
     <string name="statistics_total_calories_label">Total calories:</string>
     <string name="statistics_best_results">Best results</string>
     <string name="statistics_best_pace">Best pace:</string>
@@ -294,17 +326,19 @@
     <string name="statistics_message_no_data">There is no data to display. Start training sessions to see statistics.</string>
 
     <string name="workout_list_num_workouts">Training sessions</string>
-    <string name="workout_list_average_pace">Average pace</string>
-    <string name="workout_list_pace_label">Pace</string>
+    <!-- The one-line totals above the list: "128 workouts · 1234.5 km · 5:06 /km" -->
+    <string name="workout_list_stat_workouts">workouts</string>
+    <string name="workout_list_stat_pace">/km</string>
+    <string name="workout_list_stat_separator" translatable="false">·</string>
     <string name="workout_list_message_no_workouts">No training sessions yet</string>
     <string name="workout_list_message_start_workout">Start training to create a record.</string>
     <string name="workout_list_empty_start">Start workout</string>
     <string name="workout_list_content_description_empty">No workouts yet</string>
-    <string name="workout_list_filter_all">All</string>
     <string name="workout_list_filter_favorites">Favorites</string>
     <string name="workout_list_message_no_favorites">No favorite routes yet</string>
     <string name="workout_list_message_add_favorites">Mark a workout with a star to save it here.</string>
     <string name="workout_list_no_route_preview">No route</string>
+    <string name="workout_list_route_preview_pending_cd">Route preview is being prepared</string>
     <string name="workout_list_import">Import workouts</string>
     <string name="workout_list_export">Export workouts</string>
     <string name="workout_list_export_choose_format">Choose export format</string>
@@ -314,17 +348,59 @@
     <string name="workout_list_export_ready">Export ready</string>
     <string name="workout_list_export_title">Export workouts</string>
     <string name="workout_list_export_gpx_partial">Exported %1$d GPX files (%2$d without track skipped)</string>
+    <string name="workout_list_export_choose_period">Which workouts to export</string>
+    <string name="workout_list_export_period_all">All workouts</string>
+    <string name="workout_list_export_period_range">For a period…</string>
+    <string name="workout_list_export_period_picker_title">Export period</string>
+    <string name="workout_list_export_period_empty">No workouts in this period</string>
     <string name="workout_list_fab_actions">Workout actions</string>
     <string name="workout_list_fab_close">Close actions</string>
     <string name="workout_list_import_choose_source">Choose import source</string>
     <string name="workout_list_import_json">JSON backup</string>
-    <string name="workout_list_import_gpx_folder">Folder with GPX files</string>
+    <string name="workout_list_import_track_files">Workout files (GPX, TCX, FIT, ZIP)</string>
+    <string name="workout_list_import_track_folder">Folder of workouts or exports</string>
     <string name="workout_list_import_progress">Importing…</string>
     <string name="workout_list_import_success">Imported %1$d workouts</string>
-    <string name="workout_list_import_partial">Imported %1$d workouts (%2$d files failed)</string>
+    <string name="workout_list_import_partial">Imported %1$d workouts (%2$d unreadable)</string>
     <string name="workout_list_import_empty">Nothing to import</string>
     <string name="workout_list_import_error">Import error: %1$s</string>
-    <string name="workout_list_import_no_gpx">No GPX files found in the folder</string>
+    <string name="workout_list_import_no_track_files">No files to import in the folder</string>
+    <string name="workout_import_conflict_incoming">Imported</string>
+    <string name="workout_import_conflict_others">Overlaps with</string>
+    <string name="workout_import_conflict_saved">already in the app</string>
+    <string name="workout_import_conflict_with_track">with track</string>
+    <string name="workout_import_conflict_no_track">no track</string>
+    <string name="workout_import_conflict_replace">Replace</string>
+    <string name="workout_import_conflict_skip">Skip</string>
+    <string name="workout_import_conflict_keep_both">Keep both</string>
+    <string name="workout_list_import_progress_count">Importing… %1$d of %2$d</string>
+    <string name="workout_list_import_progress_processed">Importing… %1$d processed</string>
+    <string name="workout_list_import_pending_summary">Waiting for a decision: %1$d</string>
+    <string name="workout_list_import_duplicates_summary">Already there, skipped: %1$d</string>
+    <string name="workout_list_import_not_running_summary">Skipped, not a run: %1$d</string>
+    <string name="workout_list_pending_imports">Imported workouts waiting for a decision: %1$d</string>
+    <string name="workout_list_pending_imports_review">Review</string>
+    <string name="workout_import_conflict_none">Overlaps nothing any more</string>
+    <string name="workout_import_conflict_waiting">also waiting: %1$s</string>
+    <string name="workout_import_conflict_import">Import</string>
+    <string name="import_conflicts_label">Import conflicts</string>
+    <string name="import_conflicts_title">Workouts at the same time</string>
+    <string name="import_conflicts_subtitle">Waiting for a decision: %1$d. Until then they are not in the list, statistics or records.</string>
+    <string name="import_conflicts_empty">Nothing waits for a decision</string>
+    <string name="import_conflicts_all">For all…</string>
+    <string name="import_conflicts_all_skip">Skip all</string>
+    <string name="import_conflicts_all_replace">Replace all</string>
+    <string name="import_conflicts_all_keep_both">Keep all</string>
+    <string name="import_conflicts_replace_all_message">Each waiting workout replaces the saved workouts it overlaps. Their notes and edits are lost.</string>
+    <string name="import_notification_channel">Workout import</string>
+    <string name="import_notification_title">Importing workouts</string>
+    <string name="import_notification_stop">Stop</string>
+    <string name="import_notification_done">Import finished</string>
+    <string name="workout_list_import_inaccessible">Files no longer accessible: %1$d. Pick them again</string>
+    <string name="workout_list_import_running">An import is already running</string>
+    <string name="workout_import_conflict_source">%1$s — %2$s</string>
+    <string name="workout_import_conflict_line">%1$s · %2$s · %3$s · %4$s</string>
+    <string name="workout_import_conflict_where">%1$s (%2$s)</string>
 
     <string name="gps_label">GPS</string>
     <string name="gps_status_a11y">GPS signal: %1$s</string>
@@ -368,12 +444,14 @@
     <string name="notification_channel_name">Workout tracking</string>
     <string name="notification_channel_description">Active workout notifications</string>
     <string name="notification_workout_format">%1$s • %2$s</string>
+    <string name="notification_workout_paused_format">Paused • %1$s • %2$s</string>
+    <string name="notification_workout_auto_paused_format">Auto-paused • %1$s • %2$s</string>
     <string name="notification_interrupted_channel_name">Workout alerts</string>
     <string name="notification_interrupted_channel_description">Alerts when workout tracking stops unexpectedly</string>
     <string name="notification_interrupted_title">Workout interrupted</string>
     <string name="notification_interrupted_text">Open the app to continue</string>
 
-    <string name="csv_header">Date,Time,Workout type,Distance (km),Duration (min),Pace (min/km),Calories,Notes\n</string>
+    <string name="csv_header">Date,Time,Workout type,Distance (km),Duration (min),Pace (min/km),Calories,Moving time (min),Elevation gain (m),Elevation loss (m),Cadence (spm),Notes\n</string>
     <string name="csv_statistics_header">Workout statistics\n\nCategory,Value\n</string>
     <string name="csv_total_workouts">Total workouts</string>
     <string name="csv_total_distance">Total distance (km)</string>
@@ -382,7 +460,7 @@
     <string name="csv_average_pace">Average pace (min/km)</string>
     <string name="csv_average_distance">Average distance (km)</string>
     <string name="csv_average_time">Average time (minutes)</string>
-    <string name="csv_best_pace">Best pace (min/km)</string>
+    <string name="csv_average_cadence">Average cadence (spm)</string>    <string name="csv_best_pace">Best pace (min/km)</string>
     <string name="csv_max_distance">Maximum distance (km)</string>
     <string name="csv_longest_time">Longest workout (minutes)</string>
     <string name="csv_breakdown_header">\nDistribution by workout type\nType,Count,Distance (km)\n</string>
@@ -405,6 +483,11 @@
     <plurals name="hours">
         <item quantity="one">%d hour</item>
         <item quantity="other">%d hours</item>
+    </plurals>
+
+    <plurals name="edit_workout_route_points_count">
+        <item quantity="one">%d point</item>
+        <item quantity="other">%d points</item>
     </plurals>
 
     <plurals name="minutes">
@@ -440,6 +523,100 @@
     <plurals name="kilometers_per_hour">
         <item quantity="one">%d kilometer per hour</item>
         <item quantity="other">%d kilometers per hour</item>
+    </plurals>
+
+    <plurals name="cadence_steps_per_minute">
+        <item quantity="one">%d step per minute</item>
+        <item quantity="other">%d steps per minute</item>
+    </plurals>
+
+    <!-- Cadence -->
+    <string name="workout_details_tile_cadence">Cadence, spm</string>
+    <string name="workout_details_cadence_title">Cadence</string>
+    <string name="workout_details_cadence_a11y">Average cadence %1$s</string>
+    <string name="workout_details_cadence_pending_a11y">Cadence is still being calculated</string>
+    <string name="metric_pending_placeholder" translatable="false">—</string>
+    <string name="chart_cadence_label">Cadence (spm)</string>
+    <string name="chart_cadence_value">Cadence: %1$d spm</string>
+    <string name="chart_cadence_avg_format">avg %1$d spm</string>
+    <string name="chart_cadence_limit_label">avg %1$d</string>
+    <string name="chart_cadence_a11y">Cadence chart, steps per minute: average %1$d, from %2$d to %3$d</string>
+    <string name="statistics_average_cadence_label">Average cadence:</string>
+    <string name="statistics_cadence_format">%1$d spm</string>
+
+    <!-- Heart rate -->
+    <plurals name="heart_rate_beats_per_minute">
+        <item quantity="one">%d beat per minute</item>
+        <item quantity="other">%d beats per minute</item>
+    </plurals>
+    <string name="workout_details_tile_heart_rate">Heart rate, bpm</string>
+    <string name="workout_details_heart_rate_title">Heart rate</string>
+    <string name="workout_details_heart_rate_a11y">Average heart rate %1$s</string>
+    <string name="workout_details_heart_rate_pending_a11y">Heart rate is still being calculated</string>
+    <string name="chart_heart_rate_label">Heart rate (bpm)</string>
+    <string name="chart_heart_rate_value">Heart rate: %1$d bpm</string>
+    <string name="chart_heart_rate_summary_format">avg %1$d · max %2$d bpm</string>
+    <string name="chart_heart_rate_avg_format">avg %1$d bpm</string>
+    <string name="chart_heart_rate_limit_label">avg %1$d</string>
+    <string name="chart_heart_rate_summary_a11y">Average heart rate %1$s, maximum %2$s</string>
+    <string name="chart_heart_rate_a11y">Heart rate chart, beats per minute: average %1$d, from %2$d to %3$d</string>
+    <string name="chart_heart_rate_range_a11y">Heart rate chart, beats per minute: from %1$d to %2$d</string>
+
+    <!-- Elevation gain and loss -->
+    <string name="workout_elevation_gain_label">Elevation gain, m</string>
+    <string name="workout_elevation_loss_label">Elevation loss, m</string>
+    <string name="workout_elevation_source_gps">Elevation from GPS — approximate</string>
+    <string name="workout_elevation_source_gps_short">from GPS, approximate</string>
+    <string name="workout_elevation_source_file">Elevation from the file</string>
+    <string name="workout_elevation_source_file_short">from the file</string>
+    <string name="workout_elevation_source_dialog_title">Elevation from GPS</string>
+    <string name="workout_elevation_source_dialog_message">This elevation comes from GPS: the phone has no barometer, or it did not work through this run, or the run was recorded before the app used it. GPS measures height less accurately than position — errors of 10–20 m are common. We smooth it and ignore small changes, so the gain may differ from reality; short climbs may be missed.</string>
+    <string name="workout_elevation_source_file_dialog_title">Elevation from the file</string>
+    <string name="workout_elevation_source_file_dialog_message">The elevation was taken from the imported file as it is. We smooth it and ignore small changes, like GPS elevation, so the gain may differ from what the device that recorded the file showed.</string>
+    <string name="workout_elevation_summary_format">↑ %1$d m · ↓ %2$d m</string>
+    <string name="workout_elevation_gain_a11y">Elevation gain %1$s</string>
+    <string name="workout_elevation_loss_a11y">Elevation loss %1$s</string>
+    <string name="workout_elevation_summary_a11y">%1$s, %2$s</string>
+    <string name="workout_elevation_gain_pending_a11y">Elevation gain is still being calculated</string>
+    <string name="workout_elevation_loss_pending_a11y">Elevation loss is still being calculated</string>
+    <string name="chart_elevation_a11y">Elevation chart: gain %1$s, loss %2$s, from %3$s to %4$s</string>
+    <string name="chart_elevation_range_a11y">Elevation chart: from %1$s to %2$s</string>
+    <string name="statistics_total_elevation_gain_label">Elevation gain:</string>
+    <string name="statistics_elevation_format">%1$,d m</string>
+    <string name="statistics_elevation_approx_format">≈ %1$s</string>
+    <string name="statistics_elevation_approx_a11y">approximately %1$s</string>
+    <string name="statistics_elevation_approx_note">≈ — some elevation comes from GPS and is approximate</string>
+
+    <!-- TalkBack: detail tiles and chart summaries -->
+    <string name="workout_details_distance_a11y">Distance %1$s</string>
+    <string name="workout_details_time_a11y">Time %1$s</string>
+    <string name="workout_details_moving_time_a11y">Moving time %1$s</string>
+    <string name="workout_details_elapsed_time_a11y">Elapsed time %1$s</string>
+    <string name="workout_details_pace_a11y">Average pace %1$s</string>
+    <string name="workout_details_pace_unknown_a11y">Average pace unknown</string>
+    <string name="workout_details_average_speed_a11y">Average speed %1$s</string>
+    <string name="workout_details_calories_a11y">Calories %1$s</string>
+    <string name="kilometers_per_hour_fraction_a11y">%1$.1f kilometers per hour</string>
+    <string name="miles_per_hour_fraction_a11y">%1$.1f miles per hour</string>
+    <string name="chart_pace_a11y">Pace chart: average %1$s, best %2$s, worst %3$s</string>
+    <string name="chart_segments_a11y">Chart by segment: %1$s, fastest — %2$s, %3$s, slowest — %4$s, %5$s</string>
+    <string name="chart_segment_n_a11y">segment %1$d</string>
+    <string name="chart_segment_titled_a11y">%1$s, %2$s</string>
+    <string name="chart_segments_single_a11y">Chart by segment: one segment, %1$s</string>
+
+    <plurals name="kilocalories">
+        <item quantity="one">%d kilocalorie</item>
+        <item quantity="other">%d kilocalories</item>
+    </plurals>
+
+    <plurals name="miles_per_hour">
+        <item quantity="one">%d mile per hour</item>
+        <item quantity="other">%d miles per hour</item>
+    </plurals>
+
+    <plurals name="chart_segments_count">
+        <item quantity="one">%d segment</item>
+        <item quantity="other">%d segments</item>
     </plurals>
 
     <!-- Training plans -->
@@ -501,7 +678,6 @@
     <string name="segment_goal_distance">Distance</string>
     <string name="segment_duration_hint">Duration</string>
     <string name="segment_distance_hint">Distance</string>
-    <string name="segment_pace_hint">Target pace (optional)</string>
     <string name="segment_dialog_duration_title">Duration</string>
     <string name="segment_dialog_distance_title">Distance</string>
     <string name="segment_dialog_pace_title">Target pace</string>
@@ -582,15 +758,354 @@
     <string name="tracking_interval_progress">Interval %1$d / %2$d</string>
     <string name="tracking_interval_status">%1$d/%2$d · %3$s · %4$d%%</string>
     <string name="tracking_mode_plan">Plan: %1$s</string>
+    <string name="tracking_mode_sheet_title">Workout mode</string>
+    <string name="tracking_mode_group_plan">Today\'s plan</string>
+    <string name="tracking_mode_group_templates">Templates</string>
+    <string name="tracking_mode_easy_subtitle">No segments</string>
+    <string name="tracking_mode_plan_subtitle">Plan “%1$s” · day %2$d</string>
+    <string name="tracking_mode_repeats">%1$d × %2$s</string>
+    <string name="tracking_mode_minutes">%1$d min</string>
+    <string name="tracking_mode_about">≈ %1$s</string>
+    <string name="tracking_mode_button_a11y">Workout mode: %1$s, change</string>
     <string name="tracking_free_run">Free run</string>
-    <string name="voice_interval_start">Interval: %1$s</string>
-    <string name="voice_interval_start_with_detail">Interval: %1$s. %2$s</string>
-    <string name="voice_interval_upcoming">Next interval: %1$s</string>
-    <string name="voice_interval_upcoming_with_detail">Next interval: %1$s. %2$s</string>
     <string name="voice_interval_upcoming_in_30s">In 30 seconds: %1$s</string>
     <string name="voice_interval_goal_duration">Duration %1$s</string>
     <string name="voice_interval_goal_distance">Distance %1$s</string>
     <string name="voice_interval_goal_pace">Pace %1$s</string>
     <string name="chart_interval_n">Int %1$d</string>
+    <string name="chart_segment_km">km %1$d</string>
+    <string name="chart_value_missing" translatable="false">—</string>
+
+    <!-- Personal records -->
+    <string name="menu_records">Records</string>
+    <string name="records_title">Records</string>
+    <string name="records_subtitle">Best time over each distance within any workout with a GPS track</string>
+    <string name="records_distance_1k">1 km</string>
+    <string name="records_distance_5k">5 km</string>
+    <string name="records_distance_10k">10 km</string>
+    <string name="records_distance_half">Half marathon</string>
+    <string name="records_distance_marathon">Marathon</string>
+    <string name="records_distance_1k_a11y">1 kilometer</string>
+    <string name="records_distance_5k_a11y">5 kilometers</string>
+    <string name="records_distance_10k_a11y">10 kilometers</string>
+    <string name="records_steps_note">≈ part of the distance was counted from steps</string>
+    <string name="records_history_toggle">Improvement history (%1$d)</string>
+    <string name="records_history_first">first</string>
+    <string name="records_history_delta">−%1$s</string>
+    <string name="records_history_expanded">expanded</string>
+    <string name="records_history_collapsed">collapsed</string>
+    <string name="records_not_reached_hint">Run %1$s in one workout</string>
+    <string name="records_distance_km">%1$s km</string>
+    <string name="records_empty_title">No records yet</string>
+    <string name="records_empty_message">Records appear after your first run with GPS: best 1 km, 5 km, 10 km, half marathon and marathon.</string>
+    <string name="records_empty_manual_only">Manually added workouts without a track don’t count.</string>
+    <string name="records_empty_start">Start workout</string>
+    <string name="records_recalc_progress">Recalculating records: %1$d of %2$d</string>
+    <string name="records_recalc_indeterminate">Recalculating records…</string>
+    <string name="records_open_all">All records</string>
+    <string name="records_item_a11y">%1$s: %2$s, %3$s. Open workout</string>
+    <string name="records_item_not_reached_a11y">%1$s: no result yet</string>
+    <string name="records_history_item_a11y">%1$s, %2$s, faster by %3$s</string>
+    <string name="records_history_first_a11y">%1$s, %2$s, first result</string>
+    <string name="records_congrats_title">New personal record!</string>
+    <string name="records_congrats_title_plural">New personal records!</string>
+    <string name="records_congrats_line">%1$s — %2$s, %3$s faster</string>
+    <string name="records_first_result_title">First result</string>
+    <string name="records_first_result_line">First result: %1$s — %2$s</string>
+    <string name="records_badge_current">Personal record: %1$s</string>
+    <string name="records_badge_former">Former record: %1$s (until %2$s)</string>
+    <string name="records_pair_format">%1$s — %2$s</string>
+    <string name="records_approx_time">≈%1$s</string>
+    <string name="records_exclude_label">Don’t count in records</string>
+    <string name="records_auto_excluded">Not counted in records: route time was calculated</string>
+    <string name="records_updated_open">Open</string>
+    <plurals name="records_updated">
+        <item quantity="one">%d record updated</item>
+        <item quantity="other">%d records updated</item>
+    </plurals>
+
+    <!-- Devices (heart rate monitor) -->
+    <string name="devices_title">Devices</string>
+    <string name="devices_section_heart_rate">Heart rate monitor</string>
+    <string name="devices_unnamed">Unnamed</string>
+    <string name="devices_status_connected">connected</string>
+    <string name="devices_bpm">· %1$d bpm</string>
+    <string name="devices_status_no_contact">connected · strap not worn</string>
+    <string name="devices_status_searching">searching…</string>
+    <string name="devices_status_offline">offline</string>
+    <string name="devices_status_never_seen">not seen yet</string>
+    <string name="devices_status_bluetooth_off">Bluetooth is off</string>
+    <string name="devices_status_no_permission">No access to nearby devices</string>
+    <string name="devices_enable_bluetooth">Turn on</string>
+    <string name="devices_allow">Allow</string>
+    <string name="devices_open_settings">Open settings</string>
+    <string name="devices_battery">battery %1$d%%</string>
+    <string name="devices_last_seen">last seen: %1$s</string>
+    <string name="devices_meta_separator" translatable="false">" · "</string>
+    <string name="devices_menu_a11y">Actions for %1$s</string>
+    <string name="devices_menu_replace">Replace device</string>
+    <string name="devices_menu_forget">Forget device</string>
+    <string name="devices_forget_title">Forget %1$s?</string>
+    <string name="devices_forget_message">Heart rate won’t be recorded until you add a sensor again.</string>
+    <string name="devices_forget_confirm">Forget</string>
+    <string name="devices_empty_title">No heart rate monitor</string>
+    <string name="devices_empty_message">Connect a chest strap or a watch broadcasting heart rate to record it in every workout.</string>
+    <string name="devices_add">Add heart rate monitor</string>
+    <string name="devices_ble_unsupported">This phone has no Bluetooth LE, so a heart rate monitor can’t be connected.</string>
+    <string name="devices_paired_snackbar">%1$s added</string>
+    <plurals name="devices_battery_a11y">
+        <item quantity="one">battery %d percent</item>
+        <item quantity="other">battery %d percent</item>
+    </plurals>
+
+    <string name="add_sensor_title">Add heart rate monitor</string>
+    <string name="add_sensor_permission_rationale_31">To find your monitor, allow access to nearby devices. Your location isn’t used.</string>
+    <string name="add_sensor_permission_rationale_30">On Android 11 and below, Bluetooth devices can only be found with precise location access.</string>
+    <string name="add_sensor_permission_denied">Access is denied. Turn it on in the app’s system settings.</string>
+    <string name="add_sensor_location_off">Turn on location: Android 11 and below can’t find Bluetooth devices without it.</string>
+    <string name="add_sensor_open_location">Turn on location</string>
+    <string name="add_sensor_scanning">Looking for monitors…</string>
+    <string name="add_sensor_seconds_left">%1$d s left</string>
+    <plurals name="add_sensor_seconds_left_a11y">
+        <item quantity="one">%d second left</item>
+        <item quantity="other">%d seconds left</item>
+    </plurals>
+    <string name="add_sensor_signal_excellent">excellent signal</string>
+    <string name="add_sensor_signal_good">good signal</string>
+    <string name="add_sensor_signal_weak">weak signal</string>
+    <string name="add_sensor_signal_very_weak">very weak signal</string>
+    <string name="add_sensor_already_paired">already added</string>
+    <string name="add_sensor_scan_again">Search again</string>
+    <string name="add_sensor_retry_in">Retry in %1$d s</string>
+    <plurals name="add_sensor_retry_in_a11y">
+        <item quantity="one">Search again in %d second</item>
+        <item quantity="other">Search again in %d seconds</item>
+    </plurals>
+    <string name="add_sensor_not_found_link">Don’t see yours?</string>
+    <string name="add_sensor_empty_title">Nothing found</string>
+    <string name="add_sensor_hint_strap">Put the strap on and wet the pads: it wakes up on skin contact.</string>
+    <string name="add_sensor_hint_single_connection">Many sensors allow one connection at a time: disconnect yours from your watch or other apps.</string>
+    <string name="add_sensor_hint_watch_broadcast">Watch: turn on heart rate broadcast in the watch settings.</string>
+    <string name="add_sensor_hint_no_broadcast">Some watches can’t broadcast heart rate at all.</string>
+    <string name="add_sensor_found_a11y">Devices found: %1$d</string>
+    <string name="add_sensor_replace_title">Replace %1$s?</string>
+    <string name="add_sensor_replace_message">Only one monitor is allowed: %1$s will be forgotten and replaced by %2$s.</string>
+    <string name="add_sensor_replace">Replace</string>
+    <string name="add_sensor_probing">Checking %1$s…</string>
+    <string name="add_sensor_probing_hint">This takes up to 30 seconds. Keep the strap on.</string>
+    <string name="add_sensor_probe_unreachable">%1$s didn’t respond. Put the strap on, move closer and disconnect it from your watch.</string>
+    <string name="add_sensor_probe_not_hr">%1$s doesn’t send heart rate. Choose another device.</string>
+    <string name="add_sensor_error_bluetooth_off">Bluetooth is off</string>
+    <string name="add_sensor_error_failed">Couldn’t start searching (error %1$d). Try again later.</string>
+    <string name="add_sensor_error_failed_no_code">Couldn’t start searching. Try again later.</string>
+    <string name="add_sensor_retry">Retry</string>
+    <string name="add_sensor_back_to_list">Back to list</string>
+
+    <string name="settings_devices_title">Sensors</string>
+    <string name="settings_debug_title">Debug</string>
+    <string name="settings_label_devices">Devices</string>
+    <string name="settings_devices_none">No heart rate monitor</string>
+    <string name="settings_devices_summary">Heart rate monitor: %1$s</string>
+    <string name="settings_devices_summary_connected">Heart rate monitor: %1$s · connected</string>
+    <string name="settings_devices_summary_bt_off">Heart rate monitor: %1$s · Bluetooth off</string>
+    <string name="settings_devices_summary_no_access">Heart rate monitor: %1$s · no access</string>
+
+    <string name="tracking_hr_tile_no_sensor_a11y">Heart rate: no sensor added</string>
+    <string name="tracking_hr_tile_open_devices">open Devices</string>
+    <string name="tracking_hr_tile_a11y">Heart rate: %1$s</string>
+    <string name="tracking_hr_tile_stale_a11y">Heart rate: %1$s, not updating</string>
+    <string name="tracking_hr_tile_no_data_a11y">Heart rate: no data</string>
+    <string name="tracking_hr_link_connected">sensor connected</string>
+    <string name="tracking_hr_link_searching">searching for sensor</string>
+    <string name="tracking_hr_link_lost">sensor lost</string>
+    <string name="voice_hr_sensor_lost">Heart rate sensor lost</string>
+    <string name="voice_hr_sensor_connected">Heart rate sensor connected</string>
+
+    <!-- ===== Release 4: heart rate zones (feature/r4-hr-zones) ===== -->
+    <string name="settings_label_hr_max">Maximum heart rate</string>
+    <string name="settings_hr_max_source_auto">by age: 220 − %1$d</string>
+    <string name="settings_hr_max_source_manual">set manually</string>
+    <string name="settings_hr_max_source_none">Zones are off: set your date of birth or enter it manually</string>
+    <string name="settings_hr_max_none" translatable="false">—</string>
+    <string name="settings_hr_max_a11y">Maximum heart rate %1$s, %2$s</string>
+    <string name="settings_hr_max_none_a11y">Maximum heart rate not set, zones are off</string>
+    <string name="settings_dialog_hr_max_title">Maximum heart rate</string>
+    <string name="settings_dialog_hr_max_auto_formula">By age: 220 − %1$d = %2$d. If you know your tested maximum, set it here.</string>
+    <string name="settings_dialog_hr_max_no_birth">No date of birth: set your maximum manually. Zones are off without it.</string>
+    <string name="settings_dialog_hr_max_auto">By age</string>
+    <string name="settings_hr_max_unit">bpm</string>
+    <string name="settings_hr_max_zone_line" translatable="false">Z%1$d %2$d–%3$d</string>
+    <string name="settings_hr_max_saved">Maximum heart rate saved</string>
+    <string name="hr_max_source_auto_short">by age</string>
+    <string name="hr_zone_badge" translatable="false">Z%1$d</string>
+    <string name="hr_zone_badge_below" translatable="false">&lt;Z1</string>
+    <string name="tracking_hr_tile_zone_a11y">Heart rate: %1$s, zone %2$d</string>
+    <string name="tracking_hr_tile_stale_zone_a11y">Heart rate: %1$s, zone %2$d, not updating</string>
+    <string name="tracking_hr_tile_below_zone_a11y">Heart rate: %1$s, below zone 1</string>
+    <string name="workout_details_hr_zones_title">Time in zones</string>
+    <string name="workout_details_hr_zones_basis">Based on maximum heart rate %1$d (%2$s)</string>
+    <string name="workout_details_hr_zone_below">below Z1</string>
+    <string name="workout_details_hr_zone_range" translatable="false">%1$d–%2$d</string>
+    <string name="workout_details_hr_zone_below_range" translatable="false">&lt; %1$d</string>
+    <string name="workout_details_hr_zone_percent">%1$d%%</string>
+    <!-- %3$s: the upper bound with hr_zone_bound_a11y; %4$s: the time in words; %5$s: percent_a11y -->
+    <string name="workout_details_hr_zone_row_a11y">Zone %1$d, %2$d to %3$s: %4$s, %5$s</string>
+    <!-- %1$s: the Z1 bound with hr_zone_bound_a11y -->
+    <string name="workout_details_hr_zone_below_a11y">Below zone 1, under %1$s: %2$s, %3$s</string>
+    <!-- A zone bound for TalkBack -->
+    <plurals name="hr_zone_bound_a11y">
+        <item quantity="one">%d beat per minute</item>
+        <item quantity="other">%d beats per minute</item>
+    </plurals>
+    <string name="settings_dialog_hr_max_age_out_of_range">The maximum by age needs an age from 10 to 100. Set your maximum manually: zones are off without it.</string>
+    <string name="settings_dialog_hr_max_zones_off">Turn zones off</string>
+    <string name="settings_hr_max_zones_off_done">Heart rate zones are off</string>
+    <string name="chart_heart_rate_zones_a11y">Heart rate chart, beats per minute: average %1$d, from %2$d to %3$d. The line is coloured by heart rate zone</string>
+    <string name="chart_heart_rate_value_zone">Heart rate: %1$d bpm · Z%2$d</string>
+    <string name="chart_heart_rate_value_below">Heart rate: %1$d bpm · below Z1</string>
+    <plurals name="percent_a11y">
+        <item quantity="one">%d percent</item>
+        <item quantity="other">%d percent</item>
+    </plurals>
+    <!-- ===== End of heart rate zones ===== -->
+
+    <!-- Voice summary (release 4): one part per metric, a pause between them -->
+    <string name="voice_summary_distance">Distance %1$s</string>
+    <string name="voice_summary_time">Time %1$s</string>
+    <string name="voice_summary_avg_pace">Average pace %1$s</string>
+    <string name="voice_summary_split_pace">Pace for the %1$s: %2$s</string>
+    <string name="voice_summary_split_pace_since">Pace since the last summary: %1$s</string>
+    <string name="voice_summary_split_hr">Average heart rate for the %1$s: %2$d</string>
+    <string name="voice_summary_split_hr_since">Average heart rate since the last summary: %1$d</string>
+    <string name="voice_summary_split_pace_since_start">Pace since the start: %1$s</string>
+    <string name="voice_summary_split_hr_since_start">Average heart rate since the start: %1$d</string>
+    <string name="voice_summary_current_hr">Heart rate %1$d</string>
+    <string name="voice_span_km_0_5">last 500 meters</string>
+    <string name="voice_span_km_1">last kilometer</string>
+    <string name="voice_span_km_2">last 2 kilometers</string>
+    <string name="voice_span_km_5">last 5 kilometers</string>
+    <string name="voice_span_min_1">last minute</string>
+    <string name="voice_span_min_5">last 5 minutes</string>
+    <string name="voice_span_min_10">last 10 minutes</string>
+    <string name="voice_span_min_15">last 15 minutes</string>
+
+    <!-- ===== Release 4: voice coaching settings (feature/r4-voice-settings) ===== -->
+    <string name="settings_label_voice">Voice coaching</string>
+    <string name="settings_voice_summary_off">Off</string>
+    <!-- %1$s: voice_every_short_* -->
+    <string name="settings_voice_summary_on">On · summary %1$s</string>
+    <string name="settings_voice_summary_on_no_summary">On · no summary</string>
+    <string name="settings_voice_open_a11y">open voice settings</string>
+    <string name="voice_settings_title">Voice coaching</string>
+    <string name="voice_enabled_label">Voice coaching</string>
+    <string name="voice_enabled_hint">Summaries, segments and target cues. Music gets quieter while the voice speaks.</string>
+    <string name="voice_status_note">GPS signal, heart rate sensor and auto-pause are always announced while voice is on.</string>
+    <string name="voice_profile_free">Runs without segments</string>
+    <string name="voice_profile_intervals">Intervals</string>
+    <string name="voice_profile_intervals_hint">When the workout has segments</string>
+    <string name="voice_summary_label">Summary</string>
+    <string name="voice_summary_dialog_title">How often to speak a summary</string>
+    <string name="voice_every_off">Off</string>
+    <string name="voice_every_km_0_5">Every 0.5 km</string>
+    <string name="voice_every_km_1">Every 1 km</string>
+    <string name="voice_every_km_2">Every 2 km</string>
+    <string name="voice_every_km_5">Every 5 km</string>
+    <string name="voice_every_min_1">Every minute</string>
+    <string name="voice_every_min_5">Every 5 min</string>
+    <string name="voice_every_min_10">Every 10 min</string>
+    <string name="voice_every_min_15">Every 15 min</string>
+    <string name="voice_every_short_km_0_5">every 0.5 km</string>
+    <string name="voice_every_short_km_1">every 1 km</string>
+    <string name="voice_every_short_km_2">every 2 km</string>
+    <string name="voice_every_short_km_5">every 5 km</string>
+    <string name="voice_every_short_min_1">every minute</string>
+    <string name="voice_every_short_min_5">every 5 min</string>
+    <string name="voice_every_short_min_10">every 10 min</string>
+    <string name="voice_every_short_min_15">every 15 min</string>
+    <string name="voice_metrics_label">What to say</string>
+    <string name="voice_metrics_dialog_title">What to say in a summary</string>
+    <string name="voice_metrics_done">Done</string>
+    <string name="voice_metric_distance">Distance</string>
+    <string name="voice_metric_time">Time</string>
+    <string name="voice_metric_avg_pace">Average pace</string>
+    <string name="voice_metric_split_pace">Pace since last summary</string>
+    <string name="voice_metric_split_hr">Average heart rate since last summary</string>
+    <string name="voice_metric_current_hr">Current heart rate</string>
+    <!-- The metrics row's subtitle, joined with a comma: not lowercase() (would break abbreviations) -->
+    <string name="voice_metric_distance_lower">distance</string>
+    <string name="voice_metric_time_lower">time</string>
+    <string name="voice_metric_avg_pace_lower">average pace</string>
+    <string name="voice_metric_split_pace_lower">pace since last summary</string>
+    <string name="voice_metric_split_hr_lower">average heart rate since last summary</string>
+    <string name="voice_metric_current_hr_lower">current heart rate</string>
+    <string name="voice_metrics_hr_no_sensor">No heart rate monitor: heart rate will be skipped</string>
+    <string name="voice_segment_change_label">Segment change</string>
+    <string name="voice_segment_change_hint">What\'s next 30 seconds ahead, a beep at the start</string>
+    <string name="voice_target_check_label">Target cues</string>
+    <string name="voice_target_check_hint">“Speed up”, “Slow down”, “Above zone”, “Below zone” — at most once every 30 seconds</string>
+    <string name="voice_target_section">Segment target</string>
+    <string name="voice_pace_tolerance_label">Pace tolerance</string>
+    <string name="voice_pace_tolerance_value">±%1$d s/km</string>
+    <string name="voice_pace_tolerance_hint">Within the tolerance the pace counts as on target, for the voice and the segment bar.</string>
+    <string name="voice_metric_units_note">The voice uses kilometers, and summaries are counted in kilometers.</string>
+    <!-- TalkBack: the state of a switch row, announced when it changes -->
+    <string name="voice_switch_on_a11y">on</string>
+    <string name="voice_switch_off_a11y">off</string>
+    <!-- ===== End of voice coaching settings ===== -->
+
+    <!-- ===== Release 4: segment zone target (feature/r4-zone-target) ===== -->
+    <string name="segment_target_label">Target pace or zone</string>
+    <string name="segment_target_none">None</string>
+    <string name="segment_target_pace">Pace</string>
+    <string name="segment_target_zone">Zone</string>
+    <string name="segment_target_zone_hint">Heart rate zone</string>
+    <string name="segment_target_zone_value">Zone %1$d · %2$d–%3$d bpm</string>
+    <string name="segment_target_zone_value_no_range">Zone %1$d</string>
+    <string name="segment_target_zone_disabled">Zones are off: set your date of birth or maximum heart rate</string>
+    <string name="segment_target_open_settings">Open settings</string>
+    <string name="segment_dialog_zone_title">Heart rate zone</string>
+    <string name="segment_zone_item">Zone %1$d · %2$d–%3$d bpm · %4$s</string>
+    <!-- For TalkBack. %3$s: the upper bound with hr_zone_bound_a11y -->
+    <string name="segment_target_zone_value_a11y">Zone %1$d, %2$d to %3$s</string>
+    <!-- For TalkBack. %3$s: the upper bound with hr_zone_bound_a11y; %4$s: hr_zone_name_N -->
+    <string name="segment_zone_item_a11y">Zone %1$d, %2$d to %3$s, %4$s</string>
+    <string name="segment_target_zone_short">Z%1$d</string>
+    <string name="segment_target_zone_a11y">zone %1$d</string>
+    <string name="hr_zone_name_1">recovery</string>
+    <string name="hr_zone_name_2">aerobic base</string>
+    <string name="hr_zone_name_3">tempo</string>
+    <string name="hr_zone_name_4">threshold</string>
+    <string name="hr_zone_name_5">maximum</string>
+    <string name="voice_interval_goal_zone">Zone %1$d</string>
+    <!-- ===== End of segment zone target ===== -->
+
+    <!-- ===== Release 4: segment target check (feature/r4-target-check) ===== -->
+    <!-- %1$s: the pace in words without the unit, "4 minutes 52 seconds" -->
+    <string name="voice_target_faster">Speed up, pace %1$s</string>
+    <string name="voice_target_slower">Slow down, pace %1$s</string>
+    <string name="voice_target_above_zone">Above zone, heart rate %1$d</string>
+    <string name="voice_target_below_zone">Below zone, heart rate %1$d</string>
+    <string name="voice_target_faster_short">Speed up</string>
+    <string name="voice_target_slower_short">Slow down</string>
+    <string name="voice_target_above_zone_short">Above zone</string>
+    <string name="voice_target_below_zone_short">Below zone</string>
+    <string name="target_state_in">On target</string>
+    <string name="target_state_faster">Speed up</string>
+    <string name="target_state_slower">Slow down</string>
+    <string name="target_state_above_zone">Above zone</string>
+    <string name="target_state_below_zone">Below zone</string>
+    <string name="target_state_pending_pace">Measuring pace…</string>
+    <string name="target_state_pending_zone">Heart rate catching up…</string>
+    <string name="target_state_no_pace">No pace</string>
+    <string name="target_state_no_hr">No heart rate</string>
+    <string name="target_state_zones_off">Zones are off</string>
+    <string name="target_state_approx" translatable="false">≈&#160;%1$s</string>
+    <!-- %1$s: the verdict, %2$s: the pace "4:45" or the heart rate "172" it was made from -->
+    <string name="target_state_with_value" translatable="false">%1$s · %2$s</string>
+    <!-- For TalkBack: %1$s the verdict, %2$s the value in words -->
+    <string name="target_state_with_value_a11y" translatable="false">%1$s, %2$s</string>
+    <string name="target_state_approx_a11y">%1$s, approximate from steps</string>
+    <string name="target_announce">Segment target: %1$s</string>
+    <!-- ===== End of segment target check ===== -->
 
 </resources>

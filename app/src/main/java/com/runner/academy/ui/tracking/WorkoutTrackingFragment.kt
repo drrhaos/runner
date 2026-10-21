@@ -41,6 +41,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.ui.workout.WorkoutDetailFragmentArgs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlin.math.ceil
 
@@ -63,7 +64,9 @@ class WorkoutTrackingFragment : Fragment() {
         val app = requireContext().appContainer()
         WorkoutTrackingViewModelFactory(
             app.workoutRepository,
-            requireContext().applicationContext as android.app.Application
+            requireContext().applicationContext as android.app.Application,
+            app.pairedSensors,
+            app.heartRateSensor
         )
     }
 
@@ -165,7 +168,7 @@ class WorkoutTrackingFragment : Fragment() {
         }
 
         initializeManagers()
-        modeController?.setupSpinner()
+        modeController?.setupButton()
         modeController?.loadModes()
         setupClickListeners()
         observeViewModel()
@@ -221,6 +224,7 @@ class WorkoutTrackingFragment : Fragment() {
             onModeApplied = {
                 intervalController?.updatePreview()
                 intervalController?.maybeStartForActiveSession()
+                updateAutoPauseUnavailable()
             }
         )
         intervalController = IntervalTrackingController(
@@ -266,7 +270,8 @@ class WorkoutTrackingFragment : Fragment() {
             layoutExpandedInfo = binding.layoutExpandedInfo,
             textViewWorkoutTime = binding.textViewWorkoutTime,
             textViewWorkoutDistance = binding.textViewWorkoutDistance,
-            textViewWorkoutTimeLabel = binding.textViewWorkoutTimeLabel,
+            // The whole caption (label or pause chip) hides with the collapsed timer
+            textViewWorkoutTimeLabel = binding.layoutTimerCaption,
             textViewWorkoutDistanceLabel = binding.textViewWorkoutDistanceLabel,
         ))
         panelStateManager?.setupGesture(requireContext())
@@ -281,15 +286,38 @@ class WorkoutTrackingFragment : Fragment() {
                 textViewWorkoutHeartRate = binding.textViewWorkoutHeartRate,
                 textViewAvgSpeed = binding.textViewAvgSpeed,
                 textViewCurrentPace = binding.textViewCurrentPace,
+                layoutCurrentPaceTile = binding.layoutCurrentPaceTile,
                 textViewCaloriesBurned = binding.textViewCaloriesBurned,
-                spinnerWorkoutType = binding.spinnerWorkoutType,
+                workoutModeButton = binding.buttonWorkoutMode,
                 buttonStart = binding.buttonStart,
                 buttonPause = binding.buttonPause,
                 buttonStop = binding.buttonStop,
+                timerCaption = MetricsDisplayManager.TimerCaption(
+                    container = binding.layoutTimerCaption,
+                    label = binding.textViewWorkoutTimeLabel,
+                    chip = binding.textViewTimerStateChip
+                ),
+                timerCaptionExpanded = MetricsDisplayManager.TimerCaption(
+                    container = binding.layoutTimerCaptionExpanded,
+                    label = binding.textViewWorkoutTimeLabelExpanded,
+                    chip = binding.textViewTimerStateChipExpanded
+                ),
+                textViewElapsedTimeExpanded = binding.textViewElapsedTimeExpanded,
+                layoutHeartRateTile = binding.layoutHeartRateTile,
+                imageViewHrLink = binding.imageViewHrLink,
+                imageViewHrLinkCompact = binding.imageViewHrLinkCompact,
+                textViewHrZoneBadge = binding.textViewHrZoneBadge,
             ),
             viewModel
         ) { expanded ->
             intervalController?.onExpandedInfoChanged(expanded)
+        }
+        // Only an entry to Devices (the workout goes on: its "workout" lease shares the connection)
+        binding.layoutHeartRateTile.setOnClickListener {
+            val navController = findNavController()
+            if (viewModel.heartRateTile.value.opensDevices && navController.currentDestination?.id == R.id.nav_tracking) {
+                navController.navigate(R.id.nav_devices)
+            }
         }
     }
 
@@ -456,6 +484,20 @@ class WorkoutTrackingFragment : Fragment() {
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.heartRateTile.collect { metricsDisplayManager?.updateHeartRateTile(it) }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                combine(viewModel.heartRateDisplay, viewModel.hrZones) { display, zones ->
+                    display to zones
+                }.collect { (display, zones) -> metricsDisplayManager?.updateHeartRate(display, zones) }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 try {
                     viewModel.workoutSession.collect { session ->
                         if (isAdded && !isDetached) {
@@ -475,6 +517,7 @@ class WorkoutTrackingFragment : Fragment() {
                     viewModel.workoutState.collect { state ->
                         if (isAdded && !isDetached) {
                             metricsDisplayManager?.updateButtonStates(state)
+                            updateAutoPauseUnavailable()
                             if (state == WorkoutState.RUNNING || state == WorkoutState.PAUSED) {
                                 modeController?.syncFromViewModel()
                                 intervalController?.maybeStartForActiveSession()
@@ -559,6 +602,18 @@ class WorkoutTrackingFragment : Fragment() {
         }
 
         mapManager?.autoCenterIfNeeded(session)
+    }
+
+    /**
+     * Before the start only: auto-pause is on but the chosen mode has segments, where it does
+     * not apply. Gone once the workout runs (no auto-pause chip in an interval workout either).
+     */
+    private fun updateAutoPauseUnavailable() {
+        if (_binding == null) return
+        val idle = viewModel.workoutState.value == WorkoutState.NOT_STARTED
+        val withSegments = modeController?.selectedMode?.hasIntervals() == true
+        val show = idle && withSegments && requireContext().appContainer().userPreferences.autoPause
+        binding.textViewAutoPauseUnavailable.visibility = if (show) View.VISIBLE else View.GONE
     }
 
     private fun updateGpsBanner(session: WorkoutSession) {
@@ -676,7 +731,7 @@ class WorkoutTrackingFragment : Fragment() {
             beginWorkout()
             return
         }
-        binding.spinnerWorkoutType.visibility = View.GONE
+        binding.buttonWorkoutMode.visibility = View.GONE
         binding.buttonStart.visibility = View.GONE
         binding.textViewCountdown.visibility = View.VISIBLE
         binding.textViewCountdown.text = countdownSeconds.toString()
@@ -804,7 +859,7 @@ class WorkoutTrackingFragment : Fragment() {
                     if (isAdded && !isDetached) {
                         findNavController().navigate(
                             R.id.nav_workout_detail,
-                            WorkoutDetailFragmentArgs(workoutId = workoutId).toBundle()
+                            WorkoutDetailFragmentArgs(workoutId = workoutId, justSaved = true).toBundle()
                         )
                     }
                 } else if (_binding != null && isAdded) {
@@ -899,9 +954,25 @@ class WorkoutTrackingFragment : Fragment() {
 
     // -- Lifecycle --
 
+    override fun onStart() {
+        super.onStart()
+        // Before the start the paired sensor connects while the screen is seen (the panel may be
+        // collapsed: the compact icon by the GPS indicator shows the link)
+        viewModel.holdHeartRateBeforeStart()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        viewModel.releaseHeartRateBeforeStart()
+    }
+
     override fun onResume() {
         super.onResume()
         mapManager?.onResume()
+        // The setting may have changed meanwhile
+        updateAutoPauseUnavailable()
+        // So may HRmax: the zone badge follows it
+        viewModel.refreshHrZones()
     }
 
     override fun onPause() {
@@ -925,6 +996,7 @@ class WorkoutTrackingFragment : Fragment() {
         gpsStatusUpdater = null
         panelStateManager = null
         metricsDisplayManager = null
+        modeController?.release()
         modeController = null
         intervalController = null
         _binding = null

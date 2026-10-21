@@ -1,36 +1,44 @@
 package com.runner.academy.ui.workout
 
-import android.net.Uri
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.color.MaterialColors
+import com.google.android.material.datepicker.CalendarConstraints
+import com.google.android.material.datepicker.DateValidatorPointBackward
+import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.runner.academy.R
 import com.runner.academy.appContainer
-import com.runner.academy.data.Workout
+import com.runner.academy.data.ExportPeriod
+import com.runner.academy.data.ImportResult
 import com.runner.academy.databinding.FragmentWorkoutListBinding
-import com.runner.academy.util.FormatUtils
-import com.runner.academy.util.GpxImporter
+import com.runner.academy.service.ImportState
+import com.runner.academy.ui.records.RecordsAnnouncement
+import com.runner.academy.ui.records.RecordsUpdatedSnackbar
 import com.runner.academy.util.ShareExports
-import com.runner.academy.util.WorkoutBackupFormat
 import com.runner.academy.util.WorkoutGpxBulkExporter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.BufferedReader
 import java.io.File
-import java.io.InputStreamReader
+import java.time.ZoneId
+
+/** What an export writes. */
+private enum class ExportFormat { JSON, GPX_ZIP }
 
 class WorkoutListFragment : Fragment() {
 
@@ -41,18 +49,28 @@ class WorkoutListFragment : Fragment() {
         WorkoutViewModelFactory(requireContext().appContainer().workoutRepository)
     }
 
+    private val importViewModel: WorkoutImportViewModel by viewModels {
+        WorkoutImportViewModelFactory(requireContext(), requireContext().appContainer().workoutRepository)
+    }
+
     private lateinit var workoutAdapter: WorkoutAdapter
 
     private val openJsonLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
-        if (uri != null) importFromJsonUri(uri)
+        if (uri != null) importViewModel.importBackup(uri)
     }
 
-    private val openGpxFolderLauncher = registerForActivityResult(
+    private val openTrackFilesLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNotEmpty()) importViewModel.importFiles(uris)
+    }
+
+    private val openTrackFolderLauncher = registerForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
-        if (uri != null) importFromGpxFolder(uri)
+        if (uri != null) importViewModel.importFolder(uri)
     }
 
     override fun onCreateView(
@@ -72,6 +90,8 @@ class WorkoutListFragment : Fragment() {
         setupFilterChips()
         setupSwipeRefresh()
         observeViewModel()
+        observeImport()
+        reattachExportRangePickers()
     }
 
     private fun setupSwipeRefresh() {
@@ -91,7 +111,7 @@ class WorkoutListFragment : Fragment() {
                 )
             },
             onFavoriteClick = { workout ->
-                viewModel.toggleFavorite(workout)
+                viewModel.toggleFavorite(workout.id, workout.isFavorite)
             }
         )
 
@@ -100,6 +120,7 @@ class WorkoutListFragment : Fragment() {
             layoutManager = LinearLayoutManager(context)
             setHasFixedSize(true)
         }
+        binding.fastScrollerWorkouts.attach(binding.recyclerViewWorkouts)
 
         workoutAdapter.addLoadStateListener { loadStates ->
             if (_binding == null || !isAdded || isDetached) return@addLoadStateListener
@@ -109,23 +130,30 @@ class WorkoutListFragment : Fragment() {
                 loadStates.append.endOfPaginationReached &&
                 workoutAdapter.itemCount == 0
             updateEmptyState(isEmpty)
-            if (refresh is LoadState.NotLoading &&
-                workoutAdapter.itemCount > 0 &&
-                viewModel.listFilter.value == WorkoutListFilter.ALL
-            ) {
-                cleanVisibleWorkoutsInBackground()
-            }
         }
     }
 
     private fun setupFilterChips() {
-        binding.chipGroupWorkoutFilter.setOnCheckedStateChangeListener { _, checkedIds ->
-            val filter = when {
-                checkedIds.contains(R.id.chip_filter_favorites) -> WorkoutListFilter.FAVORITES
-                else -> WorkoutListFilter.ALL
-            }
-            viewModel.setListFilter(filter)
+        val button = binding.buttonFilterFavorites
+        button.isChecked = viewModel.listFilter.value == WorkoutListFilter.FAVORITES
+        showFavoritesFilter(button.isChecked)
+        button.addOnCheckedChangeListener { _, isChecked ->
+            showFavoritesFilter(isChecked)
+            viewModel.setListFilter(if (isChecked) WorkoutListFilter.FAVORITES else WorkoutListFilter.ALL)
         }
+    }
+
+    /** A filled primary star while only favorites are listed, an outlined one otherwise. */
+    private fun showFavoritesFilter(on: Boolean) {
+        val button = binding.buttonFilterFavorites
+        button.setIconResource(if (on) R.drawable.ic_star else R.drawable.ic_star_border)
+        button.iconTint = ColorStateList.valueOf(
+            MaterialColors.getColor(
+                button,
+                if (on) com.google.android.material.R.attr.colorPrimary
+                else com.google.android.material.R.attr.colorOnSurfaceVariant
+            )
+        )
     }
 
     private var isSpeedDialOpen = false
@@ -151,6 +179,10 @@ class WorkoutListFragment : Fragment() {
         }
         binding.buttonEmptyStartWorkout.setOnClickListener {
             findNavController().navigate(R.id.nav_tracking)
+        }
+        binding.buttonImportStop.setOnClickListener { importViewModel.stop() }
+        binding.buttonPendingImports.setOnClickListener {
+            findNavController().navigate(R.id.nav_import_conflicts)
         }
     }
 
@@ -186,7 +218,8 @@ class WorkoutListFragment : Fragment() {
     private fun showImportSourceDialog() {
         val options = arrayOf(
             getString(R.string.workout_list_import_json),
-            getString(R.string.workout_list_import_gpx_folder)
+            getString(R.string.workout_list_import_track_files),
+            getString(R.string.workout_list_import_track_folder)
         )
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.workout_list_import_choose_source)
@@ -195,7 +228,9 @@ class WorkoutListFragment : Fragment() {
                     0 -> openJsonLauncher.launch(
                         arrayOf("application/json", "text/*", "*/*")
                     )
-                    1 -> openGpxFolderLauncher.launch(null)
+                    // GPX and TCX have no MIME type every file manager knows: the content decides
+                    1 -> openTrackFilesLauncher.launch(arrayOf("*/*"))
+                    2 -> openTrackFolderLauncher.launch(null)
                 }
             }
             .setNegativeButton(R.string.cancel, null)
@@ -211,31 +246,88 @@ class WorkoutListFragment : Fragment() {
             .setTitle(R.string.workout_list_export_choose_format)
             .setItems(options) { _, which ->
                 when (which) {
-                    0 -> exportAllAsJson()
-                    1 -> exportAllAsGpxZip()
+                    0 -> showExportPeriodDialog(ExportFormat.JSON)
+                    1 -> showExportPeriodDialog(ExportFormat.GPX_ZIP)
                 }
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
-    private fun exportAllAsJson() {
+    /** All workouts, or those of a period picked on the calendar. */
+    private fun showExportPeriodDialog(format: ExportFormat) {
+        val options = arrayOf(
+            getString(R.string.workout_list_export_period_all),
+            getString(R.string.workout_list_export_period_range)
+        )
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.workout_list_export_choose_period)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> export(format, period = null)
+                    1 -> showExportRangePicker(format)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showExportRangePicker(format: ExportFormat) {
+        val picker = MaterialDatePicker.Builder.dateRangePicker()
+            .setTitleText(R.string.workout_list_export_period_picker_title)
+            .setCalendarConstraints(
+                CalendarConstraints.Builder().setValidator(DateValidatorPointBackward.now()).build()
+            )
+            .build()
+        onExportRangePicked(picker, format)
+        picker.show(childFragmentManager, exportRangeTag(format))
+    }
+
+    /** A picker shown before a rotation is restored without its listener: given it again. */
+    private fun reattachExportRangePickers() {
+        for (format in ExportFormat.entries) {
+            @Suppress("UNCHECKED_CAST")
+            val picker = childFragmentManager.findFragmentByTag(exportRangeTag(format))
+                as? MaterialDatePicker<androidx.core.util.Pair<Long, Long>> ?: continue
+            onExportRangePicked(picker, format)
+        }
+    }
+
+    private fun onExportRangePicked(picker: MaterialDatePicker<androidx.core.util.Pair<Long, Long>>, format: ExportFormat) {
+        picker.addOnPositiveButtonClickListener { selection ->
+            val first = selection.first ?: return@addOnPositiveButtonClickListener
+            val last = selection.second ?: first
+            export(format, ExportPeriod.ofPickerSelection(first, last, ZoneId.systemDefault()))
+        }
+    }
+
+    private fun exportRangeTag(format: ExportFormat) = "export_range_${format.name}"
+
+    private fun export(format: ExportFormat, period: ExportPeriod?) = when (format) {
+        ExportFormat.JSON -> exportAsJson(period)
+        ExportFormat.GPX_ZIP -> exportAsGpxZip(period)
+    }
+
+    /** "Nothing to export": said for the period when one was picked. */
+    private fun showNothingToExport(period: ExportPeriod?) {
+        val message = if (period == null) R.string.no_data_export else R.string.workout_list_export_period_empty
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun exportAsJson(period: ExportPeriod?) {
         viewLifecycleOwner.lifecycleScope.launch {
             val progress = showProgressDialog(R.string.workout_list_export_progress)
             try {
-                val workouts = viewModel.loadAllForExport()
-                if (workouts.isEmpty()) {
-                    Toast.makeText(requireContext(), R.string.no_data_export, Toast.LENGTH_SHORT).show()
+                val ids = viewModel.exportIds(period)
+                if (ids.isEmpty()) {
+                    showNothingToExport(period)
                     return@launch
                 }
-                val json = withContext(Dispatchers.Default) {
-                    WorkoutBackupFormat.toBackupJson(workouts, requireContext().packageName)
-                }
-                val fileName = WorkoutBackupFormat.getBackupJsonFileName()
-                val file = withContext(Dispatchers.IO) {
-                    writeTempTextFile(fileName, json)
-                }
+                val file = viewModel.writeBackupJson(ids, requireContext().cacheDir, requireContext().packageName)
                 shareFile(file, "application/json")
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                // The screen left during a long export: nothing to tell
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "JSON export failed: ${e.message}", e)
                 Toast.makeText(
@@ -249,21 +341,18 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
-    private fun exportAllAsGpxZip() {
+    private fun exportAsGpxZip(period: ExportPeriod?) {
         viewLifecycleOwner.lifecycleScope.launch {
             val progress = showProgressDialog(R.string.workout_list_export_progress)
             try {
-                val workouts = viewModel.loadAllForExport()
-                if (workouts.isEmpty()) {
-                    Toast.makeText(requireContext(), R.string.no_data_export, Toast.LENGTH_SHORT).show()
+                val ids = viewModel.exportIds(period)
+                if (ids.isEmpty()) {
+                    showNothingToExport(period)
                     return@launch
                 }
+                val context = requireContext().applicationContext
                 val result = withContext(Dispatchers.IO) {
-                    WorkoutGpxBulkExporter.exportToZip(
-                        workouts,
-                        requireContext(),
-                        requireContext().cacheDir
-                    )
+                    WorkoutGpxBulkExporter.exportToZip(viewModel.workoutsForExport(ids), context, context.cacheDir)
                 }
                 shareFile(result.zipFile, "application/zip", showReadyToast = result.skippedWithoutTrack == 0)
                 if (result.skippedWithoutTrack > 0) {
@@ -277,6 +366,8 @@ class WorkoutListFragment : Fragment() {
                         Toast.LENGTH_LONG
                     ).show()
                 }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e(TAG, "GPX ZIP export failed: ${e.message}", e)
                 Toast.makeText(
@@ -290,10 +381,6 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
-    private fun writeTempTextFile(fileName: String, content: String): File {
-        return ShareExports.writeCacheText(requireContext(), fileName, content)
-    }
-
     private fun shareFile(file: File, mimeType: String, showReadyToast: Boolean = true) {
         ShareExports.shareFile(
             context = requireContext(),
@@ -304,103 +391,72 @@ class WorkoutListFragment : Fragment() {
         )
     }
 
-    private fun importFromJsonUri(uri: Uri) {
+    private fun observeImport() {
         viewLifecycleOwner.lifecycleScope.launch {
-            val progress = showProgressDialog()
-            try {
-                val json = withContext(Dispatchers.IO) {
-                    requireContext().contentResolver.openInputStream(uri)?.use { stream ->
-                        BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).readText()
-                    } ?: throw IllegalStateException("Cannot open JSON file")
-                }
-                val workouts = withContext(Dispatchers.Default) {
-                    WorkoutBackupFormat.parseBackupJson(json)
-                }
-                val count = viewModel.importWorkouts(workouts)
-                showImportResult(count, failed = 0)
-            } catch (e: Exception) {
-                android.util.Log.e(TAG, "JSON import failed: ${e.message}", e)
-                Toast.makeText(
-                    requireContext(),
-                    getString(R.string.workout_list_import_error, e.message ?: ""),
-                    Toast.LENGTH_LONG
-                ).show()
-            } finally {
-                dismissProgressSafely(progress)
-            }
+            importViewModel.running.collect(::showImportProgress)
         }
-    }
-
-    private fun importFromGpxFolder(treeUri: Uri) {
         viewLifecycleOwner.lifecycleScope.launch {
-            val progress = showProgressDialog()
-            try {
-                val (workouts, failed) = withContext(Dispatchers.IO) {
-                    parseGpxDocuments(treeUri)
-                }
-                if (workouts.isEmpty() && failed == 0) {
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.workout_list_import_no_gpx),
-                        Toast.LENGTH_LONG
-                    ).show()
-                    return@launch
-                }
-                val count = if (workouts.isNotEmpty()) {
-                    viewModel.importWorkouts(workouts)
-                } else {
-                    0
-                }
-                showImportResult(count, failed)
-            } catch (e: Exception) {
-                android.util.Log.e(TAG, "GPX folder import failed: ${e.message}", e)
-                Toast.makeText(
-                    requireContext(),
-                    getString(R.string.workout_list_import_error, e.message ?: ""),
-                    Toast.LENGTH_LONG
-                ).show()
-            } finally {
-                dismissProgressSafely(progress)
-            }
-        }
-    }
-
-    private fun parseGpxDocuments(treeUri: Uri): Pair<List<Workout>, Int> {
-        val root = DocumentFile.fromTreeUri(requireContext(), treeUri)
-            ?: throw IllegalStateException("Cannot open folder")
-        val files = collectGpxFiles(root)
-        if (files.isEmpty()) return emptyList<Workout>() to 0
-
-        val imported = mutableListOf<Workout>()
-        var failed = 0
-        for (file in files) {
-            try {
-                val workout = requireContext().contentResolver.openInputStream(file.uri)?.use { stream ->
-                    GpxImporter.parseGpx(stream, file.name)
-                } ?: throw IllegalStateException("Cannot open ${file.name}")
-                imported.add(workout)
-            } catch (e: Exception) {
-                failed++
-                android.util.Log.w(TAG, "Skip GPX ${file.name}: ${e.message}")
-            }
-        }
-        return imported to failed
-    }
-
-    private fun collectGpxFiles(dir: DocumentFile): List<DocumentFile> {
-        val result = mutableListOf<DocumentFile>()
-        dir.listFiles().forEach { child ->
-            when {
-                child.isDirectory -> result.addAll(collectGpxFiles(child))
-                child.isFile && child.name?.endsWith(".gpx", ignoreCase = true) == true -> {
-                    result.add(child)
+            // Only while shown: an import that ends meanwhile is reported when the user is back
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch { importViewModel.ended.collect(::onImportEnded) }
+                launch {
+                    importViewModel.rejected.collect {
+                        Toast.makeText(requireContext(), R.string.workout_list_import_running, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
-        return result
+        viewLifecycleOwner.lifecycleScope.launch {
+            importViewModel.pendingCount.collect(::updatePendingBanner)
+        }
     }
 
-    private fun showProgressDialog(messageRes: Int = R.string.workout_list_import_progress) =
+    /** The running import, in a card: it goes on in the background (with its notification). */
+    private fun showImportProgress(progress: ImportState.Running?) {
+        val binding = _binding ?: return
+        binding.cardViewImportProgress.visibility = if (progress != null) View.VISIBLE else View.GONE
+        if (progress == null) return
+        val indicator = binding.progressImport
+        val determinate = progress.total > 0
+        if (indicator.isIndeterminate == determinate) {
+            // An indicator switches mode only while hidden
+            indicator.visibility = View.INVISIBLE
+            indicator.isIndeterminate = !determinate
+            indicator.visibility = View.VISIBLE
+        }
+        if (determinate) {
+            indicator.max = progress.total
+            indicator.setProgressCompat(progress.done, true)
+        }
+        binding.textViewImportProgress.text = ImportResultText.progress(requireContext(), progress.done, progress.total)
+    }
+
+    private fun onImportEnded(ended: ImportState.Ended) {
+        viewModel.refreshStatistics()
+        when (ended) {
+            is ImportState.NoFiles -> Toast.makeText(
+                requireContext(),
+                getString(R.string.workout_list_import_no_track_files),
+                Toast.LENGTH_LONG
+            ).show()
+            is ImportState.Failed -> Toast.makeText(
+                requireContext(),
+                getString(R.string.workout_list_import_error, ended.message),
+                Toast.LENGTH_LONG
+            ).show()
+            is ImportState.Finished -> showImportResult(ended.result)
+        }
+        // After it was shown: a screen stopped meanwhile shows it when back
+        importViewModel.markShown(ended)
+    }
+
+    private fun updatePendingBanner(count: Int) {
+        val binding = _binding ?: return
+        binding.cardViewPendingImports.visibility = if (count > 0) View.VISIBLE else View.GONE
+        binding.textViewPendingImports.text = getString(R.string.workout_list_pending_imports, count)
+    }
+
+    private fun showProgressDialog(messageRes: Int) =
         MaterialAlertDialogBuilder(requireContext())
             .setMessage(messageRes)
             .setCancelable(false)
@@ -417,13 +473,25 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
-    private fun showImportResult(imported: Int, failed: Int) {
-        val message = when {
-            imported == 0 && failed == 0 -> getString(R.string.workout_list_import_empty)
-            failed > 0 -> getString(R.string.workout_list_import_partial, imported, failed)
-            else -> getString(R.string.workout_list_import_success, imported)
+    /** The import result; when it changed records, a snackbar that also offers them. */
+    private fun showImportResult(result: ImportResult) {
+        val message = ImportResultText.lines(requireContext(), result).joinToString("\n")
+        val recordsUpdated = result.changedRecordDistances?.let(RecordsAnnouncement::afterFileImport)
+        val binding = _binding
+        if (recordsUpdated != null && binding != null) {
+            val navController = findNavController()
+            RecordsUpdatedSnackbar.show(
+                view = binding.root,
+                navController = navController,
+                count = recordsUpdated,
+                offerOpen = RecordsAnnouncement.offersOpen(navController.currentDestination?.id, workoutActive = false),
+                message = message,
+                // The import button lives in the closed speed dial: the main button is what stays on screen
+                anchor = binding.fabMain
+            )
+        } else {
+            Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
         }
-        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
     }
 
     private fun observeViewModel() {
@@ -436,6 +504,12 @@ class WorkoutListFragment : Fragment() {
                 android.util.Log.d("WorkoutList", "Paging cancelled: ${e.message}")
             } catch (e: Exception) {
                 android.util.Log.e("WorkoutList", "Error loading workouts: ${e.message}", e)
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.historyIndex.collect { index ->
+                _binding?.fastScrollerWorkouts?.index = index
             }
         }
 
@@ -467,7 +541,7 @@ class WorkoutListFragment : Fragment() {
             try {
                 viewModel.totalDistance.collect { distance ->
                     if (_binding != null && isAdded && !isDetached) {
-                        binding.textViewTotalDistance.text = FormatUtils.formatDistance(distance, requireContext())
+                        binding.textViewTotalDistance.text = MetricValue.distance(distance)
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -479,7 +553,7 @@ class WorkoutListFragment : Fragment() {
             try {
                 viewModel.averagePace.collect { avgPace ->
                     if (_binding != null && isAdded && !isDetached) {
-                        binding.textViewAvgPace.text = viewModel.formatPace(avgPace, requireContext())
+                        binding.textViewAvgPace.text = MetricValue.pace(avgPace)
                     }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -509,47 +583,6 @@ class WorkoutListFragment : Fragment() {
         }
     }
 
-    private val cleanedWorkoutIds = mutableSetOf<Long>()
-    private var cleaningInProgress = false
-
-    private fun cleanVisibleWorkoutsInBackground() {
-        if (cleaningInProgress) return
-        if (viewModel.listFilter.value != WorkoutListFilter.ALL) return
-        val snapshot = (0 until workoutAdapter.itemCount).mapNotNull { index ->
-            workoutAdapter.peek(index)
-        }.filter { it.trackData != null && it.id !in cleanedWorkoutIds }
-        if (snapshot.isEmpty()) return
-
-        cleaningInProgress = true
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                var cleanedCount = 0
-                for (workout in snapshot) {
-                    cleanedWorkoutIds.add(workout.id)
-                    val cleanedWorkout = withContext(Dispatchers.Default) {
-                        viewModel.cleanWorkoutData(workout)
-                    }
-                    if (cleanedWorkout != null && cleanedWorkout != workout) {
-                        cleanedCount++
-                    }
-                }
-                if (cleanedCount > 0) {
-                    android.util.Log.d("WorkoutList", "Cleaned $cleanedCount workouts in background")
-                }
-            } catch (e: kotlinx.coroutines.CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                android.util.Log.e(
-                    "WorkoutList",
-                    "Error cleaning workouts in background: ${e.message}",
-                    e
-                )
-            } finally {
-                cleaningInProgress = false
-            }
-        }
-    }
-
     override fun onResume() {
         super.onResume()
         // ViewModel outlives detail/edit screens: totals must be reloaded after edits or deletes there.
@@ -563,6 +596,6 @@ class WorkoutListFragment : Fragment() {
     }
 
     companion object {
-        private const val TAG = "WorkoutListImport"
+        private const val TAG = "WorkoutListExport"
     }
 }

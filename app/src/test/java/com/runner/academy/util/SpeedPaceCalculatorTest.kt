@@ -1,5 +1,6 @@
 package com.runner.academy.util
 
+import com.runner.academy.data.ElevationSource
 import com.runner.academy.data.SegmentGoalType
 import com.runner.academy.data.TrackPoint
 import com.runner.academy.data.WorkoutTemplateSegment
@@ -98,26 +99,6 @@ class SpeedPaceCalculatorTest {
     }
 
     @Test
-    fun `overallAveragePace uses total time over total distance`() {
-        // 10 km in 50 minutes → 5:00 /km
-        val pace = SpeedPaceCalculator.overallAveragePace(10_000.0, 50 * 60.0)
-        assertEquals(5f, pace, 0.01f)
-    }
-
-    @Test
-    fun `overallAveragePace is not average of average durations`() {
-        // Bug regression: avgDuration/totalDistance would give wrong result
-        // Two workouts: 5 km in 25 min and 5 km in 35 min → overall 6:00 /km
-        val totalDistance = 10f
-        val totalDuration = (25 + 35) * 60_000L
-        assertEquals(6f, SpeedPaceCalculator.overallAveragePace(totalDistance * 1000.0, totalDuration / 1000.0), 0.01f)
-
-        val wrongAvgDuration = ((25 + 35) / 2f) * 60_000f
-        val wrongPace = (wrongAvgDuration / 60_000f) / totalDistance
-        assertTrue(wrongPace < 6f) // would incorrectly show ~3:00 /km
-    }
-
-    @Test
     fun `buildSegments metric creates one km segments with correct pace`() {
         // Dense ~100 m steps east at ~55.75 lat (0.0016° lon ≈ 100 m)
         val points = mutableListOf<TrackPoint>()
@@ -172,8 +153,8 @@ class SpeedPaceCalculatorTest {
     }
 
     @Test
-    fun `paceFromSpeedKmh and overallAveragePace are consistent`() {
-        val pace = SpeedPaceCalculator.overallAveragePace(10_000.0, 60 * 60.0)
+    fun `paceFromSpeedKmh and PaceMath avgPace are consistent`() {
+        val pace = PaceMath.avgPace(10f, 60 * 60_000L)
         val speed = SpeedPaceCalculator.averageSpeedKmh(10f, 60 * 60_000L)
         assertEquals(pace, SpeedPaceCalculator.paceFromSpeedKmh(speed), 0.01f)
     }
@@ -244,7 +225,7 @@ class SpeedPaceCalculatorTest {
         val p2 = point(55.75, 37.6016, 10_000L, altitude = 110.0)
         val p3 = point(55.75, 37.6032, 20_000L, altitude = 105.0)
 
-        val series = SpeedPaceCalculator.buildElevationSeries(listOf(p1, p2, p3))
+        val series = SpeedPaceCalculator.buildElevationSeries(listOf(p1, p2, p3), ElevationSource.GPS)
         assertEquals(3, series.size)
         assertEquals(0f, series[0].distanceKm, 0.001f)
         assertTrue(series[1].distanceKm > 0f)
@@ -256,7 +237,7 @@ class SpeedPaceCalculatorTest {
     fun `buildElevationSeries empty when no altitudes`() {
         val p1 = point(55.75, 37.60, 0L, altitude = null)
         val p2 = point(55.75, 37.6016, 10_000L, altitude = null)
-        assertTrue(SpeedPaceCalculator.buildElevationSeries(listOf(p1, p2)).isEmpty())
+        assertTrue(SpeedPaceCalculator.buildElevationSeries(listOf(p1, p2), ElevationSource.GPS).isEmpty())
     }
 
     /** 100 m steps east every 50 s; the step into [bridgeAt] is a bridge of [bridgeM] instead. */
@@ -291,10 +272,60 @@ class SpeedPaceCalculatorTest {
     fun `buildElevationSeries counts a bridge`() {
         val points = trackWithBridge(count = 3, bridgeAt = 1, bridgeM = 500f)
 
-        val series = SpeedPaceCalculator.buildElevationSeries(points)
+        val series = SpeedPaceCalculator.buildElevationSeries(points, ElevationSource.GPS)
 
         assertEquals(0.5f, series[1].distanceKm, 0.001f)
         assertEquals(SpeedPaceCalculator.totalDistanceMeters(points) / 1000f, series[2].distanceKm, 0.001f)
+    }
+
+    @Test
+    fun `the elevation line passes over short holes in the altitude, never drawing zero`() {
+        // A fix every 10 s: the holes last 20 and 30 s, within the limit
+        val altitudes = listOf(100.0, 101.0, null, 103.0, 0.0, 0.0, 106.0, 107.0)
+        val points = altitudes.mapIndexed { i, alt -> point(55.75, 37.60 + i * 0.0016, i * 10_000L, altitude = alt) }
+
+        val runs = TrackChartBuilder.buildElevationRuns(points, ElevationSource.GPS)
+
+        assertEquals(listOf(listOf(100f, 101f, 103f, 106f, 107f)), runs.map { run -> run.map { it.altitudeMeters } })
+        assertTrue(SpeedPaceCalculator.buildElevationSeries(points, ElevationSource.GPS).none { it.altitudeMeters == 0f })
+    }
+
+    @Test
+    fun `the elevation line breaks over a long stretch without altitude`() {
+        // 40 s without altitude: longer than the limit
+        val altitudes = listOf(100.0, 101.0, null, null, null, 105.0, 106.0)
+        val points = altitudes.mapIndexed { i, alt -> point(55.75, 37.60 + i * 0.0016, i * 10_000L, altitude = alt) }
+
+        val runs = TrackChartBuilder.buildElevationRuns(points, ElevationSource.GPS)
+
+        assertEquals(listOf(listOf(100f, 101f), listOf(105f, 106f)), runs.map { run -> run.map { it.altitudeMeters } })
+    }
+
+    @Test
+    fun `a barometric track draws the pressure altitude on the GPS scale`() {
+        // GPS jumps around 150 m, the barometer climbs smoothly from 100 m: drawn from 150 m up
+        val gps = listOf(150.0, 147.0, 156.0, 149.0, null)
+        val points = gps.mapIndexed { i, alt ->
+            point(55.75, 37.60 + i * 0.0016, i * 10_000L, altitude = alt).copy(baroM = 100f + i)
+        }
+
+        val runs = TrackChartBuilder.buildElevationRuns(points, ElevationSource.BAROMETER)
+
+        // GPS − baro: 50, 46, 54, 46 → median 48
+        assertEquals(listOf(listOf(148f, 149f, 150f, 151f, 152f)), runs.map { run -> run.map { it.altitudeMeters } })
+        // The GPS line of the same track is unchanged
+        assertEquals(4, TrackChartBuilder.buildElevationRuns(points, ElevationSource.GPS).flatten().size)
+    }
+
+    @Test
+    fun `the elevation line breaks over a gap and a bridge but keeps the distance`() {
+        val points = trackWithBridge(count = 6, bridgeAt = 2, bridgeM = 500f)
+            .mapIndexed { i, p -> if (i == 4) p.copy(afterGap = true) else p }
+
+        val runs = TrackChartBuilder.buildElevationRuns(points, ElevationSource.GPS)
+
+        assertEquals(listOf(2, 2, 2), runs.map { it.size })
+        assertEquals(0.5f + 0.1f, runs[1].first().distanceKm, 0.01f)
     }
 
     @Test

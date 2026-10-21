@@ -1,33 +1,142 @@
 <resources>
-    <!-- Large Title–like hierarchy (iOS) -->
-    <style name="RunnerStatisticsScreenTitle">
+    <!-- The one type scale (iOS-like). Layouts set android:textAppearance to one of these instead
+         of a bare textSize; colour stays on the view. Big tracking numbers keep their own sizes. -->
+    <style name="TextAppearance.Runner" parent="" />
+
+    <style name="TextAppearance.Runner.LargeTitle">
         <item name="android:textSize">34sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:letterSpacing">-0.02</item>
-        <item name="android:textColor">?attr/colorOnBackground</item>
     </style>
 
-    <style name="RunnerStatisticsSectionTitle">
+    <style name="TextAppearance.Runner.Title">
+        <item name="android:textSize">24sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">-0.01</item>
+    </style>
+
+    <!-- Section and card titles, empty-state titles -->
+    <style name="TextAppearance.Runner.Title3">
         <item name="android:textSize">20sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:letterSpacing">-0.01</item>
+    </style>
+
+    <!-- A live tracking value: as big as Title, regular weight so the numbers stay light -->
+    <style name="TextAppearance.Runner.Metric">
+        <item name="android:textSize">24sp</item>
+    </style>
+
+    <style name="TextAppearance.Runner.Headline">
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="TextAppearance.Runner.Body">
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="TextAppearance.Runner.Subhead">
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="TextAppearance.Runner.Subhead.Medium">
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <!-- Notes and subtitles under a row or a title -->
+    <style name="TextAppearance.Runner.Footnote">
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <style name="TextAppearance.Runner.Caption">
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <style name="TextAppearance.Runner.Caption2">
+        <item name="android:textSize">11sp</item>
+    </style>
+
+    <!-- Headings, one kind each:
+         a screen title at the top of the content (Large Title),
+         a card title inside a card that explains itself under it,
+         a section header above a group of rows (iOS grouped list) -->
+    <style name="RunnerScreenTitle">
+        <item name="android:textAppearance">@style/TextAppearance.Runner.LargeTitle</item>
         <item name="android:textColor">?attr/colorOnBackground</item>
     </style>
 
+    <style name="RunnerCardTitle">
+        <item name="android:textAppearance">@style/TextAppearance.Runner.Title3</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="RunnerSectionHeader">
+        <item name="android:textAppearance">@style/TextAppearance.Runner.Subhead.Medium</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <!-- Leading icon of a settings row; decorative (importantForAccessibility="no" in the layout) -->
+    <style name="RunnerRowIcon">
+        <item name="android:layout_width">24dp</item>
+        <item name="android:layout_height">24dp</item>
+        <item name="android:layout_marginEnd">16dp</item>
+        <item name="tint">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <!-- Leading icon of a statistics row, a size down to match the Subhead label -->
+    <style name="RunnerStatisticsIcon" parent="RunnerRowIcon">
+        <item name="android:layout_width">20dp</item>
+        <item name="android:layout_height">20dp</item>
+        <item name="android:layout_marginEnd">12dp</item>
+    </style>
+
     <style name="RunnerStatisticsLabel">
-        <item name="android:textSize">15sp</item>
-        <item name="android:textColor">@color/ios_secondary_label</item>
+        <item name="android:textAppearance">@style/TextAppearance.Runner.Subhead</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
     <style name="RunnerStatisticsValue">
-        <item name="android:textSize">17sp</item>
+        <item name="android:textAppearance">@style/TextAppearance.Runner.Body</item>
         <item name="android:textStyle">bold</item>
         <item name="android:textColor">?attr/colorPrimary</item>
     </style>
 
     <style name="RunnerStatisticsEmptyState">
-        <item name="android:textSize">17sp</item>
-        <item name="android:textColor">@color/ios_secondary_label</item>
+        <item name="android:textAppearance">@style/TextAppearance.Runner.Body</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <!-- Detail tiles: a value on one line that shrinks to fit (three tiles a row at 200 % font),
+         a caption that wraps to two. The tile is one TalkBack group, so neither is read alone. -->
+    <style name="RunnerDetailMetricValue">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:autoSizeTextType">uniform</item>
+        <item name="android:autoSizeMinTextSize">@dimen/workout_detail_metric_value_min</item>
+        <item name="android:autoSizeMaxTextSize">@dimen/workout_detail_metric_value</item>
+        <item name="android:textSize">@dimen/workout_detail_metric_value</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">?attr/colorPrimary</item>
+        <item name="android:importantForAccessibility">no</item>
+    </style>
+
+    <style name="RunnerDetailMetricValue.Secondary">
+        <item name="android:autoSizeMaxTextSize">@dimen/workout_detail_metric_value_secondary</item>
+        <item name="android:textSize">@dimen/workout_detail_metric_value_secondary</item>
+    </style>
+
+    <style name="RunnerDetailMetricCaption">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:gravity">center</item>
+        <item name="android:maxLines">2</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:textSize">@dimen/workout_detail_metric_caption</item>
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+        <item name="android:importantForAccessibility">no</item>
     </style>
 </resources>
 

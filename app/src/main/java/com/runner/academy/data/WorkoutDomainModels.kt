@@ -1,6 +1,7 @@
 package com.runner.academy.data
 
 import android.location.Location
+import com.runner.academy.sensor.HeartRateDisplay
 import org.osmdroid.util.GeoPoint
 
 data class WorkoutSession(
@@ -15,7 +16,25 @@ data class WorkoutSession(
     val currentPace: Float = 0f, // текущий темп в минутах на километр
     val avgSpeed: Float = 0f,
     val currentSpeed: Float = 0f,
-    val heartRate: Int = 0,
+    /**
+     * What the heart-rate tile shows, refreshed once a second by the service; null: no sensor
+     * in this workout (none paired, or the system refused the connected-device service type).
+     * Not checkpointed: the heart rate lives in the points.
+     */
+    val heartRateDisplay: HeartRateDisplay? = null,
+    /**
+     * The smoothed pace of the current-pace tile, refreshed once a second by the service; null:
+     * none yet (the first 15 s after a start, a resume or a restore) or no data. Not
+     * checkpointed. [currentPace] stays for the adaptive GPS interval and the checkpoint.
+     */
+    val livePace: LivePace? = null,
+    /**
+     * The current segment and its target's verdict from the service's interval engine (the only
+     * one of a running workout), refreshed on the 1 s tick; null: a free run, or no tick yet
+     * since the start or a restore. Kept over a manual pause (the timer stops). Not checkpointed:
+     * the cursor is.
+     */
+    val interval: IntervalLive? = null,
     val calories: Int = 0,
     val gpsStatus: GpsStatus = GpsStatus.SEARCHING,
     val trackPoints: List<GeoPoint> = emptyList(), // для отображения на карте
@@ -33,7 +52,14 @@ data class WorkoutSession(
      * false signal, [com.runner.academy.service.GpsLocationProcessor.pendingStepMeters]): saved as
      * the track's tail if the run stops before a fix closes it.
      */
-    val openStepMeters: Float = 0f
+    val openStepMeters: Float = 0f,
+    /** [currentTime] minus auto-pauses; the average speed and pace use it. */
+    val movingTime: Long = 0,
+    val autoPaused: Boolean = false,
+    /** Auto-pause has fired at least once in this run, so moving and elapsed time may differ. */
+    val everAutoPaused: Boolean = false,
+    /** The session clock behind [currentTime] and [movingTime]; the save path stops it. */
+    val clock: SessionClockState = SessionClockState()
 )
 
 enum class GpsStatus {

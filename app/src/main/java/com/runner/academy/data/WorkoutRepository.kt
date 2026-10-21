@@ -1,8 +1,16 @@
 package com.runner.academy.data
 
 import androidx.paging.PagingSource
+import com.runner.academy.util.WorkoutDerivation
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.withContext
 
 /**
@@ -11,21 +19,55 @@ import kotlinx.coroutines.withContext
  * ViewModels from the underlying data source implementation.
  */
 class WorkoutRepository(
-    private val workoutDao: WorkoutDao,
-    private val diagnosticsStore: GpsDiagnosticsStore? = null
+    database: WorkoutDatabase,
+    private val diagnosticsStore: GpsDiagnosticsStore? = null,
+    /** Starts the background metrics pass after rows were saved uncomputed. */
+    onDeferredSaved: (List<Long>) -> Unit = {}
 ) {
+    private val workoutDao: WorkoutDao = database.workoutDao()
+    private val bestEffortDao: BestEffortDao = database.bestEffortDao()
+    private val pendingImportDao: PendingImportDao = database.pendingImportDao()
+
+    /** Every whole-row write goes through it, with the derived metrics. */
+    private val store = WorkoutStore(database, onDeferredSaved = onDeferredSaved)
 
     /**
      * Get all workouts ordered by date descending as a Flow.
      */
     fun getAllWorkouts(): Flow<List<Workout>> = workoutDao.getAllWorkouts()
 
-    fun pagingSourceAll(): PagingSource<Int, Workout> = workoutDao.pagingSourceAll()
+    /** The ids of every workout, or of those in [period], newest first: the snapshot an export goes through. */
+    suspend fun workoutIdsNewestFirst(period: ExportPeriod? = null): List<Long> = withContext(Dispatchers.IO) {
+        if (period == null) workoutDao.idsNewestFirst() else workoutDao.idsNewestFirstBetween(period.fromMs, period.toMs)
+    }
 
-    fun pagingSourceFavorites(): PagingSource<Int, Workout> = workoutDao.pagingSourceFavorites()
+    /**
+     * The whole rows of [ids] in their order, read [EXPORT_PAGE] at a time: an export of the
+     * whole history holds a few tracks, never all of them. An id deleted meanwhile is passed over.
+     */
+    fun workoutsForExport(ids: List<Long>): Flow<Workout> = flow {
+        for (page in ids.chunked(EXPORT_PAGE)) {
+            val rows = workoutDao.getWorkoutsByIds(page).associateBy { it.id }
+            page.forEach { id -> rows[id]?.let { emit(it) } }
+        }
+    }.flowOn(Dispatchers.IO)
 
-    fun pagingSourceRoutes(excludeId: Long): PagingSource<Int, Workout> =
+    fun pagingSourceAll(): PagingSource<Int, WorkoutListItem> = workoutDao.pagingSourceAll()
+
+    fun pagingSourceFavorites(): PagingSource<Int, WorkoutListItem> = workoutDao.pagingSourceFavorites()
+
+    /** The months of [pagingSourceAll] / [pagingSourceFavorites] in list order, kept up to date. */
+    fun monthsAll(): Flow<List<WorkoutMonth>> = workoutDao.monthsAll()
+
+    fun monthsFavorites(): Flow<List<WorkoutMonth>> = workoutDao.monthsFavorites()
+
+    fun pagingSourceRoutes(excludeId: Long): PagingSource<Int, WorkoutListItem> =
         workoutDao.pagingSourceRoutes(excludeId)
+
+    /** The track of one workout, read when a route is picked; null without one. */
+    suspend fun getTrackData(id: Long): String? = withContext(Dispatchers.IO) {
+        workoutDao.getTrackData(id)
+    }
 
     suspend fun countRoutes(excludeId: Long): Int = withContext(Dispatchers.IO) {
         workoutDao.countRoutes(excludeId)
@@ -40,30 +82,113 @@ class WorkoutRepository(
      */
     fun getWorkoutById(id: Long): Flow<Workout?> = workoutDao.getWorkoutById(id)
 
-    /**
-     * Insert a new workout and return the generated row ID.
-     */
+    /** Inserts a new workout with its metrics computed and returns the generated row ID. */
     suspend fun insertWorkout(workout: Workout): Long = withContext(Dispatchers.IO) {
-        workoutDao.insertWorkout(workout)
+        store.insert(workout)
     }
 
     /**
-     * Insert multiple workouts (IDs should be 0 for auto-generation).
+     * Writes one batch of an import ([WorkoutStore.importBatch]): new rows, copies dropped, the
+     * workouts overlapping others put aside for [resolvePendingImport]. A backup's rows are
+     * derived by the background pass ([WorkoutStore.Mode.DEFERRED]), files' rows before saving.
      */
-    suspend fun insertWorkouts(workouts: List<Workout>): List<Long> = withContext(Dispatchers.IO) {
-        workoutDao.insertWorkouts(workouts)
+    suspend fun importBatch(candidates: List<ImportCandidate>, mode: WorkoutStore.Mode): ImportBatch =
+        withContext(Dispatchers.IO) { store.importBatch(candidates, mode) }
+
+    /** On how many record distances one of [ids] holds the record now ("Records updated: N"). */
+    suspend fun recordDistancesHeldBy(ids: List<Long>): Int = recordBook().distancesHeldBy(ids.toSet())
+
+    /** How many imported workouts wait for a decision; follows every import and decision. */
+    fun observePendingImportCount(): Flow<Int> = pendingImportDao.observeCount().distinctUntilChanged()
+
+    /**
+     * The waiting workouts in start order, each with what it overlaps now: saved workouts and
+     * other waiting ones. Follows the waiting list and every change of the saved workouts.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    fun observePendingConflicts(): Flow<List<PendingConflict>> =
+        combine(pendingImportDao.observeAll(), workoutDao.observeChanges()) { pending, _ -> pending }
+            .mapLatest { pending -> pending.map { conflictOf(it) } }
+            .flowOn(Dispatchers.IO)
+
+    private suspend fun conflictOf(pending: PendingImportSummary): PendingConflict {
+        val others = store.overlapping(pending.startMs, pending.durationMs).filter { it.pendingId != pending.id }
+        return PendingConflict(ImportConflicts.side(pending), others.sortedBy { it.startMs })
+    }
+
+    /** Applies the user's decision to one waiting workout ([WorkoutStore.resolvePending]). */
+    suspend fun resolvePendingImport(pendingId: Long, resolution: ConflictResolution) {
+        resolve(pendingId, resolution, keepIds = emptySet())
     }
 
     /**
-     * Update an existing workout.
+     * The same decision for every waiting workout, one by one in start order. Replacing never
+     * deletes one saved by this same decision (a GPX and a TCX of one run both waiting: the
+     * second does not replace the first).
      */
-    suspend fun updateWorkout(workout: Workout) = withContext(Dispatchers.IO) {
-        workoutDao.updateWorkout(workout)
+    suspend fun resolveAllPendingImports(resolution: ConflictResolution) = withContext(Dispatchers.IO) {
+        val saved = mutableSetOf<Long>()
+        pendingImportDao.all().forEach { pending ->
+            resolve(pending.id, resolution, saved)?.insertedId?.let(saved::add)
+        }
+    }
+
+    private suspend fun resolve(pendingId: Long, resolution: ConflictResolution, keepIds: Set<Long>) =
+        withContext(Dispatchers.IO) {
+            store.resolvePending(pendingId, resolution, keepIds)
+                ?.also { resolved -> resolved.replacedIds.forEach { diagnosticsStore?.delete(it) } }
+        }
+
+    /** Saves an edited workout as a whole row with fresh metrics; see [WorkoutDao.saveEdited]. */
+    suspend fun saveEdited(workout: Workout) = withContext(Dispatchers.IO) {
+        store.saveEdited(workout)
     }
 
     suspend fun setFavorite(id: Long, isFavorite: Boolean) = withContext(Dispatchers.IO) {
         workoutDao.setFavorite(id, isFavorite)
     }
+
+    /** Takes the workout out of the records (or back): the records follow at once, nothing is recomputed. */
+    suspend fun setExcludeFromRecords(id: Long, exclude: Boolean) = withContext(Dispatchers.IO) {
+        workoutDao.setExcludeFromRecords(id, exclude)
+    }
+
+    /**
+     * Records and their history, live: any save, deletion, exclusion, date change or background
+     * pass re-emits it (Room invalidates on `best_efforts` and `workouts`). Built again only when
+     * the eligible efforts changed: a favourite toggled or a row without efforts is no change.
+     */
+    fun observeRecordBook(): Flow<RecordBook> =
+        bestEffortDao.observeEligibleEfforts()
+            .distinctUntilChanged()
+            .map(RecordBook::from)
+            .flowOn(Dispatchers.Default)
+
+    /** The records once. */
+    suspend fun recordBook(): RecordBook = withContext(Dispatchers.IO) { bestEffortDao.recordBook() }
+
+    /**
+     * True while workouts with a track are not yet computed by the current algorithms (after an
+     * update or a backup import): the records are incomplete until the background pass ends.
+     */
+    fun observeRecordsPending(): Flow<Boolean> =
+        workoutDao.observeTrackedWithMetricsBelow(WorkoutDerivation.CURRENT_METRICS_VERSION).distinctUntilChanged()
+
+    /**
+     * True while workouts exist and none has a track: why the records are empty ("manually
+     * added workouts don't count"). Follows every save and deletion.
+     */
+    fun observeOnlyManualWorkouts(): Flow<Boolean> = workoutDao.observeOnlyManualWorkouts().distinctUntilChanged()
+
+    /**
+     * The record card of a workout's details ([RecordBook.cardFor]); null when it set no
+     * record, and while [observeRecordsPending]: the first run right after an update would
+     * otherwise "beat" records not computed yet. Emits only when the card changes.
+     */
+    fun observeRecordCard(workoutId: Long, justSaved: Boolean): Flow<RecordCard?> =
+        combine(observeRecordBook(), observeRecordsPending()) { book, pending ->
+            if (pending) null else book.cardFor(workoutId, justSaved)
+        }.distinctUntilChanged()
 
     /**
      * Delete a workout.
@@ -105,14 +230,21 @@ class WorkoutRepository(
         workoutDao.getFavoriteWorkoutsCount()
     }
 
-    /**
-     * Get the average duration across all workouts.
-     */
-    suspend fun getAverageDuration(): Long? = withContext(Dispatchers.IO) {
-        workoutDao.getAverageDuration()
+    /** The average moving time across all workouts. */
+    suspend fun getAverageMovingDuration(): Long? = withContext(Dispatchers.IO) {
+        workoutDao.getAverageMovingDuration()
     }
 
     suspend fun getTotalDuration(): Long? = withContext(Dispatchers.IO) {
         workoutDao.getTotalDuration()
+    }
+
+    suspend fun getTotalMovingDuration(): Long? = withContext(Dispatchers.IO) {
+        workoutDao.getTotalMovingDuration()
+    }
+
+    companion object {
+        /** Whole rows per query of an export: a long run's track is a few hundred KB. */
+        const val EXPORT_PAGE = 10
     }
 }
